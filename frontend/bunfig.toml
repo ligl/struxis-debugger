@@ -1,0 +1,3 @@
+[run]
+# Keep local frontend CLI execution on Bun instead of falling back to Node via shebangs.
+bun = true

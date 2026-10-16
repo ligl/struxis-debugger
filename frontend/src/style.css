@@ -1,0 +1,44 @@
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #d8e1eb;
+  background: #0b0f14;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.placeholder {
+  display: grid;
+  min-height: 100vh;
+  align-content: center;
+  justify-items: start;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.eyebrow {
+  color: #31c6a4;
+  font: 11px ui-monospace, monospace;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  margin: 8px 0;
+  font-size: clamp(28px, 4vw, 44px);
+}
+
+.placeholder p:last-child {
+  color: #8b9bab;
+  line-height: 1.7;
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Struxis Debugger",
+  "version": "0.1.0",
+  "identifier": "io.capitus.struxis-debugger",
+  "build": {
+    "beforeDevCommand": {
+      "script": "bun run dev",
+      "cwd": "frontend"
+    },
+    "devUrl": "http://localhost:1421",
+    "beforeBuildCommand":{
+      "script": "bun run build",
+      "cwd": "frontend"
+    },
+    "frontendDist": "frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Struxis Debugger",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 640
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost ws://localhost:1421; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}
