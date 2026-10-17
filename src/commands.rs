@@ -6,6 +6,8 @@ use crate::{
     app::{AppState, OriginDatasetDto, TestDatasetDto},
     discovery::CatalogDatasetEntry,
     ipc::{IpcError, IpcErrorCode},
+    run::RunState,
+    snapshot_store::SnapshotArtifact,
 };
 
 #[tauri::command]
@@ -89,4 +91,76 @@ pub async fn get_current_test_dataset(
                 format!("Test Dataset state worker failed: {error}"),
             )
         })?
+}
+
+#[tauri::command]
+pub async fn list_snapshots(state: State<'_, AppState>) -> Result<Vec<SnapshotArtifact>, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.discover_snapshots())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn start_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.start_run())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Start worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn restart_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.restart_run())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Restart worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn get_run_state(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_state())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run state worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn step_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_step())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Step worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn play_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_play())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Play worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn pause_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_pause())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Pause worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn stop_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_stop())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Stop worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn dispose_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_dispose())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Dispose worker failed: {error}")))?
 }
