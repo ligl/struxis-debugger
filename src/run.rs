@@ -1,7 +1,6 @@
 //! Pure Run lifecycle model. Nautilus runtime ownership belongs to the Replay worker.
 
 use serde::Serialize;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,8 +16,8 @@ pub enum RunStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunState {
-    pub run_id: Uuid,
-    pub test_dataset_id: Uuid,
+    pub run_id: String,
+    pub test_dataset_id: String,
     pub input_fingerprint: String,
     pub input_count: usize,
     pub status: RunStatus,
@@ -29,8 +28,8 @@ pub struct RunState {
 
 impl RunState {
     pub fn ready(
-        run_id: Uuid,
-        test_dataset_id: Uuid,
+        run_id: String,
+        test_dataset_id: String,
         input_fingerprint: String,
         input_count: usize,
     ) -> Result<Self, String> {
@@ -123,8 +122,8 @@ mod tests {
 
     fn ready(count: usize) -> RunState {
         RunState::ready(
-            Uuid::new_v4(),
-            Uuid::new_v4(),
+            Uuid::new_v4().to_string(),
+            Uuid::new_v4().to_string(),
             "fingerprint".into(),
             count,
         ).expect("fixture should be valid")
