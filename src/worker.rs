@@ -673,6 +673,25 @@ mod tests {
     }
 
     #[test]
+    fn terminal_transport_failure_joins_worker_but_does_not_claim_release() {
+        let (commands, _receiver) = mpsc::sync_channel(0);
+        let join = std::thread::spawn(|| {});
+        let mut worker = ReplayWorker {
+            commands,
+            command_gate: ReplayCommandGate::new(),
+            join: Some(join),
+        };
+
+        let error = worker.join_after_transport_failure(
+            "injected Dispose transport failure".to_owned(),
+        );
+
+        assert!(error.contains("worker thread exited"));
+        assert!(error.contains("resource release is unconfirmed"));
+        assert!(worker.join.is_none());
+    }
+
+    #[test]
     fn step_permission_is_strictly_bound_to_execution_mode() {
         use super::step_allowed;
 
