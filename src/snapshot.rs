@@ -11,7 +11,6 @@ pub const STATUS_FINALIZING: &str = "Finalizing";
 pub const STATUS_COMPLETE: &str = "Complete";
 pub const STATUS_FAILED: &str = "Failed";
 
-const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 const SNAPSHOT_HASH_PREFIX: &[u8] = b"capitus.debug-chart.snapshot\0";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
