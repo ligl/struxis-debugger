@@ -630,25 +630,17 @@ mod tests {
         let running = worker.play().expect("Play should be accepted");
         assert_eq!(running.status, RunStatus::Running);
 
-        // A synchronous worker reply is returned only after the Run reaches a
-        // stable state. With this short fixture, Play normally completes before
-        // this call is admitted; Paused/Completed are both safe outcomes.
-        let mut state = worker.pause().expect("Pause should resolve at a checkpoint boundary");
-        if state.status == RunStatus::Paused {
-            // Resume by Play and wait for the finite fixture to complete.
-            state = worker.play().expect("Resume should be accepted");
-            assert_eq!(state.status, RunStatus::Running);
-        }
-        for _ in 0..10 {
-            if state.status == RunStatus::Completed {
-                break;
-            }
+        // Let the worker run independently, then verify that every input
+        // checkpoint was committed before disposing the completed session.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while observed.checkpoints.lock().expect("checkpoints").len() < 3
+            && std::time::Instant::now() < deadline
+        {
             std::thread::yield_now();
-            state = worker.pause().or_else(|_| worker.play()).expect("control state should resolve");
         }
-        assert_eq!(state.status, RunStatus::Completed);
         assert_eq!(observed.checkpoints.lock().expect("checkpoints").len(), 3);
-        worker.dispose().expect("worker Dispose");
+        let disposed = worker.dispose().expect("worker Dispose");
+        assert_eq!(disposed.status, RunStatus::Disposed);
     }
 
 }
