@@ -8,6 +8,7 @@ describe("document HTML context menu", () => {
   afterEach(() => {
     cleanup?.();
     cleanup = undefined;
+    document.getElementById("app")?.remove();
     if (clipboardDescriptor) {
       Object.defineProperty(navigator, "clipboard", clipboardDescriptor);
     } else {
@@ -23,6 +24,12 @@ describe("document HTML context menu", () => {
       configurable: true,
       value: { writeText },
     });
+
+    // jsdom starts with an empty body; model the rendered application root.
+    const appRoot = document.createElement("div");
+    appRoot.id = "app";
+    appRoot.innerHTML = "<main><h1>Debugger fixture</h1></main>";
+    document.body.append(appRoot);
 
     cleanup = mountDocumentContextMenu();
     const contextMenuEvent = new MouseEvent("contextmenu", {
@@ -47,6 +54,7 @@ describe("document HTML context menu", () => {
     expect(copiedHtml).toMatch(/^<!DOCTYPE html>/i);
     expect(copiedHtml).toContain("<html");
     expect(copiedHtml).toContain("id=\"app\"");
+    expect(copiedHtml).toContain("Debugger fixture");
     expect(copiedHtml).not.toContain("data-document-context-menu");
     expect(copyButton!.textContent).toBe("已复制文档 HTML");
   });
