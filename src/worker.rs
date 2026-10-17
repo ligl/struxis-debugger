@@ -501,6 +501,10 @@ impl WorkerSession {
         Ok(self.state.clone())
     }
 
+    /// Nautilus exposes BacktestEngine::dispose as an infallible, void API.
+    /// It performs synchronous teardown, but logs callback-cleanup failures
+    /// internally instead of returning them. Therefore this confirms that the
+    /// disposal routine returned, not that every internal callback was cleared.
     fn engine_dispose(&mut self) {
         self.engine.dispose();
     }
