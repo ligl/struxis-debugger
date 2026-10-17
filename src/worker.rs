@@ -611,7 +611,7 @@ mod tests {
     }
 
     #[test]
-    fn worker_play_runs_to_completion_and_pause_is_checkpoint_bounded() {
+    fn worker_play_runs_to_completion_before_dispose() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
         let sink = MemoryCheckpointSink::default();
