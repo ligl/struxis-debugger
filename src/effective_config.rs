@@ -1,7 +1,7 @@
 //! Canonical, Struxis-only configuration identity for Snapshot metadata.
 
 use capitus_struxis::StruxisConfig;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
@@ -10,8 +10,8 @@ const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 ///
 /// Capacity values are decimal strings in the serialized representation to
 /// match the Snapshot canonical JSON contract.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EffectiveStruxisConfig {
     pub enable_structure: bool,
     pub structure_cbars_capacity: String,
@@ -45,10 +45,9 @@ impl EffectiveStruxisConfig {
 
 /// Computes the domain-separated fingerprint of canonical effective-config JSON.
 pub fn fingerprint_canonical_config(canonical_json: &str) -> Result<String, String> {
-    let value: serde_json::Value = serde_json::from_str(canonical_json)
-        .map_err(|error| format!("Invalid effective config JSON: {error}"))?;
-    let normalized = normalize_integer_json_values(value);
-    let normalized_json = serde_json::to_string(&normalized)
+    let config: EffectiveStruxisConfig = serde_json::from_str(canonical_json)
+        .map_err(|error| format!("Invalid effective Struxis config schema: {error}"))?;
+    let normalized_json = serde_json::to_string(&config)
         .map_err(|error| format!("Effective config canonicalization failed: {error}"))?;
     if normalized_json != canonical_json {
         return Err("Effective config JSON is not canonical".to_owned());
@@ -58,27 +57,6 @@ pub fn fingerprint_canonical_config(canonical_json: &str) -> Result<String, Stri
     input.extend_from_slice(CONFIG_HASH_PREFIX);
     input.extend_from_slice(canonical_json.as_bytes());
     Ok(sha256_hex(&input))
-}
-
-fn normalize_integer_json_values(value: serde_json::Value) -> serde_json::Value {
-    match value {
-        serde_json::Value::Number(number) if number.is_i64() || number.is_u64() => {
-            serde_json::Value::String(number.to_string())
-        }
-        serde_json::Value::Array(values) => serde_json::Value::Array(
-            values.into_iter().map(normalize_integer_json_values).collect(),
-        ),
-        serde_json::Value::Object(values) => {
-            let mut normalized = serde_json::Map::new();
-            let mut entries: Vec<_> = values.into_iter().collect();
-            entries.sort_by(|left, right| left.0.cmp(&right.0));
-            for (key, value) in entries {
-                normalized.insert(key, normalize_integer_json_values(value));
-            }
-            serde_json::Value::Object(normalized)
-        }
-        other => other,
-    }
 }
 
 fn sha256_hex(input: &[u8]) -> String {
