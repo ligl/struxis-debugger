@@ -207,4 +207,29 @@ mod tests {
         assert_eq!(hex_nibble(b'f'), Some(15));
         assert_eq!(hex_nibble(b'G'), None);
     }
+
+    #[test]
+    fn discovers_test_catalog_streams_from_catalog_metadata() {
+        let catalog_path = super::configured_catalog_root();
+        assert!(
+            catalog_path.is_dir(),
+            "expected test Catalog at {}",
+            catalog_path.display()
+        );
+
+        let entries = super::discover_catalog_datasets(&catalog_path)
+            .expect("Catalog stream discovery should succeed");
+        assert!(!entries.is_empty(), "test Catalog should contain Bar streams");
+
+        let expected = entries
+            .iter()
+            .find(|entry| {
+                entry.bar_type.as_deref()
+                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+            })
+            .expect("expected BTCUSDT perpetual 5-minute stream");
+        assert!(expected.available, "{:?}", expected.diagnostic);
+        assert_eq!(expected.instrument_id.as_deref(), Some("BTCUSDT-PERP.BINANCE"));
+        assert_eq!(expected.timeframe.as_deref(), Some("5-MINUTE-LAST-EXTERNAL"));
+    }
 }
