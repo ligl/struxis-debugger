@@ -363,14 +363,12 @@ impl WorkerSession {
         self.release_runtime_and_finalize_status()
     }
 
-    /// Resource release must not erase the processing outcome. Completed and
-    /// Failed describe durable Run results; Disposed is used only when a
-    /// nonterminal Run is stopped/disposed before processing completes.
+    /// Resource release finalizes the lifecycle status as Disposed. Processing
+    /// facts remain available independently through processed_count,
+    /// input_count, cursor_sbar_id, and failure_diagnostic.
     fn release_runtime_and_finalize_status(&mut self) -> Result<RunState, String> {
         self.engine_dispose();
-        if !matches!(self.state.status, RunStatus::Completed | RunStatus::Failed) {
-            self.state.dispose()?;
-        }
+        self.state.dispose()?;
         Ok(self.state.clone())
     }
 
@@ -685,8 +683,9 @@ mod tests {
         assert_eq!(checkpoints[2].2.sbar_count, 3);
 
         let disposed = worker.dispose().expect("worker Dispose");
-        assert_eq!(disposed.status, RunStatus::Completed);
+        assert_eq!(disposed.status, RunStatus::Disposed);
         assert_eq!(disposed.processed_count, 3);
+        assert_eq!(disposed.cursor_sbar_id.as_deref(), Some("1735689720000000000"));
     }
 
     #[test]
@@ -706,7 +705,7 @@ mod tests {
         let error = worker.step().expect_err("checkpoint commit should fail");
         assert!(error.contains("injected checkpoint failure"));
         let failed = worker.dispose().expect("Dispose should release failed Run");
-        assert_eq!(failed.status, RunStatus::Failed);
+        assert_eq!(failed.status, RunStatus::Disposed);
         assert_eq!(failed.processed_count, 0);
         assert!(failed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
     }
@@ -741,7 +740,9 @@ mod tests {
         }
         assert_eq!(observed.checkpoints.lock().expect("checkpoints").len(), 3);
         let stopped = worker.stop().expect("worker Stop");
-        assert_eq!(stopped.status, RunStatus::Completed);
+        assert_eq!(stopped.status, RunStatus::Disposed);
+        assert_eq!(stopped.processed_count, 3);
+        assert_eq!(stopped.cursor_sbar_id.as_deref(), Some("1735689720000000000"));
     }
 
 }
