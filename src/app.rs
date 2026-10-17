@@ -499,10 +499,14 @@ mod tests {
     fn origin_load_and_test_creation_share_a_mutation_guard() {
         let app = app_with_origin(PathBuf::from("/unused/catalog"));
         app.inner.mutation_active.store(true, std::sync::atomic::Ordering::Release);
-        let error = app
+        let test_error = app
             .create_test_dataset("100", "200")
-            .expect_err("concurrent dataset mutation must be rejected");
+            .expect_err("concurrent Test creation must be rejected");
+        let load_error = app
+            .load_origin("any-dataset", true)
+            .expect_err("concurrent Origin Load must be rejected");
         app.inner.mutation_active.store(false, std::sync::atomic::Ordering::Release);
-        assert_eq!(error.code, IpcErrorCode::Conflict);
+        assert_eq!(test_error.code, IpcErrorCode::Conflict);
+        assert_eq!(load_error.code, IpcErrorCode::Conflict);
     }
 }
