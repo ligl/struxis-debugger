@@ -198,3 +198,103 @@ fn read_database(path: &Path) -> Result<(SnapshotManifest, Vec<SnapshotCheckpoin
     }
     Ok((manifest, checkpoints))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_root() -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "capitus-snapshot-store-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ))
+    }
+
+    fn manifest(status: &str) -> SnapshotManifest {
+        SnapshotManifest {
+            snapshot_id: "snapshot-test".into(),
+            run_id: "run-test".into(),
+            state_key: "test-state".into(),
+            instrument_id: "TEST.SIM".into(),
+            bar_type: "TEST.SIM-1-MINUTE-LAST-EXTERNAL".into(),
+            input_start_sbar_id: "100".into(),
+            input_end_sbar_id: "100".into(),
+            input_start_ts_event: "100".into(),
+            input_end_ts_event: "100".into(),
+            snapshot_generated_at: "1780000000000000000".into(),
+            input_bar_count: 1,
+            sbar_sequence_fingerprint: "a".repeat(64),
+            config_fingerprint: "b".repeat(64),
+            effective_config: "{}".into(),
+            status: status.into(),
+            checkpoint_count: 0,
+            content_checksum: String::new(),
+        }
+    }
+
+    fn create_manifest_database(path: &Path, status: &str) {
+        let connection = Connection::open(path).unwrap();
+        connection.execute_batch(
+            "CREATE TABLE snapshot_manifest(singleton INTEGER PRIMARY KEY, payload TEXT NOT NULL);",
+        ).unwrap();
+        connection.execute(
+            "INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
+            [serde_json::to_string(&manifest(status)).unwrap()],
+        ).unwrap();
+    }
+
+    #[test]
+    fn missing_snapshot_directory_is_an_empty_discovery_result() {
+        let root = temp_root();
+        assert!(discover_snapshot_artifacts(&root).unwrap().is_empty());
+    }
+
+    #[test]
+    fn complete_temporary_artifact_is_classified_but_never_promoted() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join(".snapshot-test.snapshot.tmp");
+        create_manifest_database(&path, STATUS_COMPLETE);
+
+        let artifacts = discover_snapshot_artifacts(&root).unwrap();
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].kind, SnapshotArtifactKind::CompleteButUnpublished);
+        assert_eq!(artifacts[0].snapshot_id.as_deref(), Some("snapshot-test"));
+        assert!(!root.join("snapshot-test.snapshot.sqlite").exists());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn recording_temporary_artifact_is_not_a_published_snapshot() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join(".snapshot-test.snapshot.tmp");
+        create_manifest_database(&path, STATUS_RECORDING);
+
+        let artifacts = discover_snapshot_artifacts(&root).unwrap();
+        assert_eq!(artifacts[0].kind, SnapshotArtifactKind::RecordingTemporary);
+        assert!(read_complete_snapshot(&path).unwrap_err().contains("Only published"));
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn malformed_published_artifact_is_reported_instead_of_ignored() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("bad.snapshot.sqlite");
+        let connection = Connection::open(&path).unwrap();
+        connection.execute_batch("CREATE TABLE unrelated(value TEXT);").unwrap();
+        drop(connection);
+
+        let artifacts = discover_snapshot_artifacts(&root).unwrap();
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].kind, SnapshotArtifactKind::InvalidPublished);
+        assert!(artifacts[0].diagnostic.is_some());
+
+        let _ = fs::remove_dir_all(root);
+    }
+}
