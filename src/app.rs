@@ -8,7 +8,8 @@ use std::{
     },
 };
 
-use nautilus_model::data::Bar;
+use nautilus_model::{data::Bar, identifiers::InstrumentId, instruments::InstrumentAny};
+use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 use serde::Serialize;
 
 use crate::{
@@ -16,6 +17,12 @@ use crate::{
     dataset::TestDataset,
     discovery::{CatalogDatasetEntry, configured_catalog_root, discover_catalog_datasets},
     ipc::{IpcError, IpcErrorCode},
+    replay::LoadedInput,
+    run::RunState,
+    manager::ReplayManager,
+    snapshot_store::{discover_snapshot_artifacts, SnapshotArtifact},
+    snapshot_writer::SnapshotWriter,
+    worker::ReplayWorkerConfig,
 };
 
 /// Tauri-managed application state. Nautilus runtime objects are deliberately
@@ -28,7 +35,9 @@ pub struct AppState {
 
 struct AppStateInner {
     catalog_path: PathBuf,
+    snapshot_root: PathBuf,
     datasets: Mutex<AppDatasets>,
+    replay_manager: Mutex<ReplayManager>,
     mutation_active: AtomicBool,
 }
 
@@ -54,11 +63,13 @@ impl AppState {
     pub fn new(catalog_path: PathBuf) -> Self {
         Self {
             inner: Arc::new(AppStateInner {
+                snapshot_root: configured_snapshot_root(),
                 catalog_path,
                 datasets: Mutex::new(AppDatasets {
                     current_origin: None,
                     current_test: None,
                 }),
+                replay_manager: Mutex::new(ReplayManager::new()),
                 mutation_active: AtomicBool::new(false),
             }),
         }
@@ -222,9 +233,106 @@ impl AppState {
     }
 
     #[must_use]
+    pub fn snapshot_root(&self) -> &Path {
+        &self.inner.snapshot_root
+    }
+
+    pub fn discover_snapshots(&self) -> Result<Vec<SnapshotArtifact>, IpcError> {
+        discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|error| {
+            IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery failed: {error}"))
+        })
+    }
+
+    fn prepare_run(&self) -> Result<(ReplayWorkerConfig, Box<dyn crate::worker::CheckpointSink>), IpcError> {
+        let test = {
+            let datasets = self.inner.datasets.lock().map_err(|_| {
+                IpcError::new(IpcErrorCode::Internal, "Application dataset state lock is poisoned")
+            })?;
+            datasets.current_test.as_ref().map(|record| record.dataset.clone()).ok_or_else(|| {
+                IpcError::new(IpcErrorCode::InvalidState, "Create a Test Dataset before starting a Run")
+            })?
+        };
+        let input = LoadedInput::from_test(&test).map_err(|error| {
+            IpcError::new(IpcErrorCode::InvalidArgument, format!("Replay input rejected: {error}"))
+        })?;
+        let instrument_filter = input.state_key.instrument_id.to_string();
+        let catalog = ParquetDataCatalog::new(&self.inner.catalog_path, None, None, None, None);
+        let instruments = catalog.query_instruments(Some(std::slice::from_ref(&instrument_filter)))
+            .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Load Replay instrument from Catalog: {error}")))?;
+        let instrument: InstrumentAny = instruments.into_iter()
+            .find(|instrument| instrument.id().to_string() == instrument_filter)
+            .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
+                format!("Catalog has no instrument metadata for {}", input.state_key.instrument_id)))?;
+        let run_id = uuid::Uuid::new_v4().to_string();
+        let writer = SnapshotWriter::new(&self.inner.snapshot_root, &input, &instrument.id().to_string())
+            .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Prepare Snapshot Writer: {error}")))?;
+        Ok((ReplayWorkerConfig { run_id, input, instrument }, Box::new(writer)))
+    }
+
+    pub fn start_run(&self) -> Result<RunState, IpcError> {
+        let (config, sink) = self.prepare_run()?;
+        self.with_replay_manager(|manager| manager.start(config, sink))
+    }
+
+    pub fn restart_run(&self) -> Result<RunState, IpcError> {
+        let (config, sink) = self.prepare_run()?;
+        self.with_replay_manager(|manager| manager.restart(config, sink))
+    }
+
+    pub fn replay_state(&self) -> Result<RunState, IpcError> {
+        self.with_replay_manager(ReplayManager::state)
+    }
+
+    pub fn replay_step(&self) -> Result<RunState, IpcError> {
+        self.with_replay_manager(ReplayManager::step)
+    }
+
+    pub fn replay_play(&self) -> Result<RunState, IpcError> {
+        self.with_replay_manager(ReplayManager::play)
+    }
+
+    pub fn replay_pause(&self) -> Result<RunState, IpcError> {
+        self.with_replay_manager(ReplayManager::pause)
+    }
+
+    pub fn replay_stop(&self) -> Result<RunState, IpcError> {
+        self.with_replay_manager(ReplayManager::stop)
+    }
+
+    pub fn replay_dispose(&self) -> Result<RunState, IpcError> {
+        self.with_replay_manager(ReplayManager::dispose)
+    }
+
+    fn with_replay_manager(
+        &self,
+        operation: impl FnOnce(&mut ReplayManager) -> Result<RunState, String>,
+    ) -> Result<RunState, IpcError> {
+        let mut manager = self.inner.replay_manager.lock().map_err(|_| {
+            IpcError::new(IpcErrorCode::Internal, "ReplayManager lock is poisoned")
+        })?;
+        operation(&mut manager).map_err(|error| {
+            IpcError::new(IpcErrorCode::InvalidState, error)
+        })
+    }
+
+    #[must_use]
     pub fn catalog_path(&self) -> &Path {
         &self.inner.catalog_path
     }
+}
+
+
+fn configured_snapshot_root() -> PathBuf {
+    if let Some(path) = std::env::var_os("CAPITUS_STRUXIS_DEBUGGER_SNAPSHOT_DIR") {
+        return PathBuf::from(path);
+    }
+    if let Some(path) = std::env::var_os("XDG_DATA_HOME") {
+        return PathBuf::from(path).join("capitus/struxis-debugger/snapshots");
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        return PathBuf::from(home).join(".local/share/capitus/struxis-debugger/snapshots");
+    }
+    std::env::temp_dir().join("capitus/struxis-debugger/snapshots")
 }
 
 struct MutationPermit<'a>(&'a AtomicBool);
