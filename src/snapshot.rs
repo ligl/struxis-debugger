@@ -712,17 +712,17 @@ mod tests {
 
     #[test]
     fn rejects_noncanonical_checkpoint_timestamps_and_state_ids() {
-        let mut records = records();
-        records[1].ts_event = "0200".into();
-        records[1].sbar_id = "0200".into();
-        let manifest = manifest(&records);
-        assert!(validate_snapshot_records(&manifest, &records, false)
+        let mut timestamp_records = records();
+        timestamp_records[1].ts_event = "0200".into();
+        timestamp_records[1].sbar_id = "0200".into();
+        let timestamp_manifest = manifest(&timestamp_records);
+        assert!(validate_snapshot_records(&timestamp_manifest, &timestamp_records, false)
             .unwrap_err().contains("canonical unsigned decimal encoding"));
 
-        let mut records = records();
-        records[0].state_data = r#"{"cbarCount":"00","cbars":[],"swingCount":"0","swings":[]}"#.into();
-        let manifest = manifest(&records);
-        assert!(validate_snapshot_records(&manifest, &records, false)
+        let mut state_records = records();
+        state_records[0].state_data = r#"{"cbarCount":"00","cbars":[],"swingCount":"0","swings":[]}"#.into();
+        let state_manifest = manifest(&state_records);
+        assert!(validate_snapshot_records(&state_manifest, &state_records, false)
             .unwrap_err().contains("canonical unsigned decimal encoding"));
     }
 
