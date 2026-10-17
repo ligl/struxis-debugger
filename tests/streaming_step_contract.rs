@@ -100,15 +100,51 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
             .zip(visible_bars.iter())
             .enumerate()
         {
-            assert_eq!(actual.id(), expected.id(), "Step {processed_count}, bar {bar_index}: SBarId");
-            assert_eq!(actual.bar_type, expected.bar_type, "Step {processed_count}, bar {bar_index}: BarType");
-            assert_eq!(actual.ts_event, expected.ts_event, "Step {processed_count}, bar {bar_index}: ts_event");
-            assert_eq!(actual.ts_init, expected.ts_init, "Step {processed_count}, bar {bar_index}: ts_init");
-            assert_eq!(actual.open, expected.open, "Step {processed_count}, bar {bar_index}: open");
-            assert_eq!(actual.high, expected.high, "Step {processed_count}, bar {bar_index}: high");
-            assert_eq!(actual.low, expected.low, "Step {processed_count}, bar {bar_index}: low");
-            assert_eq!(actual.close, expected.close, "Step {processed_count}, bar {bar_index}: close");
-            assert_eq!(actual.volume, expected.volume, "Step {processed_count}, bar {bar_index}: volume");
+            assert_eq!(
+                actual.id(),
+                expected.id(),
+                "Step {processed_count}, bar {bar_index}: SBarId"
+            );
+            assert_eq!(
+                actual.bar_type,
+                expected.bar_type,
+                "Step {processed_count}, bar {bar_index}: BarType"
+            );
+            assert_eq!(
+                actual.ts_event,
+                expected.ts_event,
+                "Step {processed_count}, bar {bar_index}: ts_event"
+            );
+            assert_eq!(
+                actual.ts_init,
+                expected.ts_init,
+                "Step {processed_count}, bar {bar_index}: ts_init"
+            );
+            assert_eq!(
+                actual.open,
+                expected.open,
+                "Step {processed_count}, bar {bar_index}: open"
+            );
+            assert_eq!(
+                actual.high,
+                expected.high,
+                "Step {processed_count}, bar {bar_index}: high"
+            );
+            assert_eq!(
+                actual.low,
+                expected.low,
+                "Step {processed_count}, bar {bar_index}: low"
+            );
+            assert_eq!(
+                actual.close,
+                expected.close,
+                "Step {processed_count}, bar {bar_index}: close"
+            );
+            assert_eq!(
+                actual.volume,
+                expected.volume,
+                "Step {processed_count}, bar {bar_index}: volume"
+            );
         }
 
         assert!(
