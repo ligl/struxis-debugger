@@ -3,7 +3,7 @@
 use tauri::State;
 
 use crate::{
-    app::{AppState, OriginDatasetDto},
+    app::{AppState, OriginDatasetDto, TestDatasetDto},
     discovery::CatalogDatasetEntry,
     ipc::{IpcError, IpcErrorCode},
 };
@@ -53,6 +53,40 @@ pub async fn get_current_origin(
             IpcError::new(
                 IpcErrorCode::Internal,
                 format!("Origin state worker failed: {error}"),
+            )
+        })?
+}
+
+#[tauri::command]
+pub async fn create_test_dataset(
+    start_sbar_id: String,
+    end_sbar_id: String,
+    state: State<'_, AppState>,
+) -> Result<TestDatasetDto, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        state.create_test_dataset(&start_sbar_id, &end_sbar_id)
+    })
+    .await
+    .map_err(|error| {
+        IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Test Dataset creation worker failed: {error}"),
+        )
+    })?
+}
+
+#[tauri::command]
+pub async fn get_current_test_dataset(
+    state: State<'_, AppState>,
+) -> Result<Option<TestDatasetDto>, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.current_test_dataset())
+        .await
+        .map_err(|error| {
+            IpcError::new(
+                IpcErrorCode::Internal,
+                format!("Test Dataset state worker failed: {error}"),
             )
         })?
 }
