@@ -24,6 +24,7 @@ nautilus-trading = { workspace = true }
 
 serde = { workspace = true }
 serde_json = { workspace = true }
+rusqlite = { version = "0.37.0", features = ["bundled"] }
 sha2 = { workspace = true }
 uuid = { workspace = true }
 anyhow = { workspace = true }
