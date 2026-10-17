@@ -50,66 +50,87 @@ pub struct SnapshotCheckpointRecord {
     pub diagnostics: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct SnapshotManifestChecksumView<'a> {
-    pub snapshot_id: &'a str,
-    pub run_id: &'a str,
-    pub state_key: &'a str,
-    pub instrument_id: &'a str,
-    pub bar_type: &'a str,
-    pub input_start_sbar_id: &'a str,
-    pub input_end_sbar_id: &'a str,
-    pub input_start_ts_event: &'a str,
-    pub input_end_ts_event: &'a str,
-    pub snapshot_generated_at: &'a str,
-    pub input_bar_count: usize,
-    pub sbar_sequence_fingerprint: &'a str,
-    pub config_fingerprint: &'a str,
-    pub effective_config: &'a str,
-    pub status: &'a str,
-    pub checkpoint_count: usize,
+#[derive(Debug, Clone, PartialEq, Serialize)]
+struct SnapshotManifestChecksumView {
+    snapshot_id: String,
+    run_id: String,
+    state_key: String,
+    instrument_id: String,
+    bar_type: String,
+    input_start_sbar_id: String,
+    input_end_sbar_id: String,
+    input_start_ts_event: String,
+    input_end_ts_event: String,
+    snapshot_generated_at: String,
+    input_bar_count: String,
+    sbar_sequence_fingerprint: String,
+    config_fingerprint: String,
+    effective_config: serde_json::Value,
+    status: String,
+    checkpoint_count: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct SnapshotChecksumPayload<'a> {
-    pub manifest: SnapshotManifestChecksumView<'a>,
-    pub checkpoints: &'a [SnapshotCheckpointRecord],
+struct SnapshotCheckpointChecksumView {
+    checkpoint_index: String,
+    sbar_id: String,
+    ts_event: String,
+    record_kind: String,
+    state_data: serde_json::Value,
+    diagnostics: serde_json::Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+struct SnapshotChecksumPayload {
+    manifest: SnapshotManifestChecksumView,
+    checkpoints: Vec<SnapshotCheckpointChecksumView>,
 }
 
 impl SnapshotManifest {
-    /// Checksum field is excluded; status remains covered, including Complete.
-    pub fn checksum_payload<'a>(
-        &'a self,
-        checkpoints: &'a [SnapshotCheckpointRecord],
-    ) -> SnapshotChecksumPayload<'a> {
-        SnapshotChecksumPayload {
-            manifest: SnapshotManifestChecksumView {
-                snapshot_id: &self.snapshot_id,
-                run_id: &self.run_id,
-                state_key: &self.state_key,
-                instrument_id: &self.instrument_id,
-                bar_type: &self.bar_type,
-                input_start_sbar_id: &self.input_start_sbar_id,
-                input_end_sbar_id: &self.input_end_sbar_id,
-                input_start_ts_event: &self.input_start_ts_event,
-                input_end_ts_event: &self.input_end_ts_event,
-                snapshot_generated_at: &self.snapshot_generated_at,
-                input_bar_count: self.input_bar_count,
-                sbar_sequence_fingerprint: &self.sbar_sequence_fingerprint,
-                config_fingerprint: &self.config_fingerprint,
-                effective_config: &self.effective_config,
-                status: &self.status,
-                checkpoint_count: self.checkpoint_count,
-            },
-            checkpoints,
-        }
-    }
-
+    /// Canonical checksum payload. Field order follows snapshot-compare.md;
+    /// integer values are encoded as decimal strings and embedded JSON remains
+    /// JSON values rather than being double-encoded strings.
     pub fn calculate_content_checksum(
         &self,
         checkpoints: &[SnapshotCheckpointRecord],
     ) -> Result<String, String> {
-        let encoded = serde_json::to_vec(&self.checksum_payload(checkpoints))
+        let effective_config: serde_json::Value = serde_json::from_str(&self.effective_config)
+            .map_err(|error| format!("Invalid effective_config JSON for checksum: {error}"))?;
+        let mut canonical_checkpoints = Vec::with_capacity(checkpoints.len());
+        for checkpoint in checkpoints {
+            canonical_checkpoints.push(SnapshotCheckpointChecksumView {
+                checkpoint_index: checkpoint.checkpoint_index.to_string(),
+                sbar_id: checkpoint.sbar_id.clone(),
+                ts_event: checkpoint.ts_event.clone(),
+                record_kind: checkpoint.record_kind.clone(),
+                state_data: serde_json::from_str(&checkpoint.state_data)
+                    .map_err(|error| format!("Invalid state_data JSON for checksum: {error}"))?,
+                diagnostics: serde_json::from_str(&checkpoint.diagnostics)
+                    .map_err(|error| format!("Invalid diagnostics JSON for checksum: {error}"))?,
+            });
+        }
+        let payload = SnapshotChecksumPayload {
+            manifest: SnapshotManifestChecksumView {
+                snapshot_id: self.snapshot_id.clone(),
+                run_id: self.run_id.clone(),
+                state_key: self.state_key.clone(),
+                instrument_id: self.instrument_id.clone(),
+                bar_type: self.bar_type.clone(),
+                input_start_sbar_id: self.input_start_sbar_id.clone(),
+                input_end_sbar_id: self.input_end_sbar_id.clone(),
+                input_start_ts_event: self.input_start_ts_event.clone(),
+                input_end_ts_event: self.input_end_ts_event.clone(),
+                snapshot_generated_at: self.snapshot_generated_at.clone(),
+                input_bar_count: self.input_bar_count.to_string(),
+                sbar_sequence_fingerprint: self.sbar_sequence_fingerprint.clone(),
+                config_fingerprint: self.config_fingerprint.clone(),
+                effective_config,
+                status: self.status.clone(),
+                checkpoint_count: self.checkpoint_count.to_string(),
+            },
+            checkpoints: canonical_checkpoints,
+        };
+        let encoded = serde_json::to_vec(&payload)
             .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
         let mut input = Vec::with_capacity(SNAPSHOT_HASH_PREFIX.len() + encoded.len());
         input.extend_from_slice(SNAPSHOT_HASH_PREFIX);
@@ -141,6 +162,22 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
     output
 }
 
+/// Convert integer JSON numbers to canonical decimal strings recursively.
+fn normalize_integer_json_values(value: serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Array(values) => serde_json::Value::Array(
+            values.into_iter().map(normalize_integer_json_values).collect(),
+        ),
+        serde_json::Value::Object(values) => serde_json::Value::Object(
+            values.into_iter().map(|(key, value)| (key, normalize_integer_json_values(value))).collect(),
+        ),
+        serde_json::Value::Number(number) if number.is_i64() || number.is_u64() => {
+            serde_json::Value::String(number.to_string())
+        }
+        other => other,
+    }
+}
+
 /// Validates persisted relationships without depending on a storage backend.
 /// Delta dependency reconstruction remains the responsibility of the reader.
 pub fn validate_snapshot_records(
@@ -166,14 +203,15 @@ pub fn validate_snapshot_records(
 
     let config: serde_json::Value = serde_json::from_str(&manifest.effective_config)
         .map_err(|error| format!("Invalid effective_config JSON: {error}"))?;
+    let config = normalize_integer_json_values(config);
     let canonical_config = serde_json::to_string(&config)
         .map_err(|error| format!("Cannot canonicalize effective_config: {error}"))?;
     if canonical_config != manifest.effective_config {
-        return Err("effective_config is not canonical JSON".to_owned());
+        return Err("effective_config is not canonical JSON (integer values must be decimal strings)".to_owned());
     }
-    let mut config_hash_input = Vec::with_capacity(CONFIG_HASH_PREFIX.len() + manifest.effective_config.len());
+    let mut config_hash_input = Vec::with_capacity(CONFIG_HASH_PREFIX.len() + canonical_config.len());
     config_hash_input.extend_from_slice(CONFIG_HASH_PREFIX);
-    config_hash_input.extend_from_slice(manifest.effective_config.as_bytes());
+    config_hash_input.extend_from_slice(canonical_config.as_bytes());
     if sha256_hex(&config_hash_input) != manifest.config_fingerprint {
         return Err("config_fingerprint does not match effective_config".to_owned());
     }
