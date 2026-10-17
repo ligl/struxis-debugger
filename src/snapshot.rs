@@ -112,6 +112,19 @@ impl SnapshotManifest {
     }
 }
 
+/// Validates the record relationships and the checksum of a published Snapshot.
+pub fn verify_complete_snapshot(
+    manifest: &SnapshotManifest,
+    checkpoints: &[SnapshotCheckpointRecord],
+) -> Result<(), String> {
+    validate_snapshot_records(manifest, checkpoints, true)?;
+    let expected = manifest.calculate_content_checksum(checkpoints)?;
+    if expected != manifest.content_checksum {
+        return Err("Snapshot content_checksum mismatch".to_owned());
+    }
+    Ok(())
+}
+
 pub fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     let mut output = String::with_capacity(64);
@@ -312,6 +325,17 @@ mod tests {
         let mut manifest = manifest(&records);
         manifest.effective_config = r#"{ "enableStructure": true }"#.into();
         assert!(validate_snapshot_records(&manifest, &records, true).unwrap_err().contains("canonical JSON"));
+    }
+
+    #[test]
+    fn complete_snapshot_verification_detects_tampering() {
+        let records = records();
+        let mut manifest = manifest(&records);
+        manifest.content_checksum = manifest.calculate_content_checksum(&records).unwrap();
+        assert!(verify_complete_snapshot(&manifest, &records).is_ok());
+
+        manifest.status = STATUS_FAILED.into();
+        assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("not Complete"));
     }
 
     #[test]
