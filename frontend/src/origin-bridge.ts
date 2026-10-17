@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CatalogDatasetEntry, OriginDatasetDto } from "./origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "./origin-types";
 
 export function listCatalogDatasets(): Promise<CatalogDatasetEntry[]> {
   return invoke<CatalogDatasetEntry[]>("list_catalog_datasets");
@@ -17,6 +17,20 @@ export function loadOrigin(
 
 export function getCurrentOrigin(): Promise<OriginDatasetDto | null> {
   return invoke<OriginDatasetDto | null>("get_current_origin");
+}
+
+export function createTestDataset(
+  startSbarId: string,
+  endSbarId: string,
+): Promise<TestDatasetDto> {
+  return invoke<TestDatasetDto>("create_test_dataset", {
+    startSbarId,
+    endSbarId,
+  });
+}
+
+export function getCurrentTestDataset(): Promise<TestDatasetDto | null> {
+  return invoke<TestDatasetDto | null>("get_current_test_dataset");
 }
 
 export function describeIpcError(error: unknown): string {
