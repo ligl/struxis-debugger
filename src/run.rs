@@ -99,13 +99,17 @@ impl RunState {
         Ok(())
     }
 
-    /// The caller must first stop and join the worker; Running is rejected.
+    /// Records intentional termination only for a Run without a terminal
+    /// processing outcome. Completed and Failed remain durable outcomes after
+    /// their runtime resources are released. The caller must first stop and
+    /// join the worker; Running is rejected.
     pub fn dispose(&mut self) -> Result<(), String> {
         match self.status {
-            RunStatus::Ready | RunStatus::Paused | RunStatus::Completed | RunStatus::Failed => {
+            RunStatus::Ready | RunStatus::Paused => {
                 self.status = RunStatus::Disposed;
                 Ok(())
             }
+            RunStatus::Completed | RunStatus::Failed => Ok(()),
             status => Err(self.invalid_transition("Dispose", status)),
         }
     }
@@ -167,6 +171,29 @@ mod tests {
         run.pause().unwrap();
         run.dispose().unwrap();
         assert_eq!(run.status, RunStatus::Disposed);
+    }
+
+    #[test]
+    fn dispose_preserves_completed_processing_outcome() {
+        let mut run = ready(1);
+        run.confirm_checkpoint("100".into()).unwrap();
+        assert_eq!(run.status, RunStatus::Completed);
+
+        run.dispose().unwrap();
+
+        assert_eq!(run.status, RunStatus::Completed);
+        assert_eq!(run.processed_count, 1);
+    }
+
+    #[test]
+    fn dispose_preserves_failed_processing_outcome() {
+        let mut run = ready(2);
+        run.fail("checkpoint sink failed".into()).unwrap();
+
+        run.dispose().unwrap();
+
+        assert_eq!(run.status, RunStatus::Failed);
+        assert_eq!(run.failure_diagnostic.as_deref(), Some("checkpoint sink failed"));
     }
 
     #[test]
