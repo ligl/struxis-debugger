@@ -8,7 +8,10 @@ use std::{
     },
 };
 
-use nautilus_model::{data::Bar, instruments::InstrumentAny};
+use nautilus_model::{
+    data::Bar,
+    instruments::{Instrument, InstrumentAny},
+};
 use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 use serde::Serialize;
 
