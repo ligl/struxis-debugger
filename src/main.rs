@@ -12,6 +12,8 @@ fn main() {
             commands::list_catalog_datasets,
             commands::load_origin,
             commands::get_current_origin,
+            commands::create_test_dataset,
+            commands::get_current_test_dataset,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Struxis Debugger");
