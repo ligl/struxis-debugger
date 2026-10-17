@@ -47,7 +47,7 @@ pub struct SnapshotCheckpointRecord {
     pub diagnostics: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SnapshotManifestChecksumView<'a> {
     pub snapshot_id: &'a str,
     pub run_id: &'a str,
@@ -67,7 +67,7 @@ pub struct SnapshotManifestChecksumView<'a> {
     pub checkpoint_count: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SnapshotChecksumPayload<'a> {
     pub manifest: SnapshotManifestChecksumView<'a>,
     pub checkpoints: &'a [SnapshotCheckpointRecord],
