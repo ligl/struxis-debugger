@@ -15,7 +15,7 @@ use capitus_struxis::{
     },
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplayCheckpointProjection {
     pub state_key: String,
@@ -25,7 +25,7 @@ pub struct ReplayCheckpointProjection {
     pub structure: Option<StructureCheckpoint>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SBarCheckpoint {
     pub sbar_id: String,
@@ -46,7 +46,7 @@ pub struct SBarCheckpoint {
     pub direction: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StructureCheckpoint {
     pub cbar_count: usize,
@@ -55,7 +55,7 @@ pub struct StructureCheckpoint {
     pub swings: Vec<SwingCheckpoint>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CBarCheckpoint {
     pub cbar_id: String,
@@ -68,7 +68,7 @@ pub struct CBarCheckpoint {
     pub created_at: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SwingCheckpoint {
     pub swing_id: String,
@@ -167,18 +167,3 @@ fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
     }).collect()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::project_sbars;
-    use capitus_struxis::sbar::SBarSeries;
-    use nautilus_common::cache::Cache;
-
-    // SBarSeries requires a Cache-backed view. Full end-to-end projection
-    // behavior is also asserted by streaming_step_contract integration tests.
-    #[test]
-    fn empty_unbound_series_is_not_queryable() {
-        let cache = std::rc::Rc::new(std::cell::RefCell::new(Cache::default()));
-        let series = SBarSeries::new(cache);
-        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| project_sbars(&series))).is_err());
-    }
-}
