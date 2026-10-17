@@ -286,6 +286,33 @@ mod tests {
     }
 
     #[test]
+    fn accepts_single_bar_and_full_origin_ranges() {
+        let origin = origin(vec![
+            bar(100, 100, "10.00"),
+            bar(200, 200, "10.50"),
+            bar(300, 300, "10.75"),
+        ]);
+
+        let single = TestDataset::create(&origin, "200", "200").expect("single-bar range");
+        assert_eq!(single.bars().len(), 1);
+        assert_eq!(single.start_sbar_id(), "200");
+        assert_eq!(single.end_sbar_id(), "200");
+
+        let full = TestDataset::create(&origin, "100", "300").expect("full Origin range");
+        assert_eq!(full.bars().len(), origin.bars.len());
+        assert_eq!(full.start_sbar_id(), "100");
+        assert_eq!(full.end_sbar_id(), "300");
+    }
+
+    #[test]
+    fn rejects_origin_with_a_mismatched_sequence_fingerprint() {
+        let mut origin = origin(vec![bar(100, 100, "10.00"), bar(200, 200, "10.50")]);
+        origin.sbar_sequence_fingerprint = "00".to_owned();
+
+        assert!(TestDataset::create(&origin, "100", "200").is_err());
+    }
+
+    #[test]
     fn identical_ranges_have_distinct_ids_and_identical_fingerprints() {
         let origin = origin(vec![bar(100, 100, "10.00"), bar(200, 200, "10.50")]);
         let first = TestDataset::create(&origin, "100", "200").expect("first Test");
