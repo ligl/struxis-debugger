@@ -252,3 +252,110 @@ fn read_database(path: &Path) -> Result<(SnapshotManifest, Vec<SnapshotCheckpoin
     }
     Ok((manifest, records))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        catalog::OriginLoad,
+        dataset::{sequence_fingerprint, TestDataset},
+    };
+    use capitus_struxis::StruxisStateKey;
+    use nautilus_model::{
+        data::{Bar, BarType},
+        types::{Price, Quantity},
+    };
+    use std::{str::FromStr, time::{SystemTime, UNIX_EPOCH}};
+
+    fn input() -> LoadedInput {
+        let bar_type = BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").unwrap();
+        let bars = vec![
+            Bar::new(bar_type, Price::from("10.00"), Price::from("12.00"),
+                Price::from("9.00"), Price::from("11.00"), Quantity::from("100"),
+                100_u64.into(), 100_u64.into()),
+            Bar::new(bar_type, Price::from("11.00"), Price::from("13.00"),
+                Price::from("10.00"), Price::from("12.00"), Quantity::from("100"),
+                200_u64.into(), 200_u64.into()),
+        ];
+        let state_key = StruxisStateKey::from_bar_type(&bar_type);
+        let fingerprint = sequence_fingerprint(state_key, &bars).unwrap();
+        let origin = OriginLoad {
+            origin_dataset_id: uuid::Uuid::new_v4(),
+            state_key,
+            sbar_sequence_fingerprint: fingerprint,
+            bar_type: bar_type.to_string(),
+            bars,
+        };
+        LoadedInput::from_test(&TestDataset::create(&origin, "100", "200").unwrap()).unwrap()
+    }
+
+    fn config() -> EffectiveStruxisConfig {
+        EffectiveStruxisConfig {
+            enable_structure: true,
+            structure_cbars_capacity: "10000".into(),
+            structure_swings_capacity: "2000".into(),
+            structure_trends_capacity: "666".into(),
+        }
+    }
+
+    #[test]
+    fn commits_checkpoints_and_publishes_only_a_verified_complete_snapshot() {
+        let root = std::env::temp_dir().join(format!(
+            "capitus-snapshot-writer-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let input = input();
+        let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
+        let mut state = RunState::ready("writer-test".into(), input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(), input.bars.len()).unwrap();
+        writer.initialize(&state, &config()).unwrap();
+
+        for (index, sbar_id) in ["100", "200"].iter().enumerate() {
+            let projection = ReplayCheckpointProjection {
+                state_key: format!("{:?}", input.state_key),
+                last_ts_event: Some((*sbar_id).into()),
+                sbar_count: index + 1,
+                sbars: vec![],
+                structure: None,
+            };
+            writer.commit_checkpoint(index, sbar_id, &projection).unwrap();
+            state.confirm_checkpoint((*sbar_id).into()).unwrap();
+        }
+        assert_eq!(state.status, RunStatus::Completed);
+        writer.finalize(&state).unwrap();
+
+        assert!(writer.published_path().is_file());
+        let (manifest, records) = read_database(writer.published_path()).unwrap();
+        verify_complete_snapshot(&manifest, &records).unwrap();
+        assert_eq!(manifest.status, STATUS_COMPLETE);
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].diagnostics, "[]");
+        drop(writer);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn checkpoint_commit_rejects_out_of_order_index_without_advancing_writer() {
+        let root = std::env::temp_dir().join(format!(
+            "capitus-snapshot-writer-order-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let input = input();
+        let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
+        let state = RunState::ready("writer-order".into(), input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(), input.bars.len()).unwrap();
+        writer.initialize(&state, &config()).unwrap();
+        let projection = ReplayCheckpointProjection {
+            state_key: format!("{:?}", input.state_key),
+            last_ts_event: Some("100".into()),
+            sbar_count: 1,
+            sbars: vec![],
+            structure: None,
+        };
+        assert!(writer.commit_checkpoint(1, "100", &projection).unwrap_err()
+            .contains("Expected checkpoint index 0"));
+        assert!(writer.checkpoints.is_empty());
+        drop(writer);
+        let _ = fs::remove_dir_all(root);
+    }
+}
