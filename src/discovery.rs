@@ -14,6 +14,7 @@ use anyhow::{Context, Result, bail};
 use nautilus_model::{
     data::{BarType, NautilusDataType},
     identifiers::InstrumentId,
+    instruments::Instrument,
 };
 use nautilus_persistence::{
     backend::parquet::catalog::ParquetDataCatalog,
@@ -73,7 +74,8 @@ pub fn discover_catalog_datasets(catalog_path: &Path) -> Result<Vec<CatalogDatas
         let Some(segment) = parent.file_name().and_then(|name| name.to_str()) else {
             continue;
         };
-        let decoded = decode_percent_encoded_segment(segment).unwrap_or_else(|_| segment.to_owned());
+        let decoded =
+            decode_percent_encoded_segment(segment).unwrap_or_else(|_| segment.to_owned());
         if !decoded.is_empty() {
             candidates.insert(decoded);
         }
@@ -90,13 +92,19 @@ fn resolve_candidate(catalog: &ParquetDataCatalog, candidate: String) -> Catalog
     let parsed = match BarType::from_str(&candidate) {
         Ok(bar_type) => bar_type,
         Err(error) => {
-            return unavailable(candidate, None, None, format!("Catalog BarType metadata is invalid: {error}"));
+            return unavailable(
+                candidate,
+                None,
+                None,
+                format!("Catalog BarType metadata is invalid: {error}"),
+            );
         }
     };
 
     let instrument_id: InstrumentId = parsed.instrument_id();
     let instrument_filter = instrument_id.to_string();
-    let instruments = match catalog.query_instruments(Some(std::slice::from_ref(&instrument_filter))) {
+    let instruments = match catalog.query_instruments(Some(std::slice::from_ref(&instrument_filter)))
+    {
         Ok(instruments) => instruments,
         Err(error) => {
             return unavailable(
@@ -108,7 +116,10 @@ fn resolve_candidate(catalog: &ParquetDataCatalog, candidate: String) -> Catalog
         }
     };
 
-    if !instruments.iter().any(|instrument| instrument.id() == instrument_id) {
+    if !instruments
+        .iter()
+        .any(|instrument| instrument.id() == instrument_id)
+    {
         return unavailable(
             candidate,
             Some(parsed.to_string()),
@@ -143,7 +154,7 @@ fn unavailable(
     }
 }
 
-/// Decodes percent escapes in one Catalog path segment without treating 
+/// Decodes percent escapes in one Catalog path segment without treating `+`
 /// as a space. Catalog identifiers are UTF-8 domain strings, not form data.
 fn decode_percent_encoded_segment(segment: &str) -> Result<String> {
     let bytes = segment.as_bytes();
