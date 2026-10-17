@@ -104,6 +104,76 @@ describe("Origin Load workbench", () => {
     expect(wrapper.text()).toContain("Oldest-first SBar sample");
   });
 
+  it("groups datasets by Instrument and keeps unresolved entries visible but unloadable", async () => {
+    const dailyDataset: CatalogDatasetEntry = {
+      ...dataset,
+      id: "BTCUSDT-PERP.BINANCE-1-DAY-LAST-EXTERNAL",
+      barType: "BTCUSDT-PERP.BINANCE-1-DAY-LAST-EXTERNAL",
+      timeframe: "1d",
+    };
+    const otherInstrumentDataset: CatalogDatasetEntry = {
+      ...dataset,
+      id: "ETHUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL",
+      barType: "ETHUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL",
+      instrumentId: "ETHUSDT-PERP.BINANCE",
+    };
+    const unresolvedDataset: CatalogDatasetEntry = {
+      id: "UNRESOLVED-BAR-STREAM",
+      barType: null,
+      instrumentId: null,
+      timeframe: null,
+      available: false,
+      diagnostic: "Instrument metadata is missing",
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") {
+        return Promise.resolve([
+          dataset,
+          dailyDataset,
+          otherInstrumentDataset,
+          unresolvedDataset,
+        ]);
+      }
+      if (command === "get_current_origin") return Promise.resolve(null);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.findAll(".instrument-group-row")).toHaveLength(3));
+    expect(wrapper.text()).toContain("BTCUSDT-PERP.BINANCE");
+    expect(wrapper.text()).toContain("2 DATASETS");
+    expect(wrapper.text()).toContain("ETHUSDT-PERP.BINANCE");
+    expect(wrapper.text()).toContain("Unresolved / Unavailable");
+    expect(wrapper.text()).toContain("Instrument metadata is missing");
+
+    const btcGroup = wrapper
+      .findAll(".instrument-group-row")
+      .find((row) => row.text().includes("BTCUSDT-PERP.BINANCE"))!;
+    await btcGroup.trigger("click");
+    expect(
+      wrapper.findAll(".dataset-row").some((row) =>
+        row.text().includes(dataset.id),
+      ),
+    ).toBe(false);
+    expect(
+      invokeMock.mock.calls.some(([command]) => command === "load_origin"),
+    ).toBe(false);
+
+    const reopenedBtcGroup = wrapper
+      .findAll(".instrument-group-row")
+      .find((row) => row.text().includes("BTCUSDT-PERP.BINANCE"))!;
+    await reopenedBtcGroup.trigger("click");
+    const unresolvedRow = wrapper
+      .findAll(".dataset-row")
+      .find((row) => row.text().includes(unresolvedDataset.id));
+    expect(unresolvedRow).toBeDefined();
+    await unresolvedRow!.trigger("click");
+    expect((wrapper.get(".primary-button").element as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      invokeMock.mock.calls.some(([command]) => command === "load_origin"),
+    ).toBe(false);
+  });
+
   it("retains the previously published Origin when a replacement load fails", async () => {
     const previous = makeOrigin("origin-existing");
     invokeMock.mockImplementation((command) => {
