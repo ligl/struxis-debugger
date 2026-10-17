@@ -7,7 +7,7 @@
 use std::str::FromStr;
 
 use capitus_strategy::StruxisDemo;
-use capitus_struxis::{NautilusRuntime, Struxis, StruxisConfig, StruxisStateKey};
+use capitus_struxis::{sbar::SBar, NautilusRuntime, Struxis, StruxisConfig, StruxisStateKey};
 use nautilus_backtest::{
     config::{BacktestEngineConfig, SimulatedVenueConfig},
     engine::BacktestEngine,
