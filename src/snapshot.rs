@@ -350,6 +350,11 @@ pub fn validate_snapshot_records(
         ("state_key", manifest.state_key.as_str()),
         ("instrument_id", manifest.instrument_id.as_str()),
         ("bar_type", manifest.bar_type.as_str()),
+        ("input_start_sbar_id", manifest.input_start_sbar_id.as_str()),
+        ("input_end_sbar_id", manifest.input_end_sbar_id.as_str()),
+        ("input_start_ts_event", manifest.input_start_ts_event.as_str()),
+        ("input_end_ts_event", manifest.input_end_ts_event.as_str()),
+        ("snapshot_generated_at", manifest.snapshot_generated_at.as_str()),
         ("sbar_sequence_fingerprint", manifest.sbar_sequence_fingerprint.as_str()),
         ("config_fingerprint", manifest.config_fingerprint.as_str()),
         ("effective_config", manifest.effective_config.as_str()),
@@ -358,6 +363,13 @@ pub fn validate_snapshot_records(
         if value.trim().is_empty() {
             return Err(format!("Snapshot Manifest field {field} is required"));
         }
+    }
+
+    if !matches!(
+        manifest.status.as_str(),
+        STATUS_RECORDING | STATUS_FINALIZING | STATUS_COMPLETE | STATUS_FAILED
+    ) {
+        return Err(format!("Unsupported Snapshot status {}", manifest.status));
     }
 
     let config: serde_json::Value = serde_json::from_str(&manifest.effective_config)
@@ -620,6 +632,20 @@ mod tests {
         let records = records();
         let manifest = manifest(&records);
         assert!(validate_snapshot_records(&manifest, &records, true).is_ok());
+    }
+
+    #[test]
+    fn rejects_missing_manifest_metadata_and_unknown_status() {
+        let records = records();
+        let mut missing_time = manifest(&records);
+        missing_time.snapshot_generated_at.clear();
+        assert!(validate_snapshot_records(&missing_time, &records, false)
+            .unwrap_err().contains("snapshot_generated_at is required"));
+
+        let mut unknown_status = manifest(&records);
+        unknown_status.status = "Recovered".into();
+        assert!(validate_snapshot_records(&unknown_status, &records, false)
+            .unwrap_err().contains("Unsupported Snapshot status"));
     }
 
     #[test]
