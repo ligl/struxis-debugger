@@ -1,12 +1,29 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import {
+  createTestDataset as createTestDatasetIpc,
   describeIpcError,
+  disposeRun,
   getCurrentOrigin,
+  getCurrentTestDataset,
+  getRunState,
   listCatalogDatasets,
+  listSnapshots,
   loadOrigin,
+  pauseRun,
+  playRun,
+  restartRun,
+  startRun,
+  stepRun,
+  stopRun,
 } from "./origin-bridge";
-import type { CatalogDatasetEntry, OriginDatasetDto } from "./origin-types";
+import type {
+  CatalogDatasetEntry,
+  OriginDatasetDto,
+  RunStateDto,
+  SnapshotArtifactDto,
+  TestDatasetDto,
+} from "./origin-types";
 
 type LoadStatus = "idle" | "loading" | "loaded" | "failed";
 
@@ -19,6 +36,33 @@ const loadError = ref("");
 const discoveryError = ref("");
 const origin = ref<OriginDatasetDto | null>(null);
 const refreshing = ref(false);
+
+const testDataset = ref<TestDatasetDto | null>(null);
+const startSbarId = ref("");
+const endSbarId = ref("");
+const testLoading = ref(false);
+const testError = ref("");
+const testStatus = ref("");
+
+const runState = ref<RunStateDto | null>(null);
+const runBusy = ref(false);
+const runError = ref("");
+const runStatusMessage = ref("");
+
+const snapshots = ref<SnapshotArtifactDto[]>([]);
+const snapshotsLoading = ref(false);
+const snapshotsError = ref("");
+
+const canMutateTest = computed(
+  () => !runState.value || runState.value.status === "disposed",
+);
+const canStartRun = computed(
+  () => Boolean(testDataset.value) && !runState.value && !runBusy.value,
+);
+const canRestartRun = computed(
+  () => Boolean(testDataset.value) && Boolean(runState.value) &&
+    runState.value?.status !== "running" && !runBusy.value,
+);
 
 interface InstrumentGroup {
   key: string;
@@ -99,6 +143,10 @@ async function startLoad(): Promise<void> {
   try {
     origin.value = await loadOrigin(selected.id, enableStructure.value);
     loadStatus.value = "loaded";
+    testDataset.value = null;
+    startSbarId.value = origin.value.firstSbarId;
+    endSbarId.value = origin.value.lastSbarId;
+    await refreshCurrentTestDataset();
   } catch (error) {
     // Keep the previous Origin in place; only this attempt changes to Failed.
     loadStatus.value = "failed";
@@ -108,12 +156,130 @@ async function startLoad(): Promise<void> {
   }
 }
 
-function formatTimestamp(value: string): string {
+async function refreshCurrentTestDataset(): Promise<void> {
+  testError.value = "";
+  try {
+    testDataset.value = await getCurrentTestDataset();
+    if (testDataset.value) {
+      startSbarId.value = testDataset.value.startSbarId;
+      endSbarId.value = testDataset.value.endSbarId;
+    } else if (origin.value) {
+      startSbarId.value = origin.value.firstSbarId;
+      endSbarId.value = origin.value.lastSbarId;
+    } else {
+      startSbarId.value = "";
+      endSbarId.value = "";
+    }
+  } catch (error) {
+    testError.value = describeIpcError(error);
+  }
+}
+
+async function createTestDataset(): Promise<void> {
+  if (testLoading.value || !origin.value || !canMutateTest.value) return;
+  testLoading.value = true;
+  testError.value = "";
+  testStatus.value = "";
+  try {
+    const created = await createTestDatasetIpc(startSbarId.value.trim(), endSbarId.value.trim());
+    testDataset.value = created;
+    testStatus.value = "Test Dataset created from the backend-validated SBar interval.";
+  } catch (error) {
+    testError.value = describeIpcError(error);
+  } finally {
+    testLoading.value = false;
+  }
+}
+
+async function refreshRunState(): Promise<void> {
+  if (runBusy.value) return;
+  runBusy.value = true;
+  runError.value = "";
+  try {
+    runState.value = await getRunState();
+    runStatusMessage.value = "Run state refreshed from the backend.";
+  } catch (error) {
+    runError.value = describeIpcError(error);
+  } finally {
+    runBusy.value = false;
+  }
+}
+
+type RunCommand = "start" | "restart" | "step" | "play" | "pause" | "stop" | "dispose";
+
+async function executeRunCommand(command: RunCommand): Promise<void> {
+  if (runBusy.value) return;
+  runBusy.value = true;
+  runError.value = "";
+  runStatusMessage.value = "";
+  try {
+    let next: RunStateDto;
+    switch (command) {
+      case "start":
+        next = await startRun();
+        break;
+      case "restart":
+        next = await restartRun();
+        break;
+      case "step":
+        next = await stepRun();
+        break;
+      case "play":
+        next = await playRun();
+        break;
+      case "pause":
+        next = await pauseRun();
+        break;
+      case "stop":
+        next = await stopRun();
+        break;
+      case "dispose":
+        next = await disposeRun();
+        break;
+    }
+    runState.value = next;
+    runStatusMessage.value = `Backend confirmed Run status: ${next.status}.`;
+    await refreshSnapshots();
+  } catch (error) {
+    runError.value = describeIpcError(error);
+  } finally {
+    runBusy.value = false;
+  }
+}
+
+async function refreshSnapshots(): Promise<void> {
+  if (snapshotsLoading.value) return;
+  snapshotsLoading.value = true;
+  snapshotsError.value = "";
+  try {
+    snapshots.value = await listSnapshots();
+  } catch (error) {
+    snapshotsError.value = describeIpcError(error);
+  } finally {
+    snapshotsLoading.value = false;
+  }
+}
+
+function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
+  const labels: Record<SnapshotArtifactDto["kind"], string> = {
+    complete: "COMPLETE / VERIFIED",
+    invalidPublished: "INVALID PUBLISHED",
+    recordingTemporary: "RECORDING TEMP",
+    finalizingTemporary: "FINALIZING TEMP",
+    failedTemporary: "FAILED TEMP",
+    completeButUnpublished: "COMPLETE / UNPUBLISHED",
+    unreadableTemporary: "UNREADABLE TEMP",
+  };
+  return labels[kind];
+}
+
+function formatTimestamp(value: string | null): string {
   return value || "—";
 }
 
 onMounted(async () => {
-  await Promise.all([refreshDatasets(), refreshCurrentOrigin()]);
+  await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
+  await refreshCurrentTestDataset();
 });
 </script>
 
@@ -306,6 +472,129 @@ onMounted(async () => {
           <p>Choose an available Catalog stream and load it. An Origin is published only after processing, complete SBar validation, and runtime cleanup succeed.</p>
         </div>
       </section>
+    </section>
+
+    <section class="operations-grid">
+      <section class="panel operations-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-index">03 / TEST INPUT</p>
+            <h2>Test Dataset</h2>
+          </div>
+          <span class="status-label" :class="{ loaded: testDataset }">
+            {{ testDataset ? "READY" : "NOT CREATED" }}
+          </span>
+        </div>
+
+        <template v-if="origin">
+          <p class="microcopy">Select an inclusive SBar ID interval from the validated Origin. IDs remain strings; the backend validates ordering and membership.</p>
+          <div class="form-grid">
+            <label class="form-field">
+              <span>START SBAR ID</span>
+              <input v-model="startSbarId" type="text" autocomplete="off" :disabled="testLoading || !canMutateTest" />
+            </label>
+            <label class="form-field">
+              <span>END SBAR ID</span>
+              <input v-model="endSbarId" type="text" autocomplete="off" :disabled="testLoading || !canMutateTest" />
+            </label>
+          </div>
+          <button
+            class="action-button action-primary"
+            :disabled="testLoading || !canMutateTest || !startSbarId.trim() || !endSbarId.trim()"
+            @click="createTestDataset"
+          >
+            {{ testLoading ? "VALIDATING INTERVAL…" : testDataset ? "REPLACE TEST DATASET" : "CREATE TEST DATASET" }}
+          </button>
+          <p v-if="!canMutateTest" class="microcopy">Dispose the current Run before replacing its Test Dataset.</p>
+        </template>
+        <p v-else class="empty-state">Load a validated Origin before selecting a Test interval.</p>
+
+        <p v-if="testError" class="error-message">{{ testError }}</p>
+        <p v-else-if="testStatus" class="success-message">{{ testStatus }}</p>
+
+        <div v-if="testDataset" class="detail-list">
+          <div><span>TEST DATASET ID</span><code>{{ testDataset.testDatasetId }}</code></div>
+          <div><span>ORIGIN ID</span><code>{{ testDataset.originDatasetId }}</code></div>
+          <div><span>VALIDATED RANGE</span><code>{{ testDataset.startSbarId }} → {{ testDataset.endSbarId }}</code></div>
+          <div><span>SBAR COUNT</span><strong>{{ testDataset.sbarCount.toLocaleString() }}</strong></div>
+          <div><span>SEQUENCE FINGERPRINT</span><code>{{ testDataset.sbarSequenceFingerprint }}</code></div>
+        </div>
+      </section>
+
+      <section class="panel operations-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-index">04 / REPLAY</p>
+            <h2>Run Control</h2>
+          </div>
+          <span class="status-label" :class="{ loaded: runState?.status === 'completed', failed: runState?.status === 'failed' }">
+            {{ runState ? runState.status.toUpperCase() : "NO RUN" }}
+          </span>
+        </div>
+
+        <p v-if="runError" class="error-message">{{ runError }}</p>
+        <p v-else-if="runStatusMessage" class="success-message">{{ runStatusMessage }}</p>
+        <p v-if="runState?.failureDiagnostic" class="error-message">{{ runState.failureDiagnostic }}</p>
+
+        <div class="action-grid">
+          <button class="action-button action-primary" :disabled="!canStartRun" @click="executeRunCommand('start')">START</button>
+          <button class="action-button" :disabled="!canRestartRun" @click="executeRunCommand('restart')">RESTART</button>
+          <button class="action-button" :disabled="!runState || !['ready', 'paused'].includes(runState.status) || runBusy" @click="executeRunCommand('step')">STEP</button>
+          <button class="action-button" :disabled="!runState || !['ready', 'paused'].includes(runState.status) || runBusy" @click="executeRunCommand('play')">PLAY</button>
+          <button class="action-button" :disabled="runState?.status !== 'running' || runBusy" @click="executeRunCommand('pause')">PAUSE</button>
+          <button class="action-button" :disabled="!runState || !['ready', 'running', 'paused'].includes(runState.status) || runBusy" @click="executeRunCommand('stop')">STOP</button>
+          <button class="action-button" :disabled="!runState || runState.status === 'running' || runBusy" @click="executeRunCommand('dispose')">DISPOSE</button>
+          <button class="action-button" :disabled="!runState || runBusy" @click="refreshRunState">REFRESH STATE</button>
+        </div>
+
+        <div v-if="runState" class="detail-list">
+          <div><span>RUN ID</span><code>{{ runState.runId }}</code></div>
+          <div><span>TEST DATASET</span><code>{{ runState.testDatasetId }}</code></div>
+          <div><span>PROGRESS</span><strong>{{ runState.processedCount.toLocaleString() }} / {{ runState.inputCount.toLocaleString() }}</strong></div>
+          <div><span>CURSOR SBAR ID</span><code>{{ runState.cursorSbarId ?? "—" }}</code></div>
+          <div><span>INPUT FINGERPRINT</span><code>{{ runState.inputFingerprint }}</code></div>
+        </div>
+        <p v-else class="empty-state">Create a Test Dataset to enable Run execution.</p>
+      </section>
+    </section>
+
+    <section class="panel snapshot-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-index">05 / ARTIFACTS</p>
+          <h2>Snapshot Store</h2>
+        </div>
+        <button class="subtle-button" :disabled="snapshotsLoading" @click="refreshSnapshots">
+          {{ snapshotsLoading ? "Refreshing…" : "Refresh Snapshots" }}
+        </button>
+      </div>
+      <p v-if="snapshotsError" class="error-message">{{ snapshotsError }}</p>
+      <p v-else-if="snapshots.length === 0 && !snapshotsLoading" class="empty-state">No Snapshot artifacts were discovered in the configured Snapshot directory.</p>
+      <div v-if="snapshots.length" class="table-scroll">
+        <table class="snapshot-table">
+          <thead>
+            <tr>
+              <th>ARTIFACT / SNAPSHOT ID</th>
+              <th>RUN ID</th>
+              <th>STATE KEY</th>
+              <th>GENERATED AT · NS</th>
+              <th>CHECKPOINTS</th>
+              <th>CLASSIFICATION</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="snapshot in snapshots" :key="snapshot.fileName">
+              <td><strong>{{ snapshot.snapshotId ?? snapshot.fileName }}</strong><small>{{ snapshot.fileName }}</small></td>
+              <td>{{ snapshot.runId ?? "—" }}</td>
+              <td>{{ snapshot.stateKey ?? "—" }}</td>
+              <td>{{ formatTimestamp(snapshot.generatedAt) }}</td>
+              <td>{{ snapshot.checkpointCount ?? "—" }}</td>
+              <td><span class="artifact-kind" :class="{ verified: snapshot.kind === 'complete', invalid: snapshot.kind === 'invalidPublished' || snapshot.kind === 'unreadableTemporary' }">{{ snapshotKindLabel(snapshot.kind) }}</span><small v-if="snapshot.diagnostic" class="diagnostic">{{ snapshot.diagnostic }}</small></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="microcopy">Discovery is read-only. Temporary or invalid artifacts are classified, never promoted or repaired by the UI.</p>
     </section>
 
     <footer class="footer-bar">
