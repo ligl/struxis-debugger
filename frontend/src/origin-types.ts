@@ -35,6 +35,18 @@ export interface OriginDatasetDto {
   bars: SBarDto[];
 }
 
+export interface TestDatasetDto {
+  testDatasetId: string;
+  originDatasetId: string;
+  instrumentId: string;
+  barType: string;
+  timeframe: string;
+  startSbarId: string;
+  endSbarId: string;
+  sbarCount: number;
+  sbarSequenceFingerprint: string;
+}
+
 export interface IpcError {
   code: "invalid_argument" | "not_found" | "conflict" | "invalid_state" | "internal";
   message: string;
