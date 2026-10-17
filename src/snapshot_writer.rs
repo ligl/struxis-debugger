@@ -91,7 +91,6 @@ impl SnapshotWriter {
         manifest.status = STATUS_COMPLETE.to_owned();
         manifest.checkpoint_count = self.checkpoints.len();
         manifest.content_checksum = manifest.calculate_content_checksum(&self.checkpoints)?;
-        crate::snapshot::validate_snapshot_records(&manifest, &self.checkpoints, true)?;
         verify_complete_snapshot(&manifest, &self.checkpoints)?;
 
         let connection = self.connection.as_mut()
