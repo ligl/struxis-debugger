@@ -163,7 +163,9 @@ impl Drop for ReplayWorker {
         if let Some(join) = self.join.take() {
             // Best-effort fail-safe cleanup. Explicit Dispose remains the only
             // path that can report a confirmed RunState::Disposed to callers.
-            let (reply_tx, _reply_rx) = mpsc::sync_channel(0);
+            // A buffered reply prevents the worker from blocking forever
+            // while sending Dispose's response when Drop does not read it.
+            let (reply_tx, _reply_rx) = mpsc::sync_channel(1);
             let _ = self.commands.send(WorkerCommand::Dispose(reply_tx));
             let _ = join.join();
         }
