@@ -308,9 +308,11 @@ pub fn validate_sbar_series(
 
 #[cfg(test)]
 mod tests {
-    use super::{load_bars, validate_sbar_series};
+    use super::validate_sbar_series;
     use std::{cell::RefCell, rc::Rc, str::FromStr};
 
+    #[cfg(feature = "catalog-integration-tests")]
+    use super::load_bars;
     #[cfg(feature = "catalog-integration-tests")]
     use std::path::PathBuf;
 
