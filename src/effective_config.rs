@@ -4,7 +4,7 @@ use capitus_struxis::StruxisConfig;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
-const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\\0";
+const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 
 /// The resolved Struxis configuration recorded by a Debugger Snapshot.
 ///
