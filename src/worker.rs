@@ -198,12 +198,17 @@ impl ReplayWorker {
     ) -> Result<RunState, String> {
         let _permit = self.command_gate.try_enter(kind)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
-        self.commands
-            .send(command(reply_tx))
-            .map_err(|error| format!("Replay worker is unavailable during {kind:?}: {error}"))?;
-        let result = reply_rx
-            .recv()
-            .map_err(|error| format!("Replay worker dropped {kind:?} response: {error}"))?;
+        if let Err(error) = self.commands.send(command(reply_tx)) {
+            let detail = format!("Replay worker is unavailable during {kind:?}: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        let result = match reply_rx.recv() {
+            Ok(result) => result,
+            Err(error) => {
+                let detail = format!("Replay worker dropped {kind:?} response: {error}");
+                return Err(self.join_after_transport_failure(detail));
+            }
+        };
         if let Some(join) = self.join.take() {
             join.join()
                 .map_err(|_| format!("Replay worker panicked while handling {kind:?}"))?;
@@ -216,17 +221,39 @@ impl ReplayWorker {
         let _permit = self.command_gate
             .try_enter(ReplayCommandKind::Dispose)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
-        self.commands
-            .send(WorkerCommand::Dispose(reply_tx))
-            .map_err(|error| format!("Replay worker is unavailable during Dispose: {error}"))?;
-        let result = reply_rx
-            .recv()
-            .map_err(|error| format!("Replay worker dropped Dispose response: {error}"))?;
+        if let Err(error) = self.commands.send(WorkerCommand::Dispose(reply_tx)) {
+            let detail = format!("Replay worker is unavailable during Dispose: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        let result = match reply_rx.recv() {
+            Ok(result) => result,
+            Err(error) => {
+                let detail = format!("Replay worker dropped Dispose response: {error}");
+                return Err(self.join_after_transport_failure(detail));
+            }
+        };
         if let Some(join) = self.join.take() {
             join.join()
                 .map_err(|_| "Replay worker panicked while disposing resources".to_owned())?;
         }
         result
+    }
+
+    /// Reap a worker that can no longer answer commands. A successful join
+    /// does not prove runtime cleanup succeeded: without the Dispose response,
+    /// the caller must treat resource release as unconfirmed.
+    fn join_after_transport_failure(&mut self, detail: String) -> String {
+        match self.join.take() {
+            Some(join) => match join.join() {
+                Ok(()) => format!(
+                    "{detail}; worker thread exited but resource release is unconfirmed"
+                ),
+                Err(_) => format!(
+                    "{detail}; worker panicked and resource release is unconfirmed"
+                ),
+            },
+            None => format!("{detail}; worker thread was already joined"),
+        }
     }
 }
 
