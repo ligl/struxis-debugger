@@ -887,6 +887,19 @@ mod tests {
         assert_eq!(initialized.as_ref().map(|state| state.status), Some(RunStatus::Ready));
         assert_eq!(initialized.as_ref().map(|state| state.processed_count), Some(0));
         drop(initialized);
+        let effective = observed.effective_config.lock().expect("effective config");
+        let effective = effective.as_ref().expect("sink receives effective Struxis config");
+        assert!(effective.enable_structure);
+        assert_eq!(effective.structure_cbars_capacity, "10000");
+        assert_eq!(effective.structure_swings_capacity, "2000");
+        assert_eq!(effective.structure_trends_capacity, "666");
+        assert_eq!(
+            effective.fingerprint().expect("effective config fingerprint"),
+            crate::effective_config::fingerprint_canonical_config(
+                &effective.canonical_json().expect("canonical effective config")
+            ).expect("canonical config fingerprint")
+        );
+        drop(effective);
         let first = worker.step().expect("first Step");
         assert_eq!(first.processed_count, 1);
         assert_eq!(first.cursor_sbar_id.as_deref(), Some("1735689600000000000"));
