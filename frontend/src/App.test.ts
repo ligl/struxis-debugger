@@ -90,6 +90,8 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
+    // Wait for the async discovery result to be rendered and selected before Load.
+    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
     await wrapper.get(".primary-button").trigger("click");
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("load_origin", {
@@ -136,6 +138,7 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
+    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
     const button = wrapper.get(".primary-button");
     await button.trigger("click");
     await button.trigger("click");
