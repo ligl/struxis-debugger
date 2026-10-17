@@ -781,7 +781,7 @@ mod tests {
     #[test]
     fn terminal_response_followed_by_join_panic_is_not_cached_as_disposed() {
         let (commands, receiver) = mpsc::sync_channel(0);
-        let state = super::run::RunState::ready(
+        let state = crate::run::RunState::ready(
             "worker-join-panic".into(),
             "test-dataset".into(),
             "fingerprint".into(),
