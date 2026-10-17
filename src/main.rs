@@ -5,6 +5,7 @@ pub mod dataset;
 pub mod discovery;
 pub mod ipc;
 pub mod run;
+pub mod replay;
 
 fn main() {
     tauri::Builder::default()
