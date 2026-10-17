@@ -210,8 +210,11 @@ impl ReplayWorker {
             }
         };
         if let Some(join) = self.join.take() {
-            join.join()
-                .map_err(|_| format!("Replay worker panicked while handling {kind:?}"))?;
+            join.join().map_err(|_| {
+                format!(
+                    "Replay worker panicked while handling {kind:?}; resource release is unconfirmed"
+                )
+            })?;
         }
         result
     }
@@ -233,8 +236,10 @@ impl ReplayWorker {
             }
         };
         if let Some(join) = self.join.take() {
-            join.join()
-                .map_err(|_| "Replay worker panicked while disposing resources".to_owned())?;
+            join.join().map_err(|_| {
+                "Replay worker panicked while disposing resources; resource release is unconfirmed"
+                    .to_owned()
+            })?;
         }
         result
     }
