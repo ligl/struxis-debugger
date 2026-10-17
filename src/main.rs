@@ -9,6 +9,7 @@ pub mod replay;
 pub mod checkpoint;
 pub mod worker;
 pub mod manager;
+pub mod snapshot;
 
 fn main() {
     tauri::Builder::default()
