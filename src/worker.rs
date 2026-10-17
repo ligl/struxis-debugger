@@ -516,7 +516,7 @@ impl WorkerSession {
             return Err(diagnostic);
         }
 
-        if let Err(error) = sink.commit_checkpoint(expected_count, &bar.ts_event.to_string(), &projection) {
+        if let Err(error) = sink.commit_checkpoint(self.next_index, &bar.ts_event.to_string(), &projection) {
             let diagnostic = format!(
                 "Checkpoint sink commit failed at input_index={} sbar_id={}: {error}",
                 self.next_index, bar.ts_event
@@ -912,9 +912,9 @@ mod tests {
 
         let checkpoints = observed.checkpoints.lock().expect("sink checkpoints");
         assert_eq!(checkpoints.len(), 3);
-        assert_eq!(checkpoints[0].0, 1);
-        assert_eq!(checkpoints[1].0, 2);
-        assert_eq!(checkpoints[2].0, 3);
+        assert_eq!(checkpoints[0].0, 0);
+        assert_eq!(checkpoints[1].0, 1);
+        assert_eq!(checkpoints[2].0, 2);
         assert_eq!(checkpoints[0].2.sbar_count, 1);
         assert_eq!(checkpoints[1].2.sbar_count, 2);
         assert_eq!(checkpoints[2].2.sbar_count, 3);
