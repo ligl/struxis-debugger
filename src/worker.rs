@@ -731,7 +731,43 @@ mod tests {
     }
 
     #[test]
-    fn worker_play_completion_then_stop_preserves_completed() {
+    fn asynchronous_play_failure_is_observable_without_dispose() {
+        let test = fixture_test();
+        let input = LoadedInput::from_test(&test).expect("LoadedInput");
+        let instrument = InstrumentAny::CurrencyPair(audusd_sim());
+        let (mut worker, _) = ReplayWorker::spawn(
+            ReplayWorkerConfig {
+                run_id: "worker-async-failure-observable".into(),
+                input,
+                instrument,
+            },
+            Box::new(FailingCheckpointSink),
+        ).expect("worker should initialize");
+
+        assert_eq!(worker.play().expect("Play should be accepted").status, RunStatus::Running);
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let failed = loop {
+            let state = worker.state().expect("state query should remain available");
+            if state.status == RunStatus::Failed {
+                break state;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "asynchronous Play failure was not observable before timeout"
+            );
+            std::thread::yield_now();
+        };
+
+        assert_eq!(failed.processed_count, 0);
+        assert!(failed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
+        let disposed = worker.dispose().expect("Dispose should release failed Run");
+        assert_eq!(disposed.status, RunStatus::Disposed);
+        assert!(disposed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
+    }
+
+    #[test]
+    fn worker_play_completion_then_stop_returns_disposed_with_completed_facts() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
         let sink = MemoryCheckpointSink::default();
