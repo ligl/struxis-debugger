@@ -252,8 +252,11 @@ pub fn validate_snapshot_records(
         if checkpoint.record_kind != "Full" && checkpoint.record_kind != "Delta" {
             return Err(format!("Unsupported record_kind {}", checkpoint.record_kind));
         }
-        if expected_index == 0 && checkpoint.record_kind != "Full" {
-            return Err("First checkpoint must be a Full record".to_owned());
+        if checkpoint.record_kind != "Full" {
+            return Err(format!(
+                "Checkpoint {} uses Delta, but Delta reconstruction is not implemented; only Full records can currently be verified",
+                checkpoint.checkpoint_index
+            ));
         }
         let state: serde_json::Value = serde_json::from_str(&checkpoint.state_data)
             .map_err(|error| format!("Invalid state_data JSON: {error}"))?;
@@ -304,8 +307,8 @@ mod tests {
                 checkpoint_index: 1,
                 sbar_id: "200".into(),
                 ts_event: "200".into(),
-                record_kind: "Delta".into(),
-                state_data: r#"{"operations":[]}"#.into(),
+                record_kind: "Full".into(),
+                state_data: r#"{"cbarCount":"0","cbars":[],"swingCount":"0","swings":[]}"#.into(),
                 diagnostics: "[]".into(),
             },
         ]
@@ -385,7 +388,7 @@ mod tests {
         );
         assert_eq!(
             manifest.calculate_content_checksum(&records).unwrap(),
-            "6cd4f29fe2baa85030e54a8fd11d70afad51fa577c9a9cf37aa6a610a1fa8245"
+            "6d76ab90a9d6dcbde7471f1d234fffbf4033bdbbcff74a61a796f65ab92f30b7"
         );
     }
 
@@ -405,6 +408,17 @@ mod tests {
         let records = records();
         let manifest = manifest(&records);
         assert!(validate_snapshot_records(&manifest, &records, true).is_ok());
+    }
+
+    #[test]
+    fn rejects_delta_until_reconstruction_contract_is_implemented() {
+        let mut records = records();
+        records[1].record_kind = "Delta".into();
+        records[1].state_data = r#"{"operations":[]}"#.into();
+        let manifest = manifest(&records);
+        assert!(validate_snapshot_records(&manifest, &records, true)
+            .unwrap_err()
+            .contains("Delta reconstruction is not implemented"));
     }
 
     #[test]
