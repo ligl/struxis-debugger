@@ -22,11 +22,11 @@ const dataset: CatalogDatasetEntry = {
   diagnostic: null,
 };
 
-function makeOrigin(id: string): OriginDatasetDto {
+function makeOrigin(id: string, enableStructure = true): OriginDatasetDto {
   return {
     originDatasetId: id,
     sourceCatalog: "/workspace/test_data/catalog",
-    enableStructure: true,
+    enableStructure,
     instrumentId: dataset.instrumentId!,
     barType: dataset.barType!,
     timeframe: "300s",
@@ -102,6 +102,33 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
     expect(wrapper.text()).toContain("2");
     expect(wrapper.text()).toContain("Oldest-first SBar sample");
+  });
+
+  it("maps a disabled structure checkbox to enableStructure=false and renders the returned mode", async () => {
+    const origin = makeOrigin("origin-without-structure", false);
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "load_origin") return Promise.resolve(origin);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
+
+    const structureCheckbox = wrapper.get('input[type="checkbox"]');
+    expect((structureCheckbox.element as HTMLInputElement).checked).toBe(true);
+    await structureCheckbox.setValue(false);
+    await wrapper.get(".primary-button").trigger("click");
+
+    await vi.waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith("load_origin", {
+        datasetId: dataset.id,
+        enableStructure: false,
+      }),
+    );
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-without-structure"));
+    expect(wrapper.text()).toContain("DISABLED");
   });
 
   it("groups datasets by Instrument and keeps unresolved entries visible but unloadable", async () => {
