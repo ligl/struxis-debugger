@@ -1,6 +1,5 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
 import App from "./App.vue";
 import type { CatalogDatasetEntry, OriginDatasetDto } from "./origin-types";
 
@@ -12,7 +11,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: ipc.invoke,
 }));
 
-const invokeMock = vi.mocked(invoke);
+const invokeMock = ipc.invoke;
 
 const dataset: CatalogDatasetEntry = {
   id: "BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL",
