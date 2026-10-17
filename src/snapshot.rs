@@ -356,10 +356,14 @@ fn sort_domain_objects(
             .ok_or_else(|| format!("{kind} is missing string field {anchor_field}"))?;
         let id = object.get(id_field).and_then(serde_json::Value::as_str)
             .ok_or_else(|| format!("{kind} is missing string field {id_field}"))?;
-        let anchor = anchor.parse::<u128>()
-            .map_err(|_| format!("{kind} has invalid numeric {anchor_field}: {anchor}"))?;
-        let id = id.parse::<u128>()
-            .map_err(|_| format!("{kind} has invalid numeric {id_field}: {id}"))?;
+        let anchor = parse_canonical_u128(
+            anchor,
+            &format!("{kind}.{anchor_field}"),
+        )?;
+        let id = parse_canonical_u128(
+            id,
+            &format!("{kind}.{id_field}"),
+        )?;
         keys.push((anchor, id));
     }
     let mut order: Vec<usize> = (0..objects.len()).collect();
@@ -587,6 +591,28 @@ mod tests {
         let unsorted = r#"{"cbarCount":"2","cbars":[{"sbarStartId":"20","cbarId":"10"},{"sbarStartId":"3","cbarId":"2"}],"swingCount":"0","swings":[]}"#;
         let state: serde_json::Value = serde_json::from_str(unsorted).unwrap();
         assert!(validate_canonical_structure_state(&state).is_err());
+    }
+
+    #[test]
+    fn canonical_structure_state_rejects_noncanonical_domain_ids() {
+        let structure = crate::checkpoint::StructureCheckpoint {
+            cbar_count: 1,
+            cbars: vec![crate::checkpoint::CBarCheckpoint {
+                cbar_id: "02".into(),
+                high: "2".into(),
+                low: "1".into(),
+                sbar_start_id: "3".into(),
+                sbar_end_id: "4".into(),
+                span_sbars: 2,
+                fractal_type: None,
+                created_at: "1".into(),
+            }],
+            swing_count: 0,
+            swings: vec![],
+        };
+        assert!(canonical_structure_state(Some(&structure))
+            .unwrap_err()
+            .contains("canonical unsigned decimal encoding"));
     }
 
     #[test]
