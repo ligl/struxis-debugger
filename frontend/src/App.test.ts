@@ -1,18 +1,18 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
 import App from "./App.vue";
 import type { CatalogDatasetEntry, OriginDatasetDto } from "./origin-types";
 
-const bridge = vi.hoisted(() => ({
-  describeIpcError: vi.fn((error: unknown) =>
-    typeof error === "string" ? error : "IPC operation failed",
-  ),
-  getCurrentOrigin: vi.fn(),
-  listCatalogDatasets: vi.fn(),
-  loadOrigin: vi.fn(),
+const ipc = vi.hoisted(() => ({
+  invoke: vi.fn(),
 }));
 
-vi.mock("./origin-bridge", () => bridge);
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: ipc.invoke,
+}));
+
+const invokeMock = vi.mocked(invoke);
 
 const dataset: CatalogDatasetEntry = {
   id: "BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL",
@@ -64,20 +64,40 @@ function makeOrigin(id: string): OriginDatasetDto {
   };
 }
 
+function mockInitialIpc(origin: OriginDatasetDto | null = null): void {
+  invokeMock.mockImplementation((command) => {
+    if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+    if (command === "get_current_origin") return Promise.resolve(origin);
+    return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+  });
+}
+
 describe("Origin Load workbench", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    bridge.listCatalogDatasets.mockResolvedValue([dataset]);
-    bridge.getCurrentOrigin.mockResolvedValue(null);
+    mockInitialIpc();
   });
 
   it("discovers datasets and sends the selected full-stream load request", async () => {
     const origin = makeOrigin("origin-new");
-    bridge.loadOrigin.mockResolvedValue(origin);
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "load_origin") return Promise.resolve(origin);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
     const wrapper = mount(App);
-    await vi.waitFor(() => expect(bridge.listCatalogDatasets).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
+    );
     await wrapper.get(".primary-button").trigger("click");
-    await vi.waitFor(() => expect(bridge.loadOrigin).toHaveBeenCalledWith(dataset.id, true));
+    await vi.waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith("load_origin", {
+        datasetId: dataset.id,
+        enableStructure: true,
+      }),
+    );
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
     expect(wrapper.text()).toContain("2");
     expect(wrapper.text()).toContain("Oldest-first SBar sample");
@@ -85,8 +105,13 @@ describe("Origin Load workbench", () => {
 
   it("retains the previously published Origin when a replacement load fails", async () => {
     const previous = makeOrigin("origin-existing");
-    bridge.getCurrentOrigin.mockResolvedValue(previous);
-    bridge.loadOrigin.mockRejectedValue("replacement failed");
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(previous);
+      if (command === "load_origin") return Promise.reject("replacement failed");
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
     await wrapper.get(".primary-button").trigger("click");
@@ -97,15 +122,28 @@ describe("Origin Load workbench", () => {
 
   it("prevents rapid repeated clicks from overlapping Load commands", async () => {
     let resolveLoad!: (value: OriginDatasetDto) => void;
-    bridge.loadOrigin.mockImplementation(
-      () => new Promise<OriginDatasetDto>((resolve) => { resolveLoad = resolve; }),
-    );
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "load_origin") {
+        return new Promise<OriginDatasetDto>((resolve) => {
+          resolveLoad = resolve;
+        });
+      }
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
     const wrapper = mount(App);
-    await vi.waitFor(() => expect(bridge.listCatalogDatasets).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
+    );
     const button = wrapper.get(".primary-button");
     await button.trigger("click");
     await button.trigger("click");
-    expect(bridge.loadOrigin).toHaveBeenCalledTimes(1);
+    expect(
+      invokeMock.mock.calls.filter(([command]) => command === "load_origin"),
+    ).toHaveLength(1);
+
     resolveLoad(makeOrigin("origin-new"));
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
   });
