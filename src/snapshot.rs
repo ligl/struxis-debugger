@@ -168,9 +168,15 @@ fn normalize_integer_json_values(value: serde_json::Value) -> serde_json::Value 
         serde_json::Value::Array(values) => serde_json::Value::Array(
             values.into_iter().map(normalize_integer_json_values).collect(),
         ),
-        serde_json::Value::Object(values) => serde_json::Value::Object(
-            values.into_iter().map(|(key, value)| (key, normalize_integer_json_values(value))).collect(),
-        ),
+        serde_json::Value::Object(values) => {
+            let mut entries: Vec<_> = values.into_iter().collect();
+            entries.sort_by(|left, right| left.0.cmp(&right.0));
+            let mut normalized = serde_json::Map::new();
+            for (key, value) in entries {
+                normalized.insert(key, normalize_integer_json_values(value));
+            }
+            serde_json::Value::Object(normalized)
+        },
         serde_json::Value::Number(number) if number.is_i64() || number.is_u64() => {
             serde_json::Value::String(number.to_string())
         }
@@ -179,7 +185,7 @@ fn normalize_integer_json_values(value: serde_json::Value) -> serde_json::Value 
 }
 
 /// Validates persisted relationships without depending on a storage backend.
-/// Delta dependency reconstruction remains the responsibility of the reader.
+/// Until the Delta codec and reconstruction validator exist, this validator rejects Delta records.
 pub fn validate_snapshot_records(
     manifest: &SnapshotManifest,
     checkpoints: &[SnapshotCheckpointRecord],
@@ -335,6 +341,18 @@ mod tests {
             checkpoint_count: records.len(),
             content_checksum: String::new(),
         }
+    }
+
+    #[test]
+    fn canonical_json_sorts_object_keys_recursively_without_reordering_arrays() {
+        let input: serde_json::Value = serde_json::from_str(
+            r#"{"z":1,"a":{"y":2,"b":3},"items":[{"z":1,"a":2},{"b":1,"a":2}]}"#,
+        ).unwrap();
+        let normalized = normalize_integer_json_values(input);
+        assert_eq!(
+            serde_json::to_string(&normalized).unwrap(),
+            r#"{"a":{"b":"3","y":"2"},"items":[{"a":"2","z":"1"},{"a":"2","b":"1"}],"z":"1"}"#
+        );
     }
 
     #[test]
