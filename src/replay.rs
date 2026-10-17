@@ -10,9 +10,10 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-/// Commands that mutate or advance one active Run.
+/// Commands accepted by the active Run's non-queuing command gate.
 ///
-/// Querying a stable state snapshot is intentionally not included here.
+/// GetState is read-only, but uses the same gate so its response cannot race
+/// another command's state transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReplayCommandKind {
     Start,
