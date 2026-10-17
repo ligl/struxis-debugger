@@ -353,8 +353,14 @@ impl WorkerSession {
         Ok(self.state.clone())
     }
 
-    fn step(&mut self, sink: &mut dyn CheckpointSink) -> Result<RunState, String> {
-        if !matches!(self.state.status, RunStatus::Ready | RunStatus::Paused) {
+    fn step(
+        &mut self,
+        sink: &mut dyn CheckpointSink,
+        continuous_play: bool,
+    ) -> Result<RunState, String> {
+        let allowed = matches!(self.state.status, RunStatus::Ready | RunStatus::Paused)
+            || (continuous_play && self.state.status == RunStatus::Running);
+        if !allowed {
             return Err(format!(
                 "Step is invalid while Run {} is {:?}",
                 self.state.run_id, self.state.status
@@ -448,7 +454,7 @@ fn worker_loop(
             match commands.try_recv() {
                 Ok(command) => Some(command),
                 Err(mpsc::TryRecvError::Empty) => {
-                    if let Err(error) = session.step(sink.as_mut()) {
+                    if let Err(error) = session.step(sink.as_mut(), true) {
                         if session.state.status != RunStatus::Failed {
                             let _ = session.state.fail(error);
                         }
@@ -475,7 +481,7 @@ fn worker_loop(
         };
         match command {
             WorkerCommand::Step(reply) => {
-                let _ = reply.send(session.step(sink.as_mut()));
+                let _ = reply.send(session.step(sink.as_mut(), false));
             }
             WorkerCommand::Play(reply) => {
                 let _ = reply.send(session.play());
