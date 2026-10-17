@@ -10,6 +10,7 @@ pub mod checkpoint;
 pub mod worker;
 pub mod manager;
 pub mod snapshot;
+pub mod effective_config;
 
 fn main() {
     tauri::Builder::default()
