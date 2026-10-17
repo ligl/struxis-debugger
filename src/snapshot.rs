@@ -474,7 +474,7 @@ mod tests {
     }
 
     fn manifest(records: &[SnapshotCheckpointRecord]) -> SnapshotManifest {
-        let effective_config = r#"{"enableStructure":true}"#.to_owned();
+        let effective_config = r#"{"enableStructure":true,"structureCbarsCapacity":"10000","structureSwingsCapacity":"2000","structureTrendsCapacity":"666"}"#.to_owned();
         SnapshotManifest {
             snapshot_id: "snapshot-1".into(),
             run_id: "run-1".into(),
