@@ -369,10 +369,8 @@ pub fn validate_snapshot_records(
     if canonical_config != manifest.effective_config {
         return Err("effective_config is not canonical JSON (integer values must be decimal strings)".to_owned());
     }
-    let mut config_hash_input = Vec::with_capacity(CONFIG_HASH_PREFIX.len() + canonical_config.len());
-    config_hash_input.extend_from_slice(CONFIG_HASH_PREFIX);
-    config_hash_input.extend_from_slice(canonical_config.as_bytes());
-    if sha256_hex(&config_hash_input) != manifest.config_fingerprint {
+    let actual_fingerprint = crate::effective_config::fingerprint_canonical_config(&canonical_config)?;
+    if actual_fingerprint != manifest.config_fingerprint {
         return Err("config_fingerprint does not match effective_config".to_owned());
     }
 
@@ -490,7 +488,7 @@ mod tests {
             snapshot_generated_at: "1780000000000000000".into(),
             input_bar_count: records.len(),
             sbar_sequence_fingerprint: "a".repeat(64),
-            config_fingerprint: { let mut input = CONFIG_HASH_PREFIX.to_vec(); input.extend_from_slice(effective_config.as_bytes()); sha256_hex(&input) },
+            config_fingerprint: crate::effective_config::fingerprint_canonical_config(&effective_config).unwrap(),
             effective_config,
             status: STATUS_COMPLETE.into(),
             checkpoint_count: records.len(),
@@ -599,11 +597,11 @@ mod tests {
         let manifest = manifest(&records);
         assert_eq!(
             manifest.config_fingerprint,
-            "21e728f2a246103a73133942d05478bcad5ed5428b70a952c4cd966d4f56d52a"
+            "2ce86429e2438d5bc0fdd14a2dffb748d53f70eba43c4077055a28bf299f006f"
         );
         assert_eq!(
             manifest.calculate_content_checksum(&records).unwrap(),
-            "6d76ab90a9d6dcbde7471f1d234fffbf4033bdbbcff74a61a796f65ab92f30b7"
+            "4d429084669eb32f8e978d75aa53766602ff04c1306d508021d0c503bc1573e8"
         );
     }
 
