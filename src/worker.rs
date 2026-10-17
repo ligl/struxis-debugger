@@ -76,6 +76,7 @@ pub struct ReplayWorker {
     commands: SyncSender<WorkerCommand>,
     command_gate: ReplayCommandGate,
     join: Option<JoinHandle<()>>,
+    terminal_state: Option<RunState>,
 }
 
 impl ReplayWorker {
@@ -124,6 +125,7 @@ impl ReplayWorker {
                 commands: command_tx,
                 command_gate: ReplayCommandGate::new(),
                 join: Some(join),
+                terminal_state: None,
             },
             initial_state,
         ))
@@ -135,6 +137,9 @@ impl ReplayWorker {
     /// makes asynchronous processing failures observable without issuing a
     /// state-changing command such as Stop or Dispose.
     pub fn state(&self) -> Result<RunState, String> {
+        if let Some(state) = &self.terminal_state {
+            return Ok(state.clone());
+        }
         let _permit = self.command_gate.try_enter(ReplayCommandKind::GetState)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
         self.commands
@@ -196,6 +201,9 @@ impl ReplayWorker {
         kind: ReplayCommandKind,
         command: fn(SyncSender<Result<RunState, String>>) -> WorkerCommand,
     ) -> Result<RunState, String> {
+        if let Some(state) = &self.terminal_state {
+            return Ok(state.clone());
+        }
         let _permit = self.command_gate.try_enter(kind)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
         if let Err(error) = self.commands.send(command(reply_tx)) {
@@ -216,11 +224,17 @@ impl ReplayWorker {
                 )
             })?;
         }
+        if let Ok(state) = &result {
+            self.terminal_state = Some(state.clone());
+        }
         result
     }
 
     /// Releases Run-owned resources on the worker thread and joins it.
     pub fn dispose(&mut self) -> Result<RunState, String> {
+        if let Some(state) = &self.terminal_state {
+            return Ok(state.clone());
+        }
         let _permit = self.command_gate
             .try_enter(ReplayCommandKind::Dispose)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
@@ -240,6 +254,9 @@ impl ReplayWorker {
                 "Replay worker panicked while disposing resources; resource release is unconfirmed"
                     .to_owned()
             })?;
+        }
+        if let Ok(state) = &result {
+            self.terminal_state = Some(state.clone());
         }
         result
     }
@@ -692,6 +709,7 @@ mod tests {
             commands,
             command_gate: ReplayCommandGate::new(),
             join: Some(join),
+            terminal_state: None,
         };
 
         let error = worker.join_after_transport_failure(
@@ -701,6 +719,29 @@ mod tests {
         assert!(error.contains("worker thread exited"));
         assert!(error.contains("resource release is unconfirmed"));
         assert!(worker.join.is_none());
+    }
+
+    #[test]
+    fn repeated_terminal_commands_return_the_confirmed_terminal_state() {
+        let test = fixture_test();
+        let input = LoadedInput::from_test(&test).expect("LoadedInput");
+        let instrument = InstrumentAny::CurrencyPair(audusd_sim());
+        let (mut worker, _) = ReplayWorker::spawn(
+            ReplayWorkerConfig {
+                run_id: "worker-repeated-terminal-command".into(),
+                input,
+                instrument,
+            },
+            Box::new(MemoryCheckpointSink::default()),
+        ).expect("worker should initialize");
+
+        let stopped = worker.stop().expect("first Stop should release the worker");
+        assert_eq!(stopped.status, RunStatus::Disposed);
+
+        let disposed = worker.dispose().expect("Dispose after Stop should be idempotent");
+        assert_eq!(disposed, stopped);
+        assert_eq!(worker.state().expect("terminal state remains queryable"), stopped);
+        assert_eq!(worker.stop().expect("repeated Stop should be idempotent"), stopped);
     }
 
     #[test]
