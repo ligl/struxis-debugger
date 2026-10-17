@@ -89,7 +89,7 @@ impl AppState {
             .map_err(|_| {
                 IpcError::new(
                     IpcErrorCode::Conflict,
-                    "An Origin Load operation is already active",
+                    "Another dataset mutation is already active",
                 )
             })?;
         let _permit = MutationPermit(&self.inner.mutation_active);
