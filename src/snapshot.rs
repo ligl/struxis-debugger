@@ -372,6 +372,18 @@ pub fn validate_snapshot_records(
         return Err(format!("Unsupported Snapshot status {}", manifest.status));
     }
 
+    if manifest.snapshot_generated_at.parse::<u128>().is_err()
+        || manifest.snapshot_generated_at.starts_with('+')
+        || (manifest.snapshot_generated_at.len() > 1 && manifest.snapshot_generated_at.starts_with('0'))
+    {
+        return Err("snapshot_generated_at must be a canonical unsigned nanosecond timestamp".to_owned());
+    }
+    if manifest.sbar_sequence_fingerprint.len() != 64
+        || !manifest.sbar_sequence_fingerprint.bytes().all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    {
+        return Err("sbar_sequence_fingerprint must be a 64-character lowercase SHA-256 hex digest".to_owned());
+    }
+
     let config: serde_json::Value = serde_json::from_str(&manifest.effective_config)
         .map_err(|error| format!("Invalid effective_config JSON: {error}"))?;
     let config = normalize_integer_json_values(config);
@@ -646,6 +658,20 @@ mod tests {
         unknown_status.status = "Recovered".into();
         assert!(validate_snapshot_records(&unknown_status, &records, false)
             .unwrap_err().contains("Unsupported Snapshot status"));
+    }
+
+    #[test]
+    fn rejects_noncanonical_snapshot_timestamp_and_sequence_fingerprint() {
+        let records = records();
+        let mut invalid_timestamp = manifest(&records);
+        invalid_timestamp.snapshot_generated_at = "01780000000000000000".into();
+        assert!(validate_snapshot_records(&invalid_timestamp, &records, false)
+            .unwrap_err().contains("canonical unsigned nanosecond timestamp"));
+
+        let mut invalid_fingerprint = manifest(&records);
+        invalid_fingerprint.sbar_sequence_fingerprint = "g".repeat(64);
+        assert!(validate_snapshot_records(&invalid_fingerprint, &records, false)
+            .unwrap_err().contains("lowercase SHA-256 hex digest"));
     }
 
     #[test]
