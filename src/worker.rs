@@ -350,24 +350,27 @@ impl WorkerSession {
     /// precedence over Stop: release runtime resources but preserve the
     /// completed processing result in the returned state.
     fn stop(&mut self) -> Result<RunState, String> {
-        if self.state.status == RunStatus::Completed {
-            self.engine_dispose();
-            return Ok(self.state.clone());
-        }
         if self.state.status == RunStatus::Running {
             self.state.pause()?;
         }
-        self.engine_dispose();
-        self.state.dispose()?;
-        Ok(self.state.clone())
+        self.release_runtime_and_finalize_status()
     }
 
     fn dispose(&mut self) -> Result<RunState, String> {
         if self.state.status == RunStatus::Running {
             self.state.pause()?;
         }
+        self.release_runtime_and_finalize_status()
+    }
+
+    /// Resource release must not erase the processing outcome. Completed and
+    /// Failed describe durable Run results; Disposed is used only when a
+    /// nonterminal Run is stopped/disposed before processing completes.
+    fn release_runtime_and_finalize_status(&mut self) -> Result<RunState, String> {
         self.engine_dispose();
-        self.state.dispose()?;
+        if !matches!(self.state.status, RunStatus::Completed | RunStatus::Failed) {
+            self.state.dispose()?;
+        }
         Ok(self.state.clone())
     }
 
@@ -560,8 +563,27 @@ impl CheckpointSink for MemoryCheckpointSink {
 }
 
 #[cfg(test)]
+struct FailingCheckpointSink;
+
+#[cfg(test)]
+impl CheckpointSink for FailingCheckpointSink {
+    fn initialize(&mut self, _initial_state: &RunState) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn commit_checkpoint(
+        &mut self,
+        _checkpoint_index: usize,
+        _sbar_id: &str,
+        _projection: &ReplayCheckpointProjection,
+    ) -> Result<(), String> {
+        Err("injected checkpoint failure".into())
+    }
+}
+
+#[cfg(test)]
 mod tests {
-    use super::{MemoryCheckpointSink, ReplayWorker, ReplayWorkerConfig};
+    use super::{FailingCheckpointSink, MemoryCheckpointSink, ReplayWorker, ReplayWorkerConfig};
     use crate::{
         catalog::OriginLoad,
         dataset::{TestDataset, sequence_fingerprint},
@@ -662,7 +684,31 @@ mod tests {
         assert_eq!(checkpoints[1].2.sbar_count, 2);
         assert_eq!(checkpoints[2].2.sbar_count, 3);
 
-        worker.dispose().expect("worker Dispose");
+        let disposed = worker.dispose().expect("worker Dispose");
+        assert_eq!(disposed.status, RunStatus::Completed);
+        assert_eq!(disposed.processed_count, 3);
+    }
+
+    #[test]
+    fn failed_checkpoint_remains_failed_after_dispose() {
+        let test = fixture_test();
+        let input = LoadedInput::from_test(&test).expect("LoadedInput");
+        let instrument = InstrumentAny::CurrencyPair(audusd_sim());
+        let (mut worker, _) = ReplayWorker::spawn(
+            ReplayWorkerConfig {
+                run_id: "worker-failed-dispose-contract".into(),
+                input,
+                instrument,
+            },
+            Box::new(FailingCheckpointSink),
+        ).expect("worker should initialize");
+
+        let error = worker.step().expect_err("checkpoint commit should fail");
+        assert!(error.contains("injected checkpoint failure"));
+        let failed = worker.dispose().expect("Dispose should release failed Run");
+        assert_eq!(failed.status, RunStatus::Failed);
+        assert_eq!(failed.processed_count, 0);
+        assert!(failed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
     }
 
     #[test]
