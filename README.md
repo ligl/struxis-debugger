@@ -12,15 +12,27 @@ The application directly composes Nautilus and Struxis. Its own Tauri runtime ow
 
 ## Development
 
+Install the frontend dependencies once, from the frontend directory:
+
 ```bash
 cd crates/struxis-debugger/frontend
-bun install
 bun install --frozen-lockfile
-cd ..
+```
+
+Then use the Debugger directory as the Bun command entrypoint:
+
+```bash
+cd crates/struxis-debugger
+bun run dev
+```
+
+In a separate terminal, start the Tauri application from the same Debugger directory:
+
+```bash
 cargo tauri dev
 ```
 
-The Vite development server uses port 1421, separate from Terminal's port 1420.
+The Vite development server uses port 1421, separate from Terminal's port 1420. The root-level `package.json` forwards frontend scripts to `frontend/package.json`; the frontend remains the sole owner of frontend dependencies and script implementations.
 
 ## Validation
 
@@ -29,8 +41,11 @@ From the repository root:
 ```bash
 cargo check -p capitus-struxis-debugger
 cargo test -p capitus-struxis-debugger
-bun --cwd crates/struxis-debugger/frontend run check
+cd crates/struxis-debugger
+bun run check
 ```
+
+The same root-level entrypoint also supports `bun run test`, `bun run typecheck`, `bun run build`, and `bun run test:watch`.
 
 ## Architecture
 
