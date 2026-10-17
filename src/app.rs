@@ -481,6 +481,21 @@ mod tests {
     }
 
     #[test]
+    fn test_dataset_dto_uses_camel_case_and_lossless_string_ids() {
+        let app = app_with_origin(PathBuf::from("/unused/catalog"));
+        let test = app
+            .create_test_dataset("100", "200")
+            .expect("Test should be created");
+        let value = serde_json::to_value(&test).expect("Test DTO should serialize");
+
+        assert_eq!(value["startSbarId"], "100");
+        assert_eq!(value["endSbarId"], "200");
+        assert_eq!(value["sbarCount"], 2);
+        assert!(value.get("testDatasetId").is_some());
+        assert!(value.get("test_dataset_id").is_none());
+    }
+
+    #[test]
     fn origin_load_and_test_creation_share_a_mutation_guard() {
         let app = app_with_origin(PathBuf::from("/unused/catalog"));
         app.inner.mutation_active.store(true, std::sync::atomic::Ordering::Release);
