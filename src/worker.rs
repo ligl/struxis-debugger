@@ -709,7 +709,7 @@ mod tests {
     }
 
     #[test]
-    fn failed_checkpoint_remains_failed_after_dispose() {
+    fn failed_checkpoint_dispose_preserves_diagnostic() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
         let instrument = InstrumentAny::CurrencyPair(audusd_sim());
