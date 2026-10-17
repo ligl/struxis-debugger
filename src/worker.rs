@@ -303,11 +303,14 @@ impl WorkerSession {
         }
 
         let projection = {
-            let state_view = self.struxis.state(self.input.state_key)
-                .ok_or_else(|| format!(
+            let Some(state_view) = self.struxis.state(self.input.state_key) else {
+                let diagnostic = format!(
                     "Struxis state {:?} missing after processing sbar_id={}",
                     self.input.state_key, bar.ts_event
-                ))?;
+                );
+                let _ = self.state.fail(diagnostic.clone());
+                return Err(diagnostic);
+            };
             if state_view.last_ts_event() != Some(bar.ts_event) {
                 let diagnostic = format!(
                     "Struxis checkpoint mismatch at input_index={}: expected ts_event={}, actual={:?}",
