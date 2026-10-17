@@ -1,0 +1,254 @@
+//! SQLite-backed Snapshot recording and finalization.
+//!
+//! Checkpoints are committed individually. A Snapshot is only published after
+//! final checksum verification through an independent read-only connection.
+
+use std::{
+    fs::{self, File},
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+use rusqlite::{Connection, OpenFlags, params};
+use crate::{
+    checkpoint::ReplayCheckpointProjection,
+    effective_config::EffectiveStruxisConfig,
+    replay::LoadedInput,
+    run::{RunState, RunStatus},
+    snapshot::{
+        canonical_structure_state, verify_complete_snapshot, SnapshotCheckpointRecord,
+        SnapshotManifest, STATUS_COMPLETE, STATUS_FAILED, STATUS_RECORDING,
+    },
+    worker::CheckpointSink,
+};
+
+pub struct SnapshotWriter {
+    root: PathBuf,
+    temporary_path: PathBuf,
+    published_path: PathBuf,
+    input: InputMetadata,
+    manifest: Option<SnapshotManifest>,
+    checkpoints: Vec<SnapshotCheckpointRecord>,
+    connection: Option<Connection>,
+}
+
+struct InputMetadata {
+    state_key: String,
+    instrument_id: String,
+    bar_type: String,
+    start_id: String,
+    end_id: String,
+    start_ts: String,
+    end_ts: String,
+    count: usize,
+    fingerprint: String,
+}
+
+impl SnapshotWriter {
+    pub fn new(root: impl AsRef<Path>, input: &LoadedInput, instrument_id: &str) -> Result<Self, String> {
+        let first = input.bars.first().ok_or_else(|| "Snapshot input is empty".to_owned())?;
+        let last = input.bars.last().expect("nonempty input checked above");
+        let id = uuid::Uuid::new_v4().to_string();
+        let root = root.as_ref().to_path_buf();
+        Ok(Self {
+            temporary_path: root.join(format!(".{id}.snapshot.tmp")),
+            published_path: root.join(format!("{id}.snapshot.sqlite")),
+            root,
+            input: InputMetadata {
+                state_key: format!("{:?}", input.state_key),
+                instrument_id: instrument_id.to_owned(),
+                bar_type: input.bar_type.clone(),
+                start_id: first.ts_event.to_string(),
+                end_id: last.ts_event.to_string(),
+                start_ts: first.ts_event.to_string(),
+                end_ts: last.ts_event.to_string(),
+                count: input.bars.len(),
+                fingerprint: input.sbar_sequence_fingerprint.clone(),
+            },
+            manifest: None,
+            checkpoints: Vec::new(),
+            connection: None,
+        })
+    }
+
+    #[must_use]
+    pub fn published_path(&self) -> &Path {
+        &self.published_path
+    }
+
+    fn finalize_snapshot(&mut self, state: &RunState) -> Result<(), String> {
+        if state.status != RunStatus::Completed {
+            return Err(format!("Snapshot finalization requires Completed Run, got {:?}", state.status));
+        }
+        let mut manifest = self.manifest.clone()
+            .ok_or_else(|| "Snapshot finalization requested before initialization".to_owned())?;
+        if self.checkpoints.len() != manifest.input_bar_count
+            || state.processed_count != manifest.input_bar_count
+        {
+            return Err(format!("Snapshot finalization count mismatch: input={}, checkpoints={}, processed={}",
+                manifest.input_bar_count, self.checkpoints.len(), state.processed_count));
+        }
+        manifest.status = STATUS_COMPLETE.to_owned();
+        manifest.checkpoint_count = self.checkpoints.len();
+        manifest.content_checksum = manifest.calculate_content_checksum(&self.checkpoints)?;
+        crate::snapshot::validate_snapshot_records(&manifest, &self.checkpoints, true)?;
+        verify_complete_snapshot(&manifest, &self.checkpoints)?;
+
+        let connection = self.connection.as_mut()
+            .ok_or_else(|| "Snapshot database connection is not open".to_owned())?;
+        let tx = connection.transaction().map_err(|e| format!("Begin finalization transaction: {e}"))?;
+        tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
+            .map_err(|e| format!("Persist final Manifest: {e}"))?;
+        tx.commit().map_err(|e| format!("Commit final Manifest: {e}"))?;
+        self.manifest = Some(manifest);
+        self.connection.take();
+
+        let (reopened, records) = read_database(&self.temporary_path)?;
+        verify_complete_snapshot(&reopened, &records)?;
+        fs::rename(&self.temporary_path, &self.published_path)
+            .map_err(|e| format!("Atomically publish Snapshot: {e}"))?;
+        File::open(&self.root).and_then(|directory| directory.sync_all())
+            .map_err(|e| format!("Flush Snapshot directory: {e}"))?;
+        Ok(())
+    }
+}
+
+impl CheckpointSink for SnapshotWriter {
+    fn initialize(&mut self, state: &RunState, config: &EffectiveStruxisConfig) -> Result<(), String> {
+        if self.connection.is_some() || self.manifest.is_some() {
+            return Err("SnapshotWriter cannot be initialized twice".into());
+        }
+        if state.status != RunStatus::Ready || state.processed_count != 0
+            || state.input_count != self.input.count || state.input_fingerprint != self.input.fingerprint
+        {
+            return Err("Snapshot input metadata does not match initial RunState".into());
+        }
+        fs::create_dir_all(&self.root).map_err(|e| format!("Create Snapshot directory: {e}"))?;
+        if self.temporary_path.exists() || self.published_path.exists() {
+            return Err("Snapshot output path already exists".into());
+        }
+        let generated_at = SystemTime::now().duration_since(UNIX_EPOCH)
+            .map_err(|e| format!("System clock error: {e}"))?.as_nanos().to_string();
+        let manifest = SnapshotManifest {
+            snapshot_id: self.published_path.file_stem().and_then(|s| s.to_str())
+                .and_then(|s| s.strip_suffix(".snapshot")).ok_or("Invalid Snapshot filename")?.to_owned(),
+            run_id: state.run_id.clone(),
+            state_key: self.input.state_key.clone(),
+            instrument_id: self.input.instrument_id.clone(),
+            bar_type: self.input.bar_type.clone(),
+            input_start_sbar_id: self.input.start_id.clone(),
+            input_end_sbar_id: self.input.end_id.clone(),
+            input_start_ts_event: self.input.start_ts.clone(),
+            input_end_ts_event: self.input.end_ts.clone(),
+            snapshot_generated_at: generated_at,
+            input_bar_count: self.input.count,
+            sbar_sequence_fingerprint: self.input.fingerprint.clone(),
+            config_fingerprint: config.fingerprint()?,
+            effective_config: config.canonical_json()?,
+            status: STATUS_RECORDING.to_owned(),
+            checkpoint_count: 0,
+            content_checksum: String::new(),
+        };
+        let connection = Connection::open(&self.temporary_path)
+            .map_err(|e| format!("Create temporary SQLite database: {e}"))?;
+        connection.execute_batch(
+            "PRAGMA journal_mode=DELETE;
+             PRAGMA synchronous=FULL;
+             PRAGMA foreign_keys=ON;
+             CREATE TABLE snapshot_manifest(singleton INTEGER PRIMARY KEY CHECK(singleton=1), payload TEXT NOT NULL);
+             CREATE TABLE snapshot_checkpoints(
+               checkpoint_index INTEGER PRIMARY KEY CHECK(checkpoint_index>=0),
+               sbar_id TEXT NOT NULL, ts_event TEXT NOT NULL, record_kind TEXT NOT NULL,
+               state_data TEXT NOT NULL, diagnostics TEXT NOT NULL);
+             CREATE INDEX snapshot_checkpoints_sbar_id ON snapshot_checkpoints(sbar_id);"
+        ).map_err(|e| format!("Create Snapshot schema: {e}"))?;
+        connection.execute("INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
+            .map_err(|e| format!("Persist initial Manifest: {e}"))?;
+        connection.execute_batch("PRAGMA optimize;").map_err(|e| format!("Optimize Snapshot DB: {e}"))?;
+        connection.execute_batch("BEGIN IMMEDIATE; COMMIT;")
+            .map_err(|e| format!("Commit initial Snapshot metadata: {e}"))?;
+        self.manifest = Some(manifest);
+        self.connection = Some(connection);
+        Ok(())
+    }
+
+    fn commit_checkpoint(&mut self, index: usize, sbar_id: &str,
+        projection: &ReplayCheckpointProjection) -> Result<(), String> {
+        let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
+        if manifest.status != STATUS_RECORDING {
+            return Err(format!("Cannot append checkpoint to Snapshot in {}", manifest.status));
+        }
+        if index != self.checkpoints.len() {
+            return Err(format!("Expected checkpoint index {}, got {index}", self.checkpoints.len()));
+        }
+        if projection.last_ts_event.as_deref() != Some(sbar_id) {
+            return Err("Checkpoint projection SBar ID mismatch".into());
+        }
+        let record = SnapshotCheckpointRecord {
+            checkpoint_index: index,
+            sbar_id: sbar_id.to_owned(),
+            ts_event: sbar_id.to_owned(),
+            record_kind: "Full".into(),
+            state_data: canonical_structure_state(projection.structure.as_ref())?,
+            diagnostics: "[]".into(),
+        };
+        let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
+        let tx = connection.transaction().map_err(|e| format!("Begin checkpoint transaction: {e}"))?;
+        tx.execute("INSERT INTO snapshot_checkpoints(checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics)
+                    VALUES(?1,?2,?3,?4,?5,?6)",
+            params![
+                i64::try_from(index).map_err(|_| "Checkpoint index exceeds SQLite INTEGER range")?,
+                record.sbar_id, record.ts_event, record.record_kind, record.state_data, record.diagnostics
+            ]).map_err(|e| format!("Insert checkpoint: {e}"))?;
+        manifest.checkpoint_count = index + 1;
+        tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
+            .map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
+        tx.commit().map_err(|e| format!("Commit checkpoint transaction: {e}"))?;
+        self.checkpoints.push(record);
+        self.manifest = Some(manifest);
+        Ok(())
+    }
+
+    fn finalize(&mut self, state: &RunState) -> Result<(), String> {
+        self.finalize_snapshot(state)
+    }
+
+    fn fail(&mut self, _diagnostic: &str) -> Result<(), String> {
+        if let (Some(manifest), Some(connection)) = (self.manifest.as_mut(), self.connection.as_mut()) {
+            manifest.status = STATUS_FAILED.to_owned();
+            connection.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+                params![serde_json::to_string(manifest).map_err(|e| e.to_string())?])
+                .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
+        }
+        Ok(())
+    }
+}
+
+fn read_database(path: &Path) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), String> {
+    let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)
+        .map_err(|e| format!("Read-only reopen Snapshot: {e}"))?;
+    let payload: String = connection.query_row(
+        "SELECT payload FROM snapshot_manifest WHERE singleton=1", [], |row| row.get(0))
+        .map_err(|e| format!("Read Snapshot Manifest: {e}"))?;
+    let manifest = serde_json::from_str(&payload).map_err(|e| format!("Decode Snapshot Manifest: {e}"))?;
+    let mut stmt = connection.prepare("SELECT checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics
+                                       FROM snapshot_checkpoints ORDER BY checkpoint_index")
+        .map_err(|e| format!("Prepare checkpoint read: {e}"))?;
+    let rows = stmt.query_map([], |row| Ok((
+        row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?,
+        row.get::<_, String>(3)?, row.get::<_, String>(4)?, row.get::<_, String>(5)?,
+    ))).map_err(|e| format!("Query checkpoints: {e}"))?;
+    let mut records = Vec::new();
+    for row in rows {
+        let (index, sbar_id, ts_event, record_kind, state_data, diagnostics) =
+            row.map_err(|e| format!("Read checkpoint: {e}"))?;
+        records.push(SnapshotCheckpointRecord {
+            checkpoint_index: usize::try_from(index).map_err(|_| "Negative checkpoint index")?,
+            sbar_id, ts_event, record_kind, state_data, diagnostics,
+        });
+    }
+    Ok((manifest, records))
+}
