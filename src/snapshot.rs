@@ -329,13 +329,13 @@ mod tests {
 
     #[test]
     fn complete_snapshot_verification_detects_tampering() {
-        let records = records();
+        let mut records = records();
         let mut manifest = manifest(&records);
         manifest.content_checksum = manifest.calculate_content_checksum(&records).unwrap();
         assert!(verify_complete_snapshot(&manifest, &records).is_ok());
 
-        manifest.status = STATUS_FAILED.into();
-        assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("not Complete"));
+        records[1].state_data = r#"{"operations":["tampered"]}"#.into();
+        assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("checksum mismatch"));
     }
 
     #[test]
