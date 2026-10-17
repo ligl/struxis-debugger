@@ -47,6 +47,8 @@ bun run check
 
 The same root-level entrypoint also supports `bun run test`, `bun run typecheck`, `bun run build`, and `bun run test:watch`.
 
+For UI diagnostics, right-click anywhere in the Debugger window and choose **复制文档 HTML** to copy the current rendered document markup to the clipboard. The copied HTML excludes the context menu itself; paste it into a support conversation when reporting a UI issue.
+
 ## Architecture
 
 The [Struxis Debugger system design](../../docs/architecture/struxis/debugger.md) is the single design entry point, with linked topic documents covering workspace, data contracts, replay lifecycle, snapshots, comparison, and validation. The current implementation is a disposable prototype; after the design set is completed and approved, the existing Debugger implementation will be removed and rebuilt against these documents. Application lifecycle, UI composition, state, IPC, and release decisions remain independent from Terminal.
