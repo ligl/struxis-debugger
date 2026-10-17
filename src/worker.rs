@@ -89,7 +89,7 @@ impl ReplayWorker {
             .spawn(move || {
                 let session = WorkerSession::initialize(config, sink.as_mut());
                 match session {
-                    Ok(session) => {
+                    Ok(mut session) => {
                         if ready_tx.send(Ok(session.state.clone())).is_err() {
                             session.engine_dispose();
                             return;
