@@ -13,6 +13,7 @@ use serde::Serialize;
 
 use crate::{
     catalog::{OriginLoad, load_origin as load_origin_candidate},
+    dataset::TestDataset,
     discovery::{CatalogDatasetEntry, configured_catalog_root, discover_catalog_datasets},
     ipc::{IpcError, IpcErrorCode},
 };
@@ -27,8 +28,13 @@ pub struct AppState {
 
 struct AppStateInner {
     catalog_path: PathBuf,
-    current_origin: Mutex<Option<OriginRecord>>,
-    load_active: AtomicBool,
+    datasets: Mutex<AppDatasets>,
+    mutation_active: AtomicBool,
+}
+
+struct AppDatasets {
+    current_origin: Option<OriginRecord>,
+    current_test: Option<TestRecord>,
 }
 
 #[derive(Clone)]
@@ -38,14 +44,22 @@ struct OriginRecord {
     enable_structure: bool,
 }
 
+#[derive(Clone)]
+struct TestRecord {
+    dataset: TestDataset,
+}
+
 impl AppState {
     #[must_use]
     pub fn new(catalog_path: PathBuf) -> Self {
         Self {
             inner: Arc::new(AppStateInner {
                 catalog_path,
-                current_origin: Mutex::new(None),
-                load_active: AtomicBool::new(false),
+                datasets: Mutex::new(AppDatasets {
+                    current_origin: None,
+                    current_test: None,
+                }),
+                mutation_active: AtomicBool::new(false),
             }),
         }
     }
@@ -70,7 +84,7 @@ impl AppState {
         enable_structure: bool,
     ) -> Result<OriginDatasetDto, IpcError> {
         self.inner
-            .load_active
+            .mutation_active
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .map_err(|_| {
                 IpcError::new(
@@ -78,7 +92,7 @@ impl AppState {
                     "An Origin Load operation is already active",
                 )
             })?;
-        let _permit = LoadPermit(&self.inner.load_active);
+        let _permit = MutationPermit(&self.inner.mutation_active);
 
         let entries = discover_catalog_datasets(&self.inner.catalog_path).map_err(|error| {
             IpcError::new(
@@ -131,24 +145,76 @@ impl AppState {
             enable_structure,
         };
         let dto = record.to_dto();
-        let mut current = self.inner.current_origin.lock().map_err(|_| {
+        let mut datasets = self.inner.datasets.lock().map_err(|_| {
             IpcError::new(
                 IpcErrorCode::Internal,
-                "Origin state is unavailable because its lock was poisoned",
+                "Application dataset state is unavailable because its lock was poisoned",
             )
         })?;
-        *current = Some(record);
+        datasets.current_origin = Some(record);
+        // A successful Origin replacement invalidates a Test derived from the old Origin.
+        datasets.current_test = None;
         Ok(dto)
     }
 
     pub fn current_origin(&self) -> Result<Option<OriginDatasetDto>, IpcError> {
-        let current = self.inner.current_origin.lock().map_err(|_| {
+        let datasets = self.inner.datasets.lock().map_err(|_| {
             IpcError::new(
                 IpcErrorCode::Internal,
-                "Origin state is unavailable because its lock was poisoned",
+                "Application dataset state is unavailable because its lock was poisoned",
             )
         })?;
-        Ok(current.as_ref().map(OriginRecord::to_dto))
+        Ok(datasets.current_origin.as_ref().map(OriginRecord::to_dto))
+    }
+
+    pub fn create_test_dataset(
+        &self,
+        start_sbar_id: &str,
+        end_sbar_id: &str,
+    ) -> Result<TestDatasetDto, IpcError> {
+        self.inner
+            .mutation_active
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .map_err(|_| {
+                IpcError::new(
+                    IpcErrorCode::Conflict,
+                    "Another dataset mutation is already active",
+                )
+            })?;
+        let _permit = MutationPermit(&self.inner.mutation_active);
+
+        let mut datasets = self.inner.datasets.lock().map_err(|_| {
+            IpcError::new(
+                IpcErrorCode::Internal,
+                "Application dataset state is unavailable because its lock was poisoned",
+            )
+        })?;
+        let origin = datasets.current_origin.as_ref().ok_or_else(|| {
+            IpcError::new(
+                IpcErrorCode::InvalidState,
+                "Load and validate an Origin Dataset before creating a Test Dataset",
+            )
+        })?;
+        let test = TestDataset::create(&origin.dataset, start_sbar_id, end_sbar_id).map_err(|error| {
+            IpcError::new(
+                IpcErrorCode::InvalidArgument,
+                format!("Test Dataset selection rejected: {error}"),
+            )
+        })?;
+        let record = TestRecord { dataset: test };
+        let dto = record.to_dto();
+        datasets.current_test = Some(record);
+        Ok(dto)
+    }
+
+    pub fn current_test_dataset(&self) -> Result<Option<TestDatasetDto>, IpcError> {
+        let datasets = self.inner.datasets.lock().map_err(|_| {
+            IpcError::new(
+                IpcErrorCode::Internal,
+                "Application dataset state is unavailable because its lock was poisoned",
+            )
+        })?;
+        Ok(datasets.current_test.as_ref().map(TestRecord::to_dto))
     }
 
     #[must_use]
@@ -157,9 +223,9 @@ impl AppState {
     }
 }
 
-struct LoadPermit<'a>(&'a AtomicBool);
+struct MutationPermit<'a>(&'a AtomicBool);
 
-impl Drop for LoadPermit<'_> {
+impl Drop for MutationPermit<'_> {
     fn drop(&mut self) {
         self.0.store(false, Ordering::Release);
     }
@@ -185,6 +251,20 @@ pub struct OriginDatasetDto {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TestDatasetDto {
+    pub test_dataset_id: String,
+    pub origin_dataset_id: String,
+    pub instrument_id: String,
+    pub bar_type: String,
+    pub timeframe: String,
+    pub start_sbar_id: String,
+    pub end_sbar_id: String,
+    pub sbar_count: usize,
+    pub sbar_sequence_fingerprint: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SBarDto {
     pub sbar_id: String,
     pub bar_type: String,
@@ -195,6 +275,23 @@ pub struct SBarDto {
     pub low: String,
     pub close: String,
     pub volume: String,
+}
+
+impl TestRecord {
+    fn to_dto(&self) -> TestDatasetDto {
+        let dataset = &self.dataset;
+        TestDatasetDto {
+            test_dataset_id: dataset.test_dataset_id().to_string(),
+            origin_dataset_id: dataset.origin_dataset_id().to_string(),
+            instrument_id: dataset.state_key().instrument_id.to_string(),
+            bar_type: dataset.bar_type().to_owned(),
+            timeframe: format!("{}s", dataset.state_key().timeframe.duration().as_secs()),
+            start_sbar_id: dataset.start_sbar_id().to_owned(),
+            end_sbar_id: dataset.end_sbar_id().to_owned(),
+            sbar_count: dataset.bars().len(),
+            sbar_sequence_fingerprint: dataset.sbar_sequence_fingerprint().to_owned(),
+        }
+    }
 }
 
 impl OriginRecord {
