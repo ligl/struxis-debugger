@@ -64,6 +64,9 @@ pub struct ReplayWorkerConfig {
 
 enum WorkerCommand {
     Step(SyncSender<Result<RunState, String>>),
+    Play(SyncSender<Result<RunState, String>>),
+    Pause(SyncSender<Result<RunState, String>>),
+    Stop(SyncSender<Result<RunState, String>>),
     Dispose(SyncSender<Result<RunState, String>>),
 }
 
@@ -137,6 +140,58 @@ impl ReplayWorker {
         reply_rx
             .recv()
             .map_err(|error| format!("Replay worker dropped Step response: {error}"))?
+    }
+
+    /// Starts or resumes continuous processing. The command returns after
+    /// the Run transitions to Running; each subsequent SBar is processed on
+    /// the worker thread at a checkpoint boundary.
+    pub fn play(&self) -> Result<RunState, String> {
+        self.send_state_command(ReplayCommandKind::Play, WorkerCommand::Play)
+    }
+
+    /// Pauses after the currently executing SBar checkpoint, if any, commits.
+    pub fn pause(&self) -> Result<RunState, String> {
+        self.send_state_command(ReplayCommandKind::Pause, WorkerCommand::Pause)
+    }
+
+    /// Stops the Run at a safe checkpoint boundary and releases its runtime.
+    pub fn stop(&mut self) -> Result<RunState, String> {
+        self.send_terminal_command(ReplayCommandKind::Stop, WorkerCommand::Stop)
+    }
+
+    fn send_state_command(
+        &self,
+        kind: ReplayCommandKind,
+        command: fn(SyncSender<Result<RunState, String>>) -> WorkerCommand,
+    ) -> Result<RunState, String> {
+        let _permit = self.command_gate.try_enter(kind)?;
+        let (reply_tx, reply_rx) = mpsc::sync_channel(0);
+        self.commands
+            .send(command(reply_tx))
+            .map_err(|error| format!("Replay worker is unavailable: {error}"))?;
+        reply_rx
+            .recv()
+            .map_err(|error| format!("Replay worker dropped {kind:?} response: {error}"))?
+    }
+
+    fn send_terminal_command(
+        &mut self,
+        kind: ReplayCommandKind,
+        command: fn(SyncSender<Result<RunState, String>>) -> WorkerCommand,
+    ) -> Result<RunState, String> {
+        let _permit = self.command_gate.try_enter(kind)?;
+        let (reply_tx, reply_rx) = mpsc::sync_channel(0);
+        self.commands
+            .send(command(reply_tx))
+            .map_err(|error| format!("Replay worker is unavailable during {kind:?}: {error}"))?;
+        let result = reply_rx
+            .recv()
+            .map_err(|error| format!("Replay worker dropped {kind:?} response: {error}"))?;
+        if let Some(join) = self.join.take() {
+            join.join()
+                .map_err(|_| format!("Replay worker panicked while handling {kind:?}"))?;
+        }
+        result
     }
 
     /// Releases Run-owned resources on the worker thread and joins it.
@@ -279,6 +334,25 @@ impl WorkerSession {
         })
     }
 
+    fn play(&mut self) -> Result<RunState, String> {
+        self.state.play()?;
+        Ok(self.state.clone())
+    }
+
+    fn pause(&mut self) -> Result<RunState, String> {
+        self.state.pause()?;
+        Ok(self.state.clone())
+    }
+
+    fn dispose(&mut self) -> Result<RunState, String> {
+        if self.state.status == RunStatus::Running {
+            self.state.pause()?;
+        }
+        self.engine_dispose();
+        self.state.dispose()?;
+        Ok(self.state.clone())
+    }
+
     fn step(&mut self, sink: &mut dyn CheckpointSink) -> Result<RunState, String> {
         if !matches!(self.state.status, RunStatus::Ready | RunStatus::Paused) {
             return Err(format!(
@@ -369,20 +443,53 @@ fn worker_loop(
     mut sink: Box<dyn CheckpointSink>,
     commands: Receiver<WorkerCommand>,
 ) {
-    while let Ok(command) = commands.recv() {
+    loop {
+        let command = if session.state.status == RunStatus::Running {
+            match commands.try_recv() {
+                Ok(command) => Some(command),
+                Err(mpsc::TryRecvError::Empty) => {
+                    if let Err(error) = session.step(sink.as_mut()) {
+                        if session.state.status != RunStatus::Failed {
+                            let _ = session.state.fail(error);
+                        }
+                    }
+                    None
+                }
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    let _ = session.dispose();
+                    return;
+                }
+            }
+        } else {
+            match commands.recv() {
+                Ok(command) => Some(command),
+                Err(_) => {
+                    let _ = session.dispose();
+                    return;
+                }
+            }
+        };
+
+        let Some(command) = command else {
+            continue;
+        };
         match command {
             WorkerCommand::Step(reply) => {
                 let _ = reply.send(session.step(sink.as_mut()));
             }
-            WorkerCommand::Dispose(reply) => {
-                session.engine_dispose();
-                let result = session.state.dispose();
-                let _ = reply.send(result.map(|()| session.state.clone()));
+            WorkerCommand::Play(reply) => {
+                let _ = reply.send(session.play());
+            }
+            WorkerCommand::Pause(reply) => {
+                let _ = reply.send(session.pause());
+            }
+            WorkerCommand::Stop(reply) | WorkerCommand::Dispose(reply) => {
+                let result = session.dispose();
+                let _ = reply.send(result);
                 return;
             }
         }
     }
-    session.engine_dispose();
 }
 
 /// Test-only in-memory sink. It intentionally is not a production persistence
@@ -500,6 +607,47 @@ mod tests {
         assert_eq!(checkpoints[1].2.sbar_count, 2);
         assert_eq!(checkpoints[2].2.sbar_count, 3);
 
+        worker.dispose().expect("worker Dispose");
+    }
+
+    #[test]
+    fn worker_play_runs_to_completion_and_pause_is_checkpoint_bounded() {
+        let test = fixture_test();
+        let input = LoadedInput::from_test(&test).expect("LoadedInput");
+        let sink = MemoryCheckpointSink::default();
+        let observed = sink.clone();
+        let instrument = InstrumentAny::CurrencyPair(audusd_sim());
+        let (mut worker, initial) = ReplayWorker::spawn(
+            ReplayWorkerConfig {
+                run_id: "worker-play-contract".into(),
+                input,
+                instrument,
+            },
+            Box::new(sink),
+        ).expect("worker should initialize");
+
+        assert_eq!(initial.status, RunStatus::Ready);
+        let running = worker.play().expect("Play should be accepted");
+        assert_eq!(running.status, RunStatus::Running);
+
+        // A synchronous worker reply is returned only after the Run reaches a
+        // stable state. With this short fixture, Play normally completes before
+        // this call is admitted; Paused/Completed are both safe outcomes.
+        let mut state = worker.pause().expect("Pause should resolve at a checkpoint boundary");
+        if state.status == RunStatus::Paused {
+            // Resume by Play and wait for the finite fixture to complete.
+            state = worker.play().expect("Resume should be accepted");
+            assert_eq!(state.status, RunStatus::Running);
+        }
+        for _ in 0..10 {
+            if state.status == RunStatus::Completed {
+                break;
+            }
+            std::thread::yield_now();
+            state = worker.pause().or_else(|_| worker.play()).expect("control state should resolve");
+        }
+        assert_eq!(state.status, RunStatus::Completed);
+        assert_eq!(observed.checkpoints.lock().expect("checkpoints").len(), 3);
         worker.dispose().expect("worker Dispose");
     }
 
