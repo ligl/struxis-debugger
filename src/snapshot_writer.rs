@@ -386,6 +386,39 @@ mod tests {
     }
 
     #[test]
+    fn checkpoint_commit_rejects_identity_mismatches_without_advancing_writer() {
+        let root = std::env::temp_dir().join(format!(
+            "capitus-snapshot-writer-identity-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let input = input();
+        let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
+        let state = RunState::ready("writer-identity".into(), input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(), input.bars.len()).unwrap();
+        writer.initialize(&state, &config()).unwrap();
+
+        let mut projection = ReplayCheckpointProjection {
+            state_key: format!("{:?}", input.state_key),
+            last_ts_event: Some("999".into()),
+            sbar_count: 1,
+            sbars: vec![],
+            structure: None,
+        };
+        assert!(writer.commit_checkpoint(0, "999", &projection).unwrap_err()
+            .contains("does not match fixed input"));
+        assert!(writer.checkpoints.is_empty());
+
+        projection.state_key = "wrong-state-key".into();
+        projection.last_ts_event = Some("100".into());
+        assert!(writer.commit_checkpoint(0, "100", &projection).unwrap_err()
+            .contains("StruxisStateKey mismatch"));
+        assert!(writer.checkpoints.is_empty());
+
+        drop(writer);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn checkpoint_commit_rejects_out_of_order_index_without_advancing_writer() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-writer-order-{}",
