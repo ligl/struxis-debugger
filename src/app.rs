@@ -452,11 +452,23 @@ mod tests {
     #[test]
     fn successful_origin_replacement_clears_test_but_failed_load_preserves_it() {
         let app = app_with_origin(PathBuf::from("/definitely/missing/catalog"));
+        let first_origin_id = app
+            .current_origin()
+            .expect("Origin lookup should succeed")
+            .expect("Origin should exist")
+            .origin_dataset_id;
         let first_test = app
             .create_test_dataset("100", "200")
             .expect("Test should be created");
 
         assert!(app.load_origin("missing-dataset", true).is_err());
+        assert_eq!(
+            app.current_origin()
+                .expect("Origin lookup should succeed after failed Load")
+                .expect("failed Load must preserve Origin")
+                .origin_dataset_id,
+            first_origin_id
+        );
         assert_eq!(
             app.current_test_dataset()
                 .expect("Test lookup should succeed")
