@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App.vue";
-import type { CatalogDatasetEntry, OriginDatasetDto } from "./origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "./origin-types";
 
 const ipc = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -245,5 +245,116 @@ describe("Origin Load workbench", () => {
 
     resolveLoad(makeOrigin("origin-new"));
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
+  });
+});
+
+
+const testDataset: TestDatasetDto = {
+  testDatasetId: "test-1",
+  originDatasetId: "origin-existing",
+  instrumentId: dataset.instrumentId!,
+  barType: dataset.barType!,
+  timeframe: "300s",
+  startSbarId: "100",
+  endSbarId: "200",
+  sbarCount: 2,
+  sbarSequenceFingerprint: "test-fingerprint",
+};
+
+describe("Test, Run and Snapshot workbench", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("creates a backend-validated Test Dataset and exposes Run controls", async () => {
+    const origin = makeOrigin("origin-existing");
+    const runState = {
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+      failureDiagnostic: null,
+    };
+    const snapshot = {
+      fileName: "snapshot-1.snapshot.sqlite",
+      path: "/snapshots/snapshot-1.snapshot.sqlite",
+      kind: "complete",
+      snapshotId: "snapshot-1",
+      runId: "run-1",
+      stateKey: "BTCUSDT-PERP.BINANCE",
+      generatedAt: "1780000000000000000",
+      checkpointCount: 2,
+      diagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([snapshot]);
+      if (command === "create_test_dataset") return Promise.resolve(testDataset);
+      if (command === "start_run") return Promise.resolve(runState);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
+    await vi.waitFor(() => expect(wrapper.findAll('input[type="text"]')).toHaveLength(2));
+    const rangeInputs = wrapper.findAll('input[type="text"]');
+    expect((rangeInputs[0].element as HTMLInputElement).value).toBe("100");
+    expect((rangeInputs[1].element as HTMLInputElement).value).toBe("200");
+
+    const createButton = wrapper.findAll("button").find((button) =>
+      button.text().includes("CREATE TEST DATASET"),
+    );
+    expect(createButton).toBeDefined();
+    await createButton!.trigger("click");
+    await vi.waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
+        startSbarId: "100",
+        endSbarId: "200",
+      }),
+    );
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+
+    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START");
+    expect(startButton).toBeDefined();
+    await startButton!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await vi.waitFor(() => expect(wrapper.text()).toContain("COMPLETE / VERIFIED"));
+    expect(invokeMock).toHaveBeenCalledWith("start_run");
+    expect(invokeMock).toHaveBeenCalledWith("list_snapshots");
+    expect(wrapper.text()).toContain("0 / 2");
+  });
+
+  it("keeps the previously created Test Dataset visible when replacement fails", async () => {
+    const origin = makeOrigin("origin-existing");
+    let createAttempts = 0;
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "create_test_dataset") {
+        createAttempts += 1;
+        return createAttempts === 1
+          ? Promise.resolve(testDataset)
+          : Promise.reject("replacement interval rejected");
+      }
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
+    const createButton = () => wrapper.findAll("button").find((button) =>
+      button.text().includes("CREATE TEST DATASET") || button.text().includes("REPLACE TEST DATASET"),
+    );
+    await createButton()!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await createButton()!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("replacement interval rejected"));
+    expect(wrapper.text()).toContain("test-1");
   });
 });
