@@ -99,17 +99,16 @@ impl RunState {
         Ok(())
     }
 
-    /// Records intentional termination only for a Run without a terminal
-    /// processing outcome. Completed and Failed remain durable outcomes after
-    /// their runtime resources are released. The caller must first stop and
-    /// join the worker; Running is rejected.
+    /// Finalizes the Run lifecycle after the worker has stopped and all
+    /// Run-owned resources have been released. Processing facts remain in
+    /// processed_count, input_count, cursor_sbar_id, and failure_diagnostic.
+    /// Running is rejected.
     pub fn dispose(&mut self) -> Result<(), String> {
         match self.status {
-            RunStatus::Ready | RunStatus::Paused => {
+            RunStatus::Ready | RunStatus::Paused | RunStatus::Completed | RunStatus::Failed => {
                 self.status = RunStatus::Disposed;
                 Ok(())
             }
-            RunStatus::Completed | RunStatus::Failed => Ok(()),
             status => Err(self.invalid_transition("Dispose", status)),
         }
     }
@@ -174,25 +173,26 @@ mod tests {
     }
 
     #[test]
-    fn dispose_preserves_completed_processing_outcome() {
+    fn dispose_finalizes_completed_run_and_preserves_progress() {
         let mut run = ready(1);
         run.confirm_checkpoint("100".into()).unwrap();
         assert_eq!(run.status, RunStatus::Completed);
 
         run.dispose().unwrap();
 
-        assert_eq!(run.status, RunStatus::Completed);
+        assert_eq!(run.status, RunStatus::Disposed);
         assert_eq!(run.processed_count, 1);
+        assert_eq!(run.cursor_sbar_id.as_deref(), Some("100"));
     }
 
     #[test]
-    fn dispose_preserves_failed_processing_outcome() {
+    fn dispose_finalizes_failed_run_and_preserves_diagnostic() {
         let mut run = ready(2);
         run.fail("checkpoint sink failed".into()).unwrap();
 
         run.dispose().unwrap();
 
-        assert_eq!(run.status, RunStatus::Failed);
+        assert_eq!(run.status, RunStatus::Disposed);
         assert_eq!(run.failure_diagnostic.as_deref(), Some("checkpoint sink failed"));
     }
 
