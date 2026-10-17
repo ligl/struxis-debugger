@@ -51,3 +51,43 @@ export interface IpcError {
   code: "invalid_argument" | "not_found" | "conflict" | "invalid_state" | "internal";
   message: string;
 }
+
+export type RunStatus =
+  | "ready"
+  | "running"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "disposed";
+
+export interface RunStateDto {
+  runId: string;
+  testDatasetId: string;
+  inputFingerprint: string;
+  inputCount: number;
+  status: RunStatus;
+  processedCount: number;
+  cursorSbarId: string | null;
+  failureDiagnostic: string | null;
+}
+
+export type SnapshotArtifactKind =
+  | "complete"
+  | "invalidPublished"
+  | "recordingTemporary"
+  | "finalizingTemporary"
+  | "failedTemporary"
+  | "completeButUnpublished"
+  | "unreadableTemporary";
+
+export interface SnapshotArtifactDto {
+  fileName: string;
+  path: string;
+  kind: SnapshotArtifactKind;
+  snapshotId: string | null;
+  runId: string | null;
+  stateKey: string | null;
+  generatedAt: string | null;
+  checkpointCount: number | null;
+  diagnostic: string | null;
+}
