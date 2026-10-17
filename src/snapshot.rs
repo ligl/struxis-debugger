@@ -257,15 +257,17 @@ pub fn validate_snapshot_records(
         }
         let state: serde_json::Value = serde_json::from_str(&checkpoint.state_data)
             .map_err(|error| format!("Invalid state_data JSON: {error}"))?;
+        let state = normalize_integer_json_values(state);
         if serde_json::to_string(&state).map_err(|error| error.to_string())? != checkpoint.state_data {
-            return Err(format!("Checkpoint {} state_data is not canonical JSON", checkpoint.checkpoint_index));
+            return Err(format!("Checkpoint {} state_data is not canonical JSON (integer values must be decimal strings)", checkpoint.checkpoint_index));
         }
         let diagnostics: serde_json::Value = serde_json::from_str(&checkpoint.diagnostics)
             .map_err(|error| format!("Invalid diagnostics JSON: {error}"))?;
+        let diagnostics = normalize_integer_json_values(diagnostics);
         if !diagnostics.is_array()
             || serde_json::to_string(&diagnostics).map_err(|error| error.to_string())? != checkpoint.diagnostics
         {
-            return Err(format!("Checkpoint {} diagnostics must be a canonical JSON array", checkpoint.checkpoint_index));
+            return Err(format!("Checkpoint {} diagnostics must be a canonical JSON array (integer values must be decimal strings)", checkpoint.checkpoint_index));
         }
     }
 
@@ -295,7 +297,7 @@ mod tests {
                 sbar_id: "100".into(),
                 ts_event: "100".into(),
                 record_kind: "Full".into(),
-                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#.into(),
+                state_data: r#"{"cbarCount":"0","cbars":[],"swingCount":"0","swings":[]}"#.into(),
                 diagnostics: "[]".into(),
             },
             SnapshotCheckpointRecord {
@@ -330,6 +332,47 @@ mod tests {
             checkpoint_count: records.len(),
             content_checksum: String::new(),
         }
+    }
+
+    #[test]
+    fn checksum_encodes_counts_as_strings_and_embedded_state_as_json() {
+        let records = records();
+        let manifest = manifest(&records);
+        let checksum_payload = manifest.calculate_content_checksum(&records).unwrap();
+        assert_eq!(checksum_payload.len(), 64);
+
+        let payload = SnapshotChecksumPayload {
+            manifest: SnapshotManifestChecksumView {
+                snapshot_id: manifest.snapshot_id.clone(),
+                run_id: manifest.run_id.clone(),
+                state_key: manifest.state_key.clone(),
+                instrument_id: manifest.instrument_id.clone(),
+                bar_type: manifest.bar_type.clone(),
+                input_start_sbar_id: manifest.input_start_sbar_id.clone(),
+                input_end_sbar_id: manifest.input_end_sbar_id.clone(),
+                input_start_ts_event: manifest.input_start_ts_event.clone(),
+                input_end_ts_event: manifest.input_end_ts_event.clone(),
+                snapshot_generated_at: manifest.snapshot_generated_at.clone(),
+                input_bar_count: manifest.input_bar_count.to_string(),
+                sbar_sequence_fingerprint: manifest.sbar_sequence_fingerprint.clone(),
+                config_fingerprint: manifest.config_fingerprint.clone(),
+                effective_config: serde_json::from_str(&manifest.effective_config).unwrap(),
+                status: manifest.status.clone(),
+                checkpoint_count: manifest.checkpoint_count.to_string(),
+            },
+            checkpoints: vec![SnapshotCheckpointChecksumView {
+                checkpoint_index: "0".into(),
+                sbar_id: "100".into(),
+                ts_event: "100".into(),
+                record_kind: "Full".into(),
+                state_data: serde_json::from_str(&records[0].state_data).unwrap(),
+                diagnostics: serde_json::Value::Array(vec![]),
+            }],
+        };
+        let encoded = serde_json::to_string(&payload).unwrap();
+        assert!(encoded.contains(r#""input_bar_count":"2""#));
+        assert!(encoded.contains(r#""state_data":{"cbarCount":"0""#));
+        assert!(!encoded.contains(r#""state_data":"{"#));
     }
 
     #[test]
