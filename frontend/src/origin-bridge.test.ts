@@ -8,7 +8,19 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: invokeMock,
 }));
 
-import { createTestDataset, getCurrentTestDataset } from "./origin-bridge";
+import {
+  createTestDataset,
+  disposeRun,
+  getCurrentTestDataset,
+  getRunState,
+  listSnapshots,
+  pauseRun,
+  playRun,
+  restartRun,
+  startRun,
+  stepRun,
+  stopRun,
+} from "./origin-bridge";
 import type { TestDatasetDto } from "./origin-types";
 
 const testDataset: TestDatasetDto = {
@@ -43,5 +55,64 @@ describe("Test Dataset IPC bridge", () => {
 
     await expect(getCurrentTestDataset()).resolves.toBeNull();
     expect(invokeMock).toHaveBeenCalledWith("get_current_test_dataset");
+  });
+});
+
+
+describe("Run and Snapshot IPC bridge", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps Run controls to their exact Tauri command names without inventing arguments", async () => {
+    const state = {
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "fingerprint",
+      inputCount: 2,
+      status: "paused",
+      processedCount: 1,
+      cursorSbarId: "100",
+      failureDiagnostic: null,
+    };
+    invokeMock.mockResolvedValue(state);
+
+    await expect(startRun()).resolves.toEqual(state);
+    await expect(restartRun()).resolves.toEqual(state);
+    await expect(getRunState()).resolves.toEqual(state);
+    await expect(stepRun()).resolves.toEqual(state);
+    await expect(playRun()).resolves.toEqual(state);
+    await expect(pauseRun()).resolves.toEqual(state);
+    await expect(stopRun()).resolves.toEqual(state);
+    await expect(disposeRun()).resolves.toEqual(state);
+
+    expect(invokeMock.mock.calls).toEqual([
+      ["start_run"],
+      ["restart_run"],
+      ["get_run_state"],
+      ["step_run"],
+      ["play_run"],
+      ["pause_run"],
+      ["stop_run"],
+      ["dispose_run"],
+    ]);
+  });
+
+  it("lists Snapshot artifacts using the read-only discovery command", async () => {
+    const artifacts = [{
+      fileName: "snapshot-1.snapshot.sqlite",
+      path: "/snapshots/snapshot-1.snapshot.sqlite",
+      kind: "complete",
+      snapshotId: "snapshot-1",
+      runId: "run-1",
+      stateKey: "BTCUSDT-PERP.BINANCE",
+      generatedAt: "1780000000000000000",
+      checkpointCount: 2,
+      diagnostic: null,
+    }];
+    invokeMock.mockResolvedValue(artifacts);
+
+    await expect(listSnapshots()).resolves.toEqual(artifacts);
+    expect(invokeMock).toHaveBeenCalledWith("list_snapshots");
   });
 });
