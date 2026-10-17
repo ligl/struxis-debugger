@@ -20,10 +20,49 @@ const discoveryError = ref("");
 const origin = ref<OriginDatasetDto | null>(null);
 const refreshing = ref(false);
 
+interface InstrumentGroup {
+  key: string;
+  label: string;
+  unresolved: boolean;
+  datasets: CatalogDatasetEntry[];
+  readyCount: number;
+}
+
 const selectedDataset = computed(
   () => datasets.value.find((dataset) => dataset.id === selectedId.value) ?? null,
 );
+const collapsedInstrumentIds = ref<Set<string>>(new Set());
+const instrumentGroups = computed<InstrumentGroup[]>(() => {
+  const groups = new Map<string, InstrumentGroup>();
+
+  for (const dataset of datasets.value) {
+    const unresolved = !dataset.instrumentId;
+    const key = unresolved ? "__unresolved_instrument__" : dataset.instrumentId!;
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        key,
+        label: unresolved ? "Unresolved / Unavailable" : dataset.instrumentId!,
+        unresolved,
+        datasets: [],
+        readyCount: 0,
+      };
+      groups.set(key, group);
+    }
+    group.datasets.push(dataset);
+    if (dataset.available) group.readyCount += 1;
+  }
+
+  return [...groups.values()];
+});
 const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
+
+function toggleInstrumentGroup(key: string): void {
+  const next = new Set(collapsedInstrumentIds.value);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  collapsedInstrumentIds.value = next;
+}
 
 async function refreshDatasets(): Promise<void> {
   refreshing.value = true;
@@ -109,24 +148,45 @@ onMounted(async () => {
           No Bar streams were discovered in the configured Catalog.
         </p>
 
-        <div class="dataset-list">
-          <button
-            v-for="dataset in datasets"
-            :key="dataset.id"
-            class="dataset-row"
-            :class="{ selected: selectedId === dataset.id, unavailable: !dataset.available }"
-            :disabled="loading"
-            :aria-pressed="selectedId === dataset.id"
-            @click="selectedId = dataset.id"
+        <div class="instrument-list">
+          <section
+            v-for="group in instrumentGroups"
+            :key="group.key"
+            class="instrument-group"
+            :class="{ unresolved: group.unresolved }"
           >
-            <span class="dataset-status" :class="{ ready: dataset.available }"></span>
-            <span class="dataset-details">
-              <strong>{{ dataset.barType ?? dataset.id }}</strong>
-              <small>{{ dataset.instrumentId ?? "Instrument unresolved" }}<template v-if="dataset.timeframe"> · {{ dataset.timeframe }}</template></small>
-              <small v-if="!dataset.available" class="diagnostic">{{ dataset.diagnostic }}</small>
-            </span>
-            <span class="dataset-state">{{ dataset.available ? "READY" : "UNAVAILABLE" }}</span>
-          </button>
+            <button
+              class="instrument-group-row"
+              :aria-expanded="!collapsedInstrumentIds.has(group.key)"
+              @click="toggleInstrumentGroup(group.key)"
+            >
+              <span class="group-chevron" aria-hidden="true">
+                {{ collapsedInstrumentIds.has(group.key) ? "▸" : "▾" }}
+              </span>
+              <span class="instrument-group-name">{{ group.label }}</span>
+              <span class="group-count">{{ group.datasets.length }} DATASET{{ group.datasets.length === 1 ? "" : "S" }}</span>
+              <span class="group-ready">{{ group.readyCount }}/{{ group.datasets.length }} READY</span>
+            </button>
+            <div v-if="!collapsedInstrumentIds.has(group.key)" class="dataset-list">
+              <button
+                v-for="dataset in group.datasets"
+                :key="dataset.id"
+                class="dataset-row"
+                :class="{ selected: selectedId === dataset.id, unavailable: !dataset.available }"
+                :disabled="loading"
+                :aria-pressed="selectedId === dataset.id"
+                @click="selectedId = dataset.id"
+              >
+                <span class="dataset-status" :class="{ ready: dataset.available }"></span>
+                <span class="dataset-details">
+                  <strong>{{ dataset.barType ?? dataset.id }}</strong>
+                  <small><template v-if="dataset.timeframe">{{ dataset.timeframe }} · </template>{{ dataset.id }}</small>
+                  <small v-if="!dataset.available" class="diagnostic">{{ dataset.diagnostic ?? "Dataset metadata is unavailable." }}</small>
+                </span>
+                <span class="dataset-state">{{ dataset.available ? "READY" : "UNAVAILABLE" }}</span>
+              </button>
+            </div>
+          </section>
         </div>
 
         <div class="load-options">
