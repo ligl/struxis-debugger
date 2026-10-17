@@ -6,6 +6,9 @@ pub mod discovery;
 pub mod ipc;
 pub mod run;
 pub mod replay;
+pub mod checkpoint;
+pub mod worker;
+pub mod manager;
 
 fn main() {
     tauri::Builder::default()
