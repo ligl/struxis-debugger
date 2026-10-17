@@ -4,6 +4,10 @@ readme = "README.md"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+# Enables integration tests that require the local test_data/catalog dataset.
+catalog-integration-tests = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
