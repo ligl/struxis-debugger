@@ -307,8 +307,12 @@ impl AppState {
         &self,
         operation: impl FnOnce(&mut ReplayManager) -> Result<RunState, String>,
     ) -> Result<RunState, IpcError> {
-        let mut manager = self.inner.replay_manager.lock().map_err(|_| {
-            IpcError::new(IpcErrorCode::Internal, "ReplayManager lock is poisoned")
+        let mut manager = self.inner.replay_manager.try_lock().map_err(|error| {
+            let message = match error {
+                std::sync::TryLockError::WouldBlock => "Replay command rejected: another command is active",
+                std::sync::TryLockError::Poisoned(_) => "ReplayManager lock is poisoned",
+            };
+            IpcError::new(IpcErrorCode::Conflict, message)
         })?;
         operation(&mut manager).map_err(|error| {
             IpcError::new(IpcErrorCode::InvalidState, error)
