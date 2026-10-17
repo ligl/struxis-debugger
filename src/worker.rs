@@ -628,7 +628,10 @@ impl CheckpointSink for FailingCheckpointSink {
 
 #[cfg(test)]
 mod tests {
-    use super::{FailingCheckpointSink, MemoryCheckpointSink, ReplayWorker, ReplayWorkerConfig};
+    use super::{
+        FailingCheckpointSink, MemoryCheckpointSink, ReplayCommandGate, ReplayWorker,
+        ReplayWorkerConfig, mpsc,
+    };
     use crate::{
         catalog::OriginLoad,
         dataset::{TestDataset, sequence_fingerprint},
