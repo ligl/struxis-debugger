@@ -376,6 +376,20 @@ mod tests {
     }
 
     #[test]
+    fn config_and_snapshot_checksum_match_fixed_vectors() {
+        let records = records();
+        let manifest = manifest(&records);
+        assert_eq!(
+            manifest.config_fingerprint,
+            "21e728f2a246103a73133942d05478bcad5ed5428b70a952c4cd966d4f56d52a"
+        );
+        assert_eq!(
+            manifest.calculate_content_checksum(&records).unwrap(),
+            "6cd4f29fe2baa85030e54a8fd11d70afad51fa577c9a9cf37aa6a610a1fa8245"
+        );
+    }
+
+    #[test]
     fn checksum_covers_status_but_excludes_checksum_field() {
         let records = records();
         let mut manifest = manifest(&records);
