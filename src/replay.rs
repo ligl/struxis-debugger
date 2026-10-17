@@ -74,6 +74,104 @@ impl Drop for ReplayCommandPermit {
 }
 
 
+/// Non-queuing control intent shared with a running Replay worker.
+///
+/// Play is a short state transition and must not hold the command-admission
+/// permit while the worker advances bars. Pause and Stop therefore publish
+/// intent here; the worker consumes it only at a safe checkpoint boundary.
+#[derive(Debug, Clone, Default)]
+pub struct ReplayControl {
+    intent: Arc<std::sync::atomic::AtomicU8>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum ReplayControlIntent {
+    None = 0,
+    Pause = 1,
+    Stop = 2,
+}
+
+impl ReplayControl {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Requests Pause if no other control intent is pending.
+    pub fn request_pause(&self) -> Result<(), String> {
+        self.intent
+            .compare_exchange(
+                ReplayControlIntent::None as u8,
+                ReplayControlIntent::Pause as u8,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .map(|_| ())
+            .map_err(|current| {
+                format!(
+                    "Pause rejected: pending control intent is {:?}",
+                    ReplayControlIntent::from_raw(current)
+                )
+            })
+    }
+
+    /// Requests Stop. Stop may supersede a pending Pause, but never a Stop.
+    pub fn request_stop(&self) -> Result<(), String> {
+        loop {
+            let current = self.intent.load(Ordering::Acquire);
+            match ReplayControlIntent::from_raw(current) {
+                ReplayControlIntent::None => {
+                    if self.intent.compare_exchange(
+                        ReplayControlIntent::None as u8,
+                        ReplayControlIntent::Stop as u8,
+                        Ordering::AcqRel,
+                        Ordering::Acquire,
+                    ).is_ok() {
+                        return Ok(());
+                    }
+                }
+                ReplayControlIntent::Pause => {
+                    if self.intent.compare_exchange(
+                        ReplayControlIntent::Pause as u8,
+                        ReplayControlIntent::Stop as u8,
+                        Ordering::AcqRel,
+                        Ordering::Acquire,
+                    ).is_ok() {
+                        return Ok(());
+                    }
+                }
+                ReplayControlIntent::Stop => {
+                    return Err("Stop rejected: Stop is already pending".into());
+                }
+            }
+        }
+    }
+
+    /// Reads the pending intent without consuming it.
+    #[must_use]
+    pub fn pending(&self) -> ReplayControlIntent {
+        ReplayControlIntent::from_raw(self.intent.load(Ordering::Acquire))
+    }
+
+    /// Consumes a pending intent at a worker checkpoint boundary.
+    pub fn take_at_checkpoint(&self) -> ReplayControlIntent {
+        ReplayControlIntent::from_raw(
+            self.intent.swap(ReplayControlIntent::None as u8, Ordering::AcqRel),
+        )
+    }
+}
+
+impl ReplayControlIntent {
+    fn from_raw(value: u8) -> Self {
+        match value {
+            1 => Self::Pause,
+            2 => Self::Stop,
+            _ => Self::None,
+        }
+    }
+}
+
 /// Owned, immutable Run input constructed only from the selected Test Dataset.
 ///
 /// This validates the complete ordered Bar sequence before a worker creates any
@@ -128,7 +226,7 @@ impl LoadedInput {
 
 #[cfg(test)]
 mod tests {
-    use super::{LoadedInput, ReplayCommandGate, ReplayCommandKind};
+    use super::{LoadedInput, ReplayCommandGate, ReplayCommandKind, ReplayControl, ReplayControlIntent};
 
 
     use crate::{
@@ -202,6 +300,34 @@ mod tests {
         // The owned input contains only the selected Test sequence; no Origin
         // reference or Catalog query is part of this construction path.
         assert_eq!(loaded.bars.len(), 2);
+    }
+
+    #[test]
+    fn pause_intent_is_visible_until_checkpoint_consumes_it() {
+        let control = ReplayControl::new();
+        control.request_pause().unwrap();
+        assert_eq!(control.pending(), ReplayControlIntent::Pause);
+        assert_eq!(control.take_at_checkpoint(), ReplayControlIntent::Pause);
+        assert_eq!(control.pending(), ReplayControlIntent::None);
+    }
+
+    #[test]
+    fn stop_supersedes_pause_and_cannot_be_overwritten() {
+        let control = ReplayControl::new();
+        control.request_pause().unwrap();
+        control.request_stop().unwrap();
+        assert_eq!(control.pending(), ReplayControlIntent::Stop);
+        assert!(control.request_pause().is_err());
+        assert!(control.request_stop().is_err());
+        assert_eq!(control.take_at_checkpoint(), ReplayControlIntent::Stop);
+    }
+
+    #[test]
+    fn duplicate_pause_is_rejected_without_queueing() {
+        let control = ReplayControl::new();
+        control.request_pause().unwrap();
+        assert!(control.request_pause().is_err());
+        assert_eq!(control.pending(), ReplayControlIntent::Pause);
     }
 
     #[test]
