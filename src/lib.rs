@@ -7,6 +7,7 @@ pub mod effective_config;
 pub mod replay;
 pub mod snapshot;
 pub mod snapshot_writer;
+pub mod snapshot_store;
 pub mod run;
 pub mod manager;
 pub mod worker;
