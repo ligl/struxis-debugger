@@ -32,6 +32,7 @@ use nautilus_model::{
 
 use crate::{
     checkpoint::ReplayCheckpointProjection,
+    effective_config::EffectiveStruxisConfig,
     replay::{LoadedInput, ReplayCommandGate, ReplayCommandKind},
     run::{RunState, RunStatus},
 };
@@ -41,7 +42,11 @@ use crate::{
 /// Implementations must make `commit_checkpoint` atomic: an error means the
 /// checkpoint is not confirmed and Run progress must not advance.
 pub trait CheckpointSink: Send + 'static {
-    fn initialize(&mut self, initial_state: &RunState) -> Result<(), String>;
+    fn initialize(
+        &mut self,
+        initial_state: &RunState,
+        effective_config: &EffectiveStruxisConfig,
+    ) -> Result<(), String>;
 
     fn commit_checkpoint(
         &mut self,
@@ -356,6 +361,8 @@ impl WorkerSession {
         let mut engine = BacktestEngine::new(engine_config)
             .map_err(|error| format!("Replay BacktestEngine creation failed: {error}"))?;
 
+        let struxis_config = StruxisConfig::builder().enable_structure(true).build();
+        let effective_config = EffectiveStruxisConfig::from_struxis_config(&struxis_config);
         let setup = (|| -> anyhow::Result<Struxis> {
             let instrument_id = config.instrument.id();
             engine.add_venue(
@@ -371,10 +378,7 @@ impl WorkerSession {
             engine.add_instrument(&config.instrument)?;
 
             let runtime = NautilusRuntime::new(engine.kernel().cache.clone());
-            let struxis = Struxis::new(
-                StruxisConfig::builder().enable_structure(true).build(),
-                runtime,
-            );
+            let struxis = Struxis::new(struxis_config, runtime);
             let strategy = StruxisDemo::new(
                 struxis.clone(),
                 StrategyId::from(format!("STRUXIS-DEBUGGER-{}", config.run_id)),
@@ -398,7 +402,7 @@ impl WorkerSession {
             config.input.sbar_sequence_fingerprint.clone(),
             config.input.bars.len(),
         )?;
-        if let Err(error) = sink.initialize(&state) {
+        if let Err(error) = sink.initialize(&state, &effective_config) {
             engine.dispose();
             return Err(format!("Snapshot Recording initialization failed: {error}"));
         }
@@ -623,13 +627,20 @@ fn worker_loop(
 struct MemoryCheckpointSink {
     checkpoints: Arc<Mutex<Vec<(usize, String, ReplayCheckpointProjection)>>>,
     initialized: Arc<Mutex<Option<RunState>>>,
+    effective_config: Arc<Mutex<Option<EffectiveStruxisConfig>>>,
 }
 
 #[cfg(test)]
 impl CheckpointSink for MemoryCheckpointSink {
-    fn initialize(&mut self, initial_state: &RunState) -> Result<(), String> {
+    fn initialize(
+        &mut self,
+        initial_state: &RunState,
+        effective_config: &EffectiveStruxisConfig,
+    ) -> Result<(), String> {
         *self.initialized.lock().map_err(|_| "sink lock poisoned".to_owned())? =
             Some(initial_state.clone());
+        *self.effective_config.lock().map_err(|_| "sink lock poisoned".to_owned())? =
+            Some(effective_config.clone());
         Ok(())
     }
 
@@ -650,7 +661,11 @@ struct FailingCheckpointSink;
 
 #[cfg(test)]
 impl CheckpointSink for FailingCheckpointSink {
-    fn initialize(&mut self, _initial_state: &RunState) -> Result<(), String> {
+    fn initialize(
+        &mut self,
+        _initial_state: &RunState,
+        _effective_config: &EffectiveStruxisConfig,
+    ) -> Result<(), String> {
         Ok(())
     }
 
