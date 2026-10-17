@@ -218,6 +218,15 @@ pub fn canonical_structure_state(
         .map_err(|error| format!("Cannot encode canonical structure state: {error}"))
 }
 
+fn parse_canonical_u128(value: &str, field: &str) -> Result<u128, String> {
+    let parsed = value.parse::<u128>()
+        .map_err(|_| format!("{field} must be an unsigned decimal string"))?;
+    if parsed.to_string() != value {
+        return Err(format!("{field} must use canonical unsigned decimal encoding"));
+    }
+    Ok(parsed)
+}
+
 fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), String> {
     let object = state.as_object()
         .ok_or_else(|| "state_data must be a JSON object".to_owned())?;
@@ -233,10 +242,10 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         .ok_or_else(|| "state_data cbarCount must be a decimal string".to_owned())?;
     let swing_count = object["swingCount"].as_str()
         .ok_or_else(|| "state_data swingCount must be a decimal string".to_owned())?;
-    if cbar_count.parse::<usize>().ok() != Some(cbars.len()) {
+    if parse_canonical_u128(cbar_count, "state_data cbarCount")? != cbars.len() as u128 {
         return Err("state_data cbarCount does not match cbars length".to_owned());
     }
-    if swing_count.parse::<usize>().ok() != Some(swings.len()) {
+    if parse_canonical_u128(swing_count, "state_data swingCount")? != swings.len() as u128 {
         return Err("state_data swingCount does not match swings length".to_owned());
     }
     validate_object_fields(
@@ -251,8 +260,33 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         &["endOi", "startOi"],
         "Swing",
     )?;
+    validate_unsigned_fields(
+        cbars,
+        &["cbarId", "createdAt", "sbarEndId", "sbarStartId", "spanSbars"],
+        "CBar",
+    )?;
+    validate_unsigned_fields(
+        swings,
+        &["cbarEndId", "cbarStartId", "createdAt", "sbarEndId", "sbarStartId", "spanSbars", "swingId", "updatedAt"],
+        "Swing",
+    )?;
     validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
     validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    Ok(())
+}
+
+fn validate_unsigned_fields(
+    objects: &[serde_json::Value],
+    fields: &[&str],
+    kind: &str,
+) -> Result<(), String> {
+    for (index, object) in objects.iter().enumerate() {
+        for field in fields {
+            let value = object.get(*field).and_then(serde_json::Value::as_str)
+                .ok_or_else(|| format!("{kind} at index {index} is missing string field {field}"))?;
+            parse_canonical_u128(value, &format!("{kind}[{index}].{field}"))?;
+        }
+    }
     Ok(())
 }
 
@@ -423,8 +457,10 @@ pub fn validate_snapshot_records(
                 checkpoint.checkpoint_index
             ));
         }
-        let ts_event = checkpoint.ts_event.parse::<u128>()
-            .map_err(|_| format!("Invalid checkpoint ts_event {}", checkpoint.ts_event))?;
+        let ts_event = parse_canonical_u128(
+            &checkpoint.ts_event,
+            &format!("checkpoint {} ts_event", checkpoint.checkpoint_index),
+        )?;
         if previous_ts.is_some_and(|previous| ts_event <= previous) {
             return Err("Checkpoint ts_event must be strictly increasing".to_owned());
         }
@@ -672,6 +708,22 @@ mod tests {
         invalid_fingerprint.sbar_sequence_fingerprint = "g".repeat(64);
         assert!(validate_snapshot_records(&invalid_fingerprint, &records, false)
             .unwrap_err().contains("lowercase SHA-256 hex digest"));
+    }
+
+    #[test]
+    fn rejects_noncanonical_checkpoint_timestamps_and_state_ids() {
+        let mut records = records();
+        records[1].ts_event = "0200".into();
+        records[1].sbar_id = "0200".into();
+        let manifest = manifest(&records);
+        assert!(validate_snapshot_records(&manifest, &records, false)
+            .unwrap_err().contains("canonical unsigned decimal encoding"));
+
+        let mut records = records();
+        records[0].state_data = r#"{"cbarCount":"00","cbars":[],"swingCount":"0","swings":[]}"#.into();
+        let manifest = manifest(&records);
+        assert!(validate_snapshot_records(&manifest, &records, false)
+            .unwrap_err().contains("canonical unsigned decimal encoding"));
     }
 
     #[test]
