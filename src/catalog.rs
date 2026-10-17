@@ -178,6 +178,10 @@ pub fn load_origin(
             let state = struxis.state(state_key).ok_or_else(|| {
                 anyhow::anyhow!("Struxis state {state_key:?} was not created by Origin Load")
             })?;
+            anyhow::ensure!(
+                enable_structure || state.structure().is_none(),
+                "Origin Load configured enable_structure=false but Struxis created Structure"
+            );
             validate_sbar_series(&origin_bars, state.sbars())?;
             let extracted = state.sbars().last_n(state.sbars().len());
             anyhow::ensure!(
@@ -429,6 +433,25 @@ mod tests {
 
         validate_sbar_series(&origin, state.sbars())
             .expect("identical Origin and Struxis SBar sequences should validate");
+    }
+
+    #[test]
+    fn rejects_out_of_order_sbar_series_without_sorting_input() {
+        let origin = vec![
+            fixture_bar(100, "10.00"),
+            fixture_bar(200, "10.50"),
+            fixture_bar(300, "10.75"),
+        ];
+        let (struxis, key) = processed_sbar_series(&origin);
+        let state = struxis.state(key).expect("state should be registered");
+        let out_of_order_origin = vec![origin[1].clone(), origin[0].clone(), origin[2].clone()];
+
+        let error = validate_sbar_series(&out_of_order_origin, state.sbars())
+            .expect_err("SBar validation must reject sequence order mismatch")
+            .to_string();
+
+        assert!(error.contains("loaded_index=0"), "{error}");
+        assert!(error.contains("sbar_id expected="), "{error}");
     }
 
     #[test]
