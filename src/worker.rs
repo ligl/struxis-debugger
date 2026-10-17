@@ -502,6 +502,7 @@ impl WorkerSession {
                     self.input.state_key, bar.ts_event
                 );
                 let _ = self.state.fail(diagnostic.clone());
+                let _ = sink.fail(&diagnostic);
                 return Err(diagnostic);
             };
             if state_view.last_ts_event() != Some(bar.ts_event) {
@@ -512,6 +513,7 @@ impl WorkerSession {
                     state_view.last_ts_event()
                 );
                 let _ = self.state.fail(diagnostic.clone());
+                let _ = sink.fail(&diagnostic);
                 return Err(diagnostic);
             }
             ReplayCheckpointProjection::from_state_view(&state_view)
@@ -524,6 +526,7 @@ impl WorkerSession {
                 self.next_index, expected_count, projection.sbar_count
             );
             let _ = self.state.fail(diagnostic.clone());
+            let _ = sink.fail(&diagnostic);
             return Err(diagnostic);
         }
 
@@ -533,6 +536,7 @@ impl WorkerSession {
                 self.next_index, bar.ts_event
             );
             let _ = self.state.fail(diagnostic.clone());
+            let _ = sink.fail(&diagnostic);
             return Err(diagnostic);
         }
 
