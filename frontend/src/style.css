@@ -662,3 +662,37 @@ td {
     gap: 5px;
   }
 }
+
+
+.document-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 176px;
+  padding: 4px;
+  border: 1px solid #35434f;
+  background: #111922;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 42%);
+}
+
+.document-context-menu[hidden] {
+  display: none;
+}
+
+.document-context-menu__item {
+  display: block;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #d8e1eb;
+  text-align: left;
+  font: 11px ui-monospace, SFMono-Regular, Consolas, monospace;
+  cursor: pointer;
+}
+
+.document-context-menu__item:hover,
+.document-context-menu__item:focus-visible {
+  border-color: #286d5e;
+  background: #10211f;
+  color: #d7fff4;
+}
