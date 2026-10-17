@@ -230,6 +230,6 @@ mod tests {
             .expect("expected BTCUSDT perpetual 5-minute stream");
         assert!(expected.available, "{:?}", expected.diagnostic);
         assert_eq!(expected.instrument_id.as_deref(), Some("BTCUSDT-PERP.BINANCE"));
-        assert_eq!(expected.timeframe.as_deref(), Some("5-MINUTE-LAST-EXTERNAL"));
+        assert_eq!(expected.timeframe.as_deref(), Some("5-MINUTE-LAST"));
     }
 }
