@@ -1,9 +1,10 @@
-//! Replay command admission primitives.
+//! Replay input identity and command-admission primitives.
 //!
-//! This module does not create Nautilus resources yet. The later Replay worker
-//! must create, use, and dispose BacktestEngine / Cache / Strategy / Struxis on
-//! its own thread. These primitives enforce the no-command-queue contract at
-//! the application boundary.
+//! `LoadedInput` fixes and validates the immutable Test Dataset sequence before
+//! worker initialization. `ReplayCommandGate` and `ReplayControl` provide
+//! non-queuing command admission/control primitives. The actual Nautilus runtime
+//! lifecycle and per-SBar execution live in `worker.rs`; application-level
+//! ReplayManager ownership and Tauri Run commands are not implemented here.
 
 use std::sync::{
     Arc,
