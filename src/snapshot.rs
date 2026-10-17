@@ -11,6 +11,9 @@ pub const STATUS_FINALIZING: &str = "Finalizing";
 pub const STATUS_COMPLETE: &str = "Complete";
 pub const STATUS_FAILED: &str = "Failed";
 
+const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
+const SNAPSHOT_HASH_PREFIX: &[u8] = b"capitus.debug-chart.snapshot\0";
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotManifest {
@@ -108,7 +111,10 @@ impl SnapshotManifest {
     ) -> Result<String, String> {
         let encoded = serde_json::to_vec(&self.checksum_payload(checkpoints))
             .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
-        Ok(sha256_hex(&encoded))
+        let mut input = Vec::with_capacity(SNAPSHOT_HASH_PREFIX.len() + encoded.len());
+        input.extend_from_slice(SNAPSHOT_HASH_PREFIX);
+        input.extend_from_slice(&encoded);
+        Ok(sha256_hex(&input))
     }
 }
 
@@ -165,7 +171,10 @@ pub fn validate_snapshot_records(
     if canonical_config != manifest.effective_config {
         return Err("effective_config is not canonical JSON".to_owned());
     }
-    if sha256_hex(manifest.effective_config.as_bytes()) != manifest.config_fingerprint {
+    let mut config_hash_input = Vec::with_capacity(CONFIG_HASH_PREFIX.len() + manifest.effective_config.len());
+    config_hash_input.extend_from_slice(CONFIG_HASH_PREFIX);
+    config_hash_input.extend_from_slice(manifest.effective_config.as_bytes());
+    if sha256_hex(&config_hash_input) != manifest.config_fingerprint {
         return Err("config_fingerprint does not match effective_config".to_owned());
     }
 
@@ -277,7 +286,7 @@ mod tests {
             snapshot_generated_at: "1780000000000000000".into(),
             input_bar_count: records.len(),
             sbar_sequence_fingerprint: "a".repeat(64),
-            config_fingerprint: sha256_hex(effective_config.as_bytes()),
+            config_fingerprint: { let mut input = CONFIG_HASH_PREFIX.to_vec(); input.extend_from_slice(effective_config.as_bytes()); sha256_hex(&input) },
             effective_config,
             status: STATUS_COMPLETE.into(),
             checkpoint_count: records.len(),
