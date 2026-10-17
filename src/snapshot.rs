@@ -240,8 +240,49 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     if swing_count.parse::<usize>().ok() != Some(swings.len()) {
         return Err("state_data swingCount does not match swings length".to_owned());
     }
+    validate_object_fields(
+        cbars,
+        &["cbarId", "createdAt", "fractalType", "high", "low", "sbarEndId", "sbarStartId", "spanSbars"],
+        &["fractalType"],
+        "CBar",
+    )?;
+    validate_object_fields(
+        swings,
+        &["cbarEndId", "cbarStartId", "createdAt", "direction", "endOi", "high", "low", "sbarEndId", "sbarStartId", "spanSbars", "startOi", "state", "swingId", "updatedAt", "volume"],
+        &["endOi", "startOi"],
+        "Swing",
+    )?;
     validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
     validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    Ok(())
+}
+
+fn validate_object_fields(
+    objects: &[serde_json::Value],
+    expected_fields: &[&str],
+    nullable_fields: &[&str],
+    kind: &str,
+) -> Result<(), String> {
+    for (index, object) in objects.iter().enumerate() {
+        let fields = object.as_object()
+            .ok_or_else(|| format!("{kind} at index {index} must be a JSON object"))?;
+        if fields.len() != expected_fields.len()
+            || expected_fields.iter().any(|field| !fields.contains_key(*field))
+        {
+            return Err(format!("{kind} at index {index} has missing or unexpected fields"));
+        }
+        for field in expected_fields {
+            let value = &fields[*field];
+            let valid = if nullable_fields.contains(field) {
+                value.is_null() || value.is_string()
+            } else {
+                value.is_string()
+            };
+            if !valid {
+                return Err(format!("{kind} field {field} has an invalid JSON type"));
+            }
+        }
+    }
     Ok(())
 }
 
