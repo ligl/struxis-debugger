@@ -10,6 +10,8 @@ pub mod checkpoint;
 pub mod worker;
 pub mod manager;
 pub mod snapshot;
+pub mod snapshot_writer;
+pub mod snapshot_store;
 pub mod effective_config;
 
 fn main() {
