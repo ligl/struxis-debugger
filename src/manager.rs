@@ -154,7 +154,11 @@ mod tests {
     struct NoopCheckpointSink;
 
     impl CheckpointSink for NoopCheckpointSink {
-        fn initialize(&mut self, _initial_state: &crate::run::RunState) -> Result<(), String> {
+        fn initialize(
+            &mut self,
+            _initial_state: &crate::run::RunState,
+            _effective_config: &crate::effective_config::EffectiveStruxisConfig,
+        ) -> Result<(), String> {
             Ok(())
         }
 
