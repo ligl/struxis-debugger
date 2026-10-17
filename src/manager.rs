@@ -131,3 +131,122 @@ impl ReplayManager {
         self.active.is_some()
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::ReplayManager;
+    use crate::{
+        catalog::OriginLoad,
+        checkpoint::ReplayCheckpointProjection,
+        dataset::{TestDataset, sequence_fingerprint},
+        replay::LoadedInput,
+        worker::{CheckpointSink, ReplayWorkerConfig},
+    };
+    use capitus_struxis::StruxisStateKey;
+    use nautilus_model::{
+        data::{Bar, BarType},
+        instruments::{InstrumentAny, stubs::audusd_sim},
+        types::{Price, Quantity},
+    };
+    use std::str::FromStr;
+
+    struct NoopCheckpointSink;
+
+    impl CheckpointSink for NoopCheckpointSink {
+        fn initialize(&mut self, _initial_state: &crate::run::RunState) -> Result<(), String> {
+            Ok(())
+        }
+
+        fn commit_checkpoint(
+            &mut self,
+            _checkpoint_index: usize,
+            _sbar_id: &str,
+            _projection: &ReplayCheckpointProjection,
+        ) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    fn worker_config(run_id: &str) -> ReplayWorkerConfig {
+        let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL")
+            .expect("fixture BarType");
+        let bars = (0..3)
+            .map(|index| {
+                let ts = 1_735_689_600_000_000_000_u64 + index * 60_000_000_000;
+                Bar::new(
+                    bar_type,
+                    Price::from("0.65000"),
+                    Price::from("0.65100"),
+                    Price::from("0.64900"),
+                    Price::from("0.65050"),
+                    Quantity::from("100000"),
+                    ts.into(),
+                    ts.into(),
+                )
+            })
+            .collect::<Vec<_>>();
+        let state_key = StruxisStateKey::from_bar_type(&bar_type);
+        let fingerprint = sequence_fingerprint(state_key, &bars).expect("fingerprint");
+        let origin = OriginLoad {
+            origin_dataset_id: uuid::Uuid::new_v4(),
+            state_key,
+            sbar_sequence_fingerprint: fingerprint,
+            bar_type: bar_type.to_string(),
+            bars,
+        };
+        let test = TestDataset::create(
+            &origin,
+            "1735689600000000000",
+            "1735689720000000000",
+        )
+        .expect("Test Dataset");
+        ReplayWorkerConfig {
+            run_id: run_id.to_owned(),
+            input: LoadedInput::from_test(&test).expect("LoadedInput"),
+            instrument: InstrumentAny::CurrencyPair(audusd_sim()),
+        }
+    }
+
+    fn sink() -> Box<dyn CheckpointSink> {
+        Box::new(NoopCheckpointSink)
+    }
+
+    #[test]
+    fn manager_owns_only_one_worker_until_dispose_is_confirmed() {
+        let mut manager = ReplayManager::new();
+        let initial = manager
+            .start(worker_config("manager-owner-first"), sink())
+            .expect("first Run starts");
+        assert_eq!(initial.processed_count, 0);
+        assert!(manager.has_owned_run());
+
+        let error = manager
+            .start(worker_config("manager-owner-second"), sink())
+            .expect_err("second Start must not replace an owned Run");
+        assert!(error.contains("active or unreleased Run"));
+
+        let disposed = manager.dispose().expect("Dispose confirms release");
+        assert_eq!(disposed.status, crate::run::RunStatus::Disposed);
+        assert!(!manager.has_owned_run());
+    }
+
+    #[test]
+    fn restart_releases_old_worker_before_publishing_replacement() {
+        let mut manager = ReplayManager::new();
+        manager
+            .start(worker_config("manager-restart-old"), sink())
+            .expect("old Run starts");
+
+        let replacement = manager
+            .restart(worker_config("manager-restart-new"), sink())
+            .expect("Restart should release old worker before creating new one");
+
+        assert_eq!(replacement.run_id, "manager-restart-new");
+        assert_eq!(replacement.processed_count, 0);
+        assert_eq!(replacement.status, crate::run::RunStatus::Ready);
+        assert!(manager.has_owned_run());
+        let disposed = manager.dispose().expect("replacement cleanup");
+        assert_eq!(disposed.status, crate::run::RunStatus::Disposed);
+    }
+}
