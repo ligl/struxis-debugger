@@ -344,6 +344,24 @@ impl WorkerSession {
         Ok(self.state.clone())
     }
 
+    /// Stops at the current safe boundary and releases the runtime.
+    ///
+    /// If the final checkpoint has already committed, Completed takes
+    /// precedence over Stop: release runtime resources but preserve the
+    /// completed processing result in the returned state.
+    fn stop(&mut self) -> Result<RunState, String> {
+        if self.state.status == RunStatus::Completed {
+            self.engine_dispose();
+            return Ok(self.state.clone());
+        }
+        if self.state.status == RunStatus::Running {
+            self.state.pause()?;
+        }
+        self.engine_dispose();
+        self.state.dispose()?;
+        Ok(self.state.clone())
+    }
+
     fn dispose(&mut self) -> Result<RunState, String> {
         if self.state.status == RunStatus::Running {
             self.state.pause()?;
@@ -358,8 +376,11 @@ impl WorkerSession {
         sink: &mut dyn CheckpointSink,
         continuous_play: bool,
     ) -> Result<RunState, String> {
-        let allowed = matches!(self.state.status, RunStatus::Ready | RunStatus::Paused)
-            || (continuous_play && self.state.status == RunStatus::Running);
+        let allowed = if continuous_play {
+            self.state.status == RunStatus::Running
+        } else {
+            matches!(self.state.status, RunStatus::Ready | RunStatus::Paused)
+        };
         if !allowed {
             return Err(format!(
                 "Step is invalid while Run {} is {:?}",
@@ -489,7 +510,12 @@ fn worker_loop(
             WorkerCommand::Pause(reply) => {
                 let _ = reply.send(session.pause());
             }
-            WorkerCommand::Stop(reply) | WorkerCommand::Dispose(reply) => {
+            WorkerCommand::Stop(reply) => {
+                let result = session.stop();
+                let _ = reply.send(result);
+                return;
+            }
+            WorkerCommand::Dispose(reply) => {
                 let result = session.dispose();
                 let _ = reply.send(result);
                 return;
@@ -645,8 +671,8 @@ mod tests {
             std::thread::yield_now();
         }
         assert_eq!(observed.checkpoints.lock().expect("checkpoints").len(), 3);
-        let disposed = worker.dispose().expect("worker Dispose");
-        assert_eq!(disposed.status, RunStatus::Disposed);
+        let stopped = worker.stop().expect("worker Stop");
+        assert_eq!(stopped.status, RunStatus::Completed);
     }
 
 }
