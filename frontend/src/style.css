@@ -173,7 +173,7 @@ h3 {
 .panel {
   min-width: 0;
   border: 1px solid var(--dbg-border);
-  background: rgb(14 20 27 / 96%);
+  background: var(--dbg-surface-1);
 }
 
 .catalog-panel,
