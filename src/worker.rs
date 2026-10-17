@@ -8,14 +8,12 @@
 //! implements the CheckpointSink contract.
 
 use std::{
-    path::PathBuf,
-    sync::{
-        Arc, Mutex,
-        mpsc::{self, Receiver, SyncSender},
-        atomic::Ordering,
-    },
+    sync::mpsc::{self, Receiver, SyncSender},
     thread::{self, JoinHandle},
 };
+
+#[cfg(test)]
+use std::sync::{Arc, Mutex};
 
 use capitus_strategy::StruxisDemo;
 use capitus_struxis::{NautilusRuntime, Struxis, StruxisConfig};
@@ -418,6 +416,7 @@ mod tests {
         catalog::OriginLoad,
         dataset::{TestDataset, sequence_fingerprint},
         replay::LoadedInput,
+        run::RunStatus,
     };
     use capitus_struxis::StruxisStateKey;
     use nautilus_model::{
@@ -425,7 +424,7 @@ mod tests {
         instruments::{InstrumentAny, stubs::audusd_sim},
         types::{Price, Quantity},
     };
-    use std::{str::FromStr, sync::Arc};
+    use std::str::FromStr;
 
     fn fixture_test() -> TestDataset {
         let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL")
@@ -456,24 +455,6 @@ mod tests {
             .expect("fixture Test Dataset")
     }
 
-    #[derive(Clone, Default)]
-    struct SharedSink(MemoryCheckpointSink);
-
-    impl CheckpointSink for SharedSink {
-        fn initialize(&mut self, initial_state: &crate::run::RunState) -> Result<(), String> {
-            self.0.initialize(initial_state)
-        }
-
-        fn commit_checkpoint(
-            &mut self,
-            checkpoint_index: usize,
-            sbar_id: &str,
-            projection: &crate::checkpoint::ReplayCheckpointProjection,
-        ) -> Result<(), String> {
-            self.0.commit_checkpoint(checkpoint_index, sbar_id, projection)
-        }
-    }
-
     #[test]
     fn worker_processes_one_test_sbar_per_step_and_commits_before_advancing() {
         let test = fixture_test();
@@ -490,7 +471,7 @@ mod tests {
             Box::new(sink),
         ).expect("worker should initialize");
 
-        assert_eq!(initial.status, RunStatusForTest::Ready);
+        assert_eq!(initial.status, RunStatus::Ready);
         assert_eq!(initial.processed_count, 0);
         let first = worker.step().expect("first Step");
         assert_eq!(first.processed_count, 1);
@@ -499,7 +480,7 @@ mod tests {
         assert_eq!(second.processed_count, 2);
         let third = worker.step().expect("third Step");
         assert_eq!(third.processed_count, 3);
-        assert_eq!(third.status, RunStatusForTest::Completed);
+        assert_eq!(third.status, RunStatus::Completed);
 
         let checkpoints = observed.checkpoints.lock().expect("sink checkpoints");
         assert_eq!(checkpoints.len(), 3);
@@ -513,6 +494,4 @@ mod tests {
         worker.dispose().expect("worker Dispose");
     }
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum RunStatusForTest { Ready, Completed }
 }
