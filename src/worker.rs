@@ -476,6 +476,10 @@ mod tests {
 
         assert_eq!(initial.status, RunStatus::Ready);
         assert_eq!(initial.processed_count, 0);
+        let initialized = observed.initialized.lock().expect("sink initialization");
+        assert_eq!(initialized.as_ref().map(|state| state.status), Some(RunStatus::Ready));
+        assert_eq!(initialized.as_ref().map(|state| state.processed_count), Some(0));
+        drop(initialized);
         let first = worker.step().expect("first Step");
         assert_eq!(first.processed_count, 1);
         assert_eq!(first.cursor_sbar_id.as_deref(), Some("1735689600000000000"));
