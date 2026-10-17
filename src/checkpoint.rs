@@ -9,10 +9,6 @@ use serde::Serialize;
 use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
-    structure::{
-        cbar::CBarSeries,
-        swing::SwingSeries,
-    },
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
