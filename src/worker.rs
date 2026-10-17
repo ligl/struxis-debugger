@@ -63,6 +63,7 @@ pub struct ReplayWorkerConfig {
 }
 
 enum WorkerCommand {
+    GetState(SyncSender<RunState>),
     Step(SyncSender<Result<RunState, String>>),
     Play(SyncSender<Result<RunState, String>>),
     Pause(SyncSender<Result<RunState, String>>),
@@ -126,6 +127,22 @@ impl ReplayWorker {
             },
             initial_state,
         ))
+    }
+
+    /// Returns the latest authoritative RunState observed at a worker boundary.
+    ///
+    /// During Play, the query is handled between SBar checkpoints. This also
+    /// makes asynchronous processing failures observable without issuing a
+    /// state-changing command such as Stop or Dispose.
+    pub fn state(&self) -> Result<RunState, String> {
+        let _permit = self.command_gate.try_enter(ReplayCommandKind::GetState)?;
+        let (reply_tx, reply_rx) = mpsc::sync_channel(0);
+        self.commands
+            .send(WorkerCommand::GetState(reply_tx))
+            .map_err(|error| format!("Replay worker is unavailable during GetState: {error}"))?;
+        reply_rx
+            .recv()
+            .map_err(|error| format!("Replay worker dropped GetState response: {error}"))
     }
 
     /// Processes exactly one next Test SBar and returns after its checkpoint
@@ -508,6 +525,9 @@ fn worker_loop(
             continue;
         };
         match command {
+            WorkerCommand::GetState(reply) => {
+                let _ = reply.send(session.state.clone());
+            }
             WorkerCommand::Step(reply) => {
                 let _ = reply.send(session.step(sink.as_mut(), false));
             }
