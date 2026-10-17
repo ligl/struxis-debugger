@@ -136,43 +136,50 @@ impl ReplayWorker {
     /// During Play, the query is handled between SBar checkpoints. This also
     /// makes asynchronous processing failures observable without issuing a
     /// state-changing command such as Stop or Dispose.
-    pub fn state(&self) -> Result<RunState, String> {
+    pub fn state(&mut self) -> Result<RunState, String> {
         if let Some(state) = &self.terminal_state {
             return Ok(state.clone());
         }
         let _permit = self.command_gate.try_enter(ReplayCommandKind::GetState)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
-        self.commands
-            .send(WorkerCommand::GetState(reply_tx))
-            .map_err(|error| format!("Replay worker is unavailable during GetState: {error}"))?;
-        reply_rx
-            .recv()
-            .map_err(|error| format!("Replay worker dropped GetState response: {error}"))
+        if let Err(error) = self.commands.send(WorkerCommand::GetState(reply_tx)) {
+            let detail = format!("Replay worker is unavailable during GetState: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        reply_rx.recv().map_err(|error| {
+            let detail = format!("Replay worker dropped GetState response: {error}");
+            self.join_after_transport_failure(detail)
+        })
     }
 
     /// Processes exactly one next Test SBar and returns after its checkpoint
     /// sink commit and Run progress confirmation.
-    pub fn step(&self) -> Result<RunState, String> {
+    pub fn step(&mut self) -> Result<RunState, String> {
         let _permit = self.command_gate
             .try_enter(ReplayCommandKind::Step)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
-        self.commands
-            .send(WorkerCommand::Step(reply_tx))
-            .map_err(|error| format!("Replay worker is unavailable: {error}"))?;
-        reply_rx
-            .recv()
-            .map_err(|error| format!("Replay worker dropped Step response: {error}"))?
+        if let Err(error) = self.commands.send(WorkerCommand::Step(reply_tx)) {
+            let detail = format!("Replay worker is unavailable during Step: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        match reply_rx.recv() {
+            Ok(result) => result,
+            Err(error) => {
+                let detail = format!("Replay worker dropped Step response: {error}");
+                Err(self.join_after_transport_failure(detail))
+            }
+        }
     }
 
     /// Starts or resumes continuous processing. The command returns after
     /// the Run transitions to Running; each subsequent SBar is processed on
     /// the worker thread at a checkpoint boundary.
-    pub fn play(&self) -> Result<RunState, String> {
+    pub fn play(&mut self) -> Result<RunState, String> {
         self.send_state_command(ReplayCommandKind::Play, WorkerCommand::Play)
     }
 
     /// Pauses after the currently executing SBar checkpoint, if any, commits.
-    pub fn pause(&self) -> Result<RunState, String> {
+    pub fn pause(&mut self) -> Result<RunState, String> {
         self.send_state_command(ReplayCommandKind::Pause, WorkerCommand::Pause)
     }
 
@@ -182,18 +189,23 @@ impl ReplayWorker {
     }
 
     fn send_state_command(
-        &self,
+        &mut self,
         kind: ReplayCommandKind,
         command: fn(SyncSender<Result<RunState, String>>) -> WorkerCommand,
     ) -> Result<RunState, String> {
         let _permit = self.command_gate.try_enter(kind)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
-        self.commands
-            .send(command(reply_tx))
-            .map_err(|error| format!("Replay worker is unavailable: {error}"))?;
-        reply_rx
-            .recv()
-            .map_err(|error| format!("Replay worker dropped {kind:?} response: {error}"))?
+        if let Err(error) = self.commands.send(command(reply_tx)) {
+            let detail = format!("Replay worker is unavailable during {kind:?}: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        match reply_rx.recv() {
+            Ok(result) => result,
+            Err(error) => {
+                let detail = format!("Replay worker dropped {kind:?} response: {error}");
+                Err(self.join_after_transport_failure(detail))
+            }
+        }
     }
 
     fn send_terminal_command(
@@ -717,6 +729,25 @@ mod tests {
         );
 
         assert!(error.contains("worker thread exited"));
+        assert!(error.contains("resource release is unconfirmed"));
+        assert!(worker.join.is_none());
+    }
+
+    #[test]
+    fn state_transport_failure_joins_worker_without_claiming_release() {
+        let (commands, receiver) = mpsc::sync_channel(0);
+        drop(receiver);
+        let join = std::thread::spawn(|| {});
+        let mut worker = ReplayWorker {
+            commands,
+            command_gate: ReplayCommandGate::new(),
+            join: Some(join),
+            terminal_state: None,
+        };
+
+        let error = worker.state().expect_err("state query should fail after worker exit");
+
+        assert!(error.contains("Replay worker is unavailable during GetState"));
         assert!(error.contains("resource release is unconfirmed"));
         assert!(worker.join.is_none());
     }
