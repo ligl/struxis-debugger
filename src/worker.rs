@@ -753,6 +753,64 @@ mod tests {
     }
 
     #[test]
+    fn step_play_and_pause_transport_failures_reap_the_worker() {
+        for command in ["step", "play", "pause"] {
+            let (commands, receiver) = mpsc::sync_channel(0);
+            drop(receiver);
+            let join = std::thread::spawn(|| {});
+            let mut worker = ReplayWorker {
+                commands,
+                command_gate: ReplayCommandGate::new(),
+                join: Some(join),
+                terminal_state: None,
+            };
+
+            let error = match command {
+                "step" => worker.step().expect_err("Step transport must fail"),
+                "play" => worker.play().expect_err("Play transport must fail"),
+                "pause" => worker.pause().expect_err("Pause transport must fail"),
+                _ => unreachable!(),
+            };
+
+            assert!(error.contains("resource release is unconfirmed"), "{command}: {error}");
+            assert!(worker.join.is_none(), "{command} should reap the worker");
+            assert!(worker.terminal_state.is_none(), "{command} must not cache a terminal state");
+        }
+    }
+
+    #[test]
+    fn terminal_response_followed_by_join_panic_is_not_cached_as_disposed() {
+        let (commands, receiver) = mpsc::sync_channel(0);
+        let state = super::run::RunState::ready(
+            "worker-join-panic".into(),
+            "test-dataset".into(),
+            "fingerprint".into(),
+            1,
+        ).expect("fixture state");
+        let join = std::thread::spawn(move || {
+            match receiver.recv().expect("Stop command") {
+                super::WorkerCommand::Stop(reply) => {
+                    reply.send(Ok(state)).expect("Stop response receiver");
+                    panic!("injected worker panic after terminal response");
+                }
+                _ => panic!("expected Stop command"),
+            }
+        });
+        let mut worker = ReplayWorker {
+            commands,
+            command_gate: ReplayCommandGate::new(),
+            join: Some(join),
+            terminal_state: None,
+        };
+
+        let error = worker.stop().expect_err("join panic must invalidate release confirmation");
+
+        assert!(error.contains("resource release is unconfirmed"));
+        assert!(worker.terminal_state.is_none());
+        assert!(worker.join.is_none());
+    }
+
+    #[test]
     fn repeated_terminal_commands_return_the_confirmed_terminal_state() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
