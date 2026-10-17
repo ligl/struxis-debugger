@@ -184,6 +184,68 @@ fn normalize_integer_json_values(value: serde_json::Value) -> serde_json::Value 
     }
 }
 
+/// Builds canonical Snapshot state_data from the owned structure projection.
+///
+/// SBar entities are intentionally excluded. Objects are ordered by their oldest
+/// SBar anchor, then by numeric domain ID, so the encoding does not depend on the
+/// collection's internal iteration implementation.
+pub fn canonical_structure_state(
+    structure: Option<&crate::checkpoint::StructureCheckpoint>,
+) -> Result<String, String> {
+    let mut state = match structure {
+        Some(structure) => serde_json::to_value(structure)
+            .map_err(|error| format!("Cannot encode structure checkpoint: {error}"))?,
+        None => serde_json::json!({
+            "cbarCount": 0,
+            "cbars": [],
+            "swingCount": 0,
+            "swings": [],
+        }),
+    };
+
+    let object = state.as_object_mut()
+        .ok_or_else(|| "Structure state must be a JSON object".to_owned())?;
+    let cbars = object.get_mut("cbars")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| "Structure state cbars must be an array".to_owned())?;
+    sort_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
+    let swings = object.get_mut("swings")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| "Structure state swings must be an array".to_owned())?;
+    sort_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+
+    let normalized = normalize_integer_json_values(state);
+    serde_json::to_string(&normalized)
+        .map_err(|error| format!("Cannot encode canonical structure state: {error}"))
+}
+
+fn sort_domain_objects(
+    objects: &mut [serde_json::Value],
+    anchor_field: &str,
+    id_field: &str,
+    kind: &str,
+) -> Result<(), String> {
+    let mut keys = Vec::with_capacity(objects.len());
+    for object in objects.iter() {
+        let anchor = object.get(anchor_field).and_then(serde_json::Value::as_str)
+            .ok_or_else(|| format!("{kind} is missing string field {anchor_field}"))?;
+        let id = object.get(id_field).and_then(serde_json::Value::as_str)
+            .ok_or_else(|| format!("{kind} is missing string field {id_field}"))?;
+        let anchor = anchor.parse::<u128>()
+            .map_err(|_| format!("{kind} has invalid numeric {anchor_field}: {anchor}"))?;
+        let id = id.parse::<u128>()
+            .map_err(|_| format!("{kind} has invalid numeric {id_field}: {id}"))?;
+        keys.push((anchor, id));
+    }
+    let mut order: Vec<usize> = (0..objects.len()).collect();
+    order.sort_by_key(|index| keys[*index]);
+    let original = objects.to_vec();
+    for (target, source) in order.into_iter().enumerate() {
+        objects[target] = original[source].clone();
+    }
+    Ok(())
+}
+
 /// Validates persisted relationships without depending on a storage backend.
 /// Until the Delta codec and reconstruction validator exist, this validator rejects Delta records.
 pub fn validate_snapshot_records(
@@ -341,6 +403,41 @@ mod tests {
             checkpoint_count: records.len(),
             content_checksum: String::new(),
         }
+    }
+
+    #[test]
+    fn canonical_structure_state_sorts_by_numeric_anchor_then_domain_id() {
+        let structure = crate::checkpoint::StructureCheckpoint {
+            cbar_count: 2,
+            cbars: vec![
+                crate::checkpoint::CBarCheckpoint {
+                    cbar_id: "10".into(), high: "2".into(), low: "1".into(),
+                    sbar_start_id: "20".into(), sbar_end_id: "30".into(),
+                    span_sbars: 2, fractal_type: None, created_at: "1".into(),
+                },
+                crate::checkpoint::CBarCheckpoint {
+                    cbar_id: "2".into(), high: "2".into(), low: "1".into(),
+                    sbar_start_id: "3".into(), sbar_end_id: "4".into(),
+                    span_sbars: 2, fractal_type: None, created_at: "1".into(),
+                },
+            ],
+            swing_count: 0,
+            swings: vec![],
+        };
+        let canonical = canonical_structure_state(Some(&structure)).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&canonical).unwrap();
+        assert_eq!(parsed["cbars"][0]["cbarId"], "2");
+        assert_eq!(parsed["cbars"][1]["cbarId"], "10");
+        assert_eq!(parsed["cbarCount"], "2");
+        assert_eq!(parsed["swingCount"], "0");
+    }
+
+    #[test]
+    fn canonical_structure_state_without_structure_is_explicitly_empty() {
+        assert_eq!(
+            canonical_structure_state(None).unwrap(),
+            r#"{"cbarCount":"0","cbars":[],"swingCount":"0","swings":[]}"#,
+        );
     }
 
     #[test]
