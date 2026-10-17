@@ -309,7 +309,10 @@ pub fn validate_sbar_series(
 #[cfg(test)]
 mod tests {
     use super::{load_bars, validate_sbar_series};
-    use std::{cell::RefCell, path::PathBuf, rc::Rc, str::FromStr};
+    use std::{cell::RefCell, rc::Rc, str::FromStr};
+
+    #[cfg(feature = "catalog-integration-tests")]
+    use std::path::PathBuf;
 
     use capitus_struxis::{
         NautilusRuntime, Struxis, StruxisConfig, StruxisRegistrant, StruxisStateKey,
@@ -492,18 +495,11 @@ mod tests {
         assert!(error.contains("expected=3, actual=2"), "{error}");
     }
 
+    #[cfg(feature = "catalog-integration-tests")]
     #[test]
     fn loads_origin_through_backtest_strategy_and_struxis() {
         let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../test_data/catalog");
-
-        if !catalog_path.exists() {
-            eprintln!(
-                "Skipping Origin Load integration test: {} does not exist",
-                catalog_path.display()
-            );
-            return;
-        }
 
         let with_structure = super::load_origin(&catalog_path, BAR_TYPE, true)
             .unwrap_or_else(|error| panic!("Origin Load with structure enabled failed: {error:#}"));
@@ -525,19 +521,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "catalog-integration-tests")]
     #[test]
     fn reads_complete_catalog_dataset_in_event_time_order() {
         let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../test_data/catalog");
-
-        // Local market data is intentionally not required for CI.
-        if !catalog_path.exists() {
-            eprintln!(
-                "Skipping Catalog smoke test: {} does not exist",
-                catalog_path.display()
-            );
-            return;
-        }
 
         let bars = load_bars(&catalog_path, BAR_TYPE)
             .unwrap_or_else(|error| panic!("failed to load {BAR_TYPE}: {error:#}"));
