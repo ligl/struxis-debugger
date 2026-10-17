@@ -42,6 +42,7 @@ struct InputMetadata {
     end_ts: String,
     count: usize,
     fingerprint: String,
+    bar_ids: Vec<String>,
 }
 
 impl SnapshotWriter {
@@ -64,6 +65,7 @@ impl SnapshotWriter {
                 end_ts: last.ts_event.to_string(),
                 count: input.bars.len(),
                 fingerprint: input.sbar_sequence_fingerprint.clone(),
+                bar_ids: input.bars.iter().map(|bar| bar.ts_event.to_string()).collect(),
             },
             manifest: None,
             checkpoints: Vec::new(),
@@ -149,25 +151,30 @@ impl CheckpointSink for SnapshotWriter {
             checkpoint_count: 0,
             content_checksum: String::new(),
         };
-        let connection = Connection::open(&self.temporary_path)
+        let mut connection = Connection::open(&self.temporary_path)
             .map_err(|e| format!("Create temporary SQLite database: {e}"))?;
         connection.execute_batch(
             "PRAGMA journal_mode=DELETE;
              PRAGMA synchronous=FULL;
-             PRAGMA foreign_keys=ON;
-             CREATE TABLE snapshot_manifest(singleton INTEGER PRIMARY KEY CHECK(singleton=1), payload TEXT NOT NULL);
+             PRAGMA foreign_keys=ON;"
+        ).map_err(|e| format!("Configure Snapshot database: {e}"))?;
+        // Schema and the initial Recording Manifest are one atomic initialization
+        // transaction. A failed initialization must not leave a valid-looking
+        // half-created Snapshot database.
+        let tx = connection.transaction()
+            .map_err(|e| format!("Begin Snapshot initialization transaction: {e}"))?;
+        tx.execute_batch(
+            "CREATE TABLE snapshot_manifest(singleton INTEGER PRIMARY KEY CHECK(singleton=1), payload TEXT NOT NULL);
              CREATE TABLE snapshot_checkpoints(
                checkpoint_index INTEGER PRIMARY KEY CHECK(checkpoint_index>=0),
                sbar_id TEXT NOT NULL, ts_event TEXT NOT NULL, record_kind TEXT NOT NULL,
                state_data TEXT NOT NULL, diagnostics TEXT NOT NULL);
              CREATE INDEX snapshot_checkpoints_sbar_id ON snapshot_checkpoints(sbar_id);"
         ).map_err(|e| format!("Create Snapshot schema: {e}"))?;
-        connection.execute("INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
+        tx.execute("INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
             params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
             .map_err(|e| format!("Persist initial Manifest: {e}"))?;
-        connection.execute_batch("PRAGMA optimize;").map_err(|e| format!("Optimize Snapshot DB: {e}"))?;
-        connection.execute_batch("BEGIN IMMEDIATE; COMMIT;")
-            .map_err(|e| format!("Commit initial Snapshot metadata: {e}"))?;
+        tx.commit().map_err(|e| format!("Commit Snapshot initialization transaction: {e}"))?;
         self.manifest = Some(manifest);
         self.connection = Some(connection);
         Ok(())
@@ -181,6 +188,19 @@ impl CheckpointSink for SnapshotWriter {
         }
         if index != self.checkpoints.len() {
             return Err(format!("Expected checkpoint index {}, got {index}", self.checkpoints.len()));
+        }
+        let expected_sbar_id = self.input.bar_ids.get(index)
+            .ok_or_else(|| format!("Checkpoint index {index} exceeds the fixed input sequence"))?;
+        if sbar_id != expected_sbar_id {
+            return Err(format!(
+                "Checkpoint SBar ID does not match fixed input at index {index}: expected={expected_sbar_id}, actual={sbar_id}"
+            ));
+        }
+        if projection.state_key != self.input.state_key {
+            return Err(format!(
+                "Checkpoint StruxisStateKey mismatch: expected={}, actual={}",
+                self.input.state_key, projection.state_key
+            ));
         }
         if projection.last_ts_event.as_deref() != Some(sbar_id) {
             return Err("Checkpoint projection SBar ID mismatch".into());
@@ -216,12 +236,44 @@ impl CheckpointSink for SnapshotWriter {
     }
 
     fn fail(&mut self, _diagnostic: &str) -> Result<(), String> {
-        if let (Some(manifest), Some(connection)) = (self.manifest.as_mut(), self.connection.as_mut()) {
-            manifest.status = STATUS_FAILED.to_owned();
-            connection.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
-                params![serde_json::to_string(manifest).map_err(|e| e.to_string())?])
-                .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
+        let Some(mut manifest) = self.manifest.clone() else {
+            // Initialization may fail before a valid Manifest has been committed.
+            return Ok(());
+        };
+        if manifest.status == STATUS_FAILED {
+            return Ok(());
         }
+        manifest.status = STATUS_FAILED.to_owned();
+        let payload = serde_json::to_string(&manifest)
+            .map_err(|e| format!("Encode failed Snapshot Manifest: {e}"))?;
+
+        if let Some(connection) = self.connection.as_mut() {
+            let tx = connection.transaction()
+                .map_err(|e| format!("Begin failed Snapshot status transaction: {e}"))?;
+            tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1", params![payload])
+                .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
+            tx.commit().map_err(|e| format!("Commit failed Snapshot status: {e}"))?;
+        } else {
+            // Finalization closes the writer connection before read-only
+            // verification and publication. If either later step fails, reopen
+            // whichever artifact exists and ensure it is not left marked Complete.
+            let target = if self.temporary_path.exists() {
+                &self.temporary_path
+            } else if self.published_path.exists() {
+                &self.published_path
+            } else {
+                self.manifest = Some(manifest);
+                return Ok(());
+            };
+            let mut connection = Connection::open(target)
+                .map_err(|e| format!("Reopen failed Snapshot for status update: {e}"))?;
+            let tx = connection.transaction()
+                .map_err(|e| format!("Begin failed Snapshot status transaction: {e}"))?;
+            tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1", params![payload])
+                .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
+            tx.commit().map_err(|e| format!("Commit failed Snapshot status: {e}"))?;
+        }
+        self.manifest = Some(manifest);
         Ok(())
     }
 }
