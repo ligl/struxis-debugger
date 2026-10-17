@@ -1,4 +1,5 @@
 pub mod app;
+pub mod checkpoint;
 pub mod catalog;
 pub mod commands;
 pub mod dataset;
