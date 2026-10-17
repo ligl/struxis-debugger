@@ -626,7 +626,7 @@ mod tests {
         manifest.content_checksum = manifest.calculate_content_checksum(&records).unwrap();
         assert!(verify_complete_snapshot(&manifest, &records).is_ok());
 
-        records[1].state_data = r#"{"operations":["tampered"]}"#.into();
+        records[1].state_data = r#"{"cbarCount":"1","cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":"1"}],"swingCount":"0","swings":[]}"#.into();
         assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("checksum mismatch"));
     }
 
