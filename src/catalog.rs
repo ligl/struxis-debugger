@@ -460,7 +460,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_first_bar_attribute_mismatch_without_float_conversion() {
+    fn rejects_each_sbar_domain_attribute_mismatch_without_float_conversion() {
         let actual_input = vec![
             fixture_bar(100, "10.00"),
             fixture_bar(200, "10.50"),
@@ -469,14 +469,95 @@ mod tests {
         let (struxis, key) = processed_sbar_series(&actual_input);
         let state = struxis.state(key).expect("state should be registered");
 
-        let mut origin = actual_input.clone();
-        origin[1] = fixture_bar(200, "10.25");
-        let error = validate_sbar_series(&origin, state.sbars())
-            .expect_err("different exact Price values must fail validation")
-            .to_string();
+        let cases: Vec<(&str, Vec<Bar>, &str)> = vec![
+            (
+                "bar_type",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].bar_type = BarType::from_str("AUD/JPY.SIM-5-MINUTE-LAST-EXTERNAL")
+                        .expect("valid alternate fixture BarType");
+                    bars
+                },
+                "bar_type expected=",
+            ),
+            (
+                "ts_event and SBarId",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].ts_event = 201_u64.into();
+                    bars
+                },
+                "sbar_id expected=",
+            ),
+            (
+                "ts_init",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].ts_init = 201_u64.into();
+                    bars
+                },
+                "ts_init expected=201 actual=200",
+            ),
+            (
+                "open",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].open = Price::from("10.25");
+                    bars
+                },
+                "open expected=10.25 actual=10.50",
+            ),
+            (
+                "high",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].high = Price::from("12.25");
+                    bars
+                },
+                "high expected=12.25 actual=12.00",
+            ),
+            (
+                "low",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].low = Price::from("8.75");
+                    bars
+                },
+                "low expected=8.75 actual=9.00",
+            ),
+            (
+                "close",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].close = Price::from("10.75");
+                    bars
+                },
+                "close expected=10.75 actual=11.00",
+            ),
+            (
+                "volume",
+                {
+                    let mut bars = actual_input.clone();
+                    bars[1].volume = Quantity::from("101");
+                    bars
+                },
+                "volume expected=101 actual=100",
+            ),
+        ];
 
-        assert!(error.contains("loaded_index=1"), "{error}");
-        assert!(error.contains("open expected=10.25 actual=10.50"), "{error}");
+        for (attribute, origin, expected_diagnostic) in cases {
+            let error = validate_sbar_series(&origin, state.sbars())
+                .expect_err(&format!("{attribute} mismatch must fail validation"))
+                .to_string();
+            assert!(
+                error.contains("loaded_index=1"),
+                "{attribute}: {error}"
+            );
+            assert!(
+                error.contains(expected_diagnostic),
+                "{attribute}: expected diagnostic {expected_diagnostic:?}, got {error}"
+            );
+        }
     }
 
     #[test]
