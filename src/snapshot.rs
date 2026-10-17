@@ -219,6 +219,57 @@ pub fn canonical_structure_state(
         .map_err(|error| format!("Cannot encode canonical structure state: {error}"))
 }
 
+fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), String> {
+    let object = state.as_object()
+        .ok_or_else(|| "state_data must be a JSON object".to_owned())?;
+    let expected_fields = ["cbarCount", "cbars", "swingCount", "swings"];
+    if object.len() != expected_fields.len() || expected_fields.iter().any(|key| !object.contains_key(*key)) {
+        return Err("state_data must contain exactly cbarCount, cbars, swingCount, and swings".to_owned());
+    }
+    let cbars = object["cbars"].as_array()
+        .ok_or_else(|| "state_data cbars must be an array".to_owned())?;
+    let swings = object["swings"].as_array()
+        .ok_or_else(|| "state_data swings must be an array".to_owned())?;
+    let cbar_count = object["cbarCount"].as_str()
+        .ok_or_else(|| "state_data cbarCount must be a decimal string".to_owned())?;
+    let swing_count = object["swingCount"].as_str()
+        .ok_or_else(|| "state_data swingCount must be a decimal string".to_owned())?;
+    if cbar_count.parse::<usize>().ok() != Some(cbars.len()) {
+        return Err("state_data cbarCount does not match cbars length".to_owned());
+    }
+    if swing_count.parse::<usize>().ok() != Some(swings.len()) {
+        return Err("state_data swingCount does not match swings length".to_owned());
+    }
+    validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
+    validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    Ok(())
+}
+
+fn validate_sorted_domain_objects(
+    objects: &[serde_json::Value],
+    anchor_field: &str,
+    id_field: &str,
+    kind: &str,
+) -> Result<(), String> {
+    let mut previous: Option<(u128, u128)> = None;
+    for object in objects {
+        let anchor = object.get(anchor_field).and_then(serde_json::Value::as_str)
+            .ok_or_else(|| format!("{kind} is missing string field {anchor_field}"))?
+            .parse::<u128>()
+            .map_err(|_| format!("{kind} has invalid numeric {anchor_field}"))?;
+        let id = object.get(id_field).and_then(serde_json::Value::as_str)
+            .ok_or_else(|| format!("{kind} is missing string field {id_field}"))?
+            .parse::<u128>()
+            .map_err(|_| format!("{kind} has invalid numeric {id_field}"))?;
+        let key = (anchor, id);
+        if previous.is_some_and(|value| key < value) {
+            return Err(format!("state_data {kind} array is not sorted by {anchor_field} and {id_field}"));
+        }
+        previous = Some(key);
+    }
+    Ok(())
+}
+
 fn sort_domain_objects(
     objects: &mut [serde_json::Value],
     anchor_field: &str,
@@ -328,6 +379,7 @@ pub fn validate_snapshot_records(
         }
         let state: serde_json::Value = serde_json::from_str(&checkpoint.state_data)
             .map_err(|error| format!("Invalid state_data JSON: {error}"))?;
+        validate_canonical_structure_state(&state)?;
         let state = normalize_integer_json_values(state);
         if serde_json::to_string(&state).map_err(|error| error.to_string())? != checkpoint.state_data {
             return Err(format!("Checkpoint {} state_data is not canonical JSON (integer values must be decimal strings)", checkpoint.checkpoint_index));
@@ -430,6 +482,13 @@ mod tests {
         assert_eq!(parsed["cbars"][1]["cbarId"], "10");
         assert_eq!(parsed["cbarCount"], "2");
         assert_eq!(parsed["swingCount"], "0");
+    }
+
+    #[test]
+    fn snapshot_validation_rejects_unsorted_structure_state() {
+        let unsorted = r#"{"cbarCount":"2","cbars":[{"sbarStartId":"20","cbarId":"10"},{"sbarStartId":"3","cbarId":"2"}],"swingCount":"0","swings":[]}"#;
+        let state: serde_json::Value = serde_json::from_str(unsorted).unwrap();
+        assert!(validate_canonical_structure_state(&state).is_err());
     }
 
     #[test]
