@@ -54,6 +54,16 @@ pub trait CheckpointSink: Send + 'static {
         sbar_id: &str,
         projection: &ReplayCheckpointProjection,
     ) -> Result<(), String>;
+
+    /// Finalizes durable storage after the last checkpoint has been confirmed.
+    fn finalize(&mut self, _completed_state: &RunState) -> Result<(), String> {
+        Ok(())
+    }
+
+    /// Records a durable failure status when persistence has already started.
+    fn fail(&mut self, _diagnostic: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 /// Owned configuration passed into the worker thread.
@@ -532,6 +542,13 @@ impl WorkerSession {
             if let Err(error) = self.engine.end() {
                 let diagnostic = format!("BacktestEngine finalization failed after final checkpoint: {error}");
                 let _ = self.state.fail(diagnostic.clone());
+                let _ = sink.fail(&diagnostic);
+                return Err(diagnostic);
+            }
+            if let Err(error) = sink.finalize(&self.state) {
+                let diagnostic = format!("Snapshot finalization failed: {error}");
+                let _ = self.state.fail(diagnostic.clone());
+                let _ = sink.fail(&diagnostic);
                 return Err(diagnostic);
             }
         }
