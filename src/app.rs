@@ -144,6 +144,10 @@ impl AppState {
             catalog_path: self.inner.catalog_path.clone(),
             enable_structure,
         };
+        self.publish_origin(record)
+    }
+
+    fn publish_origin(&self, record: OriginRecord) -> Result<OriginDatasetDto, IpcError> {
         let dto = record.to_dto();
         let mut datasets = self.inner.datasets.lock().map_err(|_| {
             IpcError::new(
@@ -329,5 +333,161 @@ fn sbar_to_dto(bar: &Bar) -> SBarDto {
         low: bar.low.to_string(),
         close: bar.close.to_string(),
         volume: bar.volume.to_string(),
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::{AppState, OriginRecord};
+    use crate::{
+        catalog::OriginLoad,
+        dataset::sequence_fingerprint,
+        ipc::IpcErrorCode,
+    };
+    use capitus_struxis::StruxisStateKey;
+    use nautilus_model::{
+        data::{Bar, BarType},
+        types::{Price, Quantity},
+    };
+    use std::{path::PathBuf, str::FromStr};
+    use uuid::Uuid;
+
+    fn fixture_bar(ts_event: u64, open: &str) -> Bar {
+        Bar::new(
+            BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL")
+                .expect("fixture BarType should parse"),
+            Price::from(open),
+            Price::from("12.00"),
+            Price::from("9.00"),
+            Price::from("11.00"),
+            Quantity::from("100"),
+            ts_event.into(),
+            ts_event.into(),
+        )
+    }
+
+    fn fixture_origin() -> OriginLoad {
+        let bars = vec![
+            fixture_bar(100, "10.00"),
+            fixture_bar(200, "10.50"),
+            fixture_bar(300, "10.75"),
+        ];
+        let bar_type = bars[0].bar_type;
+        let state_key = StruxisStateKey::from_bar_type(&bar_type);
+        let fingerprint = sequence_fingerprint(state_key, &bars)
+            .expect("fixture fingerprint should compute");
+        OriginLoad {
+            origin_dataset_id: Uuid::new_v4(),
+            state_key,
+            sbar_sequence_fingerprint: fingerprint,
+            bar_type: bar_type.to_string(),
+            bars,
+        }
+    }
+
+    fn app_with_origin(catalog_path: PathBuf) -> AppState {
+        let app = AppState::new(catalog_path);
+        let record = OriginRecord {
+            dataset: fixture_origin(),
+            catalog_path: app.catalog_path().to_path_buf(),
+            enable_structure: true,
+        };
+        app.publish_origin(record)
+            .expect("fixture Origin should publish");
+        app
+    }
+
+    #[test]
+    fn creates_test_from_exact_inclusive_sbar_id_range() {
+        let app = app_with_origin(PathBuf::from("/unused/catalog"));
+        let origin = app
+            .current_origin()
+            .expect("Origin lookup should succeed")
+            .expect("fixture Origin should exist");
+
+        let test = app
+            .create_test_dataset("200", "300")
+            .expect("valid inclusive selection should create Test");
+
+        assert_eq!(test.origin_dataset_id, origin.origin_dataset_id);
+        assert_eq!(test.start_sbar_id, "200");
+        assert_eq!(test.end_sbar_id, "300");
+        assert_eq!(test.sbar_count, 2);
+        assert_eq!(
+            test.sbar_sequence_fingerprint,
+            app.current_test_dataset()
+                .expect("Test lookup should succeed")
+                .expect("Test should be published")
+                .sbar_sequence_fingerprint
+        );
+    }
+
+    #[test]
+    fn rejects_test_creation_without_a_loaded_origin() {
+        let app = AppState::new(PathBuf::from("/unused/catalog"));
+        let error = app
+            .create_test_dataset("100", "200")
+            .expect_err("Test creation without Origin must fail");
+        assert_eq!(error.code, IpcErrorCode::InvalidState);
+    }
+
+    #[test]
+    fn invalid_selection_does_not_replace_existing_test() {
+        let app = app_with_origin(PathBuf::from("/unused/catalog"));
+        let first = app
+            .create_test_dataset("100", "200")
+            .expect("first Test should be created");
+        assert!(
+            app.create_test_dataset("300", "100").is_err(),
+            "reversed selection must be rejected"
+        );
+        let current = app
+            .current_test_dataset()
+            .expect("Test lookup should succeed")
+            .expect("the previously published Test must remain");
+        assert_eq!(current.test_dataset_id, first.test_dataset_id);
+    }
+
+    #[test]
+    fn successful_origin_replacement_clears_test_but_failed_load_preserves_it() {
+        let app = app_with_origin(PathBuf::from("/definitely/missing/catalog"));
+        let first_test = app
+            .create_test_dataset("100", "200")
+            .expect("Test should be created");
+
+        assert!(app.load_origin("missing-dataset", true).is_err());
+        assert_eq!(
+            app.current_test_dataset()
+                .expect("Test lookup should succeed")
+                .expect("failed Load must preserve Test")
+                .test_dataset_id,
+            first_test.test_dataset_id
+        );
+
+        let replacement = OriginRecord {
+            dataset: fixture_origin(),
+            catalog_path: app.catalog_path().to_path_buf(),
+            enable_structure: false,
+        };
+        app.publish_origin(replacement)
+            .expect("successful Origin publication should succeed");
+        assert!(
+            app.current_test_dataset()
+                .expect("Test lookup should succeed")
+                .is_none(),
+            "Test derived from the previous Origin must be invalidated"
+        );
+    }
+
+    #[test]
+    fn origin_load_and_test_creation_share_a_mutation_guard() {
+        let app = app_with_origin(PathBuf::from("/unused/catalog"));
+        app.inner.mutation_active.store(true, std::sync::atomic::Ordering::Release);
+        let error = app
+            .create_test_dataset("100", "200")
+            .expect_err("concurrent dataset mutation must be rejected");
+        app.inner.mutation_active.store(false, std::sync::atomic::Ordering::Release);
+        assert_eq!(error.code, IpcErrorCode::Conflict);
     }
 }
