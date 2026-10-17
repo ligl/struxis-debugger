@@ -43,9 +43,17 @@ export function mountDocumentContextMenu(): () => void {
     const html = `<!DOCTYPE html>\n${copy.outerHTML}`;
 
     try {
+      let copied = false;
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(html);
-      } else {
+        try {
+          await navigator.clipboard.writeText(html);
+          copied = true;
+        } catch {
+          // Fall back for WebViews where Clipboard API permissions are unavailable.
+        }
+      }
+
+      if (!copied) {
         const textarea = document.createElement("textarea");
         textarea.value = html;
         textarea.setAttribute("aria-hidden", "true");
@@ -53,10 +61,14 @@ export function mountDocumentContextMenu(): () => void {
         textarea.style.opacity = "0";
         document.body.append(textarea);
         textarea.select();
-        const copied = document.execCommand("copy");
-        textarea.remove();
+        try {
+          copied = document.execCommand("copy");
+        } finally {
+          textarea.remove();
+        }
         if (!copied) throw new Error("Clipboard API and execCommand are unavailable");
       }
+
       copyButton.textContent = "已复制文档 HTML";
       copyButton.title = "当前页面 HTML 已复制到剪贴板";
     } catch (error) {
