@@ -376,11 +376,7 @@ impl WorkerSession {
         sink: &mut dyn CheckpointSink,
         continuous_play: bool,
     ) -> Result<RunState, String> {
-        let allowed = if continuous_play {
-            self.state.status == RunStatus::Running
-        } else {
-            matches!(self.state.status, RunStatus::Ready | RunStatus::Paused)
-        };
+        let allowed = step_allowed(self.state.status, continuous_play);
         if !allowed {
             return Err(format!(
                 "Step is invalid while Run {} is {:?}",
@@ -462,6 +458,16 @@ impl WorkerSession {
 
     fn engine_dispose(&mut self) {
         self.engine.dispose();
+    }
+}
+
+/// The caller chooses the execution mode; the mode does not weaken the
+/// state machine's permissions.
+fn step_allowed(status: RunStatus, continuous_play: bool) -> bool {
+    if continuous_play {
+        status == RunStatus::Running
+    } else {
+        matches!(status, RunStatus::Ready | RunStatus::Paused)
     }
 }
 
@@ -600,6 +606,23 @@ mod tests {
     }
 
     #[test]
+    fn step_permission_is_strictly_bound_to_execution_mode() {
+        use super::step_allowed;
+
+        assert!(step_allowed(RunStatus::Ready, false));
+        assert!(step_allowed(RunStatus::Paused, false));
+        assert!(!step_allowed(RunStatus::Running, false));
+        assert!(!step_allowed(RunStatus::Completed, false));
+
+        assert!(step_allowed(RunStatus::Running, true));
+        assert!(!step_allowed(RunStatus::Ready, true));
+        assert!(!step_allowed(RunStatus::Paused, true));
+        assert!(!step_allowed(RunStatus::Completed, true));
+        assert!(!step_allowed(RunStatus::Failed, true));
+        assert!(!step_allowed(RunStatus::Disposed, true));
+    }
+
+    #[test]
     fn worker_processes_one_test_sbar_per_step_and_commits_before_advancing() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
@@ -643,7 +666,7 @@ mod tests {
     }
 
     #[test]
-    fn worker_play_runs_to_completion_before_dispose() {
+    fn worker_play_completion_then_stop_preserves_completed() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
         let sink = MemoryCheckpointSink::default();
