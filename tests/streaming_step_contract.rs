@@ -147,6 +147,21 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
             );
         }
 
+        let checkpoint = capitus_struxis_debugger::checkpoint::ReplayCheckpointProjection::from_state_view(&state);
+        assert_eq!(checkpoint.last_ts_event.as_deref(), Some(expected_timestamps[index].to_string().as_str()));
+        assert_eq!(checkpoint.sbar_count, processed_count);
+        assert_eq!(checkpoint.sbars.len(), processed_count);
+        assert_eq!(checkpoint.sbars.first().map(|bar| bar.sbar_id.as_str()), Some(expected_bars[0].ts_event.to_string().as_str()));
+        assert_eq!(checkpoint.sbars.last().map(|bar| bar.sbar_id.as_str()), Some(expected_bars[index].ts_event.to_string().as_str()));
+        assert_eq!(
+            checkpoint.structure.as_ref().map(|structure| structure.cbar_count),
+            Some(state.structure().expect("structure enabled").cbars().len())
+        );
+        assert_eq!(
+            checkpoint.structure.as_ref().map(|structure| structure.swing_count),
+            Some(state.structure().expect("structure enabled").swings().iter().count())
+        );
+
         assert!(
             state.structure().is_some(),
             "structure processing must remain enabled throughout replay"
