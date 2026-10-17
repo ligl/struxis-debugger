@@ -1,5 +1,6 @@
 pub mod catalog;
 pub mod dataset;
+pub mod ipc;
 
 fn main() {
     tauri::Builder::default()
