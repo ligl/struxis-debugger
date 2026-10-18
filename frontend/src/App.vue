@@ -65,7 +65,7 @@ const canStartRun = computed(
     !runState.value && !runBusy.value,
 );
 const canRestartRun = computed(
-  () => Boolean(testDataset.value) && !testLoading.value &&
+  () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
     Boolean(runState.value) && runState.value?.status !== "running" &&
     !runBusy.value,
 );
