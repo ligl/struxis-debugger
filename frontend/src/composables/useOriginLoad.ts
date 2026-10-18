@@ -25,6 +25,7 @@ export function useOriginLoad() {
   const refreshing = ref(false);
   let refreshDatasetsPromise: Promise<void> | null = null;
   let refreshDatasetsRequested = false;
+  let originGeneration = 0;
 
   const selectedDataset = computed(
     () => datasets.value.find((dataset) => dataset.id === selectedId.value) ?? null,
@@ -64,11 +65,15 @@ export function useOriginLoad() {
   }
 
   async function refreshCurrentOrigin(): Promise<void> {
+    const generation = ++originGeneration;
     try {
-      origin.value = await getCurrentOrigin();
+      const current = await getCurrentOrigin();
+      if (generation === originGeneration) origin.value = current;
     } catch (error) {
-      // A failed refresh must not erase an already displayed valid Origin.
-      loadError.value = describeIpcError(error);
+      // Stale refreshes must not overwrite state owned by a newer Load attempt.
+      if (generation === originGeneration) {
+        loadError.value = describeIpcError(error);
+      }
     }
   }
 
@@ -78,6 +83,8 @@ export function useOriginLoad() {
     const selected = selectedDataset.value;
     if (loading.value || !selected || !selected.available) return;
 
+    // Invalidate startup refreshes before the Load operation takes ownership.
+    originGeneration += 1;
     // Keep the busy guard active through the page's post-load handoff.
     loading.value = true;
     loadStatus.value = "loading";
@@ -93,6 +100,8 @@ export function useOriginLoad() {
         return;
       }
 
+      // A refresh started while Load was in flight must not replace this Origin.
+      originGeneration += 1;
       origin.value = loadedOrigin;
       loadStatus.value = "loaded";
       await onLoaded?.(loadedOrigin);
