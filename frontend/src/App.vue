@@ -87,8 +87,30 @@ const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 let originHandoffDuringStartup = false;
 
 async function handleRunCommand(command: RunCommand): Promise<void> {
+  if (runBusy.value) return;
   if (command === "start" && !canStartRun.value) return;
   if (command === "restart" && !canRestartRun.value) return;
+
+  const status = runState.value?.status;
+  switch (command) {
+    case "start":
+    case "restart":
+      break;
+    case "step":
+    case "play":
+      if (!status || !["ready", "paused"].includes(status)) return;
+      break;
+    case "pause":
+      if (status !== "running") return;
+      break;
+    case "stop":
+      if (!status || !["ready", "running", "paused"].includes(status)) return;
+      break;
+    case "dispose":
+      if (!status || status === "running") return;
+      break;
+  }
+
   await executeRunCommand(command);
 }
 
