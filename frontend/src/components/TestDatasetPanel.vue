@@ -21,15 +21,16 @@ const emit = defineEmits<{ "update:startSbarId": [value: string]; "update:endSba
           <div class="form-grid">
             <label class="form-field">
               <span>START SBAR ID</span>
-              <input :value="startSbarId" @input="emit('update:startSbarId', ($event.target as HTMLInputElement).value)" type="text" autocomplete="off" :disabled="testLoading || !canMutateTest" />
+              <input data-testid="test-dataset-start-sbar-id" :value="startSbarId" @input="emit('update:startSbarId', ($event.target as HTMLInputElement).value)" type="text" autocomplete="off" :disabled="testLoading || !canMutateTest" />
             </label>
             <label class="form-field">
               <span>END SBAR ID</span>
-              <input :value="endSbarId" @input="emit('update:endSbarId', ($event.target as HTMLInputElement).value)" type="text" autocomplete="off" :disabled="testLoading || !canMutateTest" />
+              <input data-testid="test-dataset-end-sbar-id" :value="endSbarId" @input="emit('update:endSbarId', ($event.target as HTMLInputElement).value)" type="text" autocomplete="off" :disabled="testLoading || !canMutateTest" />
             </label>
           </div>
           <button
             class="action-button action-primary"
+            data-testid="test-dataset-create"
             :disabled="testLoading || !canMutateTest || !startSbarId.trim() || !endSbarId.trim()"
             @click="emit('create')"
           >
