@@ -72,7 +72,7 @@ describe("useTestDataset refresh ordering", () => {
 
     const originRef = ref<OriginDatasetDto | null>(null);
     const { testError, refreshCurrentTestDataset, prepareForOrigin } =
-      useTestDataset(originRef, ref(true));
+      useTestDataset(originRef, computed(() => true));
 
     const staleRefresh = refreshCurrentTestDataset();
     originRef.value = origin("origin-new");
