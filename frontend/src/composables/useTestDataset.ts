@@ -55,6 +55,8 @@ export function useTestDataset(
   async function createTestDataset(): Promise<void> {
     if (testLoading.value || !origin.value || !canMutate.value) return;
     testLoading.value = true;
+    // Invalidate reads that began before this mutation takes ownership.
+    refreshGeneration += 1;
     testError.value = "";
     testStatus.value = "";
     try {
@@ -62,8 +64,6 @@ export function useTestDataset(
         startSbarId.value.trim(),
         endSbarId.value.trim(),
       );
-      // A refresh started while creation was in flight cannot replace this result.
-      refreshGeneration += 1;
       testDataset.value = created;
       testError.value = "";
       testStatus.value = "Test Dataset created from the backend-validated SBar interval.";
