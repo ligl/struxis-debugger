@@ -27,8 +27,6 @@ import type {
   TestDatasetDto,
 } from "./origin-types";
 
-type LoadStatus = "idle" | "loading" | "loaded" | "failed";
-
 const {
   datasets,
   selectedId,
@@ -114,14 +112,13 @@ function toggleInstrumentGroup(key: string): void {
 }
 
 async function startLoad(): Promise<void> {
-  const loadedOrigin = await loadSelectedOrigin();
-  if (!loadedOrigin) return;
-
-  // Keep cross-domain handoff in the page composition root.
-  testDataset.value = null;
-  startSbarId.value = loadedOrigin.firstSbarId;
-  endSbarId.value = loadedOrigin.lastSbarId;
-  await refreshCurrentTestDataset();
+  await loadSelectedOrigin(async (loadedOrigin) => {
+    // Keep cross-domain handoff in the page composition root.
+    testDataset.value = null;
+    startSbarId.value = loadedOrigin.firstSbarId;
+    endSbarId.value = loadedOrigin.lastSbarId;
+    await refreshCurrentTestDataset();
+  });
 }
 
 async function refreshCurrentTestDataset(): Promise<void> {

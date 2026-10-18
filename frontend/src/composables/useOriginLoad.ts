@@ -52,24 +52,30 @@ export function useOriginLoad() {
     }
   }
 
-  async function startLoad(): Promise<OriginDatasetDto | null> {
+  async function startLoad(
+    onLoaded?: (loadedOrigin: OriginDatasetDto) => Promise<void>,
+  ): Promise<void> {
     const selected = selectedDataset.value;
-    if (loading.value || !selected || !selected.available) return null;
+    if (loading.value || !selected || !selected.available) return;
 
-    // Set synchronously before awaiting IPC so rapid clicks cannot overlap.
+    // Keep the busy guard active through the page's post-load handoff.
     loading.value = true;
     loadStatus.value = "loading";
     loadError.value = "";
     try {
-      const loadedOrigin = await loadOrigin(selected.id, enableStructure.value);
+      let loadedOrigin: OriginDatasetDto;
+      try {
+        loadedOrigin = await loadOrigin(selected.id, enableStructure.value);
+      } catch (error) {
+        // Keep the previous Origin in place; only this attempt changes to Failed.
+        loadStatus.value = "failed";
+        loadError.value = describeIpcError(error);
+        return;
+      }
+
       origin.value = loadedOrigin;
       loadStatus.value = "loaded";
-      return loadedOrigin;
-    } catch (error) {
-      // Keep the previous Origin in place; only this attempt changes to Failed.
-      loadStatus.value = "failed";
-      loadError.value = describeIpcError(error);
-      return null;
+      await onLoaded?.(loadedOrigin);
     } finally {
       loading.value = false;
     }
