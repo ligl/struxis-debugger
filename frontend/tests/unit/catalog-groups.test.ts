@@ -32,7 +32,7 @@ const unresolved: CatalogDatasetEntry = {
 
 describe("useCatalogGroups", () => {
   it("groups by instrument and counts only available datasets", () => {
-    const datasets = ref([btcFiveMinute, btcDaily, unresolved]);
+    const datasets = ref<CatalogDatasetEntry[]>([btcFiveMinute, btcDaily, unresolved]);
     const { instrumentGroups } = useCatalogGroups(datasets);
 
     expect(instrumentGroups.value).toHaveLength(2);
@@ -55,7 +55,7 @@ describe("useCatalogGroups", () => {
   });
 
   it("reacts to dataset updates and toggles collapsed groups immutably", () => {
-    const datasets = ref([btcFiveMinute]);
+    const datasets = ref<CatalogDatasetEntry[]>([btcFiveMinute]);
     const { instrumentGroups, collapsedInstrumentIds, toggleInstrumentGroup } =
       useCatalogGroups(datasets);
 
