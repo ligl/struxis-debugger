@@ -464,6 +464,7 @@ describe("startup and user-operation coordination", () => {
       button.text().includes("CREATE TEST DATASET"),
     );
     expect(createButton).toBeDefined();
+    await vi.waitFor(() => expect((createButton!.element as HTMLButtonElement).disabled).toBe(false));
     await createButton!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
 
@@ -475,6 +476,7 @@ describe("startup and user-operation coordination", () => {
     expect(
       invokeMock.mock.calls.filter(([command]) => command === "get_current_test_dataset"),
     ).toHaveLength(1);
+  });
 
   it("blocks Test Dataset replacement while a Run command is pending", async () => {
     let resolveStart!: (value: unknown) => void;
@@ -538,6 +540,5 @@ describe("startup and user-operation coordination", () => {
 
     resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
-  });
   });
 });
