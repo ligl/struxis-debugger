@@ -16,20 +16,27 @@ export function useTestDataset(
   const testLoading = ref(false);
   const testError = ref("");
   const testStatus = ref("");
+  let refreshGeneration = 0;
 
   function prepareForOrigin(loadedOrigin: OriginDatasetDto): void {
+    // Invalidate any startup/session refresh that began before this Origin handoff.
+    refreshGeneration += 1;
     testDataset.value = null;
     startSbarId.value = loadedOrigin.firstSbarId;
     endSbarId.value = loadedOrigin.lastSbarId;
   }
 
   async function refreshCurrentTestDataset(): Promise<void> {
+    const generation = ++refreshGeneration;
     testError.value = "";
     try {
-      testDataset.value = await getCurrentTestDataset();
-      if (testDataset.value) {
-        startSbarId.value = testDataset.value.startSbarId;
-        endSbarId.value = testDataset.value.endSbarId;
+      const current = await getCurrentTestDataset();
+      if (generation !== refreshGeneration) return;
+
+      testDataset.value = current;
+      if (current) {
+        startSbarId.value = current.startSbarId;
+        endSbarId.value = current.endSbarId;
       } else if (origin.value) {
         startSbarId.value = origin.value.firstSbarId;
         endSbarId.value = origin.value.lastSbarId;
@@ -38,7 +45,10 @@ export function useTestDataset(
         endSbarId.value = "";
       }
     } catch (error) {
-      testError.value = describeIpcError(error);
+      // Stale failures must not replace the diagnostic for a newer request.
+      if (generation === refreshGeneration) {
+        testError.value = describeIpcError(error);
+      }
     }
   }
 
