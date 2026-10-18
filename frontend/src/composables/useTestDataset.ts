@@ -65,6 +65,7 @@ export function useTestDataset(
       // A refresh started while creation was in flight cannot replace this result.
       refreshGeneration += 1;
       testDataset.value = created;
+      testError.value = "";
       testStatus.value = "Test Dataset created from the backend-validated SBar interval.";
     } catch (error) {
       testError.value = describeIpcError(error);
