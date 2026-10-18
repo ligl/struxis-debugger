@@ -357,4 +357,69 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("replacement interval rejected"));
     expect(wrapper.text()).toContain("test-1");
   });
+
+  it("reports Run command failures without replacing the last confirmed Run state", async () => {
+    const origin = makeOrigin("origin-existing");
+    const readyRun = {
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+      failureDiagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(readyRun);
+      if (command === "step_run") return Promise.reject("step rejected by backend");
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await wrapper.findAll("button").find((button) => button.text().trim() === "REFRESH STATE")!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await wrapper.findAll("button").find((button) => button.text().trim() === "STEP")!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("step rejected by backend"));
+    expect(wrapper.text()).toContain("READY");
+    expect(invokeMock.mock.calls.filter(([command]) => command === "list_snapshots")).toHaveLength(1);
+  });
+
+  it("prevents overlapping Run commands while a command is pending", async () => {
+    const origin = makeOrigin("origin-existing");
+    let resolveStart!: (value: typeof readyRun) => void;
+    const readyRun = {
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+      failureDiagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "start_run") return new Promise<typeof readyRun>((resolve) => { resolveStart = resolve; });
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    await startButton.trigger("click");
+    await startButton.trigger("click");
+    expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(1);
+    resolveStart(readyRun);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+  });
+
 });

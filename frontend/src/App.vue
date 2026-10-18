@@ -7,21 +7,13 @@ import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import {
   describeIpcError,
-  disposeRun,
-  getRunState,
   listSnapshots,
-  pauseRun,
-  playRun,
-  restartRun,
-  startRun,
-  stepRun,
-  stopRun,
 } from "./origin-bridge";
 import { useOriginLoad } from "./composables/useOriginLoad";
 import { useTestDataset } from "./composables/useTestDataset";
+import { useRunControl } from "./composables/useRunControl";
 import type {
   CatalogDatasetEntry,
-  RunStateDto,
   SnapshotArtifactDto,
 } from "./origin-types";
 
@@ -41,14 +33,18 @@ const {
   startLoad: loadSelectedOrigin,
 } = useOriginLoad();
 
-const runState = ref<RunStateDto | null>(null);
-const runBusy = ref(false);
-const runError = ref("");
-const runStatusMessage = ref("");
-
 const snapshots = ref<SnapshotArtifactDto[]>([]);
 const snapshotsLoading = ref(false);
 const snapshotsError = ref("");
+
+const {
+  runState,
+  runBusy,
+  runError,
+  runStatusMessage,
+  refreshRunState,
+  executeRunCommand,
+} = useRunControl(refreshSnapshots);
 
 const canMutateTest = computed(
   () => !runState.value || runState.value.status === "disposed",
@@ -120,62 +116,6 @@ async function startLoad(): Promise<void> {
     prepareForOrigin(loadedOrigin);
     await refreshCurrentTestDataset();
   });
-}
-
-async function refreshRunState(): Promise<void> {
-  if (runBusy.value) return;
-  runBusy.value = true;
-  runError.value = "";
-  try {
-    runState.value = await getRunState();
-    runStatusMessage.value = "Run state refreshed from the backend.";
-  } catch (error) {
-    runError.value = describeIpcError(error);
-  } finally {
-    runBusy.value = false;
-  }
-}
-
-type RunCommand = "start" | "restart" | "step" | "play" | "pause" | "stop" | "dispose";
-
-async function executeRunCommand(command: RunCommand): Promise<void> {
-  if (runBusy.value) return;
-  runBusy.value = true;
-  runError.value = "";
-  runStatusMessage.value = "";
-  try {
-    let next: RunStateDto;
-    switch (command) {
-      case "start":
-        next = await startRun();
-        break;
-      case "restart":
-        next = await restartRun();
-        break;
-      case "step":
-        next = await stepRun();
-        break;
-      case "play":
-        next = await playRun();
-        break;
-      case "pause":
-        next = await pauseRun();
-        break;
-      case "stop":
-        next = await stopRun();
-        break;
-      case "dispose":
-        next = await disposeRun();
-        break;
-    }
-    runState.value = next;
-    runStatusMessage.value = `Backend confirmed Run status: ${next.status}.`;
-    await refreshSnapshots();
-  } catch (error) {
-    runError.value = describeIpcError(error);
-  } finally {
-    runBusy.value = false;
-  }
 }
 
 async function refreshSnapshots(): Promise<void> {
