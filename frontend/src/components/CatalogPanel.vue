@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CatalogDatasetEntry } from "../origin-types";
 interface InstrumentGroup { key: string; label: string; unresolved: boolean; datasets: CatalogDatasetEntry[]; readyCount: number; }
-defineProps<{ datasets: CatalogDatasetEntry[]; selectedId: string; selectedDataset: CatalogDatasetEntry | null; instrumentGroups: InstrumentGroup[]; collapsedInstrumentIds: Set<string>; refreshing: boolean; loading: boolean; discoveryError: string; enableStructure: boolean; }>();
+defineProps<{ datasets: CatalogDatasetEntry[]; selectedId: string; selectedDataset: CatalogDatasetEntry | null; instrumentGroups: InstrumentGroup[]; collapsedInstrumentIds: Set<string>; refreshing: boolean; loading: boolean; mutationBusy: boolean; discoveryError: string; enableStructure: boolean; }>();
 const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup: [key: string]; "update:enableStructure": [value: boolean]; load: []; }>();
 </script>
 
@@ -12,7 +12,7 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
             <p class="section-index">01 / SOURCE</p>
             <h2>Catalog streams</h2>
           </div>
-          <button class="subtle-button" :disabled="refreshing || loading" @click="emit('refresh')">
+          <button class="subtle-button" :disabled="refreshing || loading || mutationBusy" @click="emit('refresh')">
             {{ refreshing ? "Scanning…" : "Refresh" }}
           </button>
         </div>
@@ -47,7 +47,7 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
                 :key="dataset.id"
                 class="dataset-row"
                 :class="{ selected: selectedId === dataset.id, unavailable: !dataset.available }"
-                :disabled="loading"
+                :disabled="loading || mutationBusy"
                 :aria-pressed="selectedId === dataset.id"
                 @click="emit('selectDataset', dataset.id)"
               >
@@ -65,7 +65,7 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
 
         <div class="load-options">
           <label class="toggle-row">
-            <input :checked="enableStructure" @change="emit('update:enableStructure', ($event.target as HTMLInputElement).checked)" type="checkbox" :disabled="loading" />
+            <input :checked="enableStructure" @change="emit('update:enableStructure', ($event.target as HTMLInputElement).checked)" type="checkbox" :disabled="loading || mutationBusy" />
             <span>
               <strong>Calculate derived structure</strong>
               <small>Maps to StruxisConfig.enable_structure</small>
@@ -73,10 +73,10 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
           </label>
           <button
             class="primary-button"
-            :disabled="loading || !selectedDataset || !selectedDataset.available"
+            :disabled="loading || mutationBusy || !selectedDataset || !selectedDataset.available"
             @click="emit('load')"
           >
-            <span>{{ loading ? "PROCESSING FULL STREAM…" : "LOAD COMPLETE STREAM" }}</span>
+            <span>{{ loading ? "PROCESSING FULL STREAM…" : mutationBusy ? "TEST DATASET MUTATION…" : "LOAD COMPLETE STREAM" }}</span>
             <span aria-hidden="true">↗</span>
           </button>
           <p class="microcopy">Load reads the complete selected BarType stream. No range is applied.</p>
