@@ -2,13 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSnapshots } from "../../src/composables/useSnapshots";
 import type { SnapshotArtifactDto } from "../../src/origin-types";
 
-const { listSnapshotsMock } = vi.hoisted(() => ({
-  listSnapshotsMock: vi.fn(),
+const { invokeMock } = vi.hoisted(() => ({
+  invokeMock: vi.fn(),
 }));
 
-vi.mock("../../src/origin-bridge", () => ({
-  describeIpcError: (error: unknown) => String(error),
-  listSnapshots: listSnapshotsMock,
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: invokeMock,
 }));
 
 const artifact = (snapshotId: string): SnapshotArtifactDto => ({
@@ -33,7 +32,7 @@ describe("useSnapshots", () => {
     const firstRead = new Promise<SnapshotArtifactDto[]>((resolve) => {
       resolveFirst = resolve;
     });
-    listSnapshotsMock
+    invokeMock
       .mockReturnValueOnce(firstRead)
       .mockResolvedValueOnce([artifact("snapshot-new")]);
 
@@ -47,13 +46,14 @@ describe("useSnapshots", () => {
     const overlappingRefresh = refreshSnapshots();
 
     expect(overlappingRefresh).toBe(activeRefresh);
-    expect(listSnapshotsMock).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledWith("list_snapshots");
     expect(snapshotsLoading.value).toBe(true);
 
     resolveFirst([artifact("snapshot-old")]);
     await Promise.all([activeRefresh, overlappingRefresh]);
 
-    expect(listSnapshotsMock).toHaveBeenCalledTimes(2);
+    expect(invokeMock).toHaveBeenCalledTimes(2);
     expect(snapshots.value.map((item) => item.snapshotId)).toEqual([
       "snapshot-new",
     ]);
@@ -61,7 +61,7 @@ describe("useSnapshots", () => {
   });
 
   it("preserves the last successful list when a refresh fails", async () => {
-    listSnapshotsMock
+    invokeMock
       .mockResolvedValueOnce([artifact("snapshot-kept")])
       .mockRejectedValueOnce(new Error("snapshot discovery failed"));
 
@@ -73,6 +73,6 @@ describe("useSnapshots", () => {
     expect(snapshots.value.map((item) => item.snapshotId)).toEqual([
       "snapshot-kept",
     ]);
-    expect(snapshotsError.value).toBe("Error: snapshot discovery failed");
+    expect(snapshotsError.value).toContain("snapshot discovery failed");
   });
 });
