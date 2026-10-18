@@ -382,7 +382,9 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    await wrapper.findAll("button").find((button) => button.text().trim() === "REFRESH STATE")!.trigger("click");
+    const refreshButton = wrapper.findAll("button").find((button) => button.text().trim() === "REFRESH STATE")!;
+    expect((refreshButton.element as HTMLButtonElement).disabled).toBe(false);
+    await refreshButton.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
     await wrapper.findAll("button").find((button) => button.text().trim() === "STEP")!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("step rejected by backend"));
