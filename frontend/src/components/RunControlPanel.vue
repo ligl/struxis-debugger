@@ -29,7 +29,7 @@ const emit = defineEmits<{ command: [command: RunCommand]; refresh: []; }>();
           <button class="action-button" :disabled="runState?.status !== 'running' || runBusy" @click="emit('command', 'pause')">PAUSE</button>
           <button class="action-button" :disabled="!runState || !['ready', 'running', 'paused'].includes(runState.status) || runBusy" @click="emit('command', 'stop')">STOP</button>
           <button class="action-button" :disabled="!runState || runState.status === 'running' || runBusy" @click="emit('command', 'dispose')">DISPOSE</button>
-          <button class="action-button" :disabled="!runState || runBusy" @click="emit('refresh')">REFRESH STATE</button>
+          <button class="action-button" :disabled="runBusy" @click="emit('refresh')">REFRESH STATE</button>
         </div>
 
         <div v-if="runState" class="detail-list">
