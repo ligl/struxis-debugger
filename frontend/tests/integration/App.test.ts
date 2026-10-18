@@ -307,8 +307,7 @@ describe("Test, Run and Snapshot workbench", () => {
     expect((rangeInputs[0].element as HTMLInputElement).value).toBe("100");
     expect((rangeInputs[1].element as HTMLInputElement).value).toBe("200");
 
-    const createButton = wrapper.find('[data-testid="test-dataset-create"]');
-    expect(createButton).toBeDefined();
+    const createButton = wrapper.get('[data-testid="test-dataset-create"]');
     await vi.waitFor(() =>
       expect((createButton!.element as HTMLButtonElement).disabled).toBe(false),
     );
@@ -321,7 +320,7 @@ describe("Test, Run and Snapshot workbench", () => {
     );
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
 
-    const startButton = wrapper.find('[data-testid="run-start"]');
+    const startButton = wrapper.get('[data-testid="run-start"]');
     expect(startButton).toBeDefined();
     await startButton!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
@@ -350,7 +349,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
-    const createButton = () => wrapper.find('[data-testid="test-dataset-create"]');
+    const createButton = () => wrapper.get('[data-testid="test-dataset-create"]');
     await createButton()!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await createButton()!.trigger("click");
@@ -416,7 +415,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const startButton = wrapper.find('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start"]')!;
     await startButton.trigger("click");
     await startButton.trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(1);
@@ -457,7 +456,7 @@ describe("startup and user-operation coordination", () => {
 
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
-    const createButton = wrapper.find('[data-testid="test-dataset-create"]');
+    const createButton = wrapper.get('[data-testid="test-dataset-create"]');
     expect(createButton).toBeDefined();
     await vi.waitFor(() => expect((createButton!.element as HTMLButtonElement).disabled).toBe(false));
     await createButton!.trigger("click");
@@ -492,7 +491,7 @@ describe("startup and user-operation coordination", () => {
       datasetId: dataset.id,
       enableStructure: true,
     }));
-    const startButton = wrapper.find('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
     wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
@@ -549,7 +548,7 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const startButton = wrapper.find('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start"]')!;
     await startButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("start_run"));
 
@@ -621,7 +620,7 @@ describe("startup and user-operation coordination", () => {
       endSbarId: "200",
     }));
 
-    const startButton = wrapper.find('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
     wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
