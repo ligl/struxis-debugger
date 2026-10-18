@@ -76,9 +76,14 @@ const {
 
 const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 
+// A successful user Load owns the Origin → Test Dataset handoff. Startup must
+// not launch a later refresh that could supersede a Test Dataset created meanwhile.
+let originHandoffDuringStartup = false;
+
 async function startLoad(): Promise<void> {
   if (testLoading.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
+    originHandoffDuringStartup = true;
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
     await refreshCurrentTestDataset();
@@ -104,7 +109,9 @@ function formatTimestamp(value: string | null): string {
 
 onMounted(async () => {
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
-  await refreshCurrentTestDataset();
+  // If a user Load completed during startup, its handoff already refreshed the
+  // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
+  if (!originHandoffDuringStartup) await refreshCurrentTestDataset();
 });
 </script>
 
