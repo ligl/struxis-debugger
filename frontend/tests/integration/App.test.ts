@@ -529,7 +529,7 @@ describe("startup and user-operation coordination", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.findAll("button").find((button) => button.text().trim() === "REFRESH STATE")!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
-    const loadButton = wrapper.findAll("button").find((button) => button.text().includes("LOAD COMPLETE STREAM"))!;
+    const loadButton = wrapper.find(".primary-button");
     expect((loadButton.element as HTMLButtonElement).disabled).toBe(true);
     await loadButton.trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
