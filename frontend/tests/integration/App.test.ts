@@ -478,6 +478,63 @@ describe("startup and user-operation coordination", () => {
     ).toHaveLength(1);
   });
 
+  it("blocks Run start while Origin Load is pending", async () => {
+    let resolveLoad!: (value: OriginDatasetDto) => void;
+    const pendingLoad = new Promise<OriginDatasetDto>((resolve) => { resolveLoad = resolve; });
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "load_origin") return pendingLoad;
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await wrapper.get(".primary-button").trigger("click");
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("load_origin", {
+      datasetId: dataset.id,
+      enableStructure: true,
+    }));
+    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
+    expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(0);
+
+    resolveLoad(makeOrigin("origin-reloaded"));
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-reloaded"));
+  });
+
+  it("blocks Origin Load while a non-disposed Run exists", async () => {
+    const readyRun = {
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+      failureDiagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(readyRun);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await wrapper.findAll("button").find((button) => button.text().trim() === "REFRESH STATE")!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    const loadButton = wrapper.findAll("button").find((button) => button.text().includes("LOAD COMPLETE STREAM"))!;
+    expect((loadButton.element as HTMLButtonElement).disabled).toBe(true);
+    await loadButton.trigger("click");
+    expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
+  });
+
   it("blocks Test Dataset replacement while a Run command is pending", async () => {
     let resolveStart!: (value: unknown) => void;
     const pendingStart = new Promise((resolve) => { resolveStart = resolve; });
