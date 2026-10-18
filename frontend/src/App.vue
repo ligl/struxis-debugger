@@ -6,10 +6,8 @@ import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import {
-  createTestDataset as createTestDatasetIpc,
   describeIpcError,
   disposeRun,
-  getCurrentTestDataset,
   getRunState,
   listSnapshots,
   pauseRun,
@@ -20,11 +18,11 @@ import {
   stopRun,
 } from "./origin-bridge";
 import { useOriginLoad } from "./composables/useOriginLoad";
+import { useTestDataset } from "./composables/useTestDataset";
 import type {
   CatalogDatasetEntry,
   RunStateDto,
   SnapshotArtifactDto,
-  TestDatasetDto,
 } from "./origin-types";
 
 const {
@@ -42,13 +40,6 @@ const {
   refreshCurrentOrigin,
   startLoad: loadSelectedOrigin,
 } = useOriginLoad();
-
-const testDataset = ref<TestDatasetDto | null>(null);
-const startSbarId = ref("");
-const endSbarId = ref("");
-const testLoading = ref(false);
-const testError = ref("");
-const testStatus = ref("");
 
 const runState = ref<RunStateDto | null>(null);
 const runBusy = ref(false);
@@ -69,6 +60,18 @@ const canRestartRun = computed(
   () => Boolean(testDataset.value) && Boolean(runState.value) &&
     runState.value?.status !== "running" && !runBusy.value,
 );
+
+const {
+  testDataset,
+  startSbarId,
+  endSbarId,
+  testLoading,
+  testError,
+  testStatus,
+  refreshCurrentTestDataset,
+  prepareForOrigin,
+  createTestDataset,
+} = useTestDataset(origin, canMutateTest);
 
 interface InstrumentGroup {
   key: string;
@@ -114,46 +117,9 @@ function toggleInstrumentGroup(key: string): void {
 async function startLoad(): Promise<void> {
   await loadSelectedOrigin(async (loadedOrigin) => {
     // Keep cross-domain handoff in the page composition root.
-    testDataset.value = null;
-    startSbarId.value = loadedOrigin.firstSbarId;
-    endSbarId.value = loadedOrigin.lastSbarId;
+    prepareForOrigin(loadedOrigin);
     await refreshCurrentTestDataset();
   });
-}
-
-async function refreshCurrentTestDataset(): Promise<void> {
-  testError.value = "";
-  try {
-    testDataset.value = await getCurrentTestDataset();
-    if (testDataset.value) {
-      startSbarId.value = testDataset.value.startSbarId;
-      endSbarId.value = testDataset.value.endSbarId;
-    } else if (origin.value) {
-      startSbarId.value = origin.value.firstSbarId;
-      endSbarId.value = origin.value.lastSbarId;
-    } else {
-      startSbarId.value = "";
-      endSbarId.value = "";
-    }
-  } catch (error) {
-    testError.value = describeIpcError(error);
-  }
-}
-
-async function createTestDataset(): Promise<void> {
-  if (testLoading.value || !origin.value || !canMutateTest.value) return;
-  testLoading.value = true;
-  testError.value = "";
-  testStatus.value = "";
-  try {
-    const created = await createTestDatasetIpc(startSbarId.value.trim(), endSbarId.value.trim());
-    testDataset.value = created;
-    testStatus.value = "Test Dataset created from the backend-validated SBar interval.";
-  } catch (error) {
-    testError.value = describeIpcError(error);
-  } finally {
-    testLoading.value = false;
-  }
 }
 
 async function refreshRunState(): Promise<void> {
