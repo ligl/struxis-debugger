@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import type { RunStateDto } from "../origin-types";
-type RunCommand = "start" | "restart" | "step" | "play" | "pause" | "stop" | "dispose";
-defineProps<{ runState: RunStateDto | null; runBusy: boolean; runError: string; runStatusMessage: string; canStartRun: boolean; canRestartRun: boolean; }>();
+import { isRunCommandEligible, type RunCommand } from "../run-command-eligibility";
+const props = defineProps<{ runState: RunStateDto | null; runBusy: boolean; runError: string; runStatusMessage: string; canStartRun: boolean; canRestartRun: boolean; }>();
+function commandDisabled(command: RunCommand): boolean {
+  return !isRunCommandEligible(
+    command,
+    props.runState?.status ?? null,
+    props.runBusy,
+    props.canStartRun,
+    props.canRestartRun,
+  );
+}
 const emit = defineEmits<{ command: [command: RunCommand]; refresh: []; }>();
 </script>
 
@@ -22,13 +31,13 @@ const emit = defineEmits<{ command: [command: RunCommand]; refresh: []; }>();
         <p v-if="runState?.failureDiagnostic" class="error-message">{{ runState.failureDiagnostic }}</p>
 
         <div class="action-grid">
-          <button class="action-button action-primary" :disabled="!canStartRun" @click="emit('command', 'start')" data-testid="run-start">START</button>
-          <button class="action-button" :disabled="!canRestartRun" @click="emit('command', 'restart')" data-testid="run-restart">RESTART</button>
-          <button class="action-button" :disabled="!runState || !['ready', 'paused'].includes(runState.status) || runBusy" @click="emit('command', 'step')" data-testid="run-step">STEP</button>
-          <button class="action-button" :disabled="!runState || !['ready', 'paused'].includes(runState.status) || runBusy" @click="emit('command', 'play')" data-testid="run-play">PLAY</button>
-          <button class="action-button" :disabled="runState?.status !== 'running' || runBusy" @click="emit('command', 'pause')" data-testid="run-pause">PAUSE</button>
-          <button class="action-button" :disabled="!runState || !['ready', 'running', 'paused'].includes(runState.status) || runBusy" @click="emit('command', 'stop')" data-testid="run-stop">STOP</button>
-          <button class="action-button" :disabled="!runState || runState.status === 'running' || runBusy" @click="emit('command', 'dispose')" data-testid="run-dispose">DISPOSE</button>
+          <button class="action-button action-primary" :disabled="commandDisabled('start')" @click="emit('command', 'start')" data-testid="run-start">START</button>
+          <button class="action-button" :disabled="commandDisabled('restart')" @click="emit('command', 'restart')" data-testid="run-restart">RESTART</button>
+          <button class="action-button" :disabled="commandDisabled('step')" @click="emit('command', 'step')" data-testid="run-step">STEP</button>
+          <button class="action-button" :disabled="commandDisabled('play')" @click="emit('command', 'play')" data-testid="run-play">PLAY</button>
+          <button class="action-button" :disabled="commandDisabled('pause')" @click="emit('command', 'pause')" data-testid="run-pause">PAUSE</button>
+          <button class="action-button" :disabled="commandDisabled('stop')" @click="emit('command', 'stop')" data-testid="run-stop">STOP</button>
+          <button class="action-button" :disabled="commandDisabled('dispose')" @click="emit('command', 'dispose')" data-testid="run-dispose">DISPOSE</button>
           <button class="action-button" :disabled="runBusy" @click="emit('refresh')" data-testid="run-refresh-state">REFRESH STATE</button>
         </div>
 
