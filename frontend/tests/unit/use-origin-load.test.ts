@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useOriginLoad } from "../../src/composables/useOriginLoad";
-import type { CatalogDatasetEntry } from "../../src/origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto } from "../../src/origin-types";
 
 const { invokeMock } = vi.hoisted(() => ({ invokeMock: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
@@ -8,6 +8,14 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 const dataset = (id: string): CatalogDatasetEntry => ({
   id, barType: `${id}-BAR`, instrumentId: id, timeframe: "5m",
   available: true, diagnostic: null,
+});
+
+
+const origin = (id: string): OriginDatasetDto => ({
+  originDatasetId: id, sourceCatalog: "/catalog", enableStructure: true,
+  instrumentId: id, barType: `${id}-BAR`, timeframe: "300s",
+  sbarSequenceFingerprint: `fingerprint-${id}`, sbarCount: 1,
+  firstSbarId: "100", lastSbarId: "100", firstTsEvent: "100", lastTsEvent: "100", bars: [],
 });
 
 describe("useOriginLoad Catalog refresh", () => {
@@ -46,4 +54,23 @@ describe("useOriginLoad Catalog refresh", () => {
     expect(discoveryError.value).toContain("catalog discovery failed");
     expect(refreshing.value).toBe(false);
   });
+
+  it("does not let a stale current-Origin read overwrite a successful Load", async () => {
+    let resolveCurrent!: (value: OriginDatasetDto | null) => void;
+    const oldRead = new Promise<OriginDatasetDto | null>((resolve) => { resolveCurrent = resolve; });
+    invokeMock
+      .mockResolvedValueOnce([dataset("dataset-1")])
+      .mockReturnValueOnce(oldRead)
+      .mockResolvedValueOnce(origin("origin-new"));
+
+    const state = useOriginLoad();
+    await state.refreshDatasets();
+    const staleRefresh = state.refreshCurrentOrigin();
+    await state.startLoad();
+    resolveCurrent(origin("origin-old"));
+    await staleRefresh;
+
+    expect(state.origin.value?.originDatasetId).toBe("origin-new");
+  });
+
 });
