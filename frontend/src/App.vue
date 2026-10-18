@@ -61,7 +61,7 @@ const {
   createTestDataset,
 } = useTestDataset(origin, canMutateTest);
 const canStartRun = computed(
-  () => Boolean(testDataset.value) && !testLoading.value &&
+  () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
     !runState.value && !runBusy.value,
 );
 const canRestartRun = computed(
@@ -83,7 +83,7 @@ const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 let originHandoffDuringStartup = false;
 
 async function startLoad(): Promise<void> {
-  if (testLoading.value) return;
+  if (!canMutateTest.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
     // Keep cross-domain handoff in the page composition root.
@@ -132,7 +132,7 @@ onMounted(async () => {
     </header>
 
     <section class="workspace">
-      <CatalogPanel :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="testLoading" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
+      <CatalogPanel :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canMutateTest" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
 
       <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :preview-bars="previewBars" :format-timestamp="formatTimestamp" />
     </section>
