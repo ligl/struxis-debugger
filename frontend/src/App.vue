@@ -44,17 +44,6 @@ const {
   executeRunCommand,
 } = useRunControl(refreshSnapshots);
 
-const canMutateTest = computed(
-  () => !runState.value || runState.value.status === "disposed",
-);
-const canStartRun = computed(
-  () => Boolean(testDataset.value) && !runState.value && !runBusy.value,
-);
-const canRestartRun = computed(
-  () => Boolean(testDataset.value) && Boolean(runState.value) &&
-    runState.value?.status !== "running" && !runBusy.value,
-);
-
 const {
   testDataset,
   startSbarId,
@@ -67,6 +56,18 @@ const {
   createTestDataset,
 } = useTestDataset(origin, canMutateTest);
 
+const canMutateTest = computed(
+  () => !loading.value && !testLoading.value &&
+    (!runState.value || runState.value.status === "disposed"),
+);
+const canStartRun = computed(
+  () => Boolean(testDataset.value) && !runState.value && !runBusy.value,
+);
+const canRestartRun = computed(
+  () => Boolean(testDataset.value) && Boolean(runState.value) &&
+    runState.value?.status !== "running" && !runBusy.value,
+);
+
 const {
   collapsedInstrumentIds,
   instrumentGroups,
@@ -76,6 +77,7 @@ const {
 const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 
 async function startLoad(): Promise<void> {
+  if (testLoading.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
