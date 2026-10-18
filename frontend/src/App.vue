@@ -6,6 +6,7 @@ import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import type { SnapshotArtifactDto } from "./origin-types";
+import type { RunCommand } from "./composables/useRunControl";
 import { useSnapshots } from "./composables/useSnapshots";
 import { useOriginLoad } from "./composables/useOriginLoad";
 import { useTestDataset } from "./composables/useTestDataset";
@@ -85,6 +86,12 @@ const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
 let originHandoffDuringStartup = false;
 
+async function handleRunCommand(command: RunCommand): Promise<void> {
+  if (command === "start" && !canStartRun.value) return;
+  if (command === "restart" && !canRestartRun.value) return;
+  await executeRunCommand(command);
+}
+
 async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
@@ -143,7 +150,7 @@ onMounted(async () => {
     <section class="operations-grid">
       <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @update:start-sbar-id="startSbarId = $event" @update:end-sbar-id="endSbarId = $event" @create="createTestDataset" />
 
-      <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="executeRunCommand" @refresh="refreshRunState" />
+      <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
     </section>
 
     <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" @refresh="refreshSnapshots" />
