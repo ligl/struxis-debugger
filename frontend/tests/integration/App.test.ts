@@ -92,8 +92,8 @@ describe("Origin Load workbench", () => {
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
     // Wait for the async discovery result to be rendered and selected before Load.
-    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
-    await wrapper.get(".primary-button").trigger("click");
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
+    await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("load_origin", {
         datasetId: dataset.id,
@@ -115,12 +115,12 @@ describe("Origin Load workbench", () => {
     });
 
     const wrapper = mount(App);
-    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
 
-    const structureCheckbox = wrapper.get('input[type="checkbox"]');
+    const structureCheckbox = wrapper.get('[data-testid="catalog-enable-structure"]');
     expect((structureCheckbox.element as HTMLInputElement).checked).toBe(true);
     await structureCheckbox.setValue(false);
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get('[data-testid="catalog-load"]').trigger("click");
 
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("load_origin", {
@@ -167,7 +167,7 @@ describe("Origin Load workbench", () => {
     });
 
     const wrapper = mount(App);
-    await vi.waitFor(() => expect(wrapper.findAll(".instrument-group-row")).toHaveLength(3));
+    await vi.waitFor(() => expect(wrapper.findAll('[data-testid="catalog-instrument-group"]')).toHaveLength(3));
     expect(wrapper.text()).toContain("BTCUSDT-PERP.BINANCE");
     expect(wrapper.text()).toContain("2 DATASETS");
     expect(wrapper.text()).toContain("ETHUSDT-PERP.BINANCE");
@@ -175,12 +175,12 @@ describe("Origin Load workbench", () => {
     expect(wrapper.text()).toContain("Instrument metadata is missing");
 
     const btcGroup = wrapper
-      .findAll(".instrument-group-row")
-      .find((row) => row.text().includes("BTCUSDT-PERP.BINANCE"))!;
+      .findAll('[data-testid="catalog-instrument-group"]')
+      .find((row) => row.attributes("data-instrument-key") === "BTCUSDT-PERP.BINANCE")!;
     await btcGroup.trigger("click");
     expect(
-      wrapper.findAll(".dataset-row").some((row) =>
-        row.text().includes(dataset.id),
+      wrapper.findAll('[data-testid="catalog-dataset-row"]').some((row) =>
+        row.attributes("data-dataset-id") === dataset.id,
       ),
     ).toBe(false);
     expect(
@@ -188,15 +188,15 @@ describe("Origin Load workbench", () => {
     ).toBe(false);
 
     const reopenedBtcGroup = wrapper
-      .findAll(".instrument-group-row")
-      .find((row) => row.text().includes("BTCUSDT-PERP.BINANCE"))!;
+      .findAll('[data-testid="catalog-instrument-group"]')
+      .find((row) => row.attributes("data-instrument-key") === "BTCUSDT-PERP.BINANCE")!;
     await reopenedBtcGroup.trigger("click");
     const unresolvedRow = wrapper
-      .findAll(".dataset-row")
-      .find((row) => row.text().includes(unresolvedDataset.id));
+      .findAll('[data-testid="catalog-dataset-row"]')
+      .find((row) => row.attributes("data-dataset-id") === unresolvedDataset.id);
     expect(unresolvedRow).toBeDefined();
     await unresolvedRow!.trigger("click");
-    expect((wrapper.get(".primary-button").element as HTMLButtonElement).disabled).toBe(true);
+    expect((wrapper.get('[data-testid="catalog-load"]').element as HTMLButtonElement).disabled).toBe(true);
     expect(
       invokeMock.mock.calls.some(([command]) => command === "load_origin"),
     ).toBe(false);
@@ -213,7 +213,7 @@ describe("Origin Load workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("replacement failed"));
     expect(wrapper.text()).toContain("origin-existing");
     expect(wrapper.text()).toContain("previous Origin remains available");
@@ -236,8 +236,8 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
-    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
-    const button = wrapper.get(".primary-button");
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
+    const button = wrapper.get('[data-testid="catalog-load"]');
     await button.trigger("click");
     await button.trigger("click");
     expect(
@@ -302,14 +302,12 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
-    await vi.waitFor(() => expect(wrapper.findAll('input[type="text"]')).toHaveLength(2));
-    const rangeInputs = wrapper.findAll('input[type="text"]');
+    await vi.waitFor(() => expect(wrapper.findAll('[data-testid^="test-dataset-"][data-testid$="-sbar-id"]')).toHaveLength(2));
+    const rangeInputs = wrapper.findAll('[data-testid^="test-dataset-"][data-testid$="-sbar-id"]');
     expect((rangeInputs[0].element as HTMLInputElement).value).toBe("100");
     expect((rangeInputs[1].element as HTMLInputElement).value).toBe("200");
 
-    const createButton = wrapper.findAll("button").find((button) =>
-      button.text().includes("CREATE TEST DATASET"),
-    );
+    const createButton = wrapper.find('[data-testid="test-dataset-create"]');
     expect(createButton).toBeDefined();
     await vi.waitFor(() =>
       expect((createButton!.element as HTMLButtonElement).disabled).toBe(false),
@@ -323,7 +321,7 @@ describe("Test, Run and Snapshot workbench", () => {
     );
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
 
-    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START");
+    const startButton = wrapper.find('[data-testid="run-start"]');
     expect(startButton).toBeDefined();
     await startButton!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
@@ -352,9 +350,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
-    const createButton = () => wrapper.findAll("button").find((button) =>
-      button.text().includes("CREATE TEST DATASET") || button.text().includes("REPLACE TEST DATASET"),
-    );
+    const createButton = () => wrapper.find('[data-testid="test-dataset-create"]');
     await createButton()!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await createButton()!.trigger("click");
@@ -386,11 +382,11 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const refreshButton = wrapper.findAll("button").find((button) => button.text().trim() === "REFRESH STATE")!;
+    const refreshButton = wrapper.get('[data-testid="run-refresh-state"]');
     expect((refreshButton.element as HTMLButtonElement).disabled).toBe(false);
     await refreshButton.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
-    await wrapper.findAll("button").find((button) => button.text().trim() === "STEP")!.trigger("click");
+    await wrapper.get('[data-testid="run-step"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("step rejected by backend"));
     expect(wrapper.text()).toContain("READY");
     expect(invokeMock.mock.calls.filter(([command]) => command === "list_snapshots")).toHaveLength(1);
@@ -420,7 +416,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    const startButton = wrapper.find('[data-testid="run-start"]')!;
     await startButton.trigger("click");
     await startButton.trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(1);
@@ -457,13 +453,11 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mount(App);
-    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
 
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
-    const createButton = wrapper.findAll("button").find((button) =>
-      button.text().includes("CREATE TEST DATASET"),
-    );
+    const createButton = wrapper.find('[data-testid="test-dataset-create"]');
     expect(createButton).toBeDefined();
     await vi.waitFor(() => expect((createButton!.element as HTMLButtonElement).disabled).toBe(false));
     await createButton!.trigger("click");
@@ -493,12 +487,12 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("load_origin", {
       datasetId: dataset.id,
       enableStructure: true,
     }));
-    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    const startButton = wrapper.find('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
     wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
@@ -533,9 +527,9 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    await wrapper.findAll("button").find((button) => button.text().trim() === "REFRESH STATE")!.trigger("click");
+    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
-    const loadButton = wrapper.find(".primary-button");
+    const loadButton = wrapper.find('[data-testid="catalog-load"]');
     expect((loadButton.element as HTMLButtonElement).disabled).toBe(true);
     await loadButton.trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
@@ -555,11 +549,11 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    const startButton = wrapper.find('[data-testid="run-start"]')!;
     await startButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("start_run"));
 
-    const replaceButton = wrapper.findAll("button").find((button) => button.text().includes("REPLACE TEST DATASET"))!;
+    const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     expect((replaceButton.element as HTMLButtonElement).disabled).toBe(true);
     expect(invokeMock.mock.calls.filter(([command]) => command === "create_test_dataset")).toHaveLength(0);
 
@@ -590,14 +584,14 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const replaceButton = wrapper.findAll("button").find((button) => button.text().includes("REPLACE TEST DATASET"))!;
+    const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     await replaceButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
       startSbarId: "100",
       endSbarId: "200",
     }));
 
-    const loadButton = wrapper.find(".primary-button");
+    const loadButton = wrapper.find('[data-testid="catalog-load"]');
     expect((loadButton.element as HTMLButtonElement).disabled).toBe(true);
     await loadButton.trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
@@ -620,14 +614,14 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mount(App);
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const replaceButton = wrapper.findAll("button").find((button) => button.text().includes("REPLACE TEST DATASET"))!;
+    const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     await replaceButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
       startSbarId: "100",
       endSbarId: "200",
     }));
 
-    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    const startButton = wrapper.find('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
     wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
