@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "./App.vue";
-import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "./origin-types";
+import App from "../../src/App.vue";
+import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "../../src/origin-types";
 
 const ipc = vi.hoisted(() => ({
   invoke: vi.fn(),

@@ -20,8 +20,8 @@ import {
   startRun,
   stepRun,
   stopRun,
-} from "./origin-bridge";
-import type { TestDatasetDto } from "./origin-types";
+} from "../../src/origin-bridge";
+import type { TestDatasetDto } from "../../src/origin-types";
 
 const testDataset: TestDatasetDto = {
   testDatasetId: "test-1",

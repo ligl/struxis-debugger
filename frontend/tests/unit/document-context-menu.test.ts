@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mountDocumentContextMenu } from "./document-context-menu";
+import { mountDocumentContextMenu } from "../../src/document-context-menu";
 
 describe("document HTML context menu", () => {
   let cleanup: (() => void) | undefined;
