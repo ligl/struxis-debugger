@@ -58,10 +58,13 @@ export function useTestDataset(
     testError.value = "";
     testStatus.value = "";
     try {
-      testDataset.value = await createTestDatasetIpc(
+      const created = await createTestDatasetIpc(
         startSbarId.value.trim(),
         endSbarId.value.trim(),
       );
+      // A refresh started while creation was in flight cannot replace this result.
+      refreshGeneration += 1;
+      testDataset.value = created;
       testStatus.value = "Test Dataset created from the backend-validated SBar interval.";
     } catch (error) {
       testError.value = describeIpcError(error);
