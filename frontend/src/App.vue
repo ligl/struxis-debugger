@@ -60,6 +60,9 @@ const {
   prepareForOrigin,
   createTestDataset,
 } = useTestDataset(origin, canMutateTest);
+const canLoadOrigin = computed(
+  () => canMutateTest.value && !testLoading.value,
+);
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
     !runState.value && !runBusy.value,
@@ -83,7 +86,7 @@ const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 let originHandoffDuringStartup = false;
 
 async function startLoad(): Promise<void> {
-  if (!canMutateTest.value) return;
+  if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
     // Keep cross-domain handoff in the page composition root.
@@ -132,7 +135,7 @@ onMounted(async () => {
     </header>
 
     <section class="workspace">
-      <CatalogPanel :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canMutateTest" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
+      <CatalogPanel :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
 
       <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :preview-bars="previewBars" :format-timestamp="formatTimestamp" />
     </section>
