@@ -7,17 +7,35 @@ export function useSnapshots() {
   const snapshotsLoading = ref(false);
   const snapshotsError = ref("");
 
-  async function refreshSnapshots(): Promise<void> {
-    if (snapshotsLoading.value) return;
-    snapshotsLoading.value = true;
-    snapshotsError.value = "";
-    try {
-      snapshots.value = await listSnapshots();
-    } catch (error) {
-      snapshotsError.value = describeIpcError(error);
-    } finally {
-      snapshotsLoading.value = false;
+  let refreshPromise: Promise<void> | null = null;
+  let refreshRequested = false;
+
+  function refreshSnapshots(): Promise<void> {
+    if (refreshPromise) {
+      // Coalesce overlapping requests, but guarantee one more read after the
+      // active request so a Run-triggered refresh cannot be silently dropped.
+      refreshRequested = true;
+      return refreshPromise;
     }
+
+    refreshPromise = (async () => {
+      do {
+        refreshRequested = false;
+        snapshotsLoading.value = true;
+        snapshotsError.value = "";
+        try {
+          snapshots.value = await listSnapshots();
+        } catch (error) {
+          snapshotsError.value = describeIpcError(error);
+        } finally {
+          snapshotsLoading.value = false;
+        }
+      } while (refreshRequested);
+    })().finally(() => {
+      refreshPromise = null;
+    });
+
+    return refreshPromise;
   }
 
   return {
