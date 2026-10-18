@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useTestDataset } from "../../src/composables/useTestDataset";
 import type { OriginDatasetDto, TestDatasetDto } from "../../src/origin-types";
 
@@ -46,7 +46,7 @@ describe("useTestDataset refresh ordering", () => {
 
     const originRef = ref<OriginDatasetDto | null>(null);
     const { testDataset: current, startSbarId, endSbarId, refreshCurrentTestDataset, prepareForOrigin } =
-      useTestDataset(originRef, ref(true));
+      useTestDataset(originRef, computed(() => true));
 
     const staleRefresh = refreshCurrentTestDataset();
     originRef.value = origin("origin-new");
