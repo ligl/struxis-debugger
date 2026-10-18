@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted } from "vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
@@ -10,7 +10,7 @@ import { useSnapshots } from "./composables/useSnapshots";
 import { useOriginLoad } from "./composables/useOriginLoad";
 import { useTestDataset } from "./composables/useTestDataset";
 import { useRunControl } from "./composables/useRunControl";
-import type { CatalogDatasetEntry } from "./origin-types";
+import { useCatalogGroups } from "./composables/useCatalogGroups";
 
 const {
   datasets,
@@ -67,38 +67,12 @@ const {
   createTestDataset,
 } = useTestDataset(origin, canMutateTest);
 
-interface InstrumentGroup {
-  key: string;
-  label: string;
-  unresolved: boolean;
-  datasets: CatalogDatasetEntry[];
-  readyCount: number;
-}
+const {
+  collapsedInstrumentIds,
+  instrumentGroups,
+  toggleInstrumentGroup,
+} = useCatalogGroups(datasets);
 
-const collapsedInstrumentIds = ref<Set<string>>(new Set());
-const instrumentGroups = computed<InstrumentGroup[]>(() => {
-  const groups = new Map<string, InstrumentGroup>();
-
-  for (const dataset of datasets.value) {
-    const unresolved = !dataset.instrumentId;
-    const key = unresolved ? "__unresolved_instrument__" : dataset.instrumentId!;
-    let group = groups.get(key);
-    if (!group) {
-      group = {
-        key,
-        label: unresolved ? "Unresolved / Unavailable" : dataset.instrumentId!,
-        unresolved,
-        datasets: [],
-        readyCount: 0,
-      };
-      groups.set(key, group);
-    }
-    group.datasets.push(dataset);
-    if (dataset.available) group.readyCount += 1;
-  }
-
-  return [...groups.values()];
-});
 const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 
 function toggleInstrumentGroup(key: string): void {
