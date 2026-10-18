@@ -457,7 +457,6 @@ describe("startup and user-operation coordination", () => {
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
     const createButton = wrapper.get('[data-testid="test-dataset-create"]');
-    expect(createButton).toBeDefined();
     await vi.waitFor(() => expect((createButton!.element as HTMLButtonElement).disabled).toBe(false));
     await createButton!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
