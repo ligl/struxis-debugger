@@ -357,6 +357,96 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(wrapper.text()).toContain("test-1");
   });
 
+  it("rejects Run commands at the page boundary when no Run exists", async () => {
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    const panel = wrapper.getComponent(RunControlPanel);
+    for (const command of ["step", "play", "pause", "stop", "dispose"] as const) {
+      panel.vm.$emit("command", command);
+    }
+    await flushPromises();
+
+    const runIpcCommands = [
+      "step_run", "play_run", "pause_run", "stop_run", "dispose_run",
+    ];
+    expect(invokeMock.mock.calls.filter(([command]) =>
+      runIpcCommands.includes(String(command)),
+    )).toHaveLength(0);
+  });
+
+  it("rejects Run commands that are invalid for the confirmed Run status", async () => {
+    const readyRun = {
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+      failureDiagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(readyRun);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    const panel = wrapper.getComponent(RunControlPanel);
+    panel.vm.$emit("command", "pause");
+    await flushPromises();
+    expect(invokeMock.mock.calls.filter(([command]) => command === "pause_run")).toHaveLength(0);
+    expect(invokeMock.mock.calls.filter(([command]) => command === "stop_run")).toHaveLength(0);
+  });
+
+  it("rejects Step, Play and Dispose while the confirmed Run is running", async () => {
+    const runningRun = {
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "running",
+      processedCount: 1,
+      cursorSbarId: "100",
+      failureDiagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(runningRun);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
+    const panel = wrapper.getComponent(RunControlPanel);
+    for (const command of ["step", "play", "dispose"] as const) {
+      panel.vm.$emit("command", command);
+    }
+    await flushPromises();
+    expect(invokeMock.mock.calls.filter(([command]) =>
+      ["step_run", "play_run", "dispose_run"].includes(String(command)),
+    )).toHaveLength(0);
+  });
+
   it("reports Run command failures without replacing the last confirmed Run state", async () => {
     const origin = makeOrigin("origin-existing");
     const readyRun = {
