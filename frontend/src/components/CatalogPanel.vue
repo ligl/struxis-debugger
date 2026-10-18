@@ -12,7 +12,7 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
             <p class="section-index">01 / SOURCE</p>
             <h2>Catalog streams</h2>
           </div>
-          <button class="subtle-button" :disabled="refreshing || loading || mutationBusy" @click="emit('refresh')">
+          <button data-testid="catalog-refresh" class="subtle-button" :disabled="refreshing || loading || mutationBusy" @click="emit('refresh')">
             {{ refreshing ? "Scanning…" : "Refresh" }}
           </button>
         </div>
@@ -31,6 +31,8 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
           >
             <button
               class="instrument-group-row"
+              data-testid="catalog-instrument-group"
+              :data-instrument-key="group.key"
               :aria-expanded="!collapsedInstrumentIds.has(group.key)"
               @click="emit('toggleGroup', group.key)"
             >
@@ -46,6 +48,8 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
                 v-for="dataset in group.datasets"
                 :key="dataset.id"
                 class="dataset-row"
+                data-testid="catalog-dataset-row"
+                :data-dataset-id="dataset.id"
                 :class="{ selected: selectedId === dataset.id, unavailable: !dataset.available }"
                 :disabled="loading || mutationBusy"
                 :aria-pressed="selectedId === dataset.id"
@@ -65,7 +69,7 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
 
         <div class="load-options">
           <label class="toggle-row">
-            <input :checked="enableStructure" @change="emit('update:enableStructure', ($event.target as HTMLInputElement).checked)" type="checkbox" :disabled="loading || mutationBusy" />
+            <input data-testid="catalog-enable-structure" :checked="enableStructure" @change="emit('update:enableStructure', ($event.target as HTMLInputElement).checked)" type="checkbox" :disabled="loading || mutationBusy" />
             <span>
               <strong>Calculate derived structure</strong>
               <small>Maps to StruxisConfig.enable_structure</small>
@@ -73,6 +77,7 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
           </label>
           <button
             class="primary-button"
+            data-testid="catalog-load"
             :disabled="loading || mutationBusy || !selectedDataset || !selectedDataset.available"
             @click="emit('load')"
           >
