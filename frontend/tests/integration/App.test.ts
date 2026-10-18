@@ -475,6 +475,69 @@ describe("startup and user-operation coordination", () => {
     expect(
       invokeMock.mock.calls.filter(([command]) => command === "get_current_test_dataset"),
     ).toHaveLength(1);
+
+  it("blocks Test Dataset replacement while a Run command is pending", async () => {
+    let resolveStart!: (value: unknown) => void;
+    const pendingStart = new Promise((resolve) => { resolveStart = resolve; });
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "start_run") return pendingStart;
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    await startButton.trigger("click");
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("start_run"));
+
+    const replaceButton = wrapper.findAll("button").find((button) => button.text().includes("REPLACE TEST DATASET"))!;
+    expect((replaceButton.element as HTMLButtonElement).disabled).toBe(true);
+    expect(invokeMock.mock.calls.filter(([command]) => command === "create_test_dataset")).toHaveLength(0);
+
+    resolveStart({
+      runId: "run-1",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+      failureDiagnostic: null,
+    });
+    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+  });
+
+  it("blocks Run start while Test Dataset replacement is pending", async () => {
+    let resolveCreate!: (value: TestDatasetDto) => void;
+    const pendingCreate = new Promise<TestDatasetDto>((resolve) => { resolveCreate = resolve; });
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "create_test_dataset") return pendingCreate;
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    const replaceButton = wrapper.findAll("button").find((button) => button.text().includes("REPLACE TEST DATASET"))!;
+    await replaceButton.trigger("click");
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
+      startSbarId: "100",
+      endSbarId: "200",
+    }));
+
+    const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
+    expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
+    expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(0);
+
+    resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
+  });
   });
 });
-
