@@ -9,12 +9,9 @@ import {
   createTestDataset as createTestDatasetIpc,
   describeIpcError,
   disposeRun,
-  getCurrentOrigin,
   getCurrentTestDataset,
   getRunState,
-  listCatalogDatasets,
   listSnapshots,
-  loadOrigin,
   pauseRun,
   playRun,
   restartRun,
@@ -22,9 +19,9 @@ import {
   stepRun,
   stopRun,
 } from "./origin-bridge";
+import { useOriginLoad } from "./composables/useOriginLoad";
 import type {
   CatalogDatasetEntry,
-  OriginDatasetDto,
   RunStateDto,
   SnapshotArtifactDto,
   TestDatasetDto,
@@ -32,15 +29,21 @@ import type {
 
 type LoadStatus = "idle" | "loading" | "loaded" | "failed";
 
-const datasets = ref<CatalogDatasetEntry[]>([]);
-const selectedId = ref("");
-const enableStructure = ref(true);
-const loading = ref(false);
-const loadStatus = ref<LoadStatus>("idle");
-const loadError = ref("");
-const discoveryError = ref("");
-const origin = ref<OriginDatasetDto | null>(null);
-const refreshing = ref(false);
+const {
+  datasets,
+  selectedId,
+  enableStructure,
+  loading,
+  loadStatus,
+  loadError,
+  discoveryError,
+  origin,
+  refreshing,
+  selectedDataset,
+  refreshDatasets,
+  refreshCurrentOrigin,
+  startLoad: loadSelectedOrigin,
+} = useOriginLoad();
 
 const testDataset = ref<TestDatasetDto | null>(null);
 const startSbarId = ref("");
@@ -77,9 +80,6 @@ interface InstrumentGroup {
   readyCount: number;
 }
 
-const selectedDataset = computed(
-  () => datasets.value.find((dataset) => dataset.id === selectedId.value) ?? null,
-);
 const collapsedInstrumentIds = ref<Set<string>>(new Set());
 const instrumentGroups = computed<InstrumentGroup[]>(() => {
   const groups = new Map<string, InstrumentGroup>();
@@ -113,52 +113,15 @@ function toggleInstrumentGroup(key: string): void {
   collapsedInstrumentIds.value = next;
 }
 
-async function refreshDatasets(): Promise<void> {
-  refreshing.value = true;
-  discoveryError.value = "";
-  try {
-    datasets.value = await listCatalogDatasets();
-    if (!datasets.value.some((dataset) => dataset.id === selectedId.value)) {
-      selectedId.value = datasets.value.find((dataset) => dataset.available)?.id ?? "";
-    }
-  } catch (error) {
-    discoveryError.value = describeIpcError(error);
-  } finally {
-    refreshing.value = false;
-  }
-}
-
-async function refreshCurrentOrigin(): Promise<void> {
-  try {
-    origin.value = await getCurrentOrigin();
-  } catch (error) {
-    // A failed refresh must not erase an already displayed valid Origin.
-    loadError.value = describeIpcError(error);
-  }
-}
-
 async function startLoad(): Promise<void> {
-  const selected = selectedDataset.value;
-  if (loading.value || !selected || !selected.available) return;
+  const loadedOrigin = await loadSelectedOrigin();
+  if (!loadedOrigin) return;
 
-  // Set synchronously before awaiting IPC so rapid clicks cannot overlap.
-  loading.value = true;
-  loadStatus.value = "loading";
-  loadError.value = "";
-  try {
-    origin.value = await loadOrigin(selected.id, enableStructure.value);
-    loadStatus.value = "loaded";
-    testDataset.value = null;
-    startSbarId.value = origin.value.firstSbarId;
-    endSbarId.value = origin.value.lastSbarId;
-    await refreshCurrentTestDataset();
-  } catch (error) {
-    // Keep the previous Origin in place; only this attempt changes to Failed.
-    loadStatus.value = "failed";
-    loadError.value = describeIpcError(error);
-  } finally {
-    loading.value = false;
-  }
+  // Keep cross-domain handoff in the page composition root.
+  testDataset.value = null;
+  startSbarId.value = loadedOrigin.firstSbarId;
+  endSbarId.value = loadedOrigin.lastSbarId;
+  await refreshCurrentTestDataset();
 }
 
 async function refreshCurrentTestDataset(): Promise<void> {
