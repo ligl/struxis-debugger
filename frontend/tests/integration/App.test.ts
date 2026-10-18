@@ -570,6 +570,36 @@ describe("startup and user-operation coordination", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
   });
 
+  it("blocks Origin Load while Test Dataset replacement is pending", async () => {
+    let resolveCreate!: (value: TestDatasetDto) => void;
+    const pendingCreate = new Promise<TestDatasetDto>((resolve) => { resolveCreate = resolve; });
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "create_test_dataset") return pendingCreate;
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    const replaceButton = wrapper.findAll("button").find((button) => button.text().includes("REPLACE TEST DATASET"))!;
+    await replaceButton.trigger("click");
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
+      startSbarId: "100",
+      endSbarId: "200",
+    }));
+
+    const loadButton = wrapper.find(".primary-button");
+    expect((loadButton.element as HTMLButtonElement).disabled).toBe(true);
+    await loadButton.trigger("click");
+    expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
+
+    resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
+  });
+
   it("blocks Run start while Test Dataset replacement is pending", async () => {
     let resolveCreate!: (value: TestDatasetDto) => void;
     const pendingCreate = new Promise<TestDatasetDto>((resolve) => { resolveCreate = resolve; });
