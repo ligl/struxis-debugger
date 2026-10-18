@@ -425,3 +425,56 @@ describe("Test, Run and Snapshot workbench", () => {
   });
 
 });
+
+describe("startup and user-operation coordination", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("does not let delayed startup initialization overwrite a Test Dataset created after Load", async () => {
+    let resolveSnapshots!: (value: unknown[]) => void;
+    const pendingSnapshots = new Promise<unknown[]>((resolve) => {
+      resolveSnapshots = resolve;
+    });
+    const loadedOrigin = makeOrigin("origin-new");
+    const createdTestDataset: TestDatasetDto = {
+      ...testDataset,
+      originDatasetId: "origin-new",
+    };
+
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "list_snapshots") return pendingSnapshots;
+      if (command === "load_origin") return Promise.resolve(loadedOrigin);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "create_test_dataset") return Promise.resolve(createdTestDataset);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.find(".dataset-row").exists()).toBe(true));
+
+    await wrapper.get(".primary-button").trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
+    const createButton = wrapper.findAll("button").find((button) =>
+      button.text().includes("CREATE TEST DATASET"),
+    );
+    expect(createButton).toBeDefined();
+    await createButton!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+
+    // Let startup's slower Snapshot read finish only after the user mutation.
+    resolveSnapshots([]);
+    await vi.waitFor(() =>
+      expect(invokeMock.mock.calls.filter(([command]) => command === "list_snapshots")).toHaveLength(1),
+    );
+    await Promise.resolve();
+
+    expect(wrapper.text()).toContain("test-1");
+    expect(
+      invokeMock.mock.calls.filter(([command]) => command === "get_current_test_dataset"),
+    ).toHaveLength(1);
+  });
+});
+
