@@ -5,17 +5,12 @@ import OriginPanel from "./components/OriginPanel.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
-import {
-  describeIpcError,
-  listSnapshots,
-} from "./origin-bridge";
+import type { SnapshotArtifactDto } from "./origin-types";
+import { useSnapshots } from "./composables/useSnapshots";
 import { useOriginLoad } from "./composables/useOriginLoad";
 import { useTestDataset } from "./composables/useTestDataset";
 import { useRunControl } from "./composables/useRunControl";
-import type {
-  CatalogDatasetEntry,
-  SnapshotArtifactDto,
-} from "./origin-types";
+import type { CatalogDatasetEntry } from "./origin-types";
 
 const {
   datasets,
@@ -33,9 +28,12 @@ const {
   startLoad: loadSelectedOrigin,
 } = useOriginLoad();
 
-const snapshots = ref<SnapshotArtifactDto[]>([]);
-const snapshotsLoading = ref(false);
-const snapshotsError = ref("");
+const {
+  snapshots,
+  snapshotsLoading,
+  snapshotsError,
+  refreshSnapshots,
+} = useSnapshots();
 
 const {
   runState,
@@ -116,19 +114,6 @@ async function startLoad(): Promise<void> {
     prepareForOrigin(loadedOrigin);
     await refreshCurrentTestDataset();
   });
-}
-
-async function refreshSnapshots(): Promise<void> {
-  if (snapshotsLoading.value) return;
-  snapshotsLoading.value = true;
-  snapshotsError.value = "";
-  try {
-    snapshots.value = await listSnapshots();
-  } catch (error) {
-    snapshotsError.value = describeIpcError(error);
-  } finally {
-    snapshotsLoading.value = false;
-  }
 }
 
 function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
