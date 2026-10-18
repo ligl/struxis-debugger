@@ -45,7 +45,7 @@ const {
 } = useRunControl(refreshSnapshots);
 
 const canMutateTest = computed(
-  () => !loading.value &&
+  () => !loading.value && !runBusy.value &&
     (!runState.value || runState.value.status === "disposed"),
 );
 
@@ -61,11 +61,13 @@ const {
   createTestDataset,
 } = useTestDataset(origin, canMutateTest);
 const canStartRun = computed(
-  () => Boolean(testDataset.value) && !runState.value && !runBusy.value,
+  () => Boolean(testDataset.value) && !testLoading.value &&
+    !runState.value && !runBusy.value,
 );
 const canRestartRun = computed(
-  () => Boolean(testDataset.value) && Boolean(runState.value) &&
-    runState.value?.status !== "running" && !runBusy.value,
+  () => Boolean(testDataset.value) && !testLoading.value &&
+    Boolean(runState.value) && runState.value?.status !== "running" &&
+    !runBusy.value,
 );
 
 const {
