@@ -85,23 +85,30 @@ describe("useTestDataset refresh ordering", () => {
     expect(testError.value).toBe("");
   });
 
-  it("does not let a refresh overwrite a Test Dataset created while it was in flight", async () => {
+  it("does not let an in-flight refresh overwrite state while Test Dataset creation is pending", async () => {
     let resolveRefresh!: (value: TestDatasetDto | null) => void;
+    let resolveCreate!: (value: TestDatasetDto) => void;
     const staleRead = new Promise<TestDatasetDto | null>((resolve) => { resolveRefresh = resolve; });
+    const createRead = new Promise<TestDatasetDto>((resolve) => { resolveCreate = resolve; });
     invokeMock
       .mockReturnValueOnce(staleRead)
-      .mockResolvedValueOnce(testDataset("created-test"));
+      .mockReturnValueOnce(createRead);
 
     const originRef = ref<OriginDatasetDto | null>(origin("origin-new"));
     const state = useTestDataset(originRef, computed(() => true));
+    state.testDataset.value = testDataset("previous-test");
     state.startSbarId.value = "120";
     state.endSbarId.value = "180";
 
     const staleRefresh = state.refreshCurrentTestDataset();
-    await state.createTestDataset();
+    const creating = state.createTestDataset();
     resolveRefresh(null);
     await staleRefresh;
 
+    expect(state.testDataset.value?.testDatasetId).toBe("previous-test");
+
+    resolveCreate(testDataset("created-test"));
+    await creating;
     expect(state.testDataset.value?.testDatasetId).toBe("created-test");
     expect(state.testStatus.value).toContain("Test Dataset created");
   });
