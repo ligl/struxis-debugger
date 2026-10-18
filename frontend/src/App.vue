@@ -75,13 +75,6 @@ const {
 
 const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
 
-function toggleInstrumentGroup(key: string): void {
-  const next = new Set(collapsedInstrumentIds.value);
-  if (next.has(key)) next.delete(key);
-  else next.add(key);
-  collapsedInstrumentIds.value = next;
-}
-
 async function startLoad(): Promise<void> {
   await loadSelectedOrigin(async (loadedOrigin) => {
     // Keep cross-domain handoff in the page composition root.
