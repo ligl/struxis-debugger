@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
 import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "../../src/origin-types";
@@ -466,10 +466,7 @@ describe("startup and user-operation coordination", () => {
 
     // Let startup's slower Snapshot read finish only after the user mutation.
     resolveSnapshots([]);
-    await vi.waitFor(() =>
-      expect(invokeMock.mock.calls.filter(([command]) => command === "list_snapshots")).toHaveLength(1),
-    );
-    await Promise.resolve();
+    await flushPromises();
 
     expect(wrapper.text()).toContain("test-1");
     expect(
