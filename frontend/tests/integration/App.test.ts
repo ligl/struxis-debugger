@@ -310,6 +310,9 @@ describe("Test, Run and Snapshot workbench", () => {
       button.text().includes("CREATE TEST DATASET"),
     );
     expect(createButton).toBeDefined();
+    await vi.waitFor(() =>
+      expect((createButton!.element as HTMLButtonElement).disabled).toBe(false),
+    );
     await createButton!.trigger("click");
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
