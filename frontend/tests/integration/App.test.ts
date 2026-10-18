@@ -1,6 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
+import RunControlPanel from "../../src/components/RunControlPanel.vue";
 import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "../../src/origin-types";
 
 const ipc = vi.hoisted(() => ({
@@ -499,7 +500,12 @@ describe("startup and user-operation coordination", () => {
     }));
     const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
-    expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(0);
+
+    wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
+    wrapper.getComponent(RunControlPanel).vm.$emit("command", "restart");
+    expect(invokeMock.mock.calls.filter(([command]) =>
+      command === "start_run" || command === "restart_run",
+    )).toHaveLength(0);
 
     resolveLoad(makeOrigin("origin-reloaded"));
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-reloaded"));
@@ -623,7 +629,12 @@ describe("startup and user-operation coordination", () => {
 
     const startButton = wrapper.findAll("button").find((button) => button.text().trim() === "START")!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
-    expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(0);
+
+    wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
+    wrapper.getComponent(RunControlPanel).vm.$emit("command", "restart");
+    expect(invokeMock.mock.calls.filter(([command]) =>
+      command === "start_run" || command === "restart_run",
+    )).toHaveLength(0);
 
     resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
