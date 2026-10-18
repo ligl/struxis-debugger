@@ -84,4 +84,26 @@ describe("useTestDataset refresh ordering", () => {
 
     expect(testError.value).toBe("");
   });
+
+  it("does not let a refresh overwrite a Test Dataset created while it was in flight", async () => {
+    let resolveRefresh!: (value: TestDatasetDto | null) => void;
+    const staleRead = new Promise<TestDatasetDto | null>((resolve) => { resolveRefresh = resolve; });
+    invokeMock
+      .mockReturnValueOnce(staleRead)
+      .mockResolvedValueOnce(testDataset("created-test"));
+
+    const originRef = ref<OriginDatasetDto | null>(origin("origin-new"));
+    const state = useTestDataset(originRef, computed(() => true));
+    state.startSbarId.value = "120";
+    state.endSbarId.value = "180";
+
+    const staleRefresh = state.refreshCurrentTestDataset();
+    await state.createTestDataset();
+    resolveRefresh(null);
+    await staleRefresh;
+
+    expect(state.testDataset.value?.testDatasetId).toBe("created-test");
+    expect(state.testStatus.value).toContain("Test Dataset created");
+  });
+
 });
