@@ -11,15 +11,8 @@ import {
   stopRun,
 } from "../origin-bridge";
 import type { RunStateDto } from "../origin-types";
-
-export type RunCommand =
-  | "start"
-  | "restart"
-  | "step"
-  | "play"
-  | "pause"
-  | "stop"
-  | "dispose";
+import type { RunCommand } from "../run-command-eligibility";
+export type { RunCommand } from "../run-command-eligibility";
 
 export function useRunControl(
   refreshSnapshots: () => Promise<void>,
