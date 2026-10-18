@@ -76,7 +76,7 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
             :disabled="loading || mutationBusy || !selectedDataset || !selectedDataset.available"
             @click="emit('load')"
           >
-            <span>{{ loading ? "PROCESSING FULL STREAM…" : mutationBusy ? "TEST DATASET MUTATION…" : "LOAD COMPLETE STREAM" }}</span>
+            <span>{{ loading ? "PROCESSING FULL STREAM…" : mutationBusy ? "RUN / TEST BUSY…" : "LOAD COMPLETE STREAM" }}</span>
             <span aria-hidden="true">↗</span>
           </button>
           <p class="microcopy">Load reads the complete selected BarType stream. No range is applied.</p>
