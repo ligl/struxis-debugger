@@ -44,6 +44,11 @@ const {
   executeRunCommand,
 } = useRunControl(refreshSnapshots);
 
+const canMutateTest = computed(
+  () => !loading.value &&
+    (!runState.value || runState.value.status === "disposed"),
+);
+
 const {
   testDataset,
   startSbarId,
@@ -55,11 +60,6 @@ const {
   prepareForOrigin,
   createTestDataset,
 } = useTestDataset(origin, canMutateTest);
-
-const canMutateTest = computed(
-  () => !loading.value && !testLoading.value &&
-    (!runState.value || runState.value.status === "disposed"),
-);
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !runState.value && !runBusy.value,
 );
