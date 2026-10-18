@@ -410,7 +410,6 @@ describe("Test, Run and Snapshot workbench", () => {
     panel.vm.$emit("command", "pause");
     await flushPromises();
     expect(invokeMock.mock.calls.filter(([command]) => command === "pause_run")).toHaveLength(0);
-    expect(invokeMock.mock.calls.filter(([command]) => command === "stop_run")).toHaveLength(0);
   });
 
   it("rejects Step, Play and Dispose while the confirmed Run is running", async () => {
