@@ -240,19 +240,30 @@ impl AppState {
                 message: format!("Snapshot discovery failed: {message}"),
             }
         })?;
-        let find_complete = |snapshot_id: &str| {
+        // Resolve published artifacts by their filename identity as well as
+        // the decoded Manifest. If a published SQLite file is unreadable, its
+        // Manifest may be unavailable; still pass that file to the typed reader
+        // so Compare reports SnapshotUnreadable instead of misclassifying it as
+        // a missing/incomplete Snapshot.
+        let find_published = |snapshot_id: &str| {
             artifacts.iter().find(|artifact| {
-                artifact.kind == crate::snapshot_store::SnapshotArtifactKind::Complete
-                    && artifact.snapshot_id.as_deref() == Some(snapshot_id)
+                matches!(
+                    artifact.kind,
+                    crate::snapshot_store::SnapshotArtifactKind::Complete
+                        | crate::snapshot_store::SnapshotArtifactKind::InvalidPublished
+                ) && (
+                    artifact.snapshot_id.as_deref() == Some(snapshot_id)
+                        || artifact.file_name.strip_suffix(".snapshot.sqlite") == Some(snapshot_id)
+                )
             }).map(|artifact| artifact.path.clone())
         };
-        let baseline_path = find_complete(baseline_snapshot_id).ok_or_else(|| CompareRejection {
+        let baseline_path = find_published(baseline_snapshot_id).ok_or_else(|| CompareRejection {
             category: CompareRejectCategory::SnapshotIncomplete,
-            message: format!("Baseline Snapshot is not a readable Complete artifact: {baseline_snapshot_id}"),
+            message: format!("Baseline Snapshot is not a published artifact: {baseline_snapshot_id}"),
         })?;
-        let candidate_path = find_complete(candidate_snapshot_id).ok_or_else(|| CompareRejection {
+        let candidate_path = find_published(candidate_snapshot_id).ok_or_else(|| CompareRejection {
             category: CompareRejectCategory::SnapshotIncomplete,
-            message: format!("Candidate Snapshot is not a readable Complete artifact: {candidate_snapshot_id}"),
+            message: format!("Candidate Snapshot is not a published artifact: {candidate_snapshot_id}"),
         })?;
         compare_snapshot_paths(baseline_path, candidate_path)
     }
