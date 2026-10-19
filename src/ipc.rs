@@ -7,7 +7,7 @@
 /// Stable machine-readable categories returned across the IPC boundary.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum IpcErrorCode {
+pub(crate) enum IpcErrorCode {
     InvalidArgument,
     NotFound,
     Conflict,
@@ -21,15 +21,15 @@ pub enum IpcErrorCode {
 /// chain or a debug representation of runtime objects.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IpcError {
-    pub code: IpcErrorCode,
-    pub message: String,
+pub(crate) struct IpcError {
+    pub(crate) code: IpcErrorCode,
+    pub(crate) message: String,
 }
 
 impl IpcError {
     /// Creates an IPC error with an explicitly selected stable code.
     #[must_use]
-    pub fn new(code: IpcErrorCode, message: impl Into<String>) -> Self {
+    pub(crate) fn new(code: IpcErrorCode, message: impl Into<String>) -> Self {
         Self {
             code,
             message: message.into(),
