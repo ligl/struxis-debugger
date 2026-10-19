@@ -13,7 +13,7 @@ export default defineConfig({
   use: {
     baseURL,
     ...devices["Desktop Chrome"],
-    trace: "retain-on-failure",
+    trace: "off",
     screenshot: "off",
     video: "off",
   },
