@@ -276,7 +276,15 @@ impl CheckpointSink for SnapshotWriter {
         // mutate that payload to Failed: status is covered by the checksum.
         // A later publication / directory-sync failure is reported separately;
         // a published artifact remains valid only if its existing checksum verifies.
-        if manifest.status == STATUS_COMPLETE && !manifest.content_checksum.is_empty() {
+        if manifest.status == STATUS_COMPLETE
+            && !manifest.content_checksum.is_empty()
+            && !self.temporary_path.exists()
+            && self.published_path.exists()
+        {
+            // The writer's artifact has been renamed to the publish destination.
+            // If the temporary file still exists, publication did not complete
+            // (for example, the destination was already occupied), so downgrade
+            // that temporary recovery artifact to Failed instead.
             self.manifest = Some(manifest);
             return Ok(());
         }
