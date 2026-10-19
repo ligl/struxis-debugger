@@ -42,11 +42,7 @@ onMounted(() => {
     layout: {
       background: { type: ColorType.Solid, color: "#191c20" },
       textColor: "#a0a7b0",
-      attributionLogo: true,
-    },
-    grid: {
-      vertLines: { color: "#282d33" },
-      horzLines: { color: "#282d33" },
+      attributionLogo: false,
     },
     rightPriceScale: {
       borderColor: "#30353b",
@@ -127,9 +123,5 @@ onBeforeUnmount(() => {
       :data-origin-dataset-id="originDatasetId"
       :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
     ></div>
-    <p class="chart-attribution">
-      TradingView Lightweight Charts™ / Copyright © 2025 TradingView, Inc. ·
-      <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a>
-    </p>
   </section>
 </template>
