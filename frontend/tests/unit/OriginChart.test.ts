@@ -131,8 +131,8 @@ describe("OriginChart", () => {
       { time: 1700000060, open: 11, high: 13, low: 10, close: 12 },
     ]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([
-      { time: 1700000000, value: 100, color: "#557e65" },
-      { time: 1700000060, value: 100, color: "#557e65" },
+      { time: 1700000000, value: 100, color: "#1d756d" },
+      { time: 1700000060, value: 100, color: "#1d756d" },
     ]);
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
     expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
