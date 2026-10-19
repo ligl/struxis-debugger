@@ -61,7 +61,7 @@ fn test_input() -> LoadedInput {
     }
 }
 
-fn checkpoint(input: &LoadedInput, index: usize, high: &str) -> ReplayCheckpointProjection {
+fn checkpoint(input: &LoadedInput, index: usize, high: &str, include_diagnostic: bool) -> ReplayCheckpointProjection {
     let first_id = input.bars[0].ts_event.to_string();
     let current_id = input.bars[index].ts_event.to_string();
     ReplayCheckpointProjection {
@@ -84,11 +84,29 @@ fn checkpoint(input: &LoadedInput, index: usize, high: &str) -> ReplayCheckpoint
             swing_count: 0,
             swings: Vec::new(),
         }),
-        diagnostics: Vec::new(),
+        diagnostics: if include_diagnostic {
+            vec![crate::diagnostics::Diagnostic {
+                source: "replay".into(),
+                severity: "warning".into(),
+                category: "TestDiagnostic".into(),
+                object_type: None,
+                object_id: None,
+                sbar_ids: vec![current_id],
+                checkpoint_index: Some(index),
+                message: "Integration-test diagnostic".into(),
+            }]
+        } else {
+            Vec::new()
+        },
     }
 }
 
-fn publish_snapshot(root: &Path, input: &LoadedInput, changed_final_high: bool) -> PathBuf {
+fn publish_snapshot(
+    root: &Path,
+    input: &LoadedInput,
+    changed_final_high: bool,
+    include_diagnostic: bool,
+) -> PathBuf {
     let mut writer = SnapshotWriter::new(
         root,
         input,
@@ -106,7 +124,7 @@ fn publish_snapshot(root: &Path, input: &LoadedInput, changed_final_high: bool) 
     for index in 0..input.bars.len() {
         let high = if changed_final_high && index == 1 { "102.0" } else { "101.0" };
         let sbar_id = input.bars[index].ts_event.to_string();
-        writer.commit_checkpoint(index, &sbar_id, &checkpoint(input, index, high)).unwrap();
+        writer.commit_checkpoint(index, &sbar_id, &checkpoint(input, index, high, include_diagnostic && index == 0)).unwrap();
     }
 
     let completed = RunState {
@@ -134,8 +152,8 @@ fn compares_two_verified_sqlite_snapshots_by_domain_identity() {
     fs::create_dir_all(&candidate_root).unwrap();
 
     let input = test_input();
-    let baseline_path = publish_snapshot(&baseline_root, &input, false);
-    let candidate_path = publish_snapshot(&candidate_root, &input, true);
+    let baseline_path = publish_snapshot(&baseline_root, &input, false, false);
+    let candidate_path = publish_snapshot(&candidate_root, &input, true, false);
 
     let result = compare_snapshot_paths(&baseline_path, &candidate_path)
         .expect("two independently published complete Snapshots should compare");
@@ -171,12 +189,36 @@ fn rejects_sqlite_snapshots_with_different_complete_input_fingerprints() {
     let mut candidate_input = test_input();
     candidate_input.sbar_sequence_fingerprint = "a".repeat(64);
 
-    let baseline_path = publish_snapshot(&baseline_root, &baseline_input, false);
-    let candidate_path = publish_snapshot(&candidate_root, &candidate_input, false);
+    let baseline_path = publish_snapshot(&baseline_root, &baseline_input, false, false);
+    let candidate_path = publish_snapshot(&candidate_root, &candidate_input, false, false);
 
     let rejection = compare_snapshot_paths(&baseline_path, &candidate_path)
         .expect_err("different complete input fingerprints must reject comparison");
     assert_eq!(rejection.category, CompareRejectCategory::InputMismatch);
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn diagnostic_divergence_does_not_create_structural_divergence() {
+    let root = temp_root();
+    let baseline_root = root.join("baseline");
+    let candidate_root = root.join("candidate");
+    fs::create_dir_all(&baseline_root).unwrap();
+    fs::create_dir_all(&candidate_root).unwrap();
+
+    let input = test_input();
+    let baseline_path = publish_snapshot(&baseline_root, &input, false, false);
+    let candidate_path = publish_snapshot(&candidate_root, &input, false, true);
+
+    let result = compare_snapshot_paths(&baseline_path, &candidate_path)
+        .expect("diagnostic differences must not reject otherwise valid Snapshots");
+
+    assert!(result.differences.is_empty());
+    assert!(result.first_structural_divergence.is_none());
+    assert_eq!(result.diagnostics_differences.len(), 1);
+    assert_eq!(result.diagnostics_differences[0].checkpoint_index, 0);
+    assert_eq!(result.first_diagnostics_divergence, Some(0));
 
     fs::remove_dir_all(root).unwrap();
 }
