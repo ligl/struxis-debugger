@@ -61,7 +61,12 @@ fn test_input() -> LoadedInput {
     }
 }
 
-fn checkpoint(input: &LoadedInput, index: usize, high: &str, include_diagnostic: bool) -> ReplayCheckpointProjection {
+fn checkpoint(
+    input: &LoadedInput,
+    index: usize,
+    high: &str,
+    include_diagnostic: bool,
+) -> ReplayCheckpointProjection {
     let first_id = input.bars[0].ts_event.to_string();
     let current_id = input.bars[index].ts_event.to_string();
     ReplayCheckpointProjection {
@@ -124,7 +129,13 @@ fn publish_snapshot(
     for index in 0..input.bars.len() {
         let high = if changed_final_high && index == 1 { "102.0" } else { "101.0" };
         let sbar_id = input.bars[index].ts_event.to_string();
-        writer.commit_checkpoint(index, &sbar_id, &checkpoint(input, index, high, include_diagnostic && index == 0)).unwrap();
+        writer
+            .commit_checkpoint(
+                index,
+                &sbar_id,
+                &checkpoint(input, index, high, include_diagnostic && index == 0),
+            )
+            .unwrap();
     }
 
     let completed = RunState {
