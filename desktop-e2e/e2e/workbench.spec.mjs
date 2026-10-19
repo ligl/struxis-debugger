@@ -165,4 +165,55 @@ describe("Struxis Debugger native desktop", () => {
     }
   });
 
+  it("resizes the native window across desktop widths without introducing horizontal overflow", async () => {
+    const originalSize = await browser.getWindowSize();
+    const assertLayout = async (stage) => {
+      const layout = await browser.execute(() => ({
+        viewportWidth: document.documentElement.clientWidth,
+        documentScrollWidth: document.documentElement.scrollWidth,
+        viewportHeight: document.documentElement.clientHeight,
+        shell: (() => {
+          const rect = document.querySelector('[data-testid="debugger-shell"]').getBoundingClientRect();
+          return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
+        })(),
+      }));
+      assert.ok(layout.viewportWidth > 0 && layout.viewportHeight > 0,
+        `${stage}: invalid WebView viewport: ${JSON.stringify(layout)}`);
+      assert.ok(layout.documentScrollWidth <= layout.viewportWidth,
+        `${stage}: unexpected horizontal overflow: ${JSON.stringify(layout)}`);
+      assert.ok(layout.shell.left >= -1 && layout.shell.right <= layout.viewportWidth + 1,
+        `${stage}: workbench shell escaped the viewport: ${JSON.stringify(layout)}`);
+      return layout;
+    };
+
+    try {
+      await browser.setWindowSize(1280, 800);
+      await browser.waitUntil(async () => {
+        const size = await browser.getWindowSize();
+        return size.width >= 1280 && size.height >= 800;
+      }, {
+        timeout: 5_000,
+        interval: 100,
+        timeoutMsg: "Native window did not reach the requested 1280×800 size.",
+      });
+      const standard = await assertLayout("1280×800 native window");
+
+      await browser.setWindowSize(1920, 1080);
+      await browser.waitUntil(async () => {
+        const size = await browser.getWindowSize();
+        return size.width >= 1920 && size.height >= 1080;
+      }, {
+        timeout: 5_000,
+        interval: 100,
+        timeoutMsg: "Native window did not reach the requested 1920×1080 size.",
+      });
+      const wide = await assertLayout("1920×1080 native window");
+      assert.ok(wide.viewportWidth > standard.viewportWidth,
+        `Native resize did not enlarge the WebView viewport: standard=${JSON.stringify(standard)}, wide=${JSON.stringify(wide)}`);
+    } finally {
+      await browser.setWindowSize(originalSize.width, originalSize.height);
+    }
+  });
+
+
 });
