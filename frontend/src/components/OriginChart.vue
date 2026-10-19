@@ -7,6 +7,7 @@ import {
   createChart,
   type IChartApi,
   type ISeriesApi,
+  type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import type { SBarDto } from "../origin-types";
@@ -24,6 +25,24 @@ let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedOriginDatasetId: string | null = null;
 let sbarIdByTime: ReadonlyMap<number, string> = new Map();
+let firstSbarTime: Time | null = null;
+let secondSbarTime: Time | null = null;
+const firstSbarX = ref<number | null>(null);
+const secondSbarX = ref<number | null>(null);
+
+function updateSbarCoordinates(): void {
+  if (!chart) {
+    firstSbarX.value = null;
+    secondSbarX.value = null;
+    return;
+  }
+  firstSbarX.value = firstSbarTime === null
+    ? null
+    : chart.timeScale().timeToCoordinate(firstSbarTime);
+  secondSbarX.value = secondSbarTime === null
+    ? null
+    : chart.timeScale().timeToCoordinate(secondSbarTime);
+}
 
 function handleChartClick(param: { time?: unknown }): void {
   if (chartError.value || props.bars.length === 0) return;
@@ -46,13 +65,19 @@ function updateChart(): void {
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
     sbarIdByTime = projection.sbarIdByTime;
+    firstSbarTime = projection.candles[0]?.time ?? null;
+    secondSbarTime = projection.candles[1]?.time ?? null;
     chartError.value = "";
     if (props.bars.length > 0 && fittedOriginDatasetId !== props.originDatasetId) {
       chart.timeScale().fitContent();
       fittedOriginDatasetId = props.originDatasetId;
     }
+    updateSbarCoordinates();
   } catch (error) {
     sbarIdByTime = new Map();
+    firstSbarTime = null;
+    secondSbarTime = null;
+    updateSbarCoordinates();
     candleSeries.setData([]);
     volumeSeries.setData([]);
     chartError.value = error instanceof Error ? error.message : String(error);
@@ -107,12 +132,14 @@ onMounted(() => {
     scaleMargins: { top: 0.82, bottom: 0 },
   });
   chart.subscribeClick(handleChartClick);
+  chart.timeScale().subscribeVisibleLogicalRangeChange(updateSbarCoordinates);
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
     if (!chart || !entry) return;
     chart.applyOptions({
       width: Math.max(1, Math.floor(entry.contentRect.width)),
     });
+    updateSbarCoordinates();
   });
   resizeObserver.observe(chartHost.value);
   updateChart();
@@ -124,11 +151,16 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   resizeObserver = null;
   chart?.unsubscribeClick(handleChartClick);
+  chart?.timeScale().unsubscribeVisibleLogicalRangeChange(updateSbarCoordinates);
   chart?.remove();
   chart = null;
   candleSeries = null;
   volumeSeries = null;
   sbarIdByTime = new Map();
+  firstSbarTime = null;
+  secondSbarTime = null;
+  firstSbarX.value = null;
+  secondSbarX.value = null;
 });
 </script>
 
@@ -161,6 +193,8 @@ onBeforeUnmount(() => {
       class="origin-chart-host"
       data-testid="origin-chart-canvas"
       :data-origin-dataset-id="originDatasetId"
+      :data-first-sbar-x="firstSbarX ?? ''"
+      :data-second-sbar-x="secondSbarX ?? ''"
       :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
     ></div>
   </section>
