@@ -113,6 +113,55 @@ describe("Struxis Debugger native desktop", () => {
     await assertNoHorizontalOverflow("all panels restored");
   });
 
+  it("preserves native Space behavior on controls and does not replay without an eligible Run", async () => {
+    const shell = await $('[data-testid="debugger-shell"]');
+    await shell.waitForDisplayed();
+
+    await browser.execute(() => {
+      document.body.tabIndex = -1;
+      document.body.focus();
+      document.body.dataset.spaceDefaultPrevented = "unset";
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space" && event.target === document.body) {
+          document.body.dataset.spaceDefaultPrevented = String(event.defaultPrevented);
+        }
+      });
+    });
+    await browser.keys(" ");
+    const bodyDefaultPrevented = await browser.execute(
+      () => document.body.dataset.spaceDefaultPrevented,
+    );
+    assert.equal(bodyDefaultPrevented, "false",
+      "Space without an eligible Run should not be intercepted.");
+
+    await browser.execute(() => {
+      const input = document.createElement("input");
+      input.dataset.testid = "desktop-space-input-fixture";
+      document.body.appendChild(input);
+    });
+    const input = await $('[data-testid="desktop-space-input-fixture"]');
+    await input.click();
+    await browser.keys(" ");
+    assert.equal(await input.getValue(), " ",
+      "Space in an input must retain its native text-editing behavior.");
+
+    await browser.execute(() => {
+      document.querySelector('[data-testid="desktop-space-input-fixture"]').remove();
+    });
+
+    const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
+    const replayTab = workspaceNavigation.$(".workspace-tab:nth-child(2)");
+    await replayTab.click();
+    await browser.keys(" ");
+    await browser.waitUntil(
+      async () => (await $(".workflow-toolbar h2").getText()) === "Test Dataset & Replay",
+      {
+        timeout: 5_000,
+        timeoutMsg: "Space on the focused workspace button did not retain native button behavior.",
+      },
+    );
+  });
+
   it("keeps overflowing workspace content scrollable inside the workspace panel", async () => {
     const content = await $('[data-testid="workspace-content"]');
     await content.waitForDisplayed();
