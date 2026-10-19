@@ -1183,7 +1183,6 @@ body,
 
 .diagnostics-content {
   min-height: 72px;
-  max-height: 220px;
   overflow: auto;
 }
 
@@ -1241,12 +1240,10 @@ body,
     grid-template-columns: minmax(0, 1fr);
   }
   .catalog-rail {
-    max-height: 34vh;
     border-right: 0;
     border-bottom: 1px solid var(--dbg-border);
   }
   .catalog-rail.collapsed {
-    max-height: 44px;
   }
   .catalog-rail.collapsed > :not(.rail-heading) {
     display: none;
