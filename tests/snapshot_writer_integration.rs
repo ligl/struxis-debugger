@@ -366,6 +366,43 @@ fn snapshot_writer_does_not_overwrite_existing_publish_destination() {
         "Finalization must not overwrite an existing artifact"
     );
 
+    // The caller's failure path must downgrade the completed-but-unpublished
+    // temporary database so discovery cannot mistake it for a successful run.
+    writer
+        .fail("Simulated publish collision")
+        .expect("Failed finalization should persist Failed status");
+    let temporary_path = fs::read_dir(&temp_dir)
+        .expect("Read Snapshot directory")
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with('.') && name.ends_with(".snapshot.tmp"))
+        })
+        .expect("Failed unpublished Snapshot should remain as a temporary artifact");
+    let connection = rusqlite::Connection::open(&temporary_path)
+        .expect("Open retained temporary Snapshot");
+    let payload: String = connection
+        .query_row(
+            "SELECT payload FROM snapshot_manifest WHERE singleton=1",
+            [],
+            |row| row.get(0),
+        )
+        .expect("Read retained Snapshot Manifest");
+    let manifest: serde_json::Value =
+        serde_json::from_str(&payload).expect("Decode retained Snapshot Manifest");
+    assert_eq!(
+        manifest["status"].as_str(),
+        Some("Failed"),
+        "A failed publish must not leave a Complete temporary Manifest"
+    );
+    assert_eq!(
+        fs::read(writer.published_path()).expect("Re-read existing destination"),
+        existing_bytes,
+        "Failure handling must preserve the pre-existing destination"
+    );
+
     drop(writer);
     fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot directory");
 }
