@@ -446,6 +446,139 @@ describe("Test, Run and Snapshot workbench", () => {
     )).toHaveLength(0);
   });
 
+  it("maps Space to Pause and Play using the backend-confirmed Run status", async () => {
+    let status: "running" | "paused" = "running";
+    const runState = () => ({
+      runId: "run-space",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status,
+      processedCount: 1,
+      cursorSbarId: "100",
+      failureDiagnostic: null,
+    });
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(runState());
+      if (command === "pause_run") {
+        status = "paused";
+        return Promise.resolve(runState());
+      }
+      if (command === "play_run") {
+        status = "running";
+        return Promise.resolve(runState());
+      }
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
+
+    const pauseEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(pauseEvent);
+    expect(pauseEvent.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("pause_run"));
+    await vi.waitFor(() => expect(status).toBe("paused"));
+
+    const playEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(playEvent);
+    expect(playEvent.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("play_run"));
+    await vi.waitFor(() => expect(status).toBe("running"));
+    expect(invokeMock.mock.calls.filter(([command]) =>
+      command === "pause_run" || command === "play_run",
+    )).toHaveLength(2);
+  });
+
+  it("ignores Space without an eligible Run, for repeat events, and from interactive controls", async () => {
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") {
+        return Promise.resolve({
+          runId: "run-space",
+          testDatasetId: "test-1",
+          inputFingerprint: "test-fingerprint",
+          inputCount: 2,
+          status: "running",
+          processedCount: 1,
+          cursorSbarId: "100",
+          failureDiagnostic: null,
+        });
+      }
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mount(App);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+
+    const noRunEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(noRunEvent);
+    expect(noRunEvent.defaultPrevented).toBe(false);
+
+    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
+
+    const repeatedEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      repeat: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(repeatedEvent);
+    expect(repeatedEvent.defaultPrevented).toBe(false);
+
+    const input = wrapper.get("input");
+    (input.element as HTMLInputElement).focus();
+    const inputEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    input.element.dispatchEvent(inputEvent);
+    expect(inputEvent.defaultPrevented).toBe(false);
+
+    const button = wrapper.get("button.workspace-tab");
+    (button.element as HTMLButtonElement).focus();
+    const buttonEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    button.element.dispatchEvent(buttonEvent);
+    expect(buttonEvent.defaultPrevented).toBe(false);
+
+    expect(invokeMock.mock.calls.filter(([command]) =>
+      command === "pause_run" || command === "play_run",
+    )).toHaveLength(0);
+  });
+
   it("reports Run command failures without replacing the last confirmed Run state", async () => {
     const origin = makeOrigin("origin-existing");
     const readyRun = {
