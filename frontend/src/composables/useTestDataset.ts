@@ -22,8 +22,8 @@ export function useTestDataset(
     // Invalidate any startup/session refresh that began before this Origin handoff.
     refreshGeneration += 1;
     testDataset.value = null;
-    startSbarId.value = loadedOrigin.firstSbarId;
-    endSbarId.value = loadedOrigin.lastSbarId;
+    startSbarId.value = "";
+    endSbarId.value = "";
   }
 
   async function refreshCurrentTestDataset(): Promise<void> {
