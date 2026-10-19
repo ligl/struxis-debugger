@@ -126,6 +126,8 @@ test("Space preserves native control behavior and is inert without an eligible R
   await expect(page.getByRole("heading", { name: "Struxis Debugger" })).toBeVisible();
 
   await page.evaluate(() => {
+    document.body.tabIndex = -1;
+    document.body.focus();
     document.body.dataset.spaceDefaultPrevented = "unset";
     document.addEventListener("keydown", (event) => {
       if (event.code === "Space" && event.target === document.body) {
@@ -133,7 +135,6 @@ test("Space preserves native control behavior and is inert without an eligible R
       }
     });
   });
-  await page.locator("body").click({ position: { x: 8, y: 8 } });
   await page.keyboard.press("Space");
   expect(await page.locator("body").getAttribute("data-space-default-prevented")).toBe("false");
 
