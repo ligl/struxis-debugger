@@ -18,7 +18,7 @@ use crate::snapshot::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum SnapshotArtifactKind {
+pub(crate) enum SnapshotArtifactKind {
     Complete,
     InvalidPublished,
     RecordingTemporary,
@@ -30,21 +30,21 @@ pub enum SnapshotArtifactKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SnapshotArtifact {
-    pub file_name: String,
-    pub path: PathBuf,
-    pub kind: SnapshotArtifactKind,
-    pub snapshot_id: Option<String>,
-    pub run_id: Option<String>,
-    pub state_key: Option<String>,
-    pub generated_at: Option<String>,
-    pub checkpoint_count: Option<usize>,
-    pub diagnostic: Option<String>,
+pub(crate) struct SnapshotArtifact {
+    pub(crate) file_name: String,
+    pub(crate) path: PathBuf,
+    pub(crate) kind: SnapshotArtifactKind,
+    pub(crate) snapshot_id: Option<String>,
+    pub(crate) run_id: Option<String>,
+    pub(crate) state_key: Option<String>,
+    pub(crate) generated_at: Option<String>,
+    pub(crate) checkpoint_count: Option<usize>,
+    pub(crate) diagnostic: Option<String>,
 }
 
 /// Enumerates only files using the Snapshot artifact suffixes. Results are
 /// sorted by filename for stable UI and test behavior.
-pub fn discover_snapshot_artifacts(root: impl AsRef<Path>) -> Result<Vec<SnapshotArtifact>, String> {
+pub(crate) fn discover_snapshot_artifacts(root: impl AsRef<Path>) -> Result<Vec<SnapshotArtifact>, String> {
     let root = root.as_ref();
     if !root.exists() {
         return Ok(Vec::new());
@@ -79,7 +79,7 @@ pub fn discover_snapshot_artifacts(root: impl AsRef<Path>) -> Result<Vec<Snapsho
 }
 
 /// Opens and validates a published Snapshot without permitting writes.
-pub fn read_complete_snapshot(path: impl AsRef<Path>) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), String> {
+pub(crate) fn read_complete_snapshot(path: impl AsRef<Path>) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), String> {
     let path = path.as_ref();
     let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
     if !file_name.ends_with(".snapshot.sqlite") {
