@@ -69,7 +69,15 @@ function updateChart(): void {
     secondSbarTime = projection.candles[1]?.time ?? null;
     chartError.value = "";
     if (props.bars.length > 0 && fittedOriginDatasetId !== props.originDatasetId) {
-      chart.timeScale().fitContent();
+      const timeScale = chart.timeScale();
+      timeScale.fitContent();
+      // Keep the first candle inside the plot instead of placing its center
+      // on the clipped left boundary. Four trailing logical slots preserve
+      // the chart's existing right-side breathing room for short datasets.
+      timeScale.setVisibleLogicalRange({
+        from: -0.5,
+        to: projection.candles.length + 3.5,
+      });
       fittedOriginDatasetId = props.originDatasetId;
     }
     updateSbarCoordinates();
