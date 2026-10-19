@@ -1,4 +1,5 @@
 import { mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import OriginChart from "../../src/components/OriginChart.vue";
 import type { SBarDto } from "../../src/origin-types";
@@ -93,13 +94,15 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
-  it("rejects invalid chart projection and clears both series", () => {
+  it("rejects invalid chart projection and clears both series", async () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [bar({ close: "NaN" })],
         originDatasetId: "origin-invalid",
       },
     });
+    // onMounted updates reactive chartError; wait for Vue to render that state.
+    await nextTick();
 
     expect(wrapper.get('[data-testid="origin-chart-error"]').text())
       .toContain("SBar 1700000000000000000 has a non-finite close value.");
