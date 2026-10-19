@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "build": "bun run typecheck && vite build",
     "check": "bun run test && bun run build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
