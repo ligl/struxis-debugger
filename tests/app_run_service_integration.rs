@@ -69,7 +69,17 @@ fn app_state_get_run_state_returns_error_when_inactive() {
 
 #[test]
 fn app_state_snapshot_discovery_works_on_empty_directory() {
-    let state = AppState::new(test_catalog_path());
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let snapshot_root = std::env::temp_dir().join(format!(
+        "capitus-debugger-empty-snapshots-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after UNIX epoch")
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&snapshot_root).expect("empty Snapshot root should be created");
+    let state = AppState::with_snapshot_root(test_catalog_path(), snapshot_root.clone());
 
     let result = state.discover_snapshots();
 
@@ -88,6 +98,8 @@ fn app_state_snapshot_discovery_works_on_empty_directory() {
             );
         }
     }
+
+    std::fs::remove_dir_all(snapshot_root).expect("temporary Snapshot root should be removed");
 }
 
 #[cfg(test)]
