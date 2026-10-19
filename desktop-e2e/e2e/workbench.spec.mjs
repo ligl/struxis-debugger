@@ -361,7 +361,7 @@ describe("Struxis Debugger native desktop", () => {
     await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
     await browser.waitUntil(
       async () => {
-        const rows = await $$(".snapshot-table tbody tr");
+        const rows = await $(".snapshot-table tbody tr");
         for (const row of rows) {
           if ((await row.getText()).includes("COMPLETE / VERIFIED")) return true;
         }
@@ -372,6 +372,88 @@ describe("Struxis Debugger native desktop", () => {
         interval: 250,
         timeoutMsg: "The completed Run did not publish a verified Snapshot visible in the UI.",
       },
+    );
+
+    // Repeat the exact same Test Dataset so Compare exercises two independent
+    // SQLite Snapshots with an identical complete SBar sequence fingerprint.
+    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+    await $('[data-testid="run-restart"]').click();
+    const runStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
+    await browser.waitUntil(
+      async () => (await runStatus.getText()).trim() === "READY",
+      {
+        timeout: 30_000,
+        interval: 200,
+        timeoutMsg: "Restart did not prepare a second Run for Snapshot Compare.",
+      },
+    );
+
+    await $('[data-testid="run-step"]').click();
+    await browser.waitUntil(
+      async () => ["PAUSED", "COMPLETED"].includes((await runStatus.getText()).trim()),
+      {
+        timeout: 30_000,
+        interval: 200,
+        timeoutMsg: "First checkpoint of the second Run did not settle.",
+      },
+    );
+    if ((await runStatus.getText()).trim() !== "COMPLETED") {
+      await $('[data-testid="run-step"]').click();
+      await browser.waitUntil(
+        async () => (await runStatus.getText()).trim() === "COMPLETED",
+        {
+          timeout: 30_000,
+          interval: 200,
+          timeoutMsg: "Second Run did not complete its two-SBar input.",
+        },
+      );
+    }
+
+    await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
+    await browser.waitUntil(
+      async () => {
+        const rows = await $(".snapshot-table tbody tr");
+        return rows.filter(async (row) => (await row.getText()).includes("COMPLETE / VERIFIED")).length >= 2;
+      },
+      {
+        timeout: 15_000,
+        interval: 250,
+        timeoutMsg: "Two verified Complete Snapshots were not visible after the repeated Run.",
+      },
+    );
+
+    const compareButton = $(".compare-controls .primary-button");
+    await browser.waitUntil(
+      async () => compareButton.isEnabled(),
+      {
+        timeout: 10_000,
+        interval: 200,
+        timeoutMsg: "Two Complete Snapshots did not enable strict Compare.",
+      },
+    );
+    await compareButton.click();
+    await browser.waitUntil(
+      async () => $(".compare-results").isDisplayed(),
+      {
+        timeout: 15_000,
+        interval: 200,
+        timeoutMsg: "The Compare IPC result was not rendered.",
+      },
+    );
+    assert.equal(
+      await $(".compare-summary > div:first-child strong").getText(),
+      "No structural divergence",
+      "Repeated deterministic Runs over the same input should have identical structure.",
+    );
+    assert.equal(
+      await $(".compare-summary > div:nth-child(2) strong").getText(),
+      "2",
+      "Compare should include the full two-checkpoint input trajectory.",
+    );
+    assert.equal(
+      await $(".compare-summary > div:nth-child(3) strong").getText(),
+      "0",
+      "Repeated deterministic Runs should not produce structural object differences.",
     );
   });
 
