@@ -1378,21 +1378,6 @@ body,
   margin: 12px;
 }
 
-.chart-attribution {
-  margin: 0;
-  padding: 7px 10px;
-  border-top: 1px solid var(--dbg-border);
-  color: var(--dbg-text-muted);
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.chart-attribution a {
-  color: var(--dbg-text-secondary);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 @media (max-width: 720px) {
   .origin-chart-host {
     height: 320px;
