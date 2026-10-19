@@ -1,7 +1,7 @@
 //! Application services and session-owned Origin state for Struxis Debugger.
 
 use std::{
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -388,7 +388,7 @@ impl AppState {
 
     #[cfg(test)]
     #[must_use]
-    pub(crate) fn catalog_path(&self) -> &Path {
+    pub(crate) fn catalog_path(&self) -> &std::path::Path {
         &self.inner.catalog_path
     }
 }
