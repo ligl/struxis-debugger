@@ -12,7 +12,13 @@ import {
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import type { SBarDto } from "../origin-types";
 
-const props = defineProps<{ bars: SBarDto[]; originDatasetId: string }>();
+const props = defineProps<{
+  bars: SBarDto[];
+  originDatasetId: string;
+  selectionStartSbarId?: string | null;
+  selectionEndSbarId?: string | null;
+  selectionPending?: boolean;
+}>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
@@ -25,38 +31,72 @@ let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedOriginDatasetId: string | null = null;
-let sbarIdByTime: ReadonlyMap<number, string> = new Map();
+let sbarIdByLogicalIndex: readonly string[] = [];
+let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
 const firstSbarX = ref<number | null>(null);
 const secondSbarX = ref<number | null>(null);
+const selectionStartX = ref<number | null>(null);
+const selectionEndX = ref<number | null>(null);
+const previewX = ref<number | null>(null);
+
+function coordinateForSbarId(sbarId: string | null | undefined): number | null {
+  if (!chart || !sbarId) return null;
+  const time = timeBySbarId.get(sbarId);
+  return time === undefined ? null : chart.timeScale().timeToCoordinate(time);
+}
 
 function updateSbarCoordinates(): void {
   if (!chart) {
     firstSbarX.value = null;
     secondSbarX.value = null;
+    selectionStartX.value = null;
+    selectionEndX.value = null;
     return;
   }
-  firstSbarX.value = firstSbarTime === null
-    ? null
-    : chart.timeScale().timeToCoordinate(firstSbarTime);
-  secondSbarX.value = secondSbarTime === null
-    ? null
-    : chart.timeScale().timeToCoordinate(secondSbarTime);
+  const timeScale = chart.timeScale();
+  firstSbarX.value = firstSbarTime === null ? null : timeScale.timeToCoordinate(firstSbarTime);
+  secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
+  selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
+  selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
 }
 
-function handleChartClick(param: { time?: unknown }): void {
+function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   if (chartError.value || props.bars.length === 0) return;
-  if (typeof param.time !== "number") {
-    emit("selectionError", "Click directly on an SBar candle to select an exact range boundary.");
+  const pointX = param.point?.x;
+  if (typeof pointX !== "number" || !Number.isFinite(pointX)) {
+    emit("selectionError", "The click did not resolve to a horizontal position inside the chart plot.");
     return;
   }
-  const sbarId = sbarIdByTime.get(param.time);
+
+  // Selection is based only on the horizontal time-axis coordinate. The
+  // pointer's y coordinate and candle geometry are intentionally irrelevant.
+  const logical = chart?.timeScale().coordinateToLogical(pointX);
+  if (logical === null || logical === undefined || !Number.isFinite(logical)) {
+    emit("selectionError", "The clicked horizontal position does not map to the Origin time axis.");
+    return;
+  }
+  const index = Math.round(logical);
+  if (index < 0 || index >= sbarIdByLogicalIndex.length) {
+    emit("selectionError", "The clicked horizontal position is outside the loaded Origin SBar sequence.");
+    return;
+  }
+  const sbarId = sbarIdByLogicalIndex[index];
   if (sbarId === undefined) {
-    emit("selectionError", "The clicked chart time does not map to an Origin SBar. No selection was changed.");
+    emit("selectionError", "The clicked horizontal position does not map to an Origin SBar.");
     return;
   }
   emit("sbarClick", sbarId);
+}
+
+function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
+  if (!props.selectionPending || selectionStartX.value === null) {
+    previewX.value = null;
+    return;
+  }
+  const pointX = param.point?.x;
+  previewX.value = typeof pointX === "number" && Number.isFinite(pointX) ? pointX : null;
 }
 
 function fitContent(): void {
@@ -71,7 +111,13 @@ function updateChart(): void {
     const projection = mapOriginBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
-    sbarIdByTime = projection.sbarIdByTime;
+    sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
+    timeBySbarId = new Map(
+      props.bars.flatMap((bar, index) => {
+        const time = projection.candles[index]?.time;
+        return time === undefined ? [] : [[bar.sbarId, time] as const];
+      }),
+    );
     firstSbarTime = projection.candles[0]?.time ?? null;
     secondSbarTime = projection.candles[1]?.time ?? null;
     chartError.value = "";
@@ -89,7 +135,8 @@ function updateChart(): void {
     }
     updateSbarCoordinates();
   } catch (error) {
-    sbarIdByTime = new Map();
+    sbarIdByLogicalIndex = [];
+    timeBySbarId = new Map();
     firstSbarTime = null;
     secondSbarTime = null;
     updateSbarCoordinates();
@@ -103,7 +150,7 @@ onMounted(() => {
   if (!chartHost.value) return;
   chart = createChart(chartHost.value, {
     width: chartHost.value.clientWidth,
-    height: 420,
+    height: Math.max(1, chartHost.value.clientHeight),
     grid: {
       vertLines: { visible: false },
       horzLines: { visible: false },
@@ -148,12 +195,14 @@ onMounted(() => {
     scaleMargins: { top: 0.82, bottom: 0 },
   });
   chart.subscribeClick(handleChartClick);
+  chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(updateSbarCoordinates);
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
     if (!chart || !entry) return;
     chart.applyOptions({
       width: Math.max(1, Math.floor(entry.contentRect.width)),
+      height: Math.max(1, Math.floor(entry.contentRect.height)),
     });
     updateSbarCoordinates();
   });
@@ -167,16 +216,21 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   resizeObserver = null;
   chart?.unsubscribeClick(handleChartClick);
+  chart?.unsubscribeCrosshairMove(handleChartMove);
   chart?.timeScale().unsubscribeVisibleLogicalRangeChange(updateSbarCoordinates);
   chart?.remove();
   chart = null;
   candleSeries = null;
   volumeSeries = null;
-  sbarIdByTime = new Map();
+  sbarIdByLogicalIndex = [];
+  timeBySbarId = new Map();
   firstSbarTime = null;
   secondSbarTime = null;
   firstSbarX.value = null;
   secondSbarX.value = null;
+  selectionStartX.value = null;
+  selectionEndX.value = null;
+  previewX.value = null;
 });
 </script>
 
@@ -208,7 +262,7 @@ onBeforeUnmount(() => {
       <span><small>VOL</small><strong>{{ latestBar.volume }}</strong></span>
       <span class="chart-latest-id"><small>LAST SBAR ID</small><strong>{{ latestBar.sbarId }}</strong></span>
     </div>
-    <p class="microcopy chart-selection-hint">Click one candle for the range start, then another candle for the range end. The selected interval includes both endpoints.</p>
+    <p class="microcopy chart-selection-hint">Click anywhere in the chart plot to set the start; move to preview the shaded interval, then click again to fix the inclusive end. Selection uses horizontal time position only.</p>
     <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="origin-chart-error">
       <strong>Chart projection rejected</strong>
       <span>{{ chartError }}</span>
@@ -216,14 +270,51 @@ onBeforeUnmount(() => {
     <div v-else-if="bars.length === 0" class="origin-chart-empty">
       No SBar data is available in this Origin projection.
     </div>
-    <div
-      ref="chartHost"
-      class="origin-chart-host"
-      data-testid="origin-chart-canvas"
-      :data-origin-dataset-id="originDatasetId"
-      :data-first-sbar-x="firstSbarX ?? ''"
-      :data-second-sbar-x="secondSbarX ?? ''"
-      :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
-    ></div>
+    <div class="origin-chart-viewport" data-testid="origin-chart-viewport">
+      <div
+        ref="chartHost"
+        class="origin-chart-host"
+        data-testid="origin-chart-canvas"
+        :data-origin-dataset-id="originDatasetId"
+        :data-first-sbar-x="firstSbarX ?? ''"
+        :data-second-sbar-x="secondSbarX ?? ''"
+        :data-selection-start-x="selectionStartX ?? ''"
+        :data-selection-end-x="selectionEndX ?? ''"
+        :data-selection-preview-x="previewX ?? ''"
+        :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
+      ></div>
+      <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
+        <div
+          v-if="selectionPending && selectionStartX !== null && previewX !== null"
+          class="origin-selection-shade"
+          data-testid="origin-selection-preview"
+          :style="{ left: `${Math.min(selectionStartX, previewX)}px`, width: `${Math.abs(previewX - selectionStartX)}px` }"
+        ></div>
+        <div
+          v-if="selectionStartX !== null"
+          class="origin-selection-line origin-selection-line-start"
+          data-testid="origin-selection-start-line"
+          :style="{ left: `${selectionStartX}px` }"
+        ></div>
+        <div
+          v-if="selectionPending && selectionStartX !== null && previewX !== null"
+          class="origin-selection-line origin-selection-line-preview"
+          data-testid="origin-selection-preview-line"
+          :style="{ left: `${previewX}px` }"
+        ></div>
+        <template v-else-if="selectionEndX !== null">
+          <div
+            class="origin-selection-shade"
+            data-testid="origin-selection-completed"
+            :style="{ left: `${Math.min(selectionStartX ?? selectionEndX, selectionEndX)}px`, width: `${Math.abs(selectionEndX - (selectionStartX ?? selectionEndX))}px` }"
+          ></div>
+          <div
+            class="origin-selection-line origin-selection-line-end"
+            data-testid="origin-selection-end-line"
+            :style="{ left: `${selectionEndX}px` }"
+          ></div>
+        </template>
+      </div>
+    </div>
   </section>
 </template>
