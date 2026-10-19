@@ -120,6 +120,7 @@ fn published_snapshot_is_discoverable_and_verifiable_after_os_process_restart() 
         sbar_count: 1,
         sbars: Vec::new(),
         structure: None,
+    diagnostics: Vec::new(),
     };
     writer
         .commit_checkpoint(0, &sbar_id, &projection)
