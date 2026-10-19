@@ -27,7 +27,7 @@ function updateChart(): void {
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
     chartError.value = "";
-    if (fittedOriginDatasetId !== props.originDatasetId) {
+    if (props.bars.length > 0 && fittedOriginDatasetId !== props.originDatasetId) {
       chart.timeScale().fitContent();
       fittedOriginDatasetId = props.originDatasetId;
     }
