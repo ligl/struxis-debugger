@@ -227,7 +227,13 @@ describe("OriginChart", () => {
     expect(preview.attributes("style")).toContain("width: 80px");
     expect(wrapper.find('[data-testid="origin-selection-start-line"]').exists()).toBe(true);
 
-    await wrapper.setProps({
+    // Vue Test Utils infers setProps from the mount overload and omits
+    // some script-setup props; keep the workaround local to this test.
+    const setOriginChartSelectionProps = (
+      props: Partial<{ selectionPending: boolean; selectionEndSbarId: string | null }>,
+    ) => wrapper.setProps(props as never);
+
+    await setOriginChartSelectionProps({
       selectionPending: false,
       selectionEndSbarId: "1700000060000000000",
     });
