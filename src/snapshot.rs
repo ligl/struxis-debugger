@@ -260,6 +260,8 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         "Swing",
     )?;
     validate_unsigned_number_fields(swings, &["spanSbars"], "Swing")?;
+    validate_unique_domain_ids(cbars, "cbarId", "CBar")?;
+    validate_unique_domain_ids(swings, "swingId", "Swing")?;
     validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
     validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
     Ok(())
@@ -347,6 +349,22 @@ fn validate_object_fields(
             if !valid {
                 return Err(format!("{kind} field {field} has an invalid JSON type"));
             }
+        }
+    }
+    Ok(())
+}
+
+fn validate_unique_domain_ids(
+    objects: &[serde_json::Value],
+    id_field: &str,
+    kind: &str,
+) -> Result<(), String> {
+    let mut seen = std::collections::BTreeSet::new();
+    for (index, object) in objects.iter().enumerate() {
+        let id = object.get(id_field).and_then(serde_json::Value::as_str)
+            .ok_or_else(|| format!("{kind} at index {index} is missing string field {id_field}"))?;
+        if !seen.insert(id) {
+            return Err(format!("{kind} contains duplicate domain ID {id}"));
         }
     }
     Ok(())
@@ -641,6 +659,16 @@ mod tests {
         assert!(validate_canonical_structure_state(&invalid_fractal)
             .unwrap_err()
             .contains("unsupported value Sideways"));
+    }
+
+    #[test]
+    fn snapshot_state_rejects_duplicate_domain_ids() {
+        let duplicate_ids: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":2,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1},{"cbarId":"1","createdAt":"1","fractalType":null,"high":"3","low":"2","sbarEndId":"4","sbarStartId":"3","spanSbars":1}],"swingCount":0,"swings":[]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&duplicate_ids)
+            .unwrap_err()
+            .contains("duplicate domain ID 1"));
     }
 
     #[test]
