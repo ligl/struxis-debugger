@@ -97,16 +97,8 @@ impl AppState {
         dataset_id: &str,
         enable_structure: bool,
     ) -> Result<OriginDatasetDto, IpcError> {
-        self.inner
-            .mutation_active
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .map_err(|_| {
-                IpcError::new(
-                    IpcErrorCode::Conflict,
-                    "Another dataset mutation is already active",
-                )
-            })?;
-        let _permit = MutationPermit(&self.inner.mutation_active);
+        let _permit = self.acquire_mutation_permit()?;
+        self.ensure_no_owned_run()?;
 
         let entries = discover_catalog_datasets(&self.inner.catalog_path).map_err(|error| {
             IpcError::new(
@@ -190,16 +182,8 @@ impl AppState {
         start_sbar_id: &str,
         end_sbar_id: &str,
     ) -> Result<TestDatasetDto, IpcError> {
-        self.inner
-            .mutation_active
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .map_err(|_| {
-                IpcError::new(
-                    IpcErrorCode::Conflict,
-                    "Another dataset mutation is already active",
-                )
-            })?;
-        let _permit = MutationPermit(&self.inner.mutation_active);
+        let _permit = self.acquire_mutation_permit()?;
+        self.ensure_no_owned_run()?;
 
         let mut datasets = self.inner.datasets.lock().map_err(|_| {
             IpcError::new(
@@ -246,6 +230,40 @@ impl AppState {
         })
     }
 
+    fn acquire_mutation_permit(&self) -> Result<MutationPermit<'_>, IpcError> {
+        self.inner
+            .mutation_active
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .map_err(|_| {
+                IpcError::new(
+                    IpcErrorCode::Conflict,
+                    "Another dataset mutation or Run creation is already active",
+                )
+            })?;
+        Ok(MutationPermit(&self.inner.mutation_active))
+    }
+
+    fn ensure_no_owned_run(&self) -> Result<(), IpcError> {
+        let manager = self.inner.replay_manager.try_lock().map_err(|error| {
+            let message = match error {
+                std::sync::TryLockError::WouldBlock => {
+                    "Dataset mutation rejected: a Replay command is active"
+                }
+                std::sync::TryLockError::Poisoned(_) => {
+                    "Dataset mutation rejected: ReplayManager lock is poisoned"
+                }
+            };
+            IpcError::new(IpcErrorCode::Conflict, message)
+        })?;
+        if manager.has_owned_run() {
+            return Err(IpcError::new(
+                IpcErrorCode::Conflict,
+                "Dataset mutation rejected: Dispose the owned Run before changing Origin or Test Dataset",
+            ));
+        }
+        Ok(())
+    }
+
     fn prepare_run(&self) -> Result<(ReplayWorkerConfig, Box<dyn crate::worker::CheckpointSink>), IpcError> {
         let test = {
             let datasets = self.inner.datasets.lock().map_err(|_| {
@@ -273,11 +291,13 @@ impl AppState {
     }
 
     pub fn start_run(&self) -> Result<RunState, IpcError> {
+        let _permit = self.acquire_mutation_permit()?;
         let (config, sink) = self.prepare_run()?;
         self.with_replay_manager(|manager| manager.start(config, sink))
     }
 
     pub fn restart_run(&self) -> Result<RunState, IpcError> {
+        let _permit = self.acquire_mutation_permit()?;
         let (config, sink) = self.prepare_run()?;
         self.with_replay_manager(|manager| manager.restart(config, sink))
     }
