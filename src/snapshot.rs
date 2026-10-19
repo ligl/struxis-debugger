@@ -750,7 +750,9 @@ mod tests {
         };
         let encoded = serde_json::to_string(&payload).unwrap();
         assert!(encoded.contains(r#""input_bar_count":"2""#));
+        assert!(encoded.contains(r#""checkpoint_index":"0""#));
         assert!(encoded.contains(r#""state_data":{"cbarCount":0"#));
+        assert!(!encoded.contains(r#""cbarCount":"0""#));
         assert!(!encoded.contains(r#""state_data":"{"#));
     }
 
