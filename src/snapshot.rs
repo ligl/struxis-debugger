@@ -161,6 +161,25 @@ pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     output
 }
 
+/// Recursively sorts JSON object keys without changing any field's JSON type.
+fn sort_json_object_keys(value: serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Array(values) => serde_json::Value::Array(
+            values.into_iter().map(sort_json_object_keys).collect(),
+        ),
+        serde_json::Value::Object(values) => {
+            let mut entries: Vec<_> = values.into_iter().collect();
+            entries.sort_by(|left, right| left.0.cmp(&right.0));
+            let mut sorted = serde_json::Map::new();
+            for (key, value) in entries {
+                sorted.insert(key, sort_json_object_keys(value));
+            }
+            serde_json::Value::Object(sorted)
+        }
+        other => other,
+    }
+}
+
 /// Builds canonical Snapshot state_data from the owned structure projection.
 ///
 /// SBar entities are intentionally excluded. Objects are ordered by their oldest
@@ -190,6 +209,7 @@ pub(crate) fn canonical_structure_state(
         .and_then(serde_json::Value::as_array_mut)
         .ok_or_else(|| "Structure state swings must be an array".to_owned())?;
     sort_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    let state = sort_json_object_keys(state);
     validate_canonical_structure_state(&state)?;
 
     serde_json::to_string(&state)
@@ -534,6 +554,7 @@ pub(crate) fn validate_snapshot_records(
         let state: serde_json::Value = serde_json::from_str(&checkpoint.state_data)
             .map_err(|error| format!("Invalid state_data JSON: {error}"))?;
         validate_canonical_structure_state(&state)?;
+        let state = sort_json_object_keys(state);
         if serde_json::to_string(&state).map_err(|error| error.to_string())? != checkpoint.state_data {
             return Err(format!("Checkpoint {} state_data is not canonical JSON", checkpoint.checkpoint_index));
         }
@@ -707,8 +728,9 @@ mod tests {
         let input: serde_json::Value = serde_json::from_str(
             r#"{"z":1,"a":{"y":2,"b":3},"items":[{"z":1,"a":2},{"b":1,"a":2}]}"#,
         ).unwrap();
+        let sorted = sort_json_object_keys(input);
         assert_eq!(
-            serde_json::to_string(&input).unwrap(),
+            serde_json::to_string(&sorted).unwrap(),
             r#"{"a":{"b":3,"y":2},"items":[{"a":2,"z":1},{"a":2,"b":1}],"z":1}"#
         );
     }
