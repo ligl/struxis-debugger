@@ -120,3 +120,30 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
   await page.getByRole("button", { name: "Show Diagnostics" }).click();
   await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 });
+
+test("overflowing workspace content scrolls inside its own panel", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  const content = page.getByTestId("workspace-content");
+  await content.evaluate((element) => {
+    const fixture = document.createElement("div");
+    fixture.dataset.testid = "scroll-fixture";
+    fixture.setAttribute("aria-hidden", "true");
+    fixture.style.flex = "0 0 1200px";
+    element.appendChild(fixture);
+  });
+
+  const before = await content.evaluate((element) => ({
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+    scrollTop: element.scrollTop,
+  }));
+  expect(
+    before.scrollHeight,
+    `Workspace content should overflow its own scroll container. Before scroll: ${JSON.stringify(before)}`,
+  ).toBeGreaterThan(before.clientHeight);
+
+  await content.evaluate((element) => element.scrollTo({ top: 100 }));
+  await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+});
