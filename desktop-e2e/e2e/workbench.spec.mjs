@@ -309,9 +309,68 @@ describe("Struxis Debugger native desktop", () => {
     assert.ok(firstSbarId && secondSbarId && firstSbarId !== secondSbarId,
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
 
+    const originCanvas = await $('[data-testid="origin-chart-canvas"]');
+    const clickOriginBar = async (index) => {
+      const geometry = await browser.execute(() => {
+        const host = document.querySelector('[data-testid="origin-chart-canvas"]');
+        if (!host) return null;
+        const rect = host.getBoundingClientRect();
+        return {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+      assert.ok(geometry, "Origin chart canvas must remain mounted while selecting the Test interval.");
+
+      // Lightweight Charts reserves approximately 80 CSS pixels for the right
+      // price scale. fitContent() places the first data point at roughly half a
+      // bar spacing from the plot's left edge; rightOffset reserves four bars.
+      const plotWidth = geometry.width - 80;
+      const barSpacing = plotWidth / (sbarCount + 4);
+      assert.ok(
+        barSpacing >= 2,
+        `Origin chart cannot reliably target adjacent candles at this viewport: ${JSON.stringify({ sbarCount, width: geometry.width, barSpacing })}`,
+      );
+      const x = Math.round(geometry.left + (index + 0.5) * barSpacing);
+      const y = Math.round(geometry.top + geometry.height * 0.25);
+      await browser.performActions([{
+        type: "pointer",
+        id: "origin-chart-pointer",
+        parameters: { pointerType: "mouse" },
+        actions: [
+          { type: "pointerMove", duration: 0, x, y },
+          { type: "pointerDown", button: 0 },
+          { type: "pointerUp", button: 0 },
+        ],
+      }]);
+      await browser.releaseActions();
+    };
+
+    // The Test Dataset form intentionally has no editable SBar ID fields.
+    // Select the exact first and second Origin candles through the real chart
+    // event path, then verify the range projected by the workbench.
+    await clickOriginBar(0);
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
-    await $('[data-testid="test-dataset-start-sbar-id"]').setValue(firstSbarId);
-    await $('[data-testid="test-dataset-end-sbar-id"]').setValue(secondSbarId);
+    await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
+    await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
+    await originCanvas.waitForDisplayed();
+    await clickOriginBar(1);
+    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+
+    const selectedRange = await $('[data-testid="selected-test-range"]');
+    await selectedRange.waitForDisplayed();
+    const selectedIds = await selectedRange.$('code');
+    assert.equal(await selectedIds[0].getText(), firstSbarId,
+      "The first chart click must select the first Origin SBar as the range start.");
+    assert.equal(await selectedIds[1].getText(), secondSbarId,
+      "The second chart click must select the second Origin SBar as the inclusive range end.");
+    assert.equal(
+      (await selectedRange.$("div:nth-child(3) strong").getText()).replace(/\\s/g, ""),
+      "2",
+      "Selecting the first two Origin candles must produce an inclusive two-SBar Test Dataset.",
+    );
     await $('[data-testid="test-dataset-create"]').click();
 
     await browser.waitUntil(
