@@ -154,7 +154,7 @@ function pretty(value: unknown): string {
               <td>{{ difference.sbarId }}</td>
               <td>{{ difference.objectType }}</td>
               <td>{{ difference.kind.toUpperCase() }}</td>
-              <td>{{ difference.objectId ?? "UNMATCHED" }}</td>
+              <td>{{ difference.objectId }}</td>
               <td><div v-for="property in difference.properties" :key="property.field" class="property-delta"><strong>{{ property.field }}</strong><span>{{ pretty(property.baselineValue) }} → {{ pretty(property.candidateValue) }}</span></div></td>
             </tr>
           </tbody>
