@@ -14,6 +14,10 @@ export const config = {
   capabilities: [
     {
       browserName: "tauri",
+      // Ubuntu 24.04 WebKitWebDriver / tauri-driver does not support WDIO 9's
+      // automatically negotiated BiDi session. Force classic WebDriver to avoid
+      // session creation followed by repeated `invalid session id` failures.
+      "wdio:enforceWebDriverClassic": true,
       "tauri:options": {
         application: appBinaryPath,
       },
@@ -31,7 +35,8 @@ export const config = {
   ],
   framework: "mocha",
   reporters: ["spec"],
-  logLevel: "info",
+  // Keep native-driver failures actionable; INFO logs dump injected scripts on every command.
+  logLevel: "warn",
   waitforTimeout: 15_000,
   connectionRetryTimeout: 90_000,
   connectionRetryCount: 0,
