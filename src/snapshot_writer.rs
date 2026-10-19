@@ -393,9 +393,9 @@ mod tests {
     fn config() -> EffectiveStruxisConfig {
         EffectiveStruxisConfig {
             enable_structure: true,
-            structure_cbars_capacity: "10000".into(),
-            structure_swings_capacity: "2000".into(),
-            structure_trends_capacity: "666".into(),
+            structure_cbars_capacity: 10000,
+            structure_swings_capacity: 2000,
+            structure_trends_capacity: 666,
         }
     }
 
