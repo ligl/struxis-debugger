@@ -318,50 +318,96 @@ describe("Struxis Debugger native desktop", () => {
           : null;
       assert.ok(coordinateAttribute, `Unsupported Origin SBar index: ${index}`);
 
+      // v-show keeps the chart instance alive while its workspace is hidden.
+      // A previously finite timeToCoordinate value is not proof that the chart
+      // has recomputed its geometry after becoming visible again. Require the
+      // visible host geometry and native SBar coordinate to settle across
+      // multiple WebDriver polls before calculating a real pointer target.
+      let previousSample = null;
+      let stableSamples = 0;
+      let target = null;
       await browser.waitUntil(
         async () => {
-          const value = await originCanvas.getAttribute(coordinateAttribute);
-          return value !== null && value.trim() !== "" && Number.isFinite(Number(value));
+          const sample = await browser.execute((attribute) => {
+            const host = document.querySelector('[data-testid="origin-chart-canvas"]');
+            if (!host) return null;
+            const rect = host.getBoundingClientRect();
+            const coordinate = Number(host.getAttribute(attribute));
+            const style = getComputedStyle(host);
+            if (
+              style.display === "none" ||
+              style.visibility === "hidden" ||
+              rect.width <= 0 ||
+              rect.height <= 0 ||
+              !Number.isFinite(coordinate)
+            ) return null;
+            return {
+              coordinate,
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+              viewportWidth: document.documentElement.clientWidth,
+              viewportHeight: document.documentElement.clientHeight,
+            };
+          }, coordinateAttribute);
+          if (!sample) {
+            previousSample = null;
+            stableSamples = 0;
+            return false;
+          }
+
+          const unchanged = previousSample !== null &&
+            sample.coordinate === previousSample.coordinate &&
+            sample.left === previousSample.left &&
+            sample.top === previousSample.top &&
+            sample.width === previousSample.width &&
+            sample.height === previousSample.height &&
+            sample.viewportWidth === previousSample.viewportWidth &&
+            sample.viewportHeight === previousSample.viewportHeight;
+          stableSamples = unchanged ? stableSamples + 1 : 0;
+          previousSample = sample;
+          target = sample;
+          return stableSamples >= 2;
         },
         {
-          timeout: 5_000,
+          timeout: 10_000,
           interval: 100,
-          timeoutMsg: `Origin chart did not expose its native coordinate for SBar index ${index}.`,
+          timeoutMsg: `Origin chart geometry and native coordinate did not settle for SBar index ${index}.`,
         },
       );
 
-      const target = await browser.execute((attribute) => {
-        const host = document.querySelector('[data-testid="origin-chart-canvas"]');
-        if (!host) return null;
-        const coordinate = Number(host.getAttribute(attribute));
-        if (!Number.isFinite(coordinate)) return null;
-        const rect = host.getBoundingClientRect();
-        return {
-          x: Math.round(rect.left + coordinate),
-          y: Math.round(rect.top + rect.height * 0.25),
-          coordinate,
-          left: rect.left,
-          width: rect.width,
-          height: rect.height,
-        };
-      }, coordinateAttribute);
       assert.ok(target, `Origin chart did not provide a usable coordinate for SBar index ${index}.`);
       assert.ok(
         target.coordinate >= 0 && target.coordinate < target.width,
         `Origin SBar index ${index} is outside the chart plot: ${JSON.stringify(target)}`,
       );
+      const pointerTarget = {
+        x: Math.round(target.left + target.coordinate),
+        y: Math.round(target.top + target.height * 0.25),
+      };
+      assert.ok(
+        pointerTarget.x >= 0 &&
+          pointerTarget.x < target.viewportWidth &&
+          pointerTarget.y >= 0 &&
+          pointerTarget.y < target.viewportHeight,
+        `Origin SBar index ${index} resolved outside the WebView viewport: ${JSON.stringify({ target, pointerTarget })}`,
+      );
 
-      await browser.performActions([{
-        type: "pointer",
-        id: "origin-chart-pointer",
-        parameters: { pointerType: "mouse" },
-        actions: [
-          { type: "pointerMove", duration: 0, x: target.x, y: target.y },
-          { type: "pointerDown", button: 0 },
-          { type: "pointerUp", button: 0 },
-        ],
-      }]);
-      await browser.releaseActions();
+      try {
+        await browser.performActions([{
+          type: "pointer",
+          id: "origin-chart-pointer",
+          parameters: { pointerType: "mouse" },
+          actions: [
+            { type: "pointerMove", duration: 0, x: pointerTarget.x, y: pointerTarget.y },
+            { type: "pointerDown", button: 0 },
+            { type: "pointerUp", button: 0 },
+          ],
+        }]);
+      } finally {
+        await browser.releaseActions();
+      }
     };
 
     // The Test Dataset form intentionally has no editable SBar ID fields.
