@@ -293,6 +293,26 @@ describe("Test, Run and Snapshot workbench", () => {
     vi.clearAllMocks();
   });
 
+  it("keeps one authoritative chart mounted and visible in Test & Replay", async () => {
+    const origin = makeOrigin("origin-existing");
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
+
+    await wrapper.get('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)').trigger("click");
+    expect(wrapper.get('[data-testid="origin-chart-test-stub"]').isVisible()).toBe(true);
+    expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
+    expect(wrapper.get(".workflow-toolbar h2").text()).toBe("Test Dataset & Replay");
+  });
+
   it("creates a backend-validated Test Dataset and exposes Run controls", async () => {
     const origin = makeOrigin("origin-existing");
     const runState = {
