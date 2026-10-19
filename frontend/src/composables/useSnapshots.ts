@@ -59,6 +59,10 @@ export function useSnapshots() {
     snapshots,
     snapshotsLoading,
     snapshotsError,
+    compareResult,
+    compareLoading,
+    compareError,
+    runCompare,
     refreshSnapshots,
   };
 }
