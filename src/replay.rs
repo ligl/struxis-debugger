@@ -16,7 +16,7 @@ use std::sync::{
 /// GetState is read-only, but uses the same gate so its response cannot race
 /// another command's state transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ReplayCommandKind {
+pub(crate) enum ReplayCommandKind {
     Start,
     GetState,
     Step,
@@ -34,17 +34,17 @@ pub enum ReplayCommandKind {
 /// previous command still owns the permit, the new command is rejected
 /// immediately instead of being queued for later execution.
 #[derive(Debug, Clone, Default)]
-pub struct ReplayCommandGate {
+pub(crate) struct ReplayCommandGate {
     active: Arc<AtomicBool>,
 }
 
 impl ReplayCommandGate {
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    pub fn try_enter(&self, command: ReplayCommandKind) -> Result<ReplayCommandPermit, String> {
+    pub(crate) fn try_enter(&self, command: ReplayCommandKind) -> Result<ReplayCommandPermit, String> {
         self.active
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .map_err(|_| format!("{command:?} rejected: another Replay command is still active"))?;
@@ -58,14 +58,14 @@ impl ReplayCommandGate {
 
 /// RAII permit; releasing it allows the next command to be admitted.
 #[derive(Debug)]
-pub struct ReplayCommandPermit {
+pub(crate) struct ReplayCommandPermit {
     active: Arc<AtomicBool>,
     command: ReplayCommandKind,
 }
 
 impl ReplayCommandPermit {
     #[must_use]
-    pub const fn command(&self) -> ReplayCommandKind {
+    pub(crate) const fn command(&self) -> ReplayCommandKind {
         self.command
     }
 }
@@ -82,16 +82,16 @@ impl Drop for ReplayCommandPermit {
 /// This validates the complete ordered Bar sequence before a worker creates any
 /// Nautilus resources. It deliberately does not read the Origin or Catalog.
 #[derive(Debug, Clone)]
-pub struct LoadedInput {
-    pub test_dataset_id: String,
-    pub state_key: capitus_struxis::StruxisStateKey,
-    pub bar_type: String,
-    pub bars: Vec<nautilus_model::data::Bar>,
-    pub sbar_sequence_fingerprint: String,
+pub(crate) struct LoadedInput {
+    pub(crate) test_dataset_id: String,
+    pub(crate) state_key: capitus_struxis::StruxisStateKey,
+    pub(crate) bar_type: String,
+    pub(crate) bars: Vec<nautilus_model::data::Bar>,
+    pub(crate) sbar_sequence_fingerprint: String,
 }
 
 impl LoadedInput {
-    pub fn from_test(test: &crate::dataset::TestDataset) -> Result<Self, String> {
+    pub(crate) fn from_test(test: &crate::dataset::TestDataset) -> Result<Self, String> {
         use crate::dataset::sequence_fingerprint;
 
         let bars = test.bars();
