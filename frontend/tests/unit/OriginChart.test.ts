@@ -73,7 +73,7 @@ describe("OriginChart", () => {
     vi.unstubAllGlobals();
   });
 
-  it("projects validated SBar data into candlestick and volume series", () => {
+  it("projects validated SBar data into candlestick and volume series without grid or branding", () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [bar()],
@@ -82,6 +82,14 @@ describe("OriginChart", () => {
     });
 
     expect(chartMocks.createChart).toHaveBeenCalledOnce();
+    const chartOptions = chartMocks.createChart.mock.calls[0]?.[1] as {
+      grid?: unknown;
+      layout?: { attributionLogo?: boolean };
+    };
+    expect(chartOptions.grid).toBeUndefined();
+    expect(chartOptions.layout?.attributionLogo).toBe(false);
+    expect(wrapper.find(".chart-attribution").exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("TradingView");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([
       { time: 1700000000, open: 10, high: 12, low: 9, close: 11 },
     ]);
