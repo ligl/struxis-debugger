@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   CandlestickSeries,
   ColorType,
@@ -13,6 +13,7 @@ import { mapOriginBarsToChart } from "../origin-chart-data";
 import type { SBarDto } from "../origin-types";
 
 const props = defineProps<{ bars: SBarDto[]; originDatasetId: string }>();
+const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
   selectionError: [message: string];
@@ -56,6 +57,12 @@ function handleChartClick(param: { time?: unknown }): void {
     return;
   }
   emit("sbarClick", sbarId);
+}
+
+function fitContent(): void {
+  if (!chart || props.bars.length === 0) return;
+  chart.timeScale().fitContent();
+  updateSbarCoordinates();
 }
 
 function updateChart(): void {
@@ -182,11 +189,23 @@ onBeforeUnmount(() => {
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
   >
     <div class="origin-chart-heading">
-      <div>
+      <div class="chart-title-block">
         <p class="section-index">AUTHORITATIVE STRUXIS PROJECTION</p>
         <h3>Origin SBar chart</h3>
+        <span class="chart-instrument">{{ latestBar?.barType ?? originDatasetId }}</span>
       </div>
-      <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
+      <div class="chart-heading-actions">
+        <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
+        <button class="chart-tool-button" type="button" :disabled="bars.length === 0" @click="fitContent">FIT</button>
+      </div>
+    </div>
+    <div v-if="latestBar" class="chart-data-strip" aria-label="Latest SBar OHLCV">
+      <span><small>O</small><strong>{{ latestBar.open }}</strong></span>
+      <span><small>H</small><strong>{{ latestBar.high }}</strong></span>
+      <span><small>L</small><strong>{{ latestBar.low }}</strong></span>
+      <span><small>C</small><strong>{{ latestBar.close }}</strong></span>
+      <span><small>VOL</small><strong>{{ latestBar.volume }}</strong></span>
+      <span class="chart-latest-id"><small>LAST SBAR ID</small><strong>{{ latestBar.sbarId }}</strong></span>
     </div>
     <p class="microcopy chart-selection-hint">Click one candle for the range start, then another candle for the range end. The selected interval includes both endpoints.</p>
     <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="origin-chart-error">
