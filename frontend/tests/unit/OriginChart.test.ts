@@ -128,11 +128,14 @@ describe("OriginChart", () => {
   it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
     const wrapper = mount(OriginChart, {
       props: {
-        bars: [bar()],
+        bars: [],
         originDatasetId: "origin-1",
       },
     });
 
+    expect(chartMocks.fitContent).not.toHaveBeenCalled();
+
+    await wrapper.setProps({ bars: [bar()] });
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
 
     await wrapper.setProps({
