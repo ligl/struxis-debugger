@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import type { OriginDatasetDto } from "../origin-types";
-import OriginChart from "./OriginChart.vue";
-
 defineProps<{
   origin: OriginDatasetDto | null;
   loadStatus: "idle" | "loading" | "loaded" | "failed";
   loadError: string;
   formatTimestamp: (value: string | null) => string;
-  rangeSelectionStatus: string;
-}>();
-const emit = defineEmits<{
-  sbarClick: [sbarId: string];
-  selectionError: [message: string];
 }>();
 </script>
 
@@ -73,9 +66,6 @@ const emit = defineEmits<{
         </div>
       </div>
 
-      <OriginChart :bars="origin.bars" :origin-dataset-id="origin.originDatasetId" @sbar-click="emit('sbarClick', $event)" @selection-error="emit('selectionError', $event)" />
-      <p class="microcopy" data-testid="origin-range-selection-status" aria-live="polite">{{ rangeSelectionStatus }}</p>
-      <p class="source-note">Source: {{ origin.sourceCatalog }} · Chart values are projected from the validated Struxis SBar series; domain IDs remain exact strings.</p>
     </template>
 
     <div v-else class="no-origin">
