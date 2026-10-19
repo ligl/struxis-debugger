@@ -239,6 +239,15 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         &["spanSbars"],
         "Swing",
     )?;
+    validate_enum_field(cbars, "fractalType", &["Top", "Bottom"], true, "CBar")?;
+    validate_enum_field(swings, "direction", &["Up", "Down"], false, "Swing")?;
+    validate_enum_field(
+        swings,
+        "state",
+        &["Extending", "Tentative", "Confirmed"],
+        false,
+        "Swing",
+    )?;
     validate_unsigned_string_fields(
         cbars,
         &["cbarId", "createdAt", "sbarEndId", "sbarStartId"],
@@ -253,6 +262,30 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     validate_unsigned_number_fields(swings, &["spanSbars"], "Swing")?;
     validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
     validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    Ok(())
+}
+
+fn validate_enum_field(
+    objects: &[serde_json::Value],
+    field: &str,
+    allowed: &[&str],
+    nullable: bool,
+    kind: &str,
+) -> Result<(), String> {
+    for (index, object) in objects.iter().enumerate() {
+        let value = object.get(field).ok_or_else(|| {
+            format!("{kind} at index {index} is missing enum field {field}")
+        })?;
+        if nullable && value.is_null() {
+            continue;
+        }
+        let label = value.as_str().ok_or_else(|| {
+            format!("{kind}[{index}].{field} must be a string{}", if nullable { " or null" } else { "" })
+        })?;
+        if !allowed.contains(&label) {
+            return Err(format!("{kind}[{index}].{field} has unsupported value {label}"));
+        }
+    }
     Ok(())
 }
 
