@@ -489,6 +489,21 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_identity_and_schema_failures_are_integrity_rejections() {
+        for message in [
+            "CBar contains duplicate domain ID 1",
+            "CBar at index 0 has missing or unexpected fields",
+            "CBar[0].fractalType has unsupported value Sideways",
+        ] {
+            assert_eq!(
+                classify_snapshot_read_error(message.to_owned()).category,
+                CompareRejectCategory::SnapshotIntegrityFailure,
+                "unexpected rejection category for: {message}",
+            );
+        }
+    }
+
+    #[test]
     fn rejects_non_full_checkpoint_state() {
         let mut before = record(0, "100", "[]", "[]");
         let after = record(0, "100", "[]", "[]");
