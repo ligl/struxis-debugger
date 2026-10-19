@@ -17,6 +17,7 @@ use serde::Serialize;
 
 use crate::{
     catalog::{OriginLoad, load_origin as load_origin_candidate},
+    compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     dataset::TestDataset,
     discovery::{CatalogDatasetEntry, configured_catalog_root, discover_catalog_datasets},
     ipc::{IpcError, IpcErrorCode},
@@ -231,6 +232,34 @@ impl AppState {
     #[must_use]
     pub fn snapshot_root(&self) -> &Path {
         &self.inner.snapshot_root
+    }
+
+    pub fn compare_snapshots(
+        &self,
+        baseline_snapshot_id: &str,
+        candidate_snapshot_id: &str,
+    ) -> Result<SnapshotCompareResult, CompareRejection> {
+        let artifacts = discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|message| {
+            CompareRejection {
+                category: CompareRejectCategory::SnapshotUnreadable,
+                message: format!("Snapshot discovery failed: {message}"),
+            }
+        })?;
+        let find_complete = |snapshot_id: &str| {
+            artifacts.iter().find(|artifact| {
+                artifact.kind == crate::snapshot_store::SnapshotArtifactKind::Complete
+                    && artifact.snapshot_id.as_deref() == Some(snapshot_id)
+            }).map(|artifact| artifact.path.clone())
+        };
+        let baseline_path = find_complete(baseline_snapshot_id).ok_or_else(|| CompareRejection {
+            category: CompareRejectCategory::SnapshotIncomplete,
+            message: format!("Baseline Snapshot is not a readable Complete artifact: {baseline_snapshot_id}"),
+        })?;
+        let candidate_path = find_complete(candidate_snapshot_id).ok_or_else(|| CompareRejection {
+            category: CompareRejectCategory::SnapshotIncomplete,
+            message: format!("Candidate Snapshot is not a readable Complete artifact: {candidate_snapshot_id}"),
+        })?;
+        compare_snapshot_paths(baseline_path, candidate_path)
     }
 
     pub fn discover_snapshots(&self) -> Result<Vec<SnapshotArtifact>, IpcError> {
