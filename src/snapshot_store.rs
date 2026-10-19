@@ -282,6 +282,35 @@ mod tests {
     }
 
     #[test]
+    fn unreadable_temporary_artifact_is_reported_without_promotion_or_mutation() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join(".snapshot-interrupted.snapshot.tmp");
+        let original_bytes = b"not a sqlite database";
+        fs::write(&path, original_bytes).unwrap();
+
+        let artifacts = discover_snapshot_artifacts(&root).unwrap();
+
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(
+            artifacts[0].kind,
+            SnapshotArtifactKind::UnreadableTemporary
+        );
+        assert!(artifacts[0].diagnostic.is_some());
+        assert_eq!(
+            fs::read(&path).unwrap(),
+            original_bytes,
+            "Discovery must preserve unreadable temporary recovery material"
+        );
+        assert!(
+            !root.join("snapshot-interrupted.snapshot.sqlite").exists(),
+            "Discovery must never promote an unreadable temporary artifact"
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn malformed_published_artifact_is_reported_instead_of_ignored() {
         let root = temp_root();
         fs::create_dir_all(&root).unwrap();
