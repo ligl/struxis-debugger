@@ -1387,3 +1387,109 @@ body,
     align-items: flex-start;
   }
 }
+
+
+/* Trading-workstation chart hierarchy: restrained chrome, readable market data, no plot grid. */
+.chart-title-block {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.chart-title-block h3 {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.chart-instrument {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--dbg-text-muted);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.chart-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-tool-button {
+  min-width: 44px;
+  padding: 5px 8px;
+  border: 1px solid var(--dbg-border-strong);
+  background: var(--dbg-surface-2);
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.chart-tool-button:hover:not(:disabled) {
+  border-color: var(--dbg-accent);
+  color: var(--dbg-text-primary);
+}
+
+.chart-data-strip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #15181b;
+}
+
+.chart-data-strip > span {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 6px;
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.chart-data-strip small {
+  color: var(--dbg-text-muted);
+  font-size: 9px;
+}
+
+.chart-data-strip strong {
+  color: var(--dbg-text-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-data-strip > span:nth-child(2) strong {
+  color: var(--dbg-success);
+}
+
+.chart-data-strip > span:nth-child(3) strong {
+  color: var(--dbg-error);
+}
+
+.chart-data-strip .chart-latest-id {
+  flex: 1 1 180px;
+  justify-content: flex-end;
+  overflow-wrap: anywhere;
+}
+
+.chart-data-strip .chart-latest-id strong {
+  color: var(--dbg-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.origin-chart-host {
+  height: 460px;
+}
+
+@media (max-width: 720px) {
+  .origin-chart-host {
+    height: 340px;
+  }
+
+  .chart-data-strip .chart-latest-id {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
