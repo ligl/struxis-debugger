@@ -69,6 +69,66 @@ const {
 const canLoadOrigin = computed(
   () => canMutateTest.value && !testLoading.value,
 );
+
+const rangeSelectionPendingStart = ref<string | null>(null);
+const rangeSelectionReady = ref(false);
+const selectedRangeCount = ref(0);
+const rangeSelectionStatus = ref(
+  "Click an Origin candle to select the first SBar of your Test interval.",
+);
+
+function handleOriginSbarClick(sbarId: string): void {
+  if (!origin.value || !canMutateTest.value || testLoading.value) return;
+  const clickedIndex = origin.value.bars.findIndex((bar) => bar.sbarId === sbarId);
+  if (clickedIndex < 0) {
+    rangeSelectionStatus.value = "The selected SBar is not part of the current Origin. No selection was changed.";
+    return;
+  }
+
+  if (rangeSelectionPendingStart.value === null) {
+    rangeSelectionPendingStart.value = sbarId;
+    startSbarId.value = sbarId;
+    endSbarId.value = "";
+    rangeSelectionReady.value = false;
+    selectedRangeCount.value = 0;
+    rangeSelectionStatus.value = `Start SBar selected: ${sbarId}. Click another Origin candle to set the inclusive end boundary.`;
+    return;
+  }
+
+  const pendingIndex = origin.value.bars.findIndex(
+    (bar) => bar.sbarId === rangeSelectionPendingStart.value,
+  );
+  if (pendingIndex < 0) {
+    rangeSelectionPendingStart.value = null;
+    rangeSelectionReady.value = false;
+    selectedRangeCount.value = 0;
+    rangeSelectionStatus.value = "The pending start SBar is no longer part of this Origin. Select the range again.";
+    return;
+  }
+
+  const firstIndex = Math.min(pendingIndex, clickedIndex);
+  const lastIndex = Math.max(pendingIndex, clickedIndex);
+  const firstBar = origin.value.bars[firstIndex];
+  const lastBar = origin.value.bars[lastIndex];
+  if (!firstBar || !lastBar) return;
+
+  startSbarId.value = firstBar.sbarId;
+  endSbarId.value = lastBar.sbarId;
+  rangeSelectionPendingStart.value = null;
+  rangeSelectionReady.value = true;
+  selectedRangeCount.value = lastIndex - firstIndex + 1;
+  rangeSelectionStatus.value =
+    `Selected ${selectedRangeCount.value.toLocaleString()} SBars: ${firstBar.sbarId} → ${lastBar.sbarId} (inclusive).`;
+}
+
+function handleOriginSelectionError(message: string): void {
+  rangeSelectionStatus.value = message;
+}
+
+async function createSelectedTestDataset(): Promise<void> {
+  if (!rangeSelectionReady.value) return;
+  await createTestDataset();
+}
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
     !runState.value && !runBusy.value,
@@ -112,6 +172,10 @@ async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
+    rangeSelectionPendingStart.value = null;
+    rangeSelectionReady.value = false;
+    selectedRangeCount.value = 0;
+    rangeSelectionStatus.value = "Click an Origin candle to select the first SBar of your Test interval.";
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
     await refreshCurrentTestDataset();
@@ -238,10 +302,10 @@ onUnmounted(() => {
         <div data-testid="primary-workspace" class="primary-workspace">
           <div data-testid="workspace-content" class="workspace-content">
             <div v-show="workspaceMode === 'origin'" class="workspace-mode">
-              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
+              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" :range-selection-status="rangeSelectionStatus" @sbar-click="handleOriginSbarClick" @selection-error="handleOriginSelectionError" />
             </div>
             <div v-show="workspaceMode === 'replay'" class="workspace-mode">
-              <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @update:start-sbar-id="startSbarId = $event" @update:end-sbar-id="endSbarId = $event" @create="createTestDataset" />
+              <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :range-selection-ready="rangeSelectionReady" :range-selection-pending="rangeSelectionPendingStart !== null" :selected-range-count="selectedRangeCount" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @create="createSelectedTestDataset" />
               <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
             </div>
             <div v-show="workspaceMode === 'snapshots'" class="workspace-mode">
