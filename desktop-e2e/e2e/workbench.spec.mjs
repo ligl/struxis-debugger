@@ -361,7 +361,7 @@ describe("Struxis Debugger native desktop", () => {
     await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
     await browser.waitUntil(
       async () => {
-        const rows = await $(".snapshot-table tbody tr");
+        const rows = await $$(".snapshot-table tbody tr");
         for (const row of rows) {
           if ((await row.getText()).includes("COMPLETE / VERIFIED")) return true;
         }
@@ -412,7 +412,7 @@ describe("Struxis Debugger native desktop", () => {
     await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
     await browser.waitUntil(
       async () => {
-        const rows = await $(".snapshot-table tbody tr");
+        const rows = await $$(".snapshot-table tbody tr");
         let completeCount = 0;
         for (const row of rows) {
           if ((await row.getText()).includes("COMPLETE / VERIFIED")) completeCount += 1;
