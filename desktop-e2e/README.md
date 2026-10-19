@@ -35,6 +35,8 @@ The WDIO capability forces classic WebDriver mode via `wdio:enforceWebDriverClas
 - Start and locate the actual Tauri window.
 - Verify that startup Catalog discovery completes through the real `list_catalog_datasets` IPC command and renders either dataset rows or the valid empty state; an IPC error fails the test.
 - Switch between Test & Replay and Snapshot Inventory in the real window.
+- Collapse and restore Catalog, Inspector, and Diagnostics; check that the workbench remains inside the viewport without horizontal document overflow.
+- Inject temporary oversized content into the real workspace scroll container and verify that scrolling advances that container's `scrollTop`; remove the fixture even if the assertion fails.
 - Confirm that WebdriverIO teardown leaves no process from this test run.
 
-This is a feasibility smoke suite, not full desktop acceptance. Window resizing, Space-key focus rules, IPC failure paths, and the complete Load → Run → Snapshot workflow remain future coverage.
+This remains an incremental desktop suite, not full desktop acceptance. The collapse/restore and scroll-container checks were added after the initial 2/2 smoke run and require a fresh local run before they can be considered passing. Native window resizing, Space-key focus rules, IPC failure paths, and the complete Load → Run → Snapshot workflow remain future coverage.
