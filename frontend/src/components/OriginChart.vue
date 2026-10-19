@@ -125,7 +125,7 @@ onMounted(() => {
     },
     crosshair: {
       vertLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
-      horzLine: { color: "#858d97", labelBackgroundColor: "#30353b" },
+      horzLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
     },
   });
   candleSeries = chart.addSeries(CandlestickSeries, {
