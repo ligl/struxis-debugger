@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
@@ -81,7 +81,7 @@ const {
   toggleInstrumentGroup,
 } = useCatalogGroups(datasets);
 
-const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
+const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);\n\n// Layout-only state: changing workspace or panel visibility never mutates domain state.\ntype WorkspaceMode = "origin" | "replay" | "snapshots";\nconst workspaceMode = ref<WorkspaceMode>("origin");\nconst catalogCollapsed = ref(false);\nconst inspectorCollapsed = ref(false);\nconst diagnosticsCollapsed = ref(false);
 
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
@@ -136,31 +136,94 @@ onMounted(async () => {
 
 <template>
   <main class="debugger-shell">
-    <header class="topbar">
-      <div>
+    <header class="topbar workbench-topbar">
+      <div class="brand-block">
         <p class="eyebrow">CAPITUS / STRUXIS DEBUGGER</p>
-        <h1>Origin Load</h1>
-        <p class="subtitle">Catalog → Nautilus → Strategy → Struxis</p>
+        <h1>Struxis Debugger</h1>
       </div>
+      <nav class="workspace-switcher" aria-label="Debugger workspace">
+        <button class="workspace-tab" :class="{ active: workspaceMode === 'origin' }" @click="workspaceMode = 'origin'">01 / Origin</button>
+        <button class="workspace-tab" :class="{ active: workspaceMode === 'replay' }" @click="workspaceMode = 'replay'">02 / Test &amp; Replay</button>
+        <button class="workspace-tab" :class="{ active: workspaceMode === 'snapshots' }" @click="workspaceMode = 'snapshots'">03 / Snapshots</button>
+      </nav>
       <div class="runtime-mark">
         <span class="runtime-dot" :class="{ active: origin }"></span>
         <span>{{ origin ? "ORIGIN AVAILABLE" : "NO ORIGIN LOADED" }}</span>
       </div>
     </header>
 
-    <section class="workspace">
-      <CatalogPanel :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
+    <div class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'inspector-is-collapsed': inspectorCollapsed }">
+      <aside class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
+        <div class="rail-heading">
+          <span class="section-index">SOURCE</span>
+          <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
+        </div>
+        <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
+      </aside>
 
-      <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :preview-bars="previewBars" :format-timestamp="formatTimestamp" />
+      <section class="workbench-main">
+        <div class="workflow-toolbar">
+          <div>
+            <p class="section-index">{{ workspaceMode === "origin" ? "WORKFLOW / 01" : workspaceMode === "replay" ? "WORKFLOW / 02" : "WORKFLOW / 03" }}</p>
+            <h2>{{ workspaceMode === "origin" ? "Origin Load" : workspaceMode === "replay" ? "Test Dataset & Replay" : "Snapshot Inventory" }}</h2>
+          </div>
+          <div class="toolbar-actions">
+            <button class="subtle-button" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? "Show Catalog" : "Hide Catalog" }}</button>
+            <button class="subtle-button" @click="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? "Show Diagnostics" : "Hide Diagnostics" }}</button>
+          </div>
+        </div>
+
+        <div class="primary-workspace">
+          <div class="workspace-content">
+            <template v-if="workspaceMode === 'origin'">
+              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :preview-bars="previewBars" :format-timestamp="formatTimestamp" />
+            </template>
+            <template v-else-if="workspaceMode === 'replay'">
+              <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @update:start-sbar-id="startSbarId = $event" @update:end-sbar-id="endSbarId = $event" @create="createTestDataset" />
+              <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
+            </template>
+            <template v-else>
+              <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" @refresh="refreshSnapshots" />
+              <p class="microcopy workspace-notice">Snapshot Compare is not implemented yet. This workspace currently provides the authoritative snapshot inventory only.</p>
+            </template>
+          </div>
+
+          <aside class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
+            <div class="rail-heading">
+              <span class="section-index">INSPECTOR</span>
+              <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
+            </div>
+            <div v-if="!inspectorCollapsed" class="inspector-placeholder">
+              <span class="placeholder-mark">[ ]</span>
+              <h3>Object Inspector</h3>
+              <p>Waiting for the authoritative Struxis chart and object-selection projection.</p>
+              <small>UI shell only · no derived domain state</small>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
+
+    <section v-if="!diagnosticsCollapsed" class="diagnostics-dock">
+      <div class="diagnostics-heading">
+        <div>
+          <p class="section-index">DIAGNOSTICS</p>
+          <h2>Workflow events &amp; errors</h2>
+        </div>
+        <button class="subtle-button" @click="diagnosticsCollapsed = true">Collapse</button>
+      </div>
+      <div class="diagnostics-content">
+        <p v-if="loadError || discoveryError || testError || runError || snapshotsError" class="error-message">
+          <span v-if="discoveryError">Catalog: {{ discoveryError }}</span>
+          <span v-if="loadError">Origin Load: {{ loadError }}</span>
+          <span v-if="testError">Test Dataset: {{ testError }}</span>
+          <span v-if="runError">Run / Replay: {{ runError }}</span>
+          <span v-if="snapshotsError">Snapshots: {{ snapshotsError }}</span>
+        </p>
+        <p v-else class="empty-state">No active errors. Structured event history and domain diagnostics are not yet connected.</p>
+      </div>
     </section>
-
-    <section class="operations-grid">
-      <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @update:start-sbar-id="startSbarId = $event" @update:end-sbar-id="endSbarId = $event" @create="createTestDataset" />
-
-      <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
-    </section>
-
-    <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" @refresh="refreshSnapshots" />
+    <button v-else class="diagnostics-reopen" @click="diagnosticsCollapsed = false">＋ Diagnostics</button>
 
     <footer class="footer-bar">
       <span>STRUXIS DEBUGGER / PHASE 01</span>
