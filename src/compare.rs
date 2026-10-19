@@ -55,7 +55,7 @@ pub(crate) struct ObjectDifference {
     pub(crate) sbar_id: String,
     pub(crate) object_type: String,
     pub(crate) kind: DifferenceKind,
-    pub(crate) object_id: Option<String>,
+    pub(crate) object_id: String,
     pub(crate) properties: Vec<PropertyDifference>,
 }
 
@@ -300,14 +300,14 @@ fn compare_object_collection(
         match (baseline.get(&id), candidate.get(&id)) {
             (None, Some(value)) => output.push(ObjectDifference {
                 checkpoint_index, sbar_id: sbar_id.to_owned(), object_type: object_type.to_owned(),
-                kind: DifferenceKind::Added, object_id: Some(id),
+                kind: DifferenceKind::Added, object_id: id,
                 properties: value.iter().map(|(field, value)| PropertyDifference {
                     field: field.clone(), baseline_value: None, candidate_value: Some(value.clone()),
                 }).collect(),
             }),
             (Some(value), None) => output.push(ObjectDifference {
                 checkpoint_index, sbar_id: sbar_id.to_owned(), object_type: object_type.to_owned(),
-                kind: DifferenceKind::Removed, object_id: Some(id),
+                kind: DifferenceKind::Removed, object_id: id,
                 properties: value.iter().map(|(field, value)| PropertyDifference {
                     field: field.clone(), baseline_value: Some(value.clone()), candidate_value: None,
                 }).collect(),
@@ -317,7 +317,7 @@ fn compare_object_collection(
                 if !properties.is_empty() {
                     output.push(ObjectDifference {
                         checkpoint_index, sbar_id: sbar_id.to_owned(), object_type: object_type.to_owned(),
-                        kind: DifferenceKind::Modified, object_id: Some(id), properties,
+                        kind: DifferenceKind::Modified, object_id: id, properties,
                     });
                 }
             }
