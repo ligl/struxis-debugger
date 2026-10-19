@@ -151,15 +151,28 @@ describe("Struxis Debugger native desktop", () => {
 
     const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
     const replayTab = workspaceNavigation.$(".workspace-tab:nth-child(2)");
+    await browser.execute(() => {
+      const tab = document.querySelector('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)');
+      tab.dataset.spaceClickCount = "0";
+      tab.addEventListener("click", () => {
+        tab.dataset.spaceClickCount = String(Number(tab.dataset.spaceClickCount) + 1);
+      });
+    });
     await replayTab.click();
+    await browser.execute(() => {
+      document.querySelector('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)').dataset.spaceClickCount = "0";
+    });
     await browser.keys(" ");
     await browser.waitUntil(
-      async () => (await $(".workflow-toolbar h2").getText()) === "Test Dataset & Replay",
+      async () => (await browser.execute(() =>
+        document.querySelector('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)').dataset.spaceClickCount,
+      )) === "1",
       {
         timeout: 5_000,
         timeoutMsg: "Space on the focused workspace button did not retain native button behavior.",
       },
     );
+    assert.equal(await $(".workflow-toolbar h2").getText(), "Test Dataset & Replay");
   });
 
   it("keeps overflowing workspace content scrollable inside the workspace panel", async () => {
