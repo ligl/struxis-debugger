@@ -8,6 +8,7 @@ pub mod ipc;
 pub mod run;
 pub mod replay;
 pub mod checkpoint;
+pub mod diagnostics;
 pub mod worker;
 pub mod manager;
 pub mod snapshot;
