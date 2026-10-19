@@ -12,6 +12,9 @@ const chartMocks = vi.hoisted(() => ({
   fitContent: vi.fn(),
   setVisibleLogicalRange: vi.fn(),
   timeToCoordinate: vi.fn(),
+  coordinateToLogical: vi.fn(),
+  subscribeCrosshairMove: vi.fn(),
+  unsubscribeCrosshairMove: vi.fn(),
   subscribeVisibleLogicalRangeChange: vi.fn(),
   unsubscribeVisibleLogicalRangeChange: vi.fn(),
   applyChartOptions: vi.fn(),
@@ -64,11 +67,14 @@ function installChartMock() {
       fitContent: chartMocks.fitContent,
       setVisibleLogicalRange: chartMocks.setVisibleLogicalRange,
       timeToCoordinate: chartMocks.timeToCoordinate,
+      coordinateToLogical: chartMocks.coordinateToLogical,
       subscribeVisibleLogicalRangeChange: chartMocks.subscribeVisibleLogicalRangeChange,
       unsubscribeVisibleLogicalRangeChange: chartMocks.unsubscribeVisibleLogicalRangeChange,
     })),
     subscribeClick: chartMocks.subscribeClick,
     unsubscribeClick: chartMocks.unsubscribeClick,
+    subscribeCrosshairMove: chartMocks.subscribeCrosshairMove,
+    unsubscribeCrosshairMove: chartMocks.unsubscribeCrosshairMove,
     applyOptions: chartMocks.applyChartOptions,
     remove: chartMocks.chartRemove,
   };
@@ -84,6 +90,7 @@ describe("OriginChart", () => {
       if (time === 1700000060) return 200;
       return null;
     });
+    chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : 1);
     installResizeObserverMock();
     installChartMock();
   });
@@ -155,7 +162,7 @@ describe("OriginChart", () => {
     expect(chartMocks.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
   });
 
-  it("maps exact chart click times to lossless SBar IDs and rejects clicks without a bar time", () => {
+  it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [
@@ -171,19 +178,24 @@ describe("OriginChart", () => {
     });
 
     const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
-      ((param: { time?: unknown }) => void) | undefined;
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
     expect(clickHandler).toBeTypeOf("function");
 
-    clickHandler?.({ time: 1700000060 });
-    expect(wrapper.emitted("sbarClick")).toEqual([["1700000060000000000"]]);
+    clickHandler?.({ point: { x: 200, y: 12 } });
+    clickHandler?.({ point: { x: 200, y: 410 } });
+    expect(wrapper.emitted("sbarClick")).toEqual([
+      ["1700000060000000000"],
+      ["1700000060000000000"],
+    ]);
 
     clickHandler?.({});
     expect(wrapper.emitted("selectionError")).toEqual([
-      ["Click directly on an SBar candle to select an exact range boundary."],
+      ["The click did not resolve to a horizontal position inside the chart plot."],
     ]);
 
     wrapper.unmount();
     expect(chartMocks.unsubscribeClick).toHaveBeenCalledOnce();
+    expect(chartMocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
   });
 
   it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
