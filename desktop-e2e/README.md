@@ -16,6 +16,8 @@ This harness tests the real Tauri application and WebKitGTK WebView. It is separ
 
 The harness uses WebdriverIO with `@wdio/tauri-service` and the external driver provider. It does not add a testing plugin to the production Tauri app. The service may install `tauri-driver` through Cargo on the first run.
 
+The initial smoke suite uses only standard WebDriver DOM operations. Before testing, it explicitly selects the already-open main window once; this disables the service's automatic focus-recovery hook, which otherwise queries window state through the optional `@wdio/tauri-plugin` on each element lookup. The warning about the missing plugin is expected when using basic WebDriver operations without that plugin; the suite must not rely on plugin-only APIs.
+
 ## Run
 
 From `crates/struxis-debugger`:
