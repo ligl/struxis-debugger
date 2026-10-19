@@ -182,17 +182,17 @@ onMounted(async () => {
 
         <div class="primary-workspace">
           <div class="workspace-content">
-            <template v-if="workspaceMode === 'origin'">
+            <div v-show="workspaceMode === 'origin'" class="workspace-mode">
               <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :preview-bars="previewBars" :format-timestamp="formatTimestamp" />
-            </template>
-            <template v-else-if="workspaceMode === 'replay'">
+            </div>
+            <div v-show="workspaceMode === 'replay'" class="workspace-mode">
               <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @update:start-sbar-id="startSbarId = $event" @update:end-sbar-id="endSbarId = $event" @create="createTestDataset" />
               <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
-            </template>
-            <template v-else>
+            </div>
+            <div v-show="workspaceMode === 'snapshots'" class="workspace-mode">
               <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" @refresh="refreshSnapshots" />
               <p class="microcopy workspace-notice">Snapshot Compare is not implemented yet. This workspace currently provides the authoritative snapshot inventory only.</p>
-            </template>
+            </div>
           </div>
 
           <aside class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
