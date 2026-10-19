@@ -6,6 +6,8 @@
 
 use serde::Serialize;
 
+use crate::diagnostics::Diagnostic;
+
 use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
@@ -19,6 +21,8 @@ pub struct ReplayCheckpointProjection {
     pub sbar_count: usize,
     pub sbars: Vec<SBarCheckpoint>,
     pub structure: Option<StructureCheckpoint>,
+    /// Structured diagnostics observed at this exact confirmed Bar boundary.
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -138,6 +142,7 @@ impl ReplayCheckpointProjection {
             sbar_count: sbars.len(),
             sbars,
             structure,
+            diagnostics: Vec::new(),
         }
     }
 }
