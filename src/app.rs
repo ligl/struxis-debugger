@@ -229,11 +229,6 @@ impl AppState {
         Ok(datasets.current_test.as_ref().map(TestRecord::to_dto))
     }
 
-    #[must_use]
-    pub(crate) fn snapshot_root(&self) -> &Path {
-        &self.inner.snapshot_root
-    }
-
     pub(crate) fn compare_snapshots(
         &self,
         baseline_snapshot_id: &str,
