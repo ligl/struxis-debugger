@@ -674,11 +674,11 @@ mod tests {
         let manifest = manifest(&records);
         assert_eq!(
             manifest.config_fingerprint,
-            "2ce86429e2438d5bc0fdd14a2dffb748d53f70eba43c4077055a28bf299f006f"
+            "693f71cd1ec54d0c4fafa1afc24505fcf6e73a4d58f8ad6025d9f70b74b2391e"
         );
         assert_eq!(
             manifest.calculate_content_checksum(&records).unwrap(),
-            "4d429084669eb32f8e978d75aa53766602ff04c1306d508021d0c503bc1573e8"
+            "8996e6056ae7769f70f9fd3acb4329d512f4762e648092c2bc774946434a82c7"
         );
     }
 
@@ -738,7 +738,7 @@ mod tests {
             .unwrap_err().contains("canonical unsigned decimal encoding"));
 
         let mut state_records = records();
-        state_records[0].state_data = r#"{"cbarCount":"00","cbars":[],"swingCount":0,"swings":[]}"#.into();
+        state_records[0].state_data = r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#.into();
         let state_manifest = manifest(&state_records);
         assert!(validate_snapshot_records(&state_manifest, &state_records, false)
             .unwrap_err().contains("canonical unsigned decimal encoding"));
@@ -786,7 +786,7 @@ mod tests {
         manifest.content_checksum = manifest.calculate_content_checksum(&records).unwrap();
         assert!(verify_complete_snapshot(&manifest, &records).is_ok());
 
-        records[1].state_data = r#"{"cbarCount":"1","cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[]}"#.into();
+        records[1].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[]}"#.into();
         assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("checksum mismatch"));
     }
 
