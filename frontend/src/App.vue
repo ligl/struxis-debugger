@@ -34,6 +34,10 @@ const {
   snapshots,
   snapshotsLoading,
   snapshotsError,
+  compareResult,
+  compareLoading,
+  compareError,
+  runCompare,
   refreshSnapshots,
 } = useSnapshots();
 
@@ -243,8 +247,7 @@ onUnmounted(() => {
               <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
             </div>
             <div v-show="workspaceMode === 'snapshots'" class="workspace-mode">
-              <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" @refresh="refreshSnapshots" />
-              <p class="microcopy workspace-notice">Snapshot Compare is not implemented yet. This workspace currently provides the authoritative snapshot inventory only.</p>
+              <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" :compare-result="compareResult" :compare-loading="compareLoading" :compare-error="compareError" @refresh="refreshSnapshots" @compare="runCompare" />
             </div>
           </div>
 
