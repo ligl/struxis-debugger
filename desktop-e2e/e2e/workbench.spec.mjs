@@ -449,6 +449,8 @@ describe("Struxis Debugger native desktop", () => {
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
     await originCanvas.waitForDisplayed();
     await clickOriginBar(1, 0.88);
+    await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
+    await $('[data-testid="origin-selection-completed"]').waitForDisplayed();
 
     // Do not navigate away immediately after dispatching the native pointer
     // action. Confirm the chart event reached the application state machine
