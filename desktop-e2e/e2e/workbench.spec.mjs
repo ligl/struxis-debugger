@@ -417,6 +417,7 @@ describe("Struxis Debugger native desktop", () => {
     // event path, then verify the range projected by the workbench.
     await clickOriginBar(0);
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+    await originChart.waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
     await originCanvas.waitForDisplayed();
