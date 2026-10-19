@@ -15,77 +15,77 @@ use capitus_struxis::{
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ReplayCheckpointProjection {
-    pub state_key: String,
-    pub last_ts_event: Option<String>,
-    pub sbar_count: usize,
-    pub sbars: Vec<SBarCheckpoint>,
-    pub structure: Option<StructureCheckpoint>,
+pub(crate) struct ReplayCheckpointProjection {
+    pub(crate) state_key: String,
+    pub(crate) last_ts_event: Option<String>,
+    pub(crate) sbar_count: usize,
+    pub(crate) sbars: Vec<SBarCheckpoint>,
+    pub(crate) structure: Option<StructureCheckpoint>,
     /// Structured diagnostics observed at this exact confirmed Bar boundary.
-    pub diagnostics: Vec<Diagnostic>,
+    pub(crate) diagnostics: Vec<Diagnostic>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SBarCheckpoint {
-    pub sbar_id: String,
-    pub bar_type: String,
-    pub ts_event: String,
-    pub ts_init: String,
-    pub open: String,
-    pub high: String,
-    pub low: String,
-    pub close: String,
-    pub volume: String,
-    pub body: String,
-    pub upper_shadow: String,
-    pub lower_shadow: String,
-    pub total_range: String,
-    pub body_ratio: f64,
-    pub shadow_ratio: f64,
-    pub direction: String,
+pub(crate) struct SBarCheckpoint {
+    pub(crate) sbar_id: String,
+    pub(crate) bar_type: String,
+    pub(crate) ts_event: String,
+    pub(crate) ts_init: String,
+    pub(crate) open: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) close: String,
+    pub(crate) volume: String,
+    pub(crate) body: String,
+    pub(crate) upper_shadow: String,
+    pub(crate) lower_shadow: String,
+    pub(crate) total_range: String,
+    pub(crate) body_ratio: f64,
+    pub(crate) shadow_ratio: f64,
+    pub(crate) direction: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StructureCheckpoint {
-    pub cbar_count: usize,
-    pub cbars: Vec<CBarCheckpoint>,
-    pub swing_count: usize,
-    pub swings: Vec<SwingCheckpoint>,
+pub(crate) struct StructureCheckpoint {
+    pub(crate) cbar_count: usize,
+    pub(crate) cbars: Vec<CBarCheckpoint>,
+    pub(crate) swing_count: usize,
+    pub(crate) swings: Vec<SwingCheckpoint>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CBarCheckpoint {
-    pub cbar_id: String,
-    pub high: String,
-    pub low: String,
-    pub sbar_start_id: String,
-    pub sbar_end_id: String,
-    pub span_sbars: u32,
-    pub fractal_type: Option<String>,
-    pub created_at: String,
+pub(crate) struct CBarCheckpoint {
+    pub(crate) cbar_id: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) sbar_start_id: String,
+    pub(crate) sbar_end_id: String,
+    pub(crate) span_sbars: u32,
+    pub(crate) fractal_type: Option<String>,
+    pub(crate) created_at: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SwingCheckpoint {
-    pub swing_id: String,
-    pub direction: String,
-    pub high: String,
-    pub low: String,
-    pub cbar_start_id: String,
-    pub cbar_end_id: String,
-    pub sbar_start_id: String,
-    pub sbar_end_id: String,
-    pub start_oi: Option<String>,
-    pub end_oi: Option<String>,
-    pub volume: String,
-    pub span_sbars: u32,
-    pub state: String,
-    pub created_at: String,
-    pub updated_at: String,
+pub(crate) struct SwingCheckpoint {
+    pub(crate) swing_id: String,
+    pub(crate) direction: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) cbar_start_id: String,
+    pub(crate) cbar_end_id: String,
+    pub(crate) sbar_start_id: String,
+    pub(crate) sbar_end_id: String,
+    pub(crate) start_oi: Option<String>,
+    pub(crate) end_oi: Option<String>,
+    pub(crate) volume: String,
+    pub(crate) span_sbars: u32,
+    pub(crate) state: String,
+    pub(crate) created_at: String,
+    pub(crate) updated_at: String,
 }
 
 impl ReplayCheckpointProjection {
@@ -93,7 +93,7 @@ impl ReplayCheckpointProjection {
     ///
     /// Callers must drop the supplied view before the next Strategy callback,
     /// Struxis mutation, worker message wait, or thread boundary.
-    pub fn from_state_view(state: &StruxisStateView<'_>) -> Self {
+    pub(crate) fn from_state_view(state: &StruxisStateView<'_>) -> Self {
         let sbars = project_sbars(state.sbars());
         let structure = state.structure().map(|structure| {
             let cbars = structure.cbars().last_n(structure.cbars().len())
