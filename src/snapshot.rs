@@ -900,7 +900,8 @@ mod tests {
     fn rejects_noncanonical_config() {
         let records = records();
         let mut manifest = manifest(&records);
-        manifest.effective_config = r#"{ "enableStructure": true }"#.into();
+        // Keep the config schema valid; only violate canonical JSON encoding.
+        manifest.effective_config.push(' ');
         assert!(validate_snapshot_records(&manifest, &records, true).unwrap_err().contains("canonical JSON"));
     }
 
