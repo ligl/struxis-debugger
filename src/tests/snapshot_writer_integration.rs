@@ -398,6 +398,11 @@ fn snapshot_writer_does_not_overwrite_existing_publish_destination() {
         Some("Failed"),
         "A failed publish must not leave a Complete temporary Manifest"
     );
+    assert_eq!(
+        manifest["contentChecksum"].as_str(),
+        Some(""),
+        "A Failed temporary artifact must not retain a checksum for its previous Complete status"
+    );
 
     let artifacts = crate::snapshot_store::discover_snapshot_artifacts(&temp_dir)
         .expect("Snapshot discovery should classify the retained failed artifact");
