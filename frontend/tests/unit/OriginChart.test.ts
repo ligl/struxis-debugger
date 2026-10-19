@@ -90,7 +90,7 @@ describe("OriginChart", () => {
     vi.unstubAllGlobals();
   });
 
-  it("projects validated SBar data into candlestick and volume series without grid or branding", () => {
+  it("projects validated SBar data into candlestick and volume series without grid or branding", async () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [
@@ -133,6 +133,7 @@ describe("OriginChart", () => {
       { time: 1700000060, value: 100, color: "#557e65" },
     ]);
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
+    await nextTick();
     expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-origin-dataset-id"))
       .toBe("origin-1");
     const chartPanel = wrapper.get('[data-testid="origin-chart-panel"]');
