@@ -1,5 +1,6 @@
 pub mod app;
 pub mod catalog;
+pub mod compare;
 pub mod commands;
 pub mod dataset;
 pub mod discovery;
@@ -24,6 +25,7 @@ fn main() {
             commands::create_test_dataset,
             commands::get_current_test_dataset,
             commands::list_snapshots,
+            commands::compare_snapshots,
             commands::start_run,
             commands::restart_run,
             commands::get_run_state,
