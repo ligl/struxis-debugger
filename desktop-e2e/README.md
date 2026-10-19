@@ -38,6 +38,7 @@ The WDIO capability forces classic WebDriver mode via `wdio:enforceWebDriverClas
 - Collapse and restore Catalog, Inspector, and Diagnostics; check that the workbench remains inside the viewport without horizontal document overflow.
 - Inject temporary oversized content into the real workspace scroll container and verify that scrolling advances that container's `scrollTop`; remove the fixture even if the assertion fails.
 - Resize the native window to 1280×800 and 1920×1080, check viewport geometry and horizontal overflow, then restore the original window size.
+- Send real Space key events with no eligible Run and while an input / button is focused; verify the shortcut does not intercept native control behavior.
 - Confirm that WebdriverIO teardown leaves no process from this test run.
 
 This remains an incremental desktop suite, not full desktop acceptance. On 2026-10-19, the user reran `bun run test:e2e:desktop` after adding the native resize check and reported `5 passing (1.8s)`, one spec passed, and the test-launched native Debugger process exited successfully. The passing suite now covers Catalog IPC discovery, workspace switching, panel collapse/restore, internal workspace scrolling, and native window resizing at 1280×800 and 1920×1080. Space-key focus rules, IPC failure paths, and the complete Load → Run → Snapshot workflow remain future coverage.
