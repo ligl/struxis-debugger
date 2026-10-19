@@ -39,4 +39,4 @@ The WDIO capability forces classic WebDriver mode via `wdio:enforceWebDriverClas
 - Inject temporary oversized content into the real workspace scroll container and verify that scrolling advances that container's `scrollTop`; remove the fixture even if the assertion fails.
 - Confirm that WebdriverIO teardown leaves no process from this test run.
 
-This remains an incremental desktop suite, not full desktop acceptance. The collapse/restore and scroll-container checks were added after the initial 2/2 smoke run and require a fresh local run before they can be considered passing. Native window resizing, Space-key focus rules, IPC failure paths, and the complete Load → Run → Snapshot workflow remain future coverage.
+This remains an incremental desktop suite, not full desktop acceptance. The user reran `bun run test:e2e:desktop` after adding the collapse/restore and scroll-container checks; the spec passed and the test-launched native Debugger process exited successfully. Native window resizing, Space-key focus rules, IPC failure paths, and the complete Load → Run → Snapshot workflow remain future coverage.
