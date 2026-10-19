@@ -17,7 +17,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 config.global.stubs = {
   ...config.global.stubs,
   OriginPanel: {
-    template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="loadError">{{ loadError }}</span></section>',
+    template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
     props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
   },
 };
