@@ -63,6 +63,11 @@ if [[ ! -x "$APP_BINARY" ]]; then
 fi
 APP_BINARY="$(readlink -f "$APP_BINARY")"
 
+# Isolate native workflow Snapshot writes from the user's real inventory.
+E2E_SNAPSHOT_ROOT="$(mktemp -d -t capitus-debugger-e2e-snapshots.XXXXXX)"
+export CAPITUS_STRUXIS_DEBUGGER_SNAPSHOT_DIR="$E2E_SNAPSHOT_ROOT"
+trap 'rm -rf -- "$E2E_SNAPSHOT_ROOT"' EXIT
+
 list_app_pids() {
   local proc pid executable
   for proc in /proc/[0-9]*; do
