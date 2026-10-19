@@ -2,6 +2,7 @@
 
 pub mod app;
 pub mod catalog;
+pub mod compare;
 pub mod checkpoint;
 pub mod dataset;
 pub mod discovery;
