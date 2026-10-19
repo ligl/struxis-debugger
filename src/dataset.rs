@@ -12,7 +12,7 @@ use capitus_struxis::StruxisStateKey;
 
 /// An immutable, session-scoped Test Dataset derived from a validated Origin.
 #[derive(Debug, Clone)]
-pub struct TestDataset {
+pub(crate) struct TestDataset {
     test_dataset_id: Uuid,
     origin_dataset_id: Uuid,
     state_key: StruxisStateKey,
@@ -29,7 +29,7 @@ impl TestDataset {
     /// Selection boundaries are real SBar IDs represented as lossless decimal
     /// strings at the UI/IPC boundary. A new object ID is assigned on every
     /// successful call; object identity is excluded from the sequence fingerprint.
-    pub fn create(origin: &OriginLoad, start_sbar_id: &str, end_sbar_id: &str) -> Result<Self> {
+    pub(crate) fn create(origin: &OriginLoad, start_sbar_id: &str, end_sbar_id: &str) -> Result<Self> {
         validate_origin(origin)?;
 
         let start_index = origin
@@ -68,42 +68,42 @@ impl TestDataset {
     }
 
     #[must_use]
-    pub const fn test_dataset_id(&self) -> Uuid {
+    pub(crate) const fn test_dataset_id(&self) -> Uuid {
         self.test_dataset_id
     }
 
     #[must_use]
-    pub const fn origin_dataset_id(&self) -> Uuid {
+    pub(crate) const fn origin_dataset_id(&self) -> Uuid {
         self.origin_dataset_id
     }
 
     #[must_use]
-    pub const fn state_key(&self) -> StruxisStateKey {
+    pub(crate) const fn state_key(&self) -> StruxisStateKey {
         self.state_key
     }
 
     #[must_use]
-    pub fn bar_type(&self) -> &str {
+    pub(crate) fn bar_type(&self) -> &str {
         &self.bar_type
     }
 
     #[must_use]
-    pub fn start_sbar_id(&self) -> &str {
+    pub(crate) fn start_sbar_id(&self) -> &str {
         &self.start_sbar_id
     }
 
     #[must_use]
-    pub fn end_sbar_id(&self) -> &str {
+    pub(crate) fn end_sbar_id(&self) -> &str {
         &self.end_sbar_id
     }
 
     #[must_use]
-    pub fn bars(&self) -> &[Bar] {
+    pub(crate) fn bars(&self) -> &[Bar] {
         &self.bars
     }
 
     #[must_use]
-    pub fn sbar_sequence_fingerprint(&self) -> &str {
+    pub(crate) fn sbar_sequence_fingerprint(&self) -> &str {
         &self.sbar_sequence_fingerprint
     }
 }
@@ -167,7 +167,7 @@ fn validate_origin(origin: &OriginLoad) -> Result<()> {
 /// AUD/USD.SIM|300s). Duration-based encoding preserves StruxisStateKey equality
 /// when equivalent Timeframe values use different units. JSON field order and
 /// prefix are fixed by contract; integers and exact decimals are canonical strings.
-pub fn sequence_fingerprint(state_key: StruxisStateKey, bars: &[Bar]) -> Result<String> {
+pub(crate) fn sequence_fingerprint(state_key: StruxisStateKey, bars: &[Bar]) -> Result<String> {
     let canonical_state_key = format!(
         "{}|{}s",
         state_key.instrument_id,
