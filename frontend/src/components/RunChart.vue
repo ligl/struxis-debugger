@@ -9,12 +9,11 @@ import {
   type ISeriesApi,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { OriginDatasetDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
+import type { OriginDatasetDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
-  runState: RunStateDto | null;
 }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
