@@ -620,6 +620,30 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_state_requires_numeric_counts_and_span_and_closed_fractal_values() {
+        let string_count: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":"0","cbars":[],"swingCount":0,"swings":[]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&string_count)
+            .unwrap_err()
+            .contains("cbarCount must be a non-negative JSON integer"));
+
+        let string_span: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":"1"}],"swingCount":0,"swings":[]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&string_span)
+            .unwrap_err()
+            .contains("invalid JSON type"));
+
+        let invalid_fractal: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":"Sideways","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&invalid_fractal)
+            .unwrap_err()
+            .contains("unsupported value Sideways"));
+    }
+
+    #[test]
     fn canonical_structure_state_rejects_noncanonical_domain_ids() {
         let structure = crate::checkpoint::StructureCheckpoint {
             cbar_count: 1,
