@@ -107,6 +107,13 @@ impl SnapshotWriter {
 
         let (reopened, records) = read_database(&self.temporary_path)?;
         verify_complete_snapshot(&reopened, &records)?;
+        // Never replace an artifact that appeared after initialization. In
+        // particular, a pre-existing Complete Snapshot must remain untouched.
+        // The UUID makes collisions unlikely; this guard also protects against
+        // a destination created between initialize() and finalize().
+        if self.published_path.exists() {
+            return Err("Snapshot publish destination already exists".to_owned());
+        }
         fs::rename(&self.temporary_path, &self.published_path)
             .map_err(|e| format!("Atomically publish Snapshot: {e}"))?;
         File::open(&self.root).and_then(|directory| directory.sync_all())
