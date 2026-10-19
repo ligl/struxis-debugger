@@ -22,6 +22,7 @@ use nautilus_model::{
     types::{Price, Quantity},
 };
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn test_instrument_id() -> InstrumentId {
     InstrumentId::from("BTCUSDT-PERP.BINANCE")
@@ -161,9 +162,8 @@ fn snapshot_writer_full_lifecycle_with_three_checkpoints() {
     assert!(!manifest.content_checksum.is_empty());
 
     // Cleanup
-    if writer.published_path().exists() {
-        fs::remove_file(writer.published_path()).ok();
-    }
+    drop(writer);
+    fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot publication test directory");
 }
 
 #[test]
@@ -244,8 +244,13 @@ fn snapshot_writer_fail_marks_status_without_progression() {
 
 #[test]
 fn snapshot_writer_atomic_publish_renames_temp_to_final() {
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("System clock should be after Unix epoch")
+        .as_nanos();
     let temp_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/snapshot_publish_test");
+        .join("tests/fixtures/snapshot_publish_test")
+        .join(format!("run-{unique_suffix}"));
     fs::create_dir_all(&temp_dir).unwrap();
 
     let bars = create_test_bars(1);
