@@ -102,6 +102,7 @@ pub(crate) fn discover_snapshot_artifacts(root: impl AsRef<Path>) -> Result<Vec<
 }
 
 /// Opens and validates a published Snapshot without permitting writes.
+#[cfg(test)]
 pub(crate) fn read_complete_snapshot(
     path: impl AsRef<Path>,
 ) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), String> {
