@@ -311,36 +311,52 @@ describe("Struxis Debugger native desktop", () => {
 
     const originCanvas = await $('[data-testid="origin-chart-canvas"]');
     const clickOriginBar = async (index) => {
-      const geometry = await browser.execute(() => {
+      const coordinateAttribute = index === 0
+        ? "data-first-sbar-x"
+        : index === 1
+          ? "data-second-sbar-x"
+          : null;
+      assert.ok(coordinateAttribute, `Unsupported Origin SBar index: ${index}`);
+
+      await browser.waitUntil(
+        async () => {
+          const value = await originCanvas.getAttribute(coordinateAttribute);
+          return value !== null && value.trim() !== "" && Number.isFinite(Number(value));
+        },
+        {
+          timeout: 5_000,
+          interval: 100,
+          timeoutMsg: `Origin chart did not expose its native coordinate for SBar index ${index}.`,
+        },
+      );
+
+      const target = await browser.execute((attribute) => {
         const host = document.querySelector('[data-testid="origin-chart-canvas"]');
         if (!host) return null;
+        const coordinate = Number(host.getAttribute(attribute));
+        if (!Number.isFinite(coordinate)) return null;
         const rect = host.getBoundingClientRect();
         return {
+          x: Math.round(rect.left + coordinate),
+          y: Math.round(rect.top + rect.height * 0.25),
+          coordinate,
           left: rect.left,
-          top: rect.top,
           width: rect.width,
           height: rect.height,
         };
-      });
-      assert.ok(geometry, "Origin chart canvas must remain mounted while selecting the Test interval.");
-
-      // Lightweight Charts reserves approximately 80 CSS pixels for the right
-      // price scale. fitContent() places the first data point at roughly half a
-      // bar spacing from the plot's left edge; rightOffset reserves four bars.
-      const plotWidth = geometry.width - 80;
-      const barSpacing = plotWidth / (sbarCount + 4);
+      }, coordinateAttribute);
+      assert.ok(target, `Origin chart did not provide a usable coordinate for SBar index ${index}.`);
       assert.ok(
-        barSpacing >= 2,
-        `Origin chart cannot reliably target adjacent candles at this viewport: ${JSON.stringify({ sbarCount, width: geometry.width, barSpacing })}`,
+        target.coordinate >= 0 && target.coordinate < target.width,
+        `Origin SBar index ${index} is outside the chart plot: ${JSON.stringify(target)}`,
       );
-      const x = Math.round(geometry.left + (index + 0.5) * barSpacing);
-      const y = Math.round(geometry.top + geometry.height * 0.25);
+
       await browser.performActions([{
         type: "pointer",
         id: "origin-chart-pointer",
         parameters: { pointerType: "mouse" },
         actions: [
-          { type: "pointerMove", duration: 0, x, y },
+          { type: "pointerMove", duration: 0, x: target.x, y: target.y },
           { type: "pointerDown", button: 0 },
           { type: "pointerUp", button: 0 },
         ],
