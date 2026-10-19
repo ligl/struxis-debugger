@@ -101,32 +101,37 @@ mod concurrent_access {
     use std::time::Duration;
 
     #[test]
-    fn replay_manager_prevents_concurrent_step_calls() {
+    fn concurrent_inactive_step_calls_return_invalid_state_without_deadlock() {
         let state = Arc::new(AppState::new(test_catalog_path()));
         let barrier = Arc::new(Barrier::new(2));
 
-        // Note: Without a real active run, both calls will fail with InvalidState,
-        // but we're testing that they don't deadlock and return promptly.
+        // No Run is active: this verifies prompt, consistent rejection under
+        // concurrent access, not serialization of two active Run commands.
         let state_clone = state.clone();
         let barrier_clone = barrier.clone();
-
         let handle1 = thread::spawn(move || {
             barrier_clone.wait();
-            let _result = state_clone.replay_step();
+            state_clone.replay_step()
         });
 
         let barrier_clone2 = barrier.clone();
         let state_clone2 = state.clone();
         let handle2 = thread::spawn(move || {
             barrier_clone2.wait();
-            // Small delay to increase chance of contention
             thread::sleep(Duration::from_millis(10));
-            let _result = state_clone2.replay_step();
+            state_clone2.replay_step()
         });
 
-        // Both threads should complete within reasonable time
-        handle1.join().expect("Thread 1 should not panic");
-        handle2.join().expect("Thread 2 should not panic");
+        let first = handle1.join().expect("Thread 1 should not panic");
+        let second = handle2.join().expect("Thread 2 should not panic");
+        assert_eq!(
+            first.expect_err("inactive Run must reject Step").code,
+            IpcErrorCode::InvalidState
+        );
+        assert_eq!(
+            second.expect_err("inactive Run must reject Step").code,
+            IpcErrorCode::InvalidState
+        );
     }
 }
 
