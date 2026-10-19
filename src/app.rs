@@ -64,9 +64,18 @@ struct TestRecord {
 impl AppState {
     #[must_use]
     pub fn new(catalog_path: PathBuf) -> Self {
+        Self::with_snapshot_root(catalog_path, configured_snapshot_root())
+    }
+
+    /// Creates application state with an explicit Snapshot root.
+    ///
+    /// This keeps discovery deterministic for isolated tests and callers that
+    /// manage Snapshot storage outside the default user data directory.
+    #[must_use]
+    pub fn with_snapshot_root(catalog_path: PathBuf, snapshot_root: PathBuf) -> Self {
         Self {
             inner: Arc::new(AppStateInner {
-                snapshot_root: configured_snapshot_root(),
+                snapshot_root,
                 catalog_path,
                 datasets: Mutex::new(AppDatasets {
                     current_origin: None,
