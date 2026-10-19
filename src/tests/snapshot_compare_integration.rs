@@ -213,14 +213,11 @@ fn rejects_sqlite_snapshots_with_different_complete_input_fingerprints() {
 #[test]
 fn compare_preserves_unreadable_category_for_published_snapshot_with_missing_manifest() {
     let root = temp_root();
-    let baseline_root = root.join("baseline");
-    let candidate_root = root.join("candidate");
-    fs::create_dir_all(&baseline_root).unwrap();
-    fs::create_dir_all(&candidate_root).unwrap();
+    fs::create_dir_all(&root).unwrap();
 
     let input = test_input();
-    let baseline_path = publish_snapshot(&baseline_root, &input, false, false);
-    let candidate_path = publish_snapshot(&candidate_root, &input, false, false);
+    let baseline_path = publish_snapshot(&root, &input, false, false);
+    let candidate_path = publish_snapshot(&root, &input, false, false);
     let candidate_id = candidate_path.file_name().unwrap().to_str().unwrap()
         .strip_suffix(".snapshot.sqlite").unwrap().to_owned();
 
