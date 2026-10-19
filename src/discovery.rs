@@ -23,7 +23,7 @@ use nautilus_persistence::{
 use serde::Serialize;
 
 /// The Catalog root used by the standalone Debugger during development.
-pub fn configured_catalog_root() -> PathBuf {
+pub(crate) fn configured_catalog_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test_data/catalog")
 }
 
@@ -34,13 +34,13 @@ pub fn configured_catalog_root() -> PathBuf {
 /// BarType. Unavailable entries remain visible with a diagnostic.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CatalogDatasetEntry {
-    pub id: String,
-    pub bar_type: Option<String>,
-    pub instrument_id: Option<String>,
-    pub timeframe: Option<String>,
-    pub available: bool,
-    pub diagnostic: Option<String>,
+pub(crate) struct CatalogDatasetEntry {
+    pub(crate) id: String,
+    pub(crate) bar_type: Option<String>,
+    pub(crate) instrument_id: Option<String>,
+    pub(crate) timeframe: Option<String>,
+    pub(crate) available: bool,
+    pub(crate) diagnostic: Option<String>,
 }
 
 /// Lists Catalog BarType streams without loading their complete data sequences.
@@ -48,7 +48,7 @@ pub struct CatalogDatasetEntry {
 /// File paths are used only to discover candidate stream identifiers. The
 /// candidate must then be parsed by Nautilus and resolved against Catalog
 /// Instrument metadata before it is marked available.
-pub fn discover_catalog_datasets(catalog_path: &Path) -> Result<Vec<CatalogDatasetEntry>> {
+pub(crate) fn discover_catalog_datasets(catalog_path: &Path) -> Result<Vec<CatalogDatasetEntry>> {
     if !catalog_path.is_dir() {
         bail!(
             "Configured Catalog directory does not exist: {}",
