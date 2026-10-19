@@ -87,6 +87,7 @@ impl SnapshotWriter {
         })
     }
 
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn published_path(&self) -> &Path {
         &self.published_path
