@@ -12,6 +12,7 @@ use std::{
 use rusqlite::{Connection, OpenFlags, params};
 use crate::{
     checkpoint::ReplayCheckpointProjection,
+    diagnostics::canonical_diagnostics_json,
     effective_config::EffectiveStruxisConfig,
     replay::LoadedInput,
     run::{RunState, RunStatus},
@@ -231,7 +232,7 @@ impl CheckpointSink for SnapshotWriter {
             ts_event: sbar_id.to_owned(),
             record_kind: "Full".into(),
             state_data: canonical_structure_state(projection.structure.as_ref())?,
-            diagnostics: "[]".into(),
+            diagnostics: canonical_diagnostics_json(&projection.diagnostics)?,
         };
         let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
         let tx = connection.transaction().map_err(|e| format!("Begin checkpoint transaction: {e}"))?;
