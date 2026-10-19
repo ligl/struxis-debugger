@@ -111,6 +111,14 @@ mod tests {
     }
 
     #[test]
+    fn fingerprint_rejects_string_encoded_capacities() {
+        let encoded = r#"{"enableStructure":true,"structureCbarsCapacity":"10000","structureSwingsCapacity":2000,"structureTrendsCapacity":666}"#;
+        assert!(fingerprint_canonical_config(encoded)
+            .unwrap_err()
+            .contains("schema"));
+    }
+
+    #[test]
     fn fingerprint_is_derived_from_complete_effective_config() {
         let defaults = EffectiveStruxisConfig::from_struxis_config(&StruxisConfig::builder().build());
         let altered = EffectiveStruxisConfig::from_struxis_config(
