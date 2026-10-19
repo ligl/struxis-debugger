@@ -310,7 +310,7 @@ describe("Struxis Debugger native desktop", () => {
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
 
     const originCanvas = await $('[data-testid="origin-chart-canvas"]');
-    const clickOriginBar = async (index, yFraction = 0.25, click = true) => {
+    const clickOriginTimePosition = async (index, yFraction = 0.25, click = true) => {
       const coordinateAttribute = index === 0
         ? "data-first-sbar-x"
         : index === 1
@@ -421,9 +421,9 @@ describe("Struxis Debugger native desktop", () => {
     // Click at unrelated vertical positions to prove selection depends on x/time,
     // not on hitting a candle body or wick. The first move previews the overlay
     // across the full chart height before the second click fixes the endpoint.
-    await clickOriginBar(0, 0.12);
+    await clickOriginTimePosition(0, 0.12);
     await $('[data-testid="origin-selection-start-line"]').waitForDisplayed();
-    await clickOriginBar(1, 0.88, false);
+    await clickOriginTimePosition(1, 0.88, false);
     await $('[data-testid="origin-selection-preview"]').waitForDisplayed();
     const previewGeometry = await browser.execute(() => {
       const host = document.querySelector('[data-testid="origin-chart-canvas"]');
@@ -448,7 +448,7 @@ describe("Struxis Debugger native desktop", () => {
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
     await originCanvas.waitForDisplayed();
-    await clickOriginBar(1, 0.88);
+    await clickOriginTimePosition(1, 0.88);
     await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
     await $('[data-testid="origin-selection-completed"]').waitForDisplayed();
 
