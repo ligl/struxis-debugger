@@ -1,4 +1,4 @@
-import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
+import { config, enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
 import RunControlPanel from "../../src/components/RunControlPanel.vue";
@@ -12,25 +12,15 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: ipc.invoke,
 }));
 
-// App integration tests exercise page-level coordination, not the chart's browser
-// lifecycle. Stub the direct child so Lightweight Charts never initializes in jsdom.
-vi.mock("../../src/components/OriginPanel.vue", async () => {
-  const { defineComponent, h } = await import("vue");
-  return {
-    default: defineComponent({
-      name: "OriginPanelTestStub",
-      props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
-      setup(props) {
-        return () => h("section", { "data-testid": "origin-panel-test-stub" }, [
-          h("h3", "Origin SBar chart"),
-          h("span", props.origin?.originDatasetId ?? "No validated Origin Dataset"),
-          h("span", props.loadStatus),
-          props.loadError ? h("span", props.loadError) : null,
-        ]);
-      },
-    }),
-  };
-});
+// App integration tests exercise page-level coordination, not the browser-only chart lifecycle.
+// Stub by component name at the Vue Test Utils mount boundary so the real chart cannot initialize.
+config.global.stubs = {
+  ...config.global.stubs,
+  OriginPanel: {
+    template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="loadError">{{ loadError }}</span></section>',
+    props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
+  },
+};
 
 const invokeMock = ipc.invoke;
 
