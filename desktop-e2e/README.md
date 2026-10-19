@@ -27,7 +27,7 @@ cd ..
 bun run test:e2e:desktop
 ```
 
-The root command builds the Tauri binary with `cargo tauri build --debug --no-bundle`, runs WebdriverIO, and verifies that the test-launched application process exits. Close any existing instance of the same Debugger binary before running it.
+The root command first runs `bun install` inside `desktop-e2e/` and verifies that the project-local `node_modules/.bin/wdio` exists, then builds the Tauri binary with `cargo tauri build --debug --no-bundle`, runs WebdriverIO, and verifies that the test-launched application process exits. You do not need to install WebdriverIO globally. Close any existing instance of the same Debugger binary before running it.
 
 ## Initial acceptance scope
 
