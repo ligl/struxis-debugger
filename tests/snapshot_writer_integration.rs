@@ -397,6 +397,19 @@ fn snapshot_writer_does_not_overwrite_existing_publish_destination() {
         Some("Failed"),
         "A failed publish must not leave a Complete temporary Manifest"
     );
+
+    let artifacts = capitus_struxis_debugger::snapshot_store::discover_snapshot_artifacts(&temp_dir)
+        .expect("Snapshot discovery should classify the retained failed artifact");
+    let failed_artifact = artifacts
+        .iter()
+        .find(|artifact| artifact.path == temporary_path)
+        .expect("Failed temporary artifact should remain discoverable");
+    assert_eq!(
+        failed_artifact.kind,
+        capitus_struxis_debugger::snapshot_store::SnapshotArtifactKind::FailedTemporary,
+        "Store discovery must classify the Writer's failed residual as FailedTemporary"
+    );
+
     assert_eq!(
         fs::read(writer.published_path()).expect("Re-read existing destination"),
         existing_bytes,
