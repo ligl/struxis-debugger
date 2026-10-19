@@ -30,6 +30,8 @@ pub struct SnapshotWriter {
     manifest: Option<SnapshotManifest>,
     checkpoints: Vec<SnapshotCheckpointRecord>,
     connection: Option<Connection>,
+    #[cfg(test)]
+    fail_directory_sync: bool,
 }
 
 struct InputMetadata {
@@ -70,6 +72,8 @@ impl SnapshotWriter {
             manifest: None,
             checkpoints: Vec::new(),
             connection: None,
+            #[cfg(test)]
+            fail_directory_sync: false,
         })
     }
 
@@ -116,9 +120,18 @@ impl SnapshotWriter {
         }
         fs::rename(&self.temporary_path, &self.published_path)
             .map_err(|e| format!("Atomically publish Snapshot: {e}"))?;
-        File::open(&self.root).and_then(|directory| directory.sync_all())
-            .map_err(|e| format!("Flush Snapshot directory: {e}"))?;
+        self.sync_snapshot_directory()?;
         Ok(())
+    }
+
+    fn sync_snapshot_directory(&self) -> Result<(), String> {
+        #[cfg(test)]
+        if self.fail_directory_sync {
+            return Err("Flush Snapshot directory: simulated directory sync failure".to_owned());
+        }
+
+        File::open(&self.root).and_then(|directory| directory.sync_all())
+            .map_err(|e| format!("Flush Snapshot directory: {e}"))
     }
 }
 
@@ -388,6 +401,58 @@ mod tests {
         assert_eq!(manifest.status, STATUS_COMPLETE);
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].diagnostics, "[]");
+        drop(writer);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn directory_sync_failure_after_publish_marks_published_snapshot_failed() {
+        let root = std::env::temp_dir().join(format!(
+            "capitus-snapshot-directory-sync-failure-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let input = input();
+        let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
+        let mut state = RunState::ready(
+            "writer-directory-sync-failure".into(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            input.bars.len(),
+        ).unwrap();
+        writer.initialize(&state, &config()).unwrap();
+
+        for (index, bar) in input.bars.iter().enumerate() {
+            let sbar_id = bar.ts_event.to_string();
+            let projection = ReplayCheckpointProjection {
+                state_key: format!("{:?}", input.state_key),
+                last_ts_event: Some(sbar_id.clone()),
+                sbar_count: index + 1,
+                sbars: vec![],
+                structure: None,
+            };
+            writer.commit_checkpoint(index, &sbar_id, &projection).unwrap();
+            state.confirm_checkpoint(sbar_id).unwrap();
+        }
+        assert_eq!(state.status, RunStatus::Completed);
+
+        // Inject failure only after the verified temporary file has been
+        // renamed into the published namespace.
+        writer.fail_directory_sync = true;
+        let error = writer.finalize(&state).unwrap_err();
+        assert!(error.contains("simulated directory sync failure"));
+        assert!(writer.published_path().is_file());
+
+        // The failed finalize path must not leave a usable Complete artifact.
+        writer.fail("simulated directory sync failure").unwrap();
+        let (manifest, records) = read_database(writer.published_path()).unwrap();
+        assert_eq!(manifest.status, STATUS_FAILED);
+        assert_eq!(records.len(), input.bars.len());
+
+        let artifacts = crate::snapshot_store::discover_snapshot_artifacts(&root).unwrap();
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].kind, crate::snapshot_store::SnapshotArtifactKind::InvalidPublished);
+        assert_eq!(artifacts[0].snapshot_id.as_deref(), Some(manifest.snapshot_id.as_str()));
+
         drop(writer);
         let _ = fs::remove_dir_all(root);
     }
