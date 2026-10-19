@@ -486,14 +486,8 @@ pub(crate) fn validate_snapshot_records(
         if serde_json::to_string(&state).map_err(|error| error.to_string())? != checkpoint.state_data {
             return Err(format!("Checkpoint {} state_data is not canonical JSON (integer values must be decimal strings)", checkpoint.checkpoint_index));
         }
-        let diagnostics: serde_json::Value = serde_json::from_str(&checkpoint.diagnostics)
-            .map_err(|error| format!("Invalid diagnostics JSON: {error}"))?;
-        let diagnostics = normalize_integer_json_values(diagnostics);
-        if !diagnostics.is_array()
-            || serde_json::to_string(&diagnostics).map_err(|error| error.to_string())? != checkpoint.diagnostics
-        {
-            return Err(format!("Checkpoint {} diagnostics must be a canonical JSON array (integer values must be decimal strings)", checkpoint.checkpoint_index));
-        }
+        crate::diagnostics::validate_canonical_diagnostics_json(&checkpoint.diagnostics)
+            .map_err(|error| format!("Checkpoint {} diagnostics: {error}", checkpoint.checkpoint_index))?;
     }
 
     let first = checkpoints.first().expect("nonempty checked above");

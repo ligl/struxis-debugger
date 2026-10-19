@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct Diagnostic {
     pub(crate) source: String,
     pub(crate) severity: String,
@@ -68,6 +68,20 @@ pub(crate) fn canonical_diagnostics_json(diagnostics: &[Diagnostic]) -> Result<S
         .map_err(|error| format!("Cannot encode canonical diagnostics: {error}"))
 }
 
+/// Validates the persisted diagnostics JSON against the actual diagnostic DTO.
+///
+/// Canonicalization orders records and JSON object fields; it does not rewrite
+/// semantic values such as checkpoint indexes from numbers into strings.
+pub(crate) fn validate_canonical_diagnostics_json(encoded: &str) -> Result<(), String> {
+    let diagnostics: Vec<Diagnostic> = serde_json::from_str(encoded)
+        .map_err(|error| format!("Invalid diagnostics DTO: {error}"))?;
+    let canonical = canonical_diagnostics_json(&diagnostics)?;
+    if canonical != encoded {
+        return Err("Diagnostics are not canonical JSON".to_owned());
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{canonical_diagnostics_json, Diagnostic};
@@ -100,6 +114,18 @@ mod tests {
         let parsed: Vec<Diagnostic> = serde_json::from_str(&forward).unwrap();
         assert_eq!(parsed[0].source, "input");
         assert_eq!(parsed[1].source, "replay");
+    }
+
+    #[test]
+    fn checkpoint_index_keeps_its_json_integer_type() {
+        let value = diagnostic("replay", "Category", "message");
+        let encoded = canonical_diagnostics_json(&[value]).unwrap();
+        assert!(encoded.contains(r#""checkpointIndex":0"#));
+        assert!(!encoded.contains(r#""checkpointIndex":"0""#));
+        assert!(super::validate_canonical_diagnostics_json(&encoded).is_ok());
+
+        let string_index = encoded.replace(r#""checkpointIndex":0"#, r#""checkpointIndex":"0""#);
+        assert!(super::validate_canonical_diagnostics_json(&string_index).is_err());
     }
 
     #[test]
