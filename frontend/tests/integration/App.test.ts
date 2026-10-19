@@ -19,8 +19,12 @@ function mountApp() {
     global: {
       stubs: {
         OriginPanel: {
-          template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="origin && rangeSelectionStatus">{{ rangeSelectionStatus }}</span><button v-if="origin" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="origin" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
-          props: ["origin", "loadStatus", "loadError", "formatTimestamp", "rangeSelectionStatus"],
+          template: '<section data-testid="origin-panel-test-stub"><h3>Current Origin</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
+          props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
+        },
+        OriginChart: {
+          template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\\'sbar-click\\', \\'100\\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\\'sbar-click\\', \\'200\\')">Select SBar 200</button></section>',
+          props: ["bars", "originDatasetId"],
         },
       },
     },
