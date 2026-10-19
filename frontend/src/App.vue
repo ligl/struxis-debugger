@@ -13,6 +13,7 @@ import { useOriginLoad } from "./composables/useOriginLoad";
 import { useTestDataset } from "./composables/useTestDataset";
 import { useRunControl } from "./composables/useRunControl";
 import { useCatalogGroups } from "./composables/useCatalogGroups";
+import { resolveOriginRangeClick } from "./origin-range-selection";
 
 const {
   datasets,
@@ -79,46 +80,35 @@ const rangeSelectionStatus = ref(
 
 function handleOriginSbarClick(sbarId: string): void {
   if (!origin.value || !canMutateTest.value || testLoading.value) return;
-  const clickedIndex = origin.value.bars.findIndex((bar) => bar.sbarId === sbarId);
-  if (clickedIndex < 0) {
-    rangeSelectionStatus.value = "The selected SBar is not part of the current Origin. No selection was changed.";
+  const result = resolveOriginRangeClick(
+    origin.value.bars,
+    rangeSelectionPendingStart.value,
+    sbarId,
+  );
+
+  if (result.kind === "invalid") {
+    rangeSelectionStatus.value = result.message;
     return;
   }
 
-  if (rangeSelectionPendingStart.value === null) {
-    rangeSelectionPendingStart.value = sbarId;
-    startSbarId.value = sbarId;
+  if (result.kind === "start") {
+    rangeSelectionPendingStart.value = result.sbarId;
+    startSbarId.value = result.sbarId;
     endSbarId.value = "";
     rangeSelectionReady.value = false;
     selectedRangeCount.value = 0;
-    rangeSelectionStatus.value = `Start SBar selected: ${sbarId}. Click another Origin candle to set the inclusive end boundary.`;
+    rangeSelectionStatus.value =
+      `Start SBar selected: ${result.sbarId}. Click another Origin candle to set the inclusive end boundary.`;
     return;
   }
 
-  const pendingIndex = origin.value.bars.findIndex(
-    (bar) => bar.sbarId === rangeSelectionPendingStart.value,
-  );
-  if (pendingIndex < 0) {
-    rangeSelectionPendingStart.value = null;
-    rangeSelectionReady.value = false;
-    selectedRangeCount.value = 0;
-    rangeSelectionStatus.value = "The pending start SBar is no longer part of this Origin. Select the range again.";
-    return;
-  }
-
-  const firstIndex = Math.min(pendingIndex, clickedIndex);
-  const lastIndex = Math.max(pendingIndex, clickedIndex);
-  const firstBar = origin.value.bars[firstIndex];
-  const lastBar = origin.value.bars[lastIndex];
-  if (!firstBar || !lastBar) return;
-
-  startSbarId.value = firstBar.sbarId;
-  endSbarId.value = lastBar.sbarId;
+  startSbarId.value = result.startSbarId;
+  endSbarId.value = result.endSbarId;
   rangeSelectionPendingStart.value = null;
   rangeSelectionReady.value = true;
-  selectedRangeCount.value = lastIndex - firstIndex + 1;
+  selectedRangeCount.value = result.count;
   rangeSelectionStatus.value =
-    `Selected ${selectedRangeCount.value.toLocaleString()} SBars: ${firstBar.sbarId} → ${lastBar.sbarId} (inclusive).`;
+    `Selected ${result.count.toLocaleString()} SBars: ${result.startSbarId} → ${result.endSbarId} (inclusive).`;
 }
 
 function handleOriginSelectionError(message: string): void {
