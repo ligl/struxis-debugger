@@ -211,6 +211,37 @@ fn rejects_sqlite_snapshots_with_different_complete_input_fingerprints() {
 }
 
 #[test]
+fn compare_preserves_unreadable_category_for_published_snapshot_with_missing_manifest() {
+    let root = temp_root();
+    let baseline_root = root.join("baseline");
+    let candidate_root = root.join("candidate");
+    fs::create_dir_all(&baseline_root).unwrap();
+    fs::create_dir_all(&candidate_root).unwrap();
+
+    let input = test_input();
+    let baseline_path = publish_snapshot(&baseline_root, &input, false, false);
+    let candidate_path = publish_snapshot(&candidate_root, &input, false, false);
+    let candidate_id = candidate_path.file_name().unwrap().to_str().unwrap()
+        .strip_suffix(".snapshot.sqlite").unwrap().to_owned();
+
+    // Simulate a published artifact whose SQLite/Manifest can no longer be read.
+    fs::write(&candidate_path, b"not a SQLite database").unwrap();
+
+    let app = crate::app::AppState::with_snapshot_root(
+        root.join("unused-catalog"),
+        root.clone(),
+    );
+    let rejection = app.compare_snapshots(
+        baseline_path.file_name().unwrap().to_str().unwrap()
+            .strip_suffix(".snapshot.sqlite").unwrap(),
+        &candidate_id,
+    ).expect_err("unreadable published Snapshot must be rejected");
+
+    assert_eq!(rejection.category, CompareRejectCategory::SnapshotUnreadable);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn diagnostic_divergence_does_not_create_structural_divergence() {
     let root = temp_root();
     let baseline_root = root.join("baseline");
