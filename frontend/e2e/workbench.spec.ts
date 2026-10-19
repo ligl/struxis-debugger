@@ -120,6 +120,45 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
   await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 });
 
+test("Space preserves native control behavior and is inert without an eligible Run", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Struxis Debugger" })).toBeVisible();
+
+  await page.evaluate(() => {
+    document.body.dataset.spaceDefaultPrevented = "unset";
+    document.addEventListener("keydown", (event) => {
+      if (event.code === "Space" && event.target === document.body) {
+        document.body.dataset.spaceDefaultPrevented = String(event.defaultPrevented);
+      }
+    });
+  });
+  await page.locator("body").click({ position: { x: 8, y: 8 } });
+  await page.keyboard.press("Space");
+  expect(await page.locator("body").getAttribute("data-space-default-prevented")).toBe("false");
+
+  await page.evaluate(() => {
+    const input = document.createElement("input");
+    input.dataset.testid = "space-input-fixture";
+    document.body.appendChild(input);
+    const button = document.createElement("button");
+    button.dataset.testid = "space-button-fixture";
+    button.textContent = "Fixture";
+    button.addEventListener("click", () => { button.dataset.activated = "true"; });
+    document.body.appendChild(button);
+  });
+
+  const input = page.getByTestId("space-input-fixture");
+  await input.focus();
+  await page.keyboard.press("Space");
+  await expect(input).toHaveValue(" ");
+
+  const button = page.getByTestId("space-button-fixture");
+  await button.focus();
+  await page.keyboard.press("Space");
+  await expect(button).toHaveAttribute("data-activated", "true");
+});
+
 test("overflowing workspace content scrolls inside its own panel", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
