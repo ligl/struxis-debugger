@@ -304,7 +304,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(true);
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(true));
     expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
 
     await wrapper.get('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)').trigger("click");
