@@ -81,7 +81,14 @@ const {
   toggleInstrumentGroup,
 } = useCatalogGroups(datasets);
 
-const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);\n\n// Layout-only state: changing workspace or panel visibility never mutates domain state.\ntype WorkspaceMode = "origin" | "replay" | "snapshots";\nconst workspaceMode = ref<WorkspaceMode>("origin");\nconst catalogCollapsed = ref(false);\nconst inspectorCollapsed = ref(false);\nconst diagnosticsCollapsed = ref(false);
+const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
+
+// Layout-only state: changing workspace or panel visibility never mutates domain state.
+type WorkspaceMode = "origin" | "replay" | "snapshots";
+const workspaceMode = ref<WorkspaceMode>("origin");
+const catalogCollapsed = ref(false);
+const inspectorCollapsed = ref(false);
+const diagnosticsCollapsed = ref(false);
 
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
