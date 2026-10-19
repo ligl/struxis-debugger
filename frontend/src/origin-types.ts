@@ -141,11 +141,22 @@ export interface ObjectDifferenceDto {
   properties: PropertyDifferenceDto[];
 }
 
+export interface DiagnosticDto {
+  source: string;
+  severity: string;
+  category: string;
+  objectType: string | null;
+  objectId: string | null;
+  sbarIds: string[];
+  checkpointIndex: number | null;
+  message: string;
+}
+
 export interface DiagnosticsDifferenceDto {
   checkpointIndex: number;
   sbarId: string;
-  baseline: unknown;
-  candidate: unknown;
+  baseline: DiagnosticDto[];
+  candidate: DiagnosticDto[];
 }
 
 export interface SnapshotCompareResultDto {
