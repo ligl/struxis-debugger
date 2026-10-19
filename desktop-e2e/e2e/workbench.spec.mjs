@@ -444,7 +444,7 @@ describe("Struxis Debugger native desktop", () => {
       `Origin selection preview must span the full chart height: ${JSON.stringify(previewGeometry)}`,
     );
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
-    await originChart.waitForDisplayed();
+    await $('[data-testid="run-chart-panel"]').waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
     await originCanvas.waitForDisplayed();
