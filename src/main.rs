@@ -1,20 +1,20 @@
-pub mod app;
-pub mod catalog;
-pub mod compare;
-pub mod commands;
-pub mod dataset;
-pub mod discovery;
-pub mod ipc;
-pub mod run;
-pub mod replay;
-pub mod checkpoint;
-pub mod diagnostics;
-pub mod worker;
-pub mod manager;
-pub mod snapshot;
-pub mod snapshot_writer;
-pub mod snapshot_store;
-pub mod effective_config;
+mod app;
+mod catalog;
+mod compare;
+mod commands;
+mod dataset;
+mod discovery;
+mod ipc;
+mod run;
+mod replay;
+mod checkpoint;
+mod diagnostics;
+mod worker;
+mod manager;
+mod snapshot;
+mod snapshot_writer;
+mod snapshot_store;
+mod effective_config;
 
 fn main() {
     tauri::Builder::default()
@@ -39,3 +39,6 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("failed to run Struxis Debugger");
 }
+
+#[cfg(test)]
+mod tests;
