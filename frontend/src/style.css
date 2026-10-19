@@ -1088,6 +1088,19 @@ body,
   grid-template-columns: minmax(0, 1fr) 42px;
 }
 
+.workspace-mode {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workspace-mode > .panel,
+.workspace-mode > .operations-panel,
+.workspace-mode > .snapshot-panel {
+  min-width: 0;
+}
+
 .workspace-content {
   display: flex;
   min-width: 0;
