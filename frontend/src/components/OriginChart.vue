@@ -18,6 +18,7 @@ let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let fittedOriginDatasetId: string | null = null;
 
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
@@ -26,7 +27,10 @@ function updateChart(): void {
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
     chartError.value = "";
-    chart.timeScale().fitContent();
+    if (fittedOriginDatasetId !== props.originDatasetId) {
+      chart.timeScale().fitContent();
+      fittedOriginDatasetId = props.originDatasetId;
+    }
   } catch (error) {
     candleSeries.setData([]);
     volumeSeries.setData([]);
@@ -39,6 +43,10 @@ onMounted(() => {
   chart = createChart(chartHost.value, {
     width: chartHost.value.clientWidth,
     height: 420,
+    grid: {
+      vertLines: { visible: false },
+      horzLines: { visible: false },
+    },
     layout: {
       background: { type: ColorType.Solid, color: "#191c20" },
       textColor: "#a0a7b0",
@@ -88,7 +96,7 @@ onMounted(() => {
   updateChart();
 });
 
-watch(() => props.bars, updateChart);
+watch(() => [props.bars, props.originDatasetId] as const, updateChart);
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
