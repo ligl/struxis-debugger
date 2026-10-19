@@ -386,6 +386,7 @@ impl AppState {
         })
     }
 
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn catalog_path(&self) -> &Path {
         &self.inner.catalog_path
