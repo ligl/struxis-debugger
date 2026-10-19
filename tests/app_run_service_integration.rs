@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use capitus_struxis_debugger::{
     app::AppState,
     ipc::{IpcError, IpcErrorCode},
+    run::RunStatus,
 };
 
 fn test_catalog_path() -> PathBuf {
@@ -174,4 +175,64 @@ fn active_run_rejects_origin_and_test_dataset_replacement() {
 
     // A completed Run remains owned until explicit Dispose.
     state.replay_dispose().expect("Run resources should be disposed");
+}
+
+
+#[test]
+fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let snapshot_root = std::env::temp_dir().join(format!(
+        "capitus-debugger-run-lifecycle-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after UNIX epoch")
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&snapshot_root).expect("Snapshot root should be created");
+    let state = AppState::with_snapshot_root(test_catalog_path(), snapshot_root.clone());
+
+    let entry = state
+        .discover_datasets()
+        .expect("Catalog discovery should succeed")
+        .into_iter()
+        .find(|entry| {
+            entry.available
+                && entry.bar_type.as_deref()
+                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+        })
+        .expect("fixture BTCUSDT stream should be available");
+
+    let origin = state.load_origin(&entry.id, true).expect("Origin should load");
+    assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
+    let test = state
+        .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
+        .expect("two-SBar Test Dataset should be created");
+    assert_eq!(test.sbar_count, 2);
+
+    let initial = state.start_run().expect("Run should start");
+    assert_eq!(initial.status, RunStatus::Ready);
+    assert_eq!(initial.processed_count, 0);
+
+    let first = state.replay_step().expect("first SBar should process");
+    assert_eq!(first.processed_count, 1);
+    assert_eq!(first.status, RunStatus::Paused);
+
+    let completed = state.replay_step().expect("second SBar should complete Run");
+    assert_eq!(completed.processed_count, 2);
+    assert_eq!(completed.status, RunStatus::Completed);
+
+    let artifacts = state
+        .discover_snapshots()
+        .expect("Snapshot discovery should succeed after completion");
+    assert_eq!(
+        artifacts.len(),
+        1,
+        "Exactly one completed Snapshot should be discoverable"
+    );
+
+    let disposed = state.replay_dispose().expect("Run resources should be disposed");
+    assert_eq!(disposed.status, RunStatus::Disposed);
+    drop(state);
+    std::fs::remove_dir_all(snapshot_root).expect("temporary Snapshot root should be removed");
 }
