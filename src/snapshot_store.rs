@@ -246,6 +246,19 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_root_that_is_a_file_returns_a_clear_error() {
+        let root = temp_root();
+        fs::write(&root, b"not a directory").unwrap();
+
+        let error = discover_snapshot_artifacts(&root).unwrap_err();
+
+        assert!(error.contains("Snapshot root is not a directory"));
+        assert!(error.contains(&root.display().to_string()));
+
+        let _ = fs::remove_file(root);
+    }
+
+    #[test]
     fn missing_snapshot_directory_is_an_empty_discovery_result() {
         let root = temp_root();
         assert!(discover_snapshot_artifacts(&root).unwrap().is_empty());
