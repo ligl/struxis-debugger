@@ -378,9 +378,9 @@ describe("Struxis Debugger native desktop", () => {
     // SQLite Snapshots with an identical complete SBar sequence fingerprint.
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     await $('[data-testid="run-restart"]').click();
-    const runStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
+    const secondRunStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
     await browser.waitUntil(
-      async () => (await runStatus.getText()).trim() === "READY",
+      async () => (await secondRunStatus.getText()).trim() === "READY",
       {
         timeout: 30_000,
         interval: 200,
@@ -390,17 +390,17 @@ describe("Struxis Debugger native desktop", () => {
 
     await $('[data-testid="run-step"]').click();
     await browser.waitUntil(
-      async () => ["PAUSED", "COMPLETED"].includes((await runStatus.getText()).trim()),
+      async () => ["PAUSED", "COMPLETED"].includes((await secondRunStatus.getText()).trim()),
       {
         timeout: 30_000,
         interval: 200,
         timeoutMsg: "First checkpoint of the second Run did not settle.",
       },
     );
-    if ((await runStatus.getText()).trim() !== "COMPLETED") {
+    if ((await secondRunStatus.getText()).trim() !== "COMPLETED") {
       await $('[data-testid="run-step"]').click();
       await browser.waitUntil(
-        async () => (await runStatus.getText()).trim() === "COMPLETED",
+        async () => (await secondRunStatus.getText()).trim() === "COMPLETED",
         {
           timeout: 30_000,
           interval: 200,
