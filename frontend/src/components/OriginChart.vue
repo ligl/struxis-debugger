@@ -109,12 +109,12 @@ onMounted(() => {
       horzLines: { visible: false },
     },
     layout: {
-      background: { type: ColorType.Solid, color: "#191c20" },
-      textColor: "#a0a7b0",
+      background: { type: ColorType.Solid, color: "#131722" },
+      textColor: "#b2b5be",
       attributionLogo: false,
     },
     rightPriceScale: {
-      borderColor: "#30353b",
+      borderColor: "#2a2e39",
       scaleMargins: { top: 0.08, bottom: 0.22 },
     },
     timeScale: {
@@ -124,7 +124,7 @@ onMounted(() => {
       rightOffset: 4,
     },
     crosshair: {
-      vertLine: { color: "#858d97", labelBackgroundColor: "#30353b" },
+      vertLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
       horzLine: { color: "#858d97", labelBackgroundColor: "#30353b" },
     },
   });
