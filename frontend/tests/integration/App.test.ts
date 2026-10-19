@@ -23,7 +23,7 @@ function mountApp() {
           props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
         },
         OriginChart: {
-          template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\\'sbar-click\\', \\'100\\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\\'sbar-click\\', \\'200\\')">Select SBar 200</button></section>',
+          template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button></section>',
           props: ["bars", "originDatasetId"],
         },
       },
