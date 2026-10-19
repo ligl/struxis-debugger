@@ -233,7 +233,7 @@ fn snapshot_writer_fail_marks_status_without_progression() {
         fs::read_dir(&temp_dir)
             .unwrap()
             .flatten()
-            .for_each(|entry| fs::remove_file(entry.path()).ok());
+            .for_each(|entry| { let _ = fs::remove_file(entry.path()); });
     }
 }
 
