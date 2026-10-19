@@ -268,14 +268,48 @@ fn compare_structure_record(
         baseline_state.get("swings"), candidate_state.get("swings"), "swingId", output,
     )?;
 
-    // A valid Snapshot schema currently has no other state fields. Treat schema
-    // drift as an integrity error rather than silently ignoring new semantics.
-    for key in ["cbarCount", "cbars", "swingCount", "swings"] {
-        if baseline_state.get(key).is_none() || candidate_state.get(key).is_none() {
+    // A valid Snapshot schema currently has exactly these state fields.
+    // Reject schema drift and internally inconsistent counts rather than
+    // silently producing a partial comparison from malformed state_data.
+    for (label, state) in [("baseline", &baseline_state), ("candidate", &candidate_state)] {
+        let fields = state.as_object().ok_or_else(|| reject(
+            CompareRejectCategory::SnapshotIntegrityFailure,
+            format!("{label} state_data must be an object"),
+        ))?;
+        for key in ["cbarCount", "cbars", "swingCount", "swings"] {
+            if !fields.contains_key(key) {
+                return Err(reject(
+                    CompareRejectCategory::SnapshotIntegrityFailure,
+                    format!("{label} state_data is missing required field: {key}"),
+                ));
+            }
+        }
+        if let Some(key) = fields.keys().find(|key| {
+            !["cbarCount", "cbars", "swingCount", "swings"].contains(&key.as_str())
+        }) {
             return Err(reject(
                 CompareRejectCategory::SnapshotIntegrityFailure,
-                format!("Missing required state_data field: {key}"),
+                format!("{label} state_data contains unsupported field: {key}"),
             ));
+        }
+        for (count_key, collection_key, label_name) in [
+            ("cbarCount", "cbars", "CBar"),
+            ("swingCount", "swings", "Swing"),
+        ] {
+            let declared_count = fields[count_key].as_u64().ok_or_else(|| reject(
+                CompareRejectCategory::SnapshotIntegrityFailure,
+                format!("{label} {count_key} must be a non-negative integer"),
+            ))?;
+            let actual_count = fields[collection_key].as_array().ok_or_else(|| reject(
+                CompareRejectCategory::SnapshotIntegrityFailure,
+                format!("{label} {collection_key} must be an array"),
+            ))?.len() as u64;
+            if declared_count != actual_count {
+                return Err(reject(
+                    CompareRejectCategory::SnapshotIntegrityFailure,
+                    format!("{label} {label_name} count does not match its collection"),
+                ));
+            }
         }
     }
     let _ = before;
@@ -506,6 +540,28 @@ mod tests {
                 "classification must follow the typed variant, not the message text",
             );
         }
+    }
+
+    #[test]
+    fn rejects_state_data_when_declared_count_disagrees_with_collection() {
+        let mut before = record(0, "100", r#"[{"cbarId":"10"}]"#, "[]");
+        let after = record(0, "100", r#"[{"cbarId":"10"}]"#, "[]");
+        before.state_data = before.state_data.replace("\\"cbarCount\\":1", "\\"cbarCount\\":0");
+
+        let rejection = compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err();
+        assert_eq!(rejection.category, CompareRejectCategory::SnapshotIntegrityFailure);
+        assert!(rejection.message.contains("CBar count"));
+    }
+
+    #[test]
+    fn rejects_unrecognized_top_level_state_data_fields() {
+        let mut before = record(0, "100", "[]", "[]");
+        let after = record(0, "100", "[]", "[]");
+        before.state_data = before.state_data.replace("\\\"swings\\\":[]", "\\\"swings\\\":[],\\\"futureField\\\":true");
+
+        let rejection = compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err();
+        assert_eq!(rejection.category, CompareRejectCategory::SnapshotIntegrityFailure);
+        assert!(rejection.message.contains("unsupported field"));
     }
 
     #[test]
