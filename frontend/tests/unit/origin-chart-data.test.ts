@@ -68,7 +68,7 @@ describe("mapOriginBarsToChart", () => {
   it("rejects non-canonical and unsafe chart timestamps", () => {
     expect(() => mapOriginBarsToChart([bar({ tsEvent: "01700000000000000000", sbarId: "01700000000000000000" })]))
       .toThrow(/canonical non-negative integer/);
-    const unsafe = "9007199254740991000000000";
+    const unsafe = "9007199254740992000000000";
     expect(() => mapOriginBarsToChart([bar({ tsEvent: unsafe, sbarId: unsafe })]))
       .toThrow(/safe Unix-second range/);
   });
