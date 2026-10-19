@@ -26,6 +26,10 @@ function mountApp() {
           template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button></section>',
           props: ["bars", "originDatasetId"],
         },
+        RunChart: {
+          template: '<section data-testid="run-chart-test-stub"><h3>Test Dataset SBar chart</h3></section>',
+          props: ["origin", "testDataset"],
+        },
       },
     },
   });
@@ -293,7 +297,7 @@ describe("Test, Run and Snapshot workbench", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps one authoritative chart mounted and visible in Test & Replay", async () => {
+  it("uses independent Origin and Run chart components in their respective workspaces", async () => {
     const origin = makeOrigin("origin-existing");
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
@@ -307,9 +311,11 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(true));
     expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
 
+    expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(false);
     await wrapper.get('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)').trigger("click");
-    expect(wrapper.get('[data-testid="origin-chart-test-stub"]').isVisible()).toBe(true);
-    expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
+    expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="run-chart-test-stub"]')).toHaveLength(1);
     expect(wrapper.get(".workflow-toolbar h2").text()).toBe("Test Dataset & Replay");
   });
 
