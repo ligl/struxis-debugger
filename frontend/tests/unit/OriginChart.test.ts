@@ -135,10 +135,16 @@ describe("OriginChart", () => {
 
     expect(chartMocks.fitContent).not.toHaveBeenCalled();
 
-    await wrapper.setProps({ bars: [bar()] });
+    // Vue Test Utils currently infers only the generic vnode props for this
+    // SFC's setProps overload, so narrow the helper to this component's public props.
+    const setOriginChartProps = wrapper.setProps as unknown as (
+      props: Partial<{ bars: SBarDto[]; originDatasetId: string }>,
+    ) => Promise<void>;
+
+    await setOriginChartProps({ bars: [bar()] });
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
 
-    await wrapper.setProps({
+    await setOriginChartProps({
       bars: [
         bar(),
         bar({
@@ -150,7 +156,7 @@ describe("OriginChart", () => {
     });
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
 
-    await wrapper.setProps({
+    await setOriginChartProps({
       originDatasetId: "origin-2",
       bars: [bar({
         sbarId: "1700000120000000000",
