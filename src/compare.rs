@@ -414,7 +414,7 @@ mod tests {
             ts_event: sbar_id.into(),
             record_kind: "Full".into(),
             state_data: format!(
-                r#"{{"cbarCount":"{}","cbars":{},"swingCount":"{}","swings":{}}}"#,
+                r#"{{"cbarCount":{},"cbars":{},"swingCount":{},"swings":{}}}"#,
                 serde_json::from_str::<Value>(cbars).unwrap().as_array().unwrap().len(),
                 cbars,
                 serde_json::from_str::<Value>(swings).unwrap().as_array().unwrap().len(),
@@ -426,8 +426,8 @@ mod tests {
 
     #[test]
     fn compares_cbar_by_domain_id_and_reports_first_divergence() {
-        let before = record(0, "100", r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":"1","fractalType":null,"createdAt":"1"}]"#, "[]");
-        let after = record(0, "100", r#"[{"cbarId":"10","high":"13","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":"1","fractalType":null,"createdAt":"1"}]"#, "[]");
+        let before = record(0, "100", r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"1"}]"#, "[]");
+        let after = record(0, "100", r#"[{"cbarId":"10","high":"13","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"1"}]"#, "[]");
         let mut differences = Vec::new();
         compare_structure_record(&before, &after, &mut differences).unwrap();
         assert_eq!(differences.len(), 1);
@@ -441,13 +441,13 @@ mod tests {
         let before = record(
             0,
             "100",
-            r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":"1","fractalType":null,"createdAt":"1000"}]"#,
+            r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"1000"}]"#,
             r#"[{"swingId":"20","high":"12","low":"9","createdAt":"1000","updatedAt":"1001"}]"#,
         );
         let after = record(
             0,
             "100",
-            r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":"1","fractalType":null,"createdAt":"2000"}]"#,
+            r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"2000"}]"#,
             r#"[{"swingId":"20","high":"12","low":"9","createdAt":"2000","updatedAt":"2001"}]"#,
         );
         let mut differences = Vec::new();
