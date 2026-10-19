@@ -11,6 +11,7 @@
     "build": "cd frontend && bun run build",
     "check": "cd frontend && bun run check",
     "preview": "cd frontend && bun run preview",
-    "test:e2e": "cd frontend && bun run test:e2e"
+    "test:e2e": "cd frontend && bun run test:e2e",
+    "test:e2e:desktop": "cd desktop-e2e && bun run test:app"
   }
 }
