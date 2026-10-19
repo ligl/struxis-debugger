@@ -8,15 +8,15 @@ const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 
 /// The resolved Struxis configuration recorded by a Debugger Snapshot.
 ///
-/// Capacity values are decimal strings in the serialized representation to
-/// match the Snapshot canonical JSON contract.
+/// Capacity values are serialized as JSON integers; the config fingerprint hashes
+/// this exact canonical representation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct EffectiveStruxisConfig {
     pub(crate) enable_structure: bool,
-    pub(crate) structure_cbars_capacity: String,
-    pub(crate) structure_swings_capacity: String,
-    pub(crate) structure_trends_capacity: String,
+    pub(crate) structure_cbars_capacity: usize,
+    pub(crate) structure_swings_capacity: usize,
+    pub(crate) structure_trends_capacity: usize,
 }
 
 impl EffectiveStruxisConfig {
@@ -25,9 +25,9 @@ impl EffectiveStruxisConfig {
         let (cbars, swings, trends) = config.resolved_structure_capacities();
         Self {
             enable_structure: config.enable_structure,
-            structure_cbars_capacity: cbars.to_string(),
-            structure_swings_capacity: swings.to_string(),
-            structure_trends_capacity: trends.to_string(),
+            structure_cbars_capacity: cbars,
+            structure_swings_capacity: swings,
+            structure_trends_capacity: trends,
         }
     }
 
@@ -80,9 +80,9 @@ mod tests {
         let (cbars, swings, trends) = config.resolved_structure_capacities();
 
         assert!(effective.enable_structure);
-        assert_eq!(effective.structure_cbars_capacity, cbars.to_string());
-        assert_eq!(effective.structure_swings_capacity, swings.to_string());
-        assert_eq!(effective.structure_trends_capacity, trends.to_string());
+        assert_eq!(effective.structure_cbars_capacity, cbars);
+        assert_eq!(effective.structure_swings_capacity, swings);
+        assert_eq!(effective.structure_trends_capacity, trends);
     }
 
     #[test]
@@ -96,17 +96,17 @@ mod tests {
         let effective = EffectiveStruxisConfig::from_struxis_config(&config);
 
         assert!(!effective.enable_structure);
-        assert_eq!(effective.structure_cbars_capacity, "321");
-        assert_eq!(effective.structure_swings_capacity, "123");
-        assert_eq!(effective.structure_trends_capacity, "45");
+        assert_eq!(effective.structure_cbars_capacity, 321);
+        assert_eq!(effective.structure_swings_capacity, 123);
+        assert_eq!(effective.structure_trends_capacity, 45);
     }
 
     #[test]
     fn fingerprint_rejects_missing_and_unknown_schema_fields() {
-        let missing = r#"{"enableStructure":true,"structureCbarsCapacity":"10000","structureSwingsCapacity":"2000"}"#;
+        let missing = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000}"#;
         assert!(fingerprint_canonical_config(missing).unwrap_err().contains("schema"));
 
-        let unknown = r#"{"enableStructure":true,"structureCbarsCapacity":"10000","structureSwingsCapacity":"2000","structureTrendsCapacity":"666","tradingFeeModel":"ignored"}"#;
+        let unknown = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"structureTrendsCapacity":666,"tradingFeeModel":"ignored"}"#;
         assert!(fingerprint_canonical_config(unknown).unwrap_err().contains("schema"));
     }
 
