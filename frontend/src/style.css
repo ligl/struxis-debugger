@@ -1383,6 +1383,26 @@ body,
   border-left: 1px dashed #e4b46f;
 }
 
+/* Run chart has an independent chart instance and no Origin range-selection state. */
+.run-chart-panel {
+  min-width: 0;
+  margin-top: 2px;
+  border: 1px solid var(--dbg-border);
+  background: var(--dbg-surface-1);
+}
+
+.run-chart-host {
+  width: 100%;
+  min-width: 0;
+  height: 460px;
+}
+
+@media (max-width: 720px) {
+  .run-chart-host {
+    height: 340px;
+  }
+}
+
 .origin-chart-heading {
   display: flex;
   align-items: end;
