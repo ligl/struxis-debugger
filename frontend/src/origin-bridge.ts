@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CatalogDatasetEntry, OriginDatasetDto, RunStateDto, SnapshotArtifactDto, TestDatasetDto } from "./origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto, RunStateDto, SnapshotArtifactDto, SnapshotCompareResultDto, TestDatasetDto } from "./origin-types";
 
 export function listCatalogDatasets(): Promise<CatalogDatasetEntry[]> {
   return invoke<CatalogDatasetEntry[]>("list_catalog_datasets");
@@ -44,6 +44,16 @@ export function describeIpcError(error: unknown): string {
 
 export function listSnapshots(): Promise<SnapshotArtifactDto[]> {
   return invoke<SnapshotArtifactDto[]>("list_snapshots");
+}
+
+export function compareSnapshots(
+  baselineSnapshotId: string,
+  candidateSnapshotId: string,
+): Promise<SnapshotCompareResultDto> {
+  return invoke<SnapshotCompareResultDto>("compare_snapshots", {
+    baselineSnapshotId,
+    candidateSnapshotId,
+  });
 }
 
 export function startRun(): Promise<RunStateDto> {
