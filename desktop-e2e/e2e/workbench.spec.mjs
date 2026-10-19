@@ -422,8 +422,30 @@ describe("Struxis Debugger native desktop", () => {
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
     await originCanvas.waitForDisplayed();
     await clickOriginBar(1);
-    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
 
+    // Do not navigate away immediately after dispatching the native pointer
+    // action. Confirm the chart event reached the application state machine
+    // first, and preserve the visible status if the click was rejected.
+    const rangeStatus = await $('[data-testid="origin-range-selection-status"]');
+    try {
+      await browser.waitUntil(
+        async () => (await rangeStatus.getText()).includes(
+          `Selected 2 SBars: ${firstSbarId} → ${secondSbarId}`,
+        ),
+        {
+          timeout: 5_000,
+          interval: 100,
+          timeoutMsg: "The second native chart click did not complete the expected two-SBar range.",
+        },
+      );
+    } catch (error) {
+      const observedStatus = await rangeStatus.getText();
+      throw new Error(
+        `Origin range selection failed after the second chart click. Expected first=${firstSbarId}, second=${secondSbarId}; observed status=${JSON.stringify(observedStatus)}. ${String(error)}`,
+      );
+    }
+
+    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     const selectedRange = await $('[data-testid="selected-test-range"]');
     await selectedRange.waitForDisplayed();
     const selectedStart = await selectedRange.$("div:nth-child(1) code");
