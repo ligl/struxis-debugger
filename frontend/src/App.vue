@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
@@ -116,6 +116,54 @@ async function startLoad(): Promise<void> {
   });
 }
 
+function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return target.closest(
+    [
+      "input",
+      "textarea",
+      "select",
+      "button",
+      "a[href]",
+      "summary",
+      "[contenteditable]:not([contenteditable='false'])",
+      "[role='button']",
+      "[role='link']",
+      "[role='checkbox']",
+      "[role='radio']",
+      "[role='switch']",
+      "[role='tab']",
+      "[role='menuitem']",
+      "[role='slider']",
+      "[role='spinbutton']",
+      "[role='textbox']",
+      "[role='combobox']",
+      "[tabindex]:not([tabindex='-1'])",
+    ].join(","),
+  ) !== null;
+}
+
+function handleReplayShortcut(event: KeyboardEvent): void {
+  if (event.code !== "Space" || event.repeat) return;
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (
+    isInteractiveKeyboardTarget(event.target) ||
+    isInteractiveKeyboardTarget(document.activeElement) ||
+    runBusy.value
+  ) return;
+
+  const status = runState.value?.status;
+  const command = status === "running"
+    ? "pause"
+    : status === "paused"
+      ? "play"
+      : null;
+  if (!command) return;
+
+  event.preventDefault();
+  void handleRunCommand(command);
+}
+
 function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
   const labels: Record<SnapshotArtifactDto["kind"], string> = {
     complete: "COMPLETE / VERIFIED",
@@ -134,10 +182,15 @@ function formatTimestamp(value: string | null): string {
 }
 
 onMounted(async () => {
+  document.addEventListener("keydown", handleReplayShortcut);
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
   if (!originHandoffDuringStartup) await refreshCurrentTestDataset();
+});
+
+onUnmounted(() => {
+  document.removeEventListener("keydown", handleReplayShortcut);
 });
 </script>
 
