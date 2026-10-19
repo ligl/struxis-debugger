@@ -211,6 +211,13 @@ onMounted(() => {
 });
 
 watch(() => [props.bars, props.originDatasetId] as const, updateChart);
+watch(
+  () => [props.selectionStartSbarId, props.selectionEndSbarId, props.selectionPending] as const,
+  () => {
+    updateSbarCoordinates();
+    if (!props.selectionPending) previewX.value = null;
+  },
+);
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
