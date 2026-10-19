@@ -11,7 +11,7 @@ use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 /// No timestamp range or SQL predicate is applied. The returned records are
 /// checked in event-time order; this function fails rather than silently
 /// sorting a dataset whose ordering is inconsistent.
-pub fn load_bars(catalog_path: &Path, bar_type: &str) -> Result<Vec<Bar>> {
+pub(crate) fn load_bars(catalog_path: &Path, bar_type: &str) -> Result<Vec<Bar>> {
     let mut catalog = ParquetDataCatalog::new(catalog_path, None, None, None, None);
     let bars = catalog.query::<Bar>(
         Some(vec![bar_type.to_owned()]),
@@ -72,12 +72,12 @@ fn validate_catalog_bars(bars: &[Bar], bar_type: &str) -> Result<()> {
 /// Catalog input has been processed and validated. The BacktestEngine and its
 /// Cache are disposed before this value is returned.
 #[derive(Debug, Clone)]
-pub struct OriginLoad {
-    pub origin_dataset_id: uuid::Uuid,
-    pub state_key: capitus_struxis::StruxisStateKey,
-    pub sbar_sequence_fingerprint: String,
-    pub bar_type: String,
-    pub bars: Vec<Bar>,
+pub(crate) struct OriginLoad {
+    pub(crate) origin_dataset_id: uuid::Uuid,
+    pub(crate) state_key: capitus_struxis::StruxisStateKey,
+    pub(crate) sbar_sequence_fingerprint: String,
+    pub(crate) bar_type: String,
+    pub(crate) bars: Vec<Bar>,
 }
 
 /// Loads a complete Catalog BarType through Nautilus → Strategy → Struxis,
@@ -87,7 +87,7 @@ pub struct OriginLoad {
 /// This is an Origin Load operation, not a replay step: the complete dataset is
 /// processed in one temporary engine. Each later Run must create its own
 /// independent engine, Cache, Strategy, and Struxis state.
-pub fn load_origin(
+pub(crate) fn load_origin(
     catalog_path: &Path,
     bar_type: &str,
     enable_structure: bool,
@@ -217,7 +217,7 @@ pub fn load_origin(
 /// `StruxisStateView`. Both sequences are compared oldest-first, without
 /// sorting, filling gaps, normalizing values, or converting fixed-precision
 /// prices/quantities to floating point.
-pub fn validate_sbar_series(
+pub(crate) fn validate_sbar_series(
     origin_bars: &[Bar],
     sbar_series: &capitus_struxis::sbar::SBarSeries,
 ) -> Result<()> {
