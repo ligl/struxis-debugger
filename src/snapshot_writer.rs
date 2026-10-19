@@ -37,6 +37,8 @@ pub(crate) struct SnapshotWriter {
     published_by_this_writer: bool,
     #[cfg(test)]
     fail_directory_sync: bool,
+    #[cfg(test)]
+    fail_temporary_cleanup: bool,
 }
 
 struct InputMetadata {
@@ -80,6 +82,8 @@ impl SnapshotWriter {
             published_by_this_writer: false,
             #[cfg(test)]
             fail_directory_sync: false,
+            #[cfg(test)]
+            fail_temporary_cleanup: false,
         })
     }
 
@@ -134,7 +138,19 @@ impl SnapshotWriter {
         // The published file is already valid at this point. If unlinking the
         // temporary hard link fails, keep the published artifact intact and
         // continue; failure handling must not mutate the shared inode.
-        if let Err(error) = fs::remove_file(&self.temporary_path) {
+        #[cfg(test)]
+        let cleanup_result = if self.fail_temporary_cleanup {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "simulated temporary-link cleanup failure",
+            ))
+        } else {
+            fs::remove_file(&self.temporary_path)
+        };
+        #[cfg(not(test))]
+        let cleanup_result = fs::remove_file(&self.temporary_path);
+
+        if let Err(error) = cleanup_result {
             log::warn!(
                 "Published Snapshot {} but could not remove temporary link {}: {error}",
                 self.published_path.display(),
@@ -524,6 +540,99 @@ mod tests {
         assert_eq!(artifacts.len(), 1);
         assert_eq!(artifacts[0].kind, crate::snapshot_store::SnapshotArtifactKind::Complete);
         assert_eq!(artifacts[0].snapshot_id.as_deref(), Some(manifest.snapshot_id.as_str()));
+
+        drop(writer);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn publish_destination_collision_never_replaces_existing_file() {
+        let root = std::env::temp_dir().join(format!(
+            "capitus-snapshot-publish-collision-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let input = input();
+        let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
+        let mut state = RunState::ready(
+            "writer-publish-collision".into(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            input.bars.len(),
+        ).unwrap();
+        writer.initialize(&state, &config()).unwrap();
+
+        for (index, bar) in input.bars.iter().enumerate() {
+            let sbar_id = bar.ts_event.to_string();
+            let projection = ReplayCheckpointProjection {
+                state_key: format!("{:?}", input.state_key),
+                last_ts_event: Some(sbar_id.clone()),
+                sbar_count: index + 1,
+                sbars: vec![],
+                structure: None,
+                diagnostics: Vec::new(),
+            };
+            writer.commit_checkpoint(index, &sbar_id, &projection).unwrap();
+            state.confirm_checkpoint(sbar_id).unwrap();
+        }
+
+        fs::write(writer.published_path(), b"pre-existing artifact").unwrap();
+        let error = writer.finalize(&state).unwrap_err();
+        assert!(error.contains("publish destination already exists"));
+        writer.fail("publish destination collision").unwrap();
+
+        assert_eq!(
+            fs::read(writer.published_path()).unwrap(),
+            b"pre-existing artifact",
+            "publication must never overwrite an artifact created at the destination",
+        );
+        let (failed_manifest, _) = read_database(&writer.temporary_path).unwrap();
+        assert_eq!(failed_manifest.status, STATUS_FAILED);
+
+        drop(writer);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn temporary_link_cleanup_failure_preserves_published_complete_snapshot() {
+        let root = std::env::temp_dir().join(format!(
+            "capitus-snapshot-cleanup-failure-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let input = input();
+        let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
+        let mut state = RunState::ready(
+            "writer-cleanup-failure".into(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            input.bars.len(),
+        ).unwrap();
+        writer.initialize(&state, &config()).unwrap();
+
+        for (index, bar) in input.bars.iter().enumerate() {
+            let sbar_id = bar.ts_event.to_string();
+            let projection = ReplayCheckpointProjection {
+                state_key: format!("{:?}", input.state_key),
+                last_ts_event: Some(sbar_id.clone()),
+                sbar_count: index + 1,
+                sbars: vec![],
+                structure: None,
+                diagnostics: Vec::new(),
+            };
+            writer.commit_checkpoint(index, &sbar_id, &projection).unwrap();
+            state.confirm_checkpoint(sbar_id).unwrap();
+        }
+
+        writer.fail_temporary_cleanup = true;
+        writer.finalize(&state).unwrap();
+        assert!(writer.published_path().is_file());
+        assert!(writer.temporary_path.is_file());
+
+        // The two paths are hard links to one inode. Failure handling must not
+        // mutate the Complete Manifest through the leftover temporary name.
+        writer.fail("temporary link cleanup failed").unwrap();
+        let (manifest, records) = read_database(writer.published_path()).unwrap();
+        assert_eq!(manifest.status, STATUS_COMPLETE);
+        verify_complete_snapshot(&manifest, &records).unwrap();
 
         drop(writer);
         let _ = fs::remove_dir_all(root);
