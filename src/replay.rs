@@ -23,7 +23,6 @@ pub(crate) enum ReplayCommandKind {
     Play,
     Pause,
     Stop,
-    Resume,
     Dispose,
     Restart,
 }
