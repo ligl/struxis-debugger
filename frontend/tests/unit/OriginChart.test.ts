@@ -103,9 +103,11 @@ describe("OriginChart", () => {
     expect(wrapper.text()).not.toContain("TradingView");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([
       { time: 1700000000, open: 10, high: 12, low: 9, close: 11 },
+      { time: 1700000060, open: 11, high: 13, low: 10, close: 12 },
     ]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([
       { time: 1700000000, value: 100, color: "#557e65" },
+      { time: 1700000060, value: 100, color: "#557e65" },
     ]);
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
     expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-origin-dataset-id"))
