@@ -332,7 +332,9 @@ describe("Struxis Debugger native desktop", () => {
             const host = document.querySelector('[data-testid="origin-chart-canvas"]');
             if (!host) return null;
             const rect = host.getBoundingClientRect();
-            const coordinate = Number(host.getAttribute(attribute));
+            const rawCoordinate = host.getAttribute(attribute);
+            if (rawCoordinate === null || rawCoordinate.trim() === "") return null;
+            const coordinate = Number(rawCoordinate);
             const style = getComputedStyle(host);
             if (
               style.display === "none" ||
