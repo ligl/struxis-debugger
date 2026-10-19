@@ -314,6 +314,63 @@ fn snapshot_writer_atomic_publish_renames_temp_to_final() {
 }
 
 #[test]
+fn snapshot_writer_does_not_overwrite_existing_publish_destination() {
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("System clock should be after Unix epoch")
+        .as_nanos();
+    let temp_dir = std::env::temp_dir()
+        .join(format!("capitus-snapshot-publish-collision-{unique_suffix}"));
+    fs::create_dir_all(&temp_dir).expect("Create isolated Snapshot directory");
+
+    let bars = create_test_bars(1);
+    let input = create_test_input(bars);
+    let initial_state = create_initial_run_state(&input);
+    let config = create_effective_config();
+    let mut writer = SnapshotWriter::new(
+        &temp_dir,
+        &input,
+        &test_instrument_id().to_string(),
+    )
+    .expect("SnapshotWriter should be created");
+    writer
+        .initialize(&initial_state, &config)
+        .expect("SnapshotWriter should initialize");
+
+    let sbar_id = input.bars[0].ts_event.to_string();
+    let projection = create_minimal_checkpoint(0, &sbar_id);
+    writer
+        .commit_checkpoint(0, &sbar_id, &projection)
+        .expect("Checkpoint should commit");
+
+    // Simulate another artifact occupying the generated destination after
+    // initialize(). Publication must fail without replacing these bytes.
+    let existing_bytes = b"pre-existing snapshot artifact";
+    fs::write(writer.published_path(), existing_bytes)
+        .expect("Create pre-existing publish destination");
+
+    let completed_state = RunState {
+        status: RunStatus::Completed,
+        processed_count: 1,
+        ..initial_state
+    };
+    let result = writer.finalize(&completed_state);
+
+    assert!(
+        result.is_err(),
+        "Finalization must reject an occupied publish destination"
+    );
+    assert_eq!(
+        fs::read(writer.published_path()).expect("Read existing destination"),
+        existing_bytes,
+        "Finalization must not overwrite an existing artifact"
+    );
+
+    drop(writer);
+    fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot directory");
+}
+
+#[test]
 fn snapshot_writer_rejects_finalization_when_checkpoints_are_incomplete() {
     let unique_suffix = SystemTime::now()
         .duration_since(UNIX_EPOCH)
