@@ -50,7 +50,6 @@ impl ReplayCommandGate {
 
         Ok(ReplayCommandPermit {
             active: Arc::clone(&self.active),
-            command,
         })
     }
 }
@@ -59,14 +58,6 @@ impl ReplayCommandGate {
 #[derive(Debug)]
 pub(crate) struct ReplayCommandPermit {
     active: Arc<AtomicBool>,
-    command: ReplayCommandKind,
-}
-
-impl ReplayCommandPermit {
-    #[must_use]
-    pub(crate) const fn command(&self) -> ReplayCommandKind {
-        self.command
-    }
 }
 
 impl Drop for ReplayCommandPermit {
@@ -234,8 +225,7 @@ mod tests {
     fn permit_drop_releases_gate_after_early_return() {
         let gate = ReplayCommandGate::new();
         {
-            let permit = gate.try_enter(ReplayCommandKind::Restart).unwrap();
-            assert_eq!(permit.command(), ReplayCommandKind::Restart);
+            let _permit = gate.try_enter(ReplayCommandKind::Restart).unwrap();
         }
 
         assert!(gate.try_enter(ReplayCommandKind::Start).is_ok());
