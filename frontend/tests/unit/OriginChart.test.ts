@@ -211,6 +211,7 @@ describe("OriginChart", () => {
         ],
         originDatasetId: "origin-overlay",
         selectionStartSbarId: "1700000000000000000",
+        selectionEndSbarId: null,
         selectionPending: true,
       },
     });
