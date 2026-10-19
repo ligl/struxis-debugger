@@ -85,8 +85,6 @@ const {
   toggleInstrumentGroup,
 } = useCatalogGroups(datasets);
 
-const previewBars = computed(() => origin.value?.bars.slice(0, 12) ?? []);
-
 // Layout-only state: changing workspace or panel visibility never mutates domain state.
 type WorkspaceMode = "origin" | "replay" | "snapshots";
 const workspaceMode = ref<WorkspaceMode>("origin");
@@ -240,7 +238,7 @@ onUnmounted(() => {
         <div data-testid="primary-workspace" class="primary-workspace">
           <div data-testid="workspace-content" class="workspace-content">
             <div v-show="workspaceMode === 'origin'" class="workspace-mode">
-              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :preview-bars="previewBars" :format-timestamp="formatTimestamp" />
+              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
             </div>
             <div v-show="workspaceMode === 'replay'" class="workspace-mode">
               <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @update:start-sbar-id="startSbarId = $event" @update:end-sbar-id="endSbarId = $event" @create="createTestDataset" />
