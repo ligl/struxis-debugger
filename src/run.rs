@@ -4,7 +4,7 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum RunStatus {
+pub(crate) enum RunStatus {
     Ready,
     Running,
     Paused,
@@ -15,19 +15,19 @@ pub enum RunStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RunState {
-    pub run_id: String,
-    pub test_dataset_id: String,
-    pub input_fingerprint: String,
-    pub input_count: usize,
-    pub status: RunStatus,
-    pub processed_count: usize,
-    pub cursor_sbar_id: Option<String>,
-    pub failure_diagnostic: Option<String>,
+pub(crate) struct RunState {
+    pub(crate) run_id: String,
+    pub(crate) test_dataset_id: String,
+    pub(crate) input_fingerprint: String,
+    pub(crate) input_count: usize,
+    pub(crate) status: RunStatus,
+    pub(crate) processed_count: usize,
+    pub(crate) cursor_sbar_id: Option<String>,
+    pub(crate) failure_diagnostic: Option<String>,
 }
 
 impl RunState {
-    pub fn ready(
+    pub(crate) fn ready(
         run_id: String,
         test_dataset_id: String,
         input_fingerprint: String,
@@ -48,7 +48,7 @@ impl RunState {
         })
     }
 
-    pub fn play(&mut self) -> Result<(), String> {
+    pub(crate) fn play(&mut self) -> Result<(), String> {
         match self.status {
             RunStatus::Ready | RunStatus::Paused => {
                 self.status = RunStatus::Running;
@@ -58,7 +58,7 @@ impl RunState {
         }
     }
 
-    pub fn pause(&mut self) -> Result<(), String> {
+    pub(crate) fn pause(&mut self) -> Result<(), String> {
         match self.status {
             RunStatus::Running => {
                 self.status = RunStatus::Paused;
@@ -69,7 +69,7 @@ impl RunState {
     }
 
     /// Call only after Strategy/Struxis processing and checkpoint commit succeed.
-    pub fn confirm_checkpoint(&mut self, sbar_id: String) -> Result<(), String> {
+    pub(crate) fn confirm_checkpoint(&mut self, sbar_id: String) -> Result<(), String> {
         if !matches!(
             self.status,
             RunStatus::Ready | RunStatus::Running | RunStatus::Paused
@@ -90,7 +90,7 @@ impl RunState {
         Ok(())
     }
 
-    pub fn fail(&mut self, diagnostic: String) -> Result<(), String> {
+    pub(crate) fn fail(&mut self, diagnostic: String) -> Result<(), String> {
         if self.status == RunStatus::Disposed || diagnostic.trim().is_empty() {
             return Err("Run cannot fail from Disposed or with an empty diagnostic".into());
         }
@@ -103,7 +103,7 @@ impl RunState {
     /// Run-owned resources have been released. Processing facts remain in
     /// processed_count, input_count, cursor_sbar_id, and failure_diagnostic.
     /// Running is rejected.
-    pub fn dispose(&mut self) -> Result<(), String> {
+    pub(crate) fn dispose(&mut self) -> Result<(), String> {
         match self.status {
             RunStatus::Ready | RunStatus::Paused | RunStatus::Completed | RunStatus::Failed => {
                 self.status = RunStatus::Disposed;
