@@ -10,6 +10,7 @@ const chartMocks = vi.hoisted(() => ({
   volumeSetData: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
+  setVisibleLogicalRange: vi.fn(),
   timeToCoordinate: vi.fn(),
   subscribeVisibleLogicalRangeChange: vi.fn(),
   unsubscribeVisibleLogicalRangeChange: vi.fn(),
@@ -61,6 +62,7 @@ function installChartMock() {
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
       fitContent: chartMocks.fitContent,
+      setVisibleLogicalRange: chartMocks.setVisibleLogicalRange,
       timeToCoordinate: chartMocks.timeToCoordinate,
       subscribeVisibleLogicalRangeChange: chartMocks.subscribeVisibleLogicalRangeChange,
       unsubscribeVisibleLogicalRangeChange: chartMocks.unsubscribeVisibleLogicalRangeChange,
@@ -133,6 +135,11 @@ describe("OriginChart", () => {
       { time: 1700000060, value: 100, color: "#557e65" },
     ]);
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledWith({
+      from: -0.5,
+      to: 5.5,
+    });
     await nextTick();
     expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-origin-dataset-id"))
       .toBe("origin-1");
@@ -196,6 +203,7 @@ describe("OriginChart", () => {
 
     await setOriginChartProps({ bars: [bar()] });
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
 
     await setOriginChartProps({
       bars: [
@@ -218,6 +226,11 @@ describe("OriginChart", () => {
       })],
     });
     expect(chartMocks.fitContent).toHaveBeenCalledTimes(2);
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledTimes(2);
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({
+      from: -0.5,
+      to: 4.5,
+    });
     wrapper.unmount();
   });
 
