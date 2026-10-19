@@ -272,6 +272,14 @@ impl CheckpointSink for SnapshotWriter {
         if manifest.status == STATUS_FAILED {
             return Ok(());
         }
+        // Once the Complete Manifest and checksum have been committed, never
+        // mutate that payload to Failed: status is covered by the checksum.
+        // A later publication / directory-sync failure is reported separately;
+        // a published artifact remains valid only if its existing checksum verifies.
+        if manifest.status == STATUS_COMPLETE && !manifest.content_checksum.is_empty() {
+            self.manifest = Some(manifest);
+            return Ok(());
+        }
         manifest.status = STATUS_FAILED.to_owned();
         let payload = serde_json::to_string(&manifest)
             .map_err(|e| format!("Encode failed Snapshot Manifest: {e}"))?;
@@ -434,7 +442,7 @@ mod tests {
     }
 
     #[test]
-    fn directory_sync_failure_after_publish_marks_published_snapshot_failed() {
+    fn directory_sync_failure_preserves_the_verified_checksum_and_status() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-directory-sync-failure-{}",
             SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
@@ -471,15 +479,18 @@ mod tests {
         assert!(error.contains("simulated directory sync failure"));
         assert!(writer.published_path().is_file());
 
-        // The failed finalize path must not leave a usable Complete artifact.
+        // Do not rewrite status after checksum verification: status is part
+        // of the checksum payload. The caller still reports the directory-sync
+        // error, while discovery independently verifies the published artifact.
         writer.fail("simulated directory sync failure").unwrap();
         let (manifest, records) = read_database(writer.published_path()).unwrap();
-        assert_eq!(manifest.status, STATUS_FAILED);
+        assert_eq!(manifest.status, STATUS_COMPLETE);
         assert_eq!(records.len(), input.bars.len());
+        verify_complete_snapshot(&manifest, &records).unwrap();
 
         let artifacts = crate::snapshot_store::discover_snapshot_artifacts(&root).unwrap();
         assert_eq!(artifacts.len(), 1);
-        assert_eq!(artifacts[0].kind, crate::snapshot_store::SnapshotArtifactKind::InvalidPublished);
+        assert_eq!(artifacts[0].kind, crate::snapshot_store::SnapshotArtifactKind::Complete);
         assert_eq!(artifacts[0].snapshot_id.as_deref(), Some(manifest.snapshot_id.as_str()));
 
         drop(writer);
