@@ -30,7 +30,7 @@ const emit = defineEmits<{ create: [] }>();
     </div>
 
     <template v-if="origin">
-      <p class="microcopy">Choose a continuous, inclusive interval by clicking the start SBar and then the end SBar in the Origin chart. The backend validates both exact SBar IDs before creating the Test Dataset.</p>
+      <p class="microcopy">Choose a continuous, inclusive interval by clicking anywhere in the Origin chart plot. The first click fixes the start; move the pointer to preview a full-height shaded interval, then click to fix the end. Vertical position does not affect the selected SBar. The backend validates both exact SBar IDs before creating the Test Dataset.</p>
 
       <div v-if="rangeSelectionReady" class="detail-list" data-testid="selected-test-range">
         <div><span>SELECTED START SBAR ID</span><code>{{ startSbarId }}</code></div>
@@ -38,10 +38,10 @@ const emit = defineEmits<{ create: [] }>();
         <div><span>INCLUSIVE SBAR COUNT</span><strong>{{ selectedRangeCount.toLocaleString() }}</strong></div>
       </div>
       <div v-else-if="rangeSelectionPending" class="empty-state" data-testid="test-range-awaiting-end">
-        Start selected: <code>{{ startSbarId }}</code>. Click a second Origin candle to complete the interval.
+        Start selected: <code>{{ startSbarId }}</code>. Move the pointer to preview the interval, then click anywhere in the plot to fix the end.
       </div>
       <p v-else class="empty-state" data-testid="test-range-not-selected">
-        No new interval selected. Click two candles in the Origin chart to define the Test input.
+        No new interval selected. Click twice anywhere in the Origin chart plot to define the Test input.
       </p>
 
       <button
