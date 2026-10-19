@@ -97,6 +97,7 @@ fn create_minimal_checkpoint(index: usize, sbar_id: &str) -> ReplayCheckpointPro
         sbar_count: index + 1,
         sbars: Vec::new(),
         structure: None,
+        diagnostics: Vec::new(),
     }
 }
 
