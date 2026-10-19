@@ -136,8 +136,8 @@ export interface ObjectDifferenceDto {
   checkpointIndex: number;
   sbarId: string;
   objectType: string;
-  kind: "added" | "removed" | "modified" | "unmatched";
-  objectId: string | null;
+  kind: "added" | "removed" | "modified";
+  objectId: string;
   properties: PropertyDifferenceDto[];
 }
 
