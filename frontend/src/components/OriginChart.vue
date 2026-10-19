@@ -12,6 +12,10 @@ import { mapOriginBarsToChart } from "../origin-chart-data";
 import type { SBarDto } from "../origin-types";
 
 const props = defineProps<{ bars: SBarDto[]; originDatasetId: string }>();
+const emit = defineEmits<{
+  sbarClick: [sbarId: string];
+  selectionError: [message: string];
+}>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
 let chart: IChartApi | null = null;
@@ -19,6 +23,21 @@ let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedOriginDatasetId: string | null = null;
+let sbarIdByTime: ReadonlyMap<number, string> = new Map();
+
+function handleChartClick(param: { time?: unknown }): void {
+  if (chartError.value || props.bars.length === 0) return;
+  if (typeof param.time !== "number") {
+    emit("selectionError", "Click directly on an SBar candle to select an exact range boundary.");
+    return;
+  }
+  const sbarId = sbarIdByTime.get(param.time);
+  if (sbarId === undefined) {
+    emit("selectionError", "The clicked chart time does not map to an Origin SBar. No selection was changed.");
+    return;
+  }
+  emit("sbarClick", sbarId);
+}
 
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
@@ -26,12 +45,14 @@ function updateChart(): void {
     const projection = mapOriginBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
+    sbarIdByTime = projection.sbarIdByTime;
     chartError.value = "";
     if (props.bars.length > 0 && fittedOriginDatasetId !== props.originDatasetId) {
       chart.timeScale().fitContent();
       fittedOriginDatasetId = props.originDatasetId;
     }
   } catch (error) {
+    sbarIdByTime = new Map();
     candleSeries.setData([]);
     volumeSeries.setData([]);
     chartError.value = error instanceof Error ? error.message : String(error);
@@ -85,6 +106,7 @@ onMounted(() => {
   chart.priceScale("").applyOptions({
     scaleMargins: { top: 0.82, bottom: 0 },
   });
+  chart.subscribeClick(handleChartClick);
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
     if (!chart || !entry) return;
@@ -101,10 +123,12 @@ watch(() => [props.bars, props.originDatasetId] as const, updateChart);
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   resizeObserver = null;
+  chart?.unsubscribeClick(handleChartClick);
   chart?.remove();
   chart = null;
   candleSeries = null;
   volumeSeries = null;
+  sbarIdByTime = new Map();
 });
 </script>
 
@@ -124,6 +148,7 @@ onBeforeUnmount(() => {
       </div>
       <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
     </div>
+    <p class="microcopy chart-selection-hint">Click one candle for the range start, then another candle for the range end. The selected interval includes both endpoints.</p>
     <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="origin-chart-error">
       <strong>Chart projection rejected</strong>
       <span>{{ chartError }}</span>
