@@ -92,7 +92,7 @@ export function mapOriginBarsToChart(bars: readonly SBarDto[]): OriginChartProje
     volume.push({
       time,
       value: barVolume,
-      color: close >= open ? "#557e65" : "#8d555b",
+      color: close >= open ? "#1d756d" : "#983b42",
     });
     sbarIdByTime.set(timeSeconds, bar.sbarId);
   }
