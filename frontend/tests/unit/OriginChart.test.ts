@@ -198,6 +198,46 @@ describe("OriginChart", () => {
     expect(chartMocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
   });
 
+  it("previews a full-height range overlay and fixes both boundary lines on completion", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [
+          bar(),
+          bar({
+            sbarId: "1700000060000000000",
+            tsEvent: "1700000060000000000",
+            tsInit: "1700000060000000001",
+          }),
+        ],
+        originDatasetId: "origin-overlay",
+        selectionStartSbarId: "1700000000000000000",
+        selectionPending: true,
+      },
+    });
+    await nextTick();
+
+    const moveHandler = chartMocks.subscribeCrosshairMove.mock.calls[0]?.[0] as
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+    moveHandler?.({ point: { x: 180, y: 15 } });
+    await nextTick();
+
+    const preview = wrapper.get('[data-testid="origin-selection-preview"]');
+    expect(preview.attributes("style")).toContain("left: 100px");
+    expect(preview.attributes("style")).toContain("width: 80px");
+    expect(wrapper.find('[data-testid="origin-selection-start-line"]').exists()).toBe(true);
+
+    await wrapper.setProps({
+      selectionPending: false,
+      selectionEndSbarId: "1700000060000000000",
+    });
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="origin-selection-preview"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="origin-selection-completed"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-selection-end-line"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
     const wrapper = mount(OriginChart, {
       props: {
