@@ -279,6 +279,9 @@ describe("Struxis Debugger native desktop", () => {
 
 
   it("runs Origin → two-SBar Test Dataset → real Run → verified Snapshot through the native UI and IPC", async () => {
+    const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
+    await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
+
     const datasetRows = await $$('[data-testid="catalog-dataset-row"]:not(.unavailable)');
     assert.ok(datasetRows.length > 0, "The configured test Catalog must contain an available Bar stream.");
 
@@ -304,7 +307,6 @@ describe("Struxis Debugger native desktop", () => {
     assert.ok(firstSbarId.length > 0 && secondSbarId.length > 0 && firstSbarId !== secondSbarId,
       "Origin preview must expose distinct ordered SBar IDs.");
 
-    const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     await $('[data-testid="test-dataset-start-sbar-id"]').setValue(firstSbarId);
     await $('[data-testid="test-dataset-end-sbar-id"]').setValue(secondSbarId);
