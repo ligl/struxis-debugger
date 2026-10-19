@@ -76,7 +76,7 @@ const rangeSelectionPendingStart = ref<string | null>(null);
 const rangeSelectionReady = ref(false);
 const selectedRangeCount = ref(0);
 const rangeSelectionStatus = ref(
-  "Click an Origin candle to select the first SBar of your Test interval.",
+  "Click anywhere in the chart plot to select the start time of your Test interval.",
 );
 
 function handleOriginSbarClick(sbarId: string): void {
@@ -99,7 +99,7 @@ function handleOriginSbarClick(sbarId: string): void {
     rangeSelectionReady.value = false;
     selectedRangeCount.value = 0;
     rangeSelectionStatus.value =
-      `Start SBar selected: ${result.sbarId}. Click another Origin candle to set the inclusive end boundary.`;
+      `Start SBar selected: ${result.sbarId}. Move the pointer to preview the range, then click to fix the inclusive end boundary.`;
     return;
   }
 
@@ -166,7 +166,7 @@ async function startLoad(): Promise<void> {
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = false;
     selectedRangeCount.value = 0;
-    rangeSelectionStatus.value = "Click an Origin candle to select the first SBar of your Test interval.";
+    rangeSelectionStatus.value = "Click anywhere in the chart plot to select the start time of your Test interval.";
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
     await refreshCurrentTestDataset();
@@ -296,6 +296,9 @@ onUnmounted(() => {
               <OriginChart
                 :bars="origin.bars"
                 :origin-dataset-id="origin.originDatasetId"
+                :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
+                :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
+                :selection-pending="rangeSelectionPendingStart !== null"
                 @sbar-click="handleOriginSbarClick"
                 @selection-error="handleOriginSelectionError"
               />
