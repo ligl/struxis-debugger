@@ -1,4 +1,4 @@
-import { config, enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
 import RunControlPanel from "../../src/components/RunControlPanel.vue";
@@ -13,14 +13,19 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 // App integration tests exercise page-level coordination, not the browser-only chart lifecycle.
-// Stub by component name at the Vue Test Utils mount boundary so the real chart cannot initialize.
-config.global.stubs = {
-  ...config.global.stubs,
-  OriginPanel: {
-    template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
-    props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
-  },
-};
+// Keep the chart stub local to this suite so Vue Test Utils global configuration cannot leak to other tests.
+function mountApp() {
+  return mount(App, {
+    global: {
+      stubs: {
+        OriginPanel: {
+          template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
+          props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
+        },
+      },
+    },
+  });
+}
 
 const invokeMock = ipc.invoke;
 
@@ -99,7 +104,7 @@ describe("Origin Load workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
@@ -126,7 +131,7 @@ describe("Origin Load workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
 
     const structureCheckbox = wrapper.get('[data-testid="catalog-enable-structure"]');
@@ -178,7 +183,7 @@ describe("Origin Load workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.findAll('[data-testid="catalog-instrument-group"]')).toHaveLength(3));
     expect(wrapper.text()).toContain("BTCUSDT-PERP.BINANCE");
     expect(wrapper.text()).toContain("2 DATASETS");
@@ -223,7 +228,7 @@ describe("Origin Load workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("replacement failed"));
@@ -244,7 +249,7 @@ describe("Origin Load workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
@@ -312,7 +317,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
     await vi.waitFor(() => expect(wrapper.findAll('[data-testid^="test-dataset-"][data-testid$="-sbar-id"]')).toHaveLength(2));
     const rangeInputs = wrapper.findAll('[data-testid^="test-dataset-"][data-testid$="-sbar-id"]');
@@ -359,7 +364,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
     const createButton = () => wrapper.get('[data-testid="test-dataset-create"]');
     await createButton()!.trigger("click");
@@ -378,7 +383,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const panel = wrapper.getComponent(RunControlPanel);
     for (const command of ["step", "play", "pause", "stop", "dispose"] as const) {
@@ -414,7 +419,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
@@ -454,7 +459,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
@@ -497,7 +502,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
@@ -549,7 +554,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
 
     const noRunEvent = new KeyboardEvent("keydown", {
@@ -623,7 +628,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const refreshButton = wrapper.get('[data-testid="run-refresh-state"]');
     expect((refreshButton.element as HTMLButtonElement).disabled).toBe(false);
@@ -657,7 +662,7 @@ describe("Test, Run and Snapshot workbench", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     await startButton.trigger("click");
@@ -695,7 +700,7 @@ describe("startup and user-operation coordination", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
 
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
@@ -727,7 +732,7 @@ describe("startup and user-operation coordination", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("load_origin", {
@@ -767,7 +772,7 @@ describe("startup and user-operation coordination", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
@@ -789,7 +794,7 @@ describe("startup and user-operation coordination", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     await startButton.trigger("click");
@@ -824,7 +829,7 @@ describe("startup and user-operation coordination", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     await replaceButton.trigger("click");
@@ -854,7 +859,7 @@ describe("startup and user-operation coordination", () => {
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
-    const wrapper = mount(App);
+    const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     await replaceButton.trigger("click");
