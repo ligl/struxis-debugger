@@ -37,6 +37,7 @@ The WDIO capability forces classic WebDriver mode via `wdio:enforceWebDriverClas
 - Switch between Test & Replay and Snapshot Inventory in the real window.
 - Collapse and restore Catalog, Inspector, and Diagnostics; check that the workbench remains inside the viewport without horizontal document overflow.
 - Inject temporary oversized content into the real workspace scroll container and verify that scrolling advances that container's `scrollTop`; remove the fixture even if the assertion fails.
+- Resize the native window to 1280×800 and 1920×1080, check viewport geometry and horizontal overflow, then restore the original window size.
 - Confirm that WebdriverIO teardown leaves no process from this test run.
 
-This remains an incremental desktop suite, not full desktop acceptance. The user reran `bun run test:e2e:desktop` after adding the collapse/restore and scroll-container checks; the spec passed and the test-launched native Debugger process exited successfully. Native window resizing, Space-key focus rules, IPC failure paths, and the complete Load → Run → Snapshot workflow remain future coverage.
+This remains an incremental desktop suite, not full desktop acceptance. The user reran `bun run test:e2e:desktop` after adding the collapse/restore and scroll-container checks; the spec passed and the test-launched native Debugger process exited successfully. Native window resizing has now been added to the suite but awaits local execution. Space-key focus rules, IPC failure paths, and the complete Load → Run → Snapshot workflow remain future coverage.
