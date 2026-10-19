@@ -10,7 +10,7 @@ use serde_json::Value;
 
 use crate::{
     snapshot::{SnapshotCheckpointRecord, SnapshotManifest},
-    snapshot_store::read_complete_snapshot,
+    snapshot_store::{read_complete_snapshot_typed, SnapshotReadError},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -129,9 +129,9 @@ pub(crate) fn compare_snapshot_paths(
     candidate_path: impl AsRef<Path>,
 ) -> Result<SnapshotCompareResult, CompareRejection> {
     let (baseline_manifest, baseline_records) =
-        read_complete_snapshot(baseline_path).map_err(classify_snapshot_read_error)?;
+        read_complete_snapshot_typed(baseline_path).map_err(classify_snapshot_read_error)?;
     let (candidate_manifest, candidate_records) =
-        read_complete_snapshot(candidate_path).map_err(classify_snapshot_read_error)?;
+        read_complete_snapshot_typed(candidate_path).map_err(classify_snapshot_read_error)?;
 
     if baseline_manifest.sbar_sequence_fingerprint != candidate_manifest.sbar_sequence_fingerprint {
         return Err(reject(
@@ -385,26 +385,17 @@ fn parse_json(value: &str, label: &str) -> Result<Value, CompareRejection> {
     ))
 }
 
-fn classify_snapshot_read_error(message: String) -> CompareRejection {
-    let category = if message.contains("Only published") {
-        CompareRejectCategory::SnapshotIncomplete
-    } else if message.contains("checksum")
-        || message.contains("canonical")
-        || message.contains("must")
-        || message.contains("mismatch")
-        || message.contains("Invalid")
-        || message.contains("does not")
-        || message.contains("missing")
-        || message.contains("unexpected")
-        || message.contains("duplicate domain ID")
-        || message.contains("unsupported value")
-        || message.contains("non-negative JSON integer")
-        || message.contains("invalid JSON type")
-        || message.contains("out of u32 range")
-    {
-        CompareRejectCategory::SnapshotIntegrityFailure
-    } else {
-        CompareRejectCategory::SnapshotUnreadable
+fn classify_snapshot_read_error(error: SnapshotReadError) -> CompareRejection {
+    let (category, message) = match error {
+        SnapshotReadError::Unpublished(message) | SnapshotReadError::Incomplete(message) => {
+            (CompareRejectCategory::SnapshotIncomplete, message)
+        }
+        SnapshotReadError::Unreadable(message) => {
+            (CompareRejectCategory::SnapshotUnreadable, message)
+        }
+        SnapshotReadError::IntegrityFailure(message) => {
+            (CompareRejectCategory::SnapshotIntegrityFailure, message)
+        }
     };
     reject(category, message)
 }
@@ -489,16 +480,30 @@ mod tests {
     }
 
     #[test]
-    fn snapshot_identity_and_schema_failures_are_integrity_rejections() {
-        for message in [
-            "CBar contains duplicate domain ID 1",
-            "CBar at index 0 has missing or unexpected fields",
-            "CBar[0].fractalType has unsupported value Sideways",
-        ] {
-            assert_eq!(
-                classify_snapshot_read_error(message.to_owned()).category,
+    fn snapshot_read_error_categories_do_not_depend_on_message_text() {
+        let cases = [
+            (
+                SnapshotReadError::Unreadable("checksum mismatch wording".into()),
+                CompareRejectCategory::SnapshotUnreadable,
+            ),
+            (
+                SnapshotReadError::IntegrityFailure("I/O failure wording".into()),
                 CompareRejectCategory::SnapshotIntegrityFailure,
-                "unexpected rejection category for: {message}",
+            ),
+            (
+                SnapshotReadError::Incomplete("invalid JSON wording".into()),
+                CompareRejectCategory::SnapshotIncomplete,
+            ),
+            (
+                SnapshotReadError::Unpublished("database schema failure wording".into()),
+                CompareRejectCategory::SnapshotIncomplete,
+            ),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(
+                classify_snapshot_read_error(error).category,
+                expected,
+                "classification must follow the typed variant, not the message text",
             );
         }
     }
