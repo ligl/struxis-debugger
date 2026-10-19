@@ -63,6 +63,19 @@ describe("useTestDataset refresh ordering", () => {
     expect(invokeMock).toHaveBeenCalledTimes(2);
   });
 
+  it("requires an explicit chart selection after an Origin handoff", () => {
+    const originRef = ref<OriginDatasetDto | null>(origin("origin-new"));
+    const state = useTestDataset(originRef, computed(() => true));
+    state.startSbarId.value = "120";
+    state.endSbarId.value = "180";
+
+    state.prepareForOrigin(origin("origin-new"));
+
+    expect(state.startSbarId.value).toBe("");
+    expect(state.endSbarId.value).toBe("");
+    expect(state.testDataset.value).toBeNull();
+  });
+
   it("does not let a stale refresh failure replace the current diagnostic", async () => {
     let rejectStartup!: (error: Error) => void;
     const startupRead = new Promise<TestDatasetDto | null>((_resolve, reject) => { rejectStartup = reject; });
