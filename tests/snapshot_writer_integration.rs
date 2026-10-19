@@ -312,3 +312,55 @@ fn snapshot_writer_atomic_publish_renames_temp_to_final() {
     drop(writer);
     fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot publication test directory");
 }
+
+#[test]
+fn snapshot_writer_rejects_finalization_when_checkpoints_are_incomplete() {
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("System clock should be after Unix epoch")
+        .as_nanos();
+    let temp_dir = std::env::temp_dir()
+        .join(format!("capitus-snapshot-incomplete-finalize-{unique_suffix}"));
+    fs::create_dir_all(&temp_dir).expect("Create isolated Snapshot directory");
+
+    let bars = create_test_bars(2);
+    let input = create_test_input(bars);
+    let initial_state = create_initial_run_state(&input);
+    let config = create_effective_config();
+    let mut writer = SnapshotWriter::new(
+        &temp_dir,
+        &input,
+        &test_instrument_id().to_string(),
+    )
+    .expect("SnapshotWriter should be created");
+    writer
+        .initialize(&initial_state, &config)
+        .expect("SnapshotWriter should initialize");
+
+    // Commit only the first of two required checkpoints.
+    let sbar_id = input.bars[0].ts_event.to_string();
+    let projection = create_minimal_checkpoint(0, &sbar_id);
+    writer
+        .commit_checkpoint(0, &sbar_id, &projection)
+        .expect("First checkpoint should commit");
+
+    // A caller-supplied Completed status must not bypass completeness checks.
+    let incomplete_completed_state = RunState {
+        status: RunStatus::Completed,
+        processed_count: 1,
+        ..initial_state
+    };
+    let result = writer.finalize(&incomplete_completed_state);
+
+    assert!(
+        result.is_err(),
+        "Finalization must reject fewer checkpoints than the fixed input count"
+    );
+    assert!(
+        !writer.published_path().exists(),
+        "An incomplete Snapshot must never be published as Complete"
+    );
+
+    drop(writer);
+    fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot directory");
+}
