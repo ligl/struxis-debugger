@@ -69,4 +69,100 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
   });
+  it("collapses and restores Catalog, Inspector, and Diagnostics without breaking the workbench layout", async () => {
+    const shell = await $('[data-testid="debugger-shell"]');
+    await shell.waitForDisplayed();
+
+    const assertNoHorizontalOverflow = async (stage) => {
+      const layout = await browser.execute(() => ({
+        viewportWidth: document.documentElement.clientWidth,
+        documentScrollWidth: document.documentElement.scrollWidth,
+        shell: (() => {
+          const rect = document.querySelector('[data-testid="debugger-shell"]').getBoundingClientRect();
+          return { left: rect.left, right: rect.right, width: rect.width };
+        })(),
+      }));
+      assert.ok(
+        layout.documentScrollWidth <= layout.viewportWidth,
+        `${stage}: unexpected horizontal overflow: ${JSON.stringify(layout)}`,
+      );
+      assert.ok(
+        layout.shell.left >= -1 && layout.shell.right <= layout.viewportWidth + 1,
+        `${stage}: workbench shell escaped the viewport: ${JSON.stringify(layout)}`,
+      );
+    };
+
+    await $('[aria-label="Collapse Catalog"]').click();
+    await $('[aria-label="Expand Catalog"]').waitForDisplayed();
+    await assertNoHorizontalOverflow("Catalog collapsed");
+    await $('[aria-label="Expand Catalog"]').click();
+    await $('[aria-label="Collapse Catalog"]').waitForDisplayed();
+
+    await $('[aria-label="Collapse Inspector"]').click();
+    await $('[aria-label="Expand Inspector"]').waitForDisplayed();
+    await assertNoHorizontalOverflow("Inspector collapsed");
+    await $('[aria-label="Expand Inspector"]').click();
+    await $('[aria-label="Collapse Inspector"]').waitForDisplayed();
+
+    await $('[data-testid="diagnostics-dock"] button').click();
+    await $('[data-testid="diagnostics-dock"]').waitForExist({ reverse: true });
+    await $('[data-testid="debugger-shell"] .diagnostics-reopen').waitForDisplayed();
+    await assertNoHorizontalOverflow("Diagnostics collapsed");
+    await $('[data-testid="debugger-shell"] .diagnostics-reopen').click();
+    await $('[data-testid="diagnostics-dock"]').waitForDisplayed();
+    await assertNoHorizontalOverflow("all panels restored");
+  });
+
+  it("keeps overflowing workspace content scrollable inside the workspace panel", async () => {
+    const content = await $('[data-testid="workspace-content"]');
+    await content.waitForDisplayed();
+
+    await browser.execute(() => {
+      const container = document.querySelector('[data-testid="workspace-content"]');
+      const fixture = document.createElement("div");
+      fixture.dataset.testid = "desktop-scroll-fixture";
+      fixture.setAttribute("aria-hidden", "true");
+      fixture.style.flex = "0 0 1200px";
+      container.appendChild(fixture);
+    });
+
+    try {
+      const before = await browser.execute(() => {
+        const element = document.querySelector('[data-testid="workspace-content"]');
+        return {
+          scrollHeight: element.scrollHeight,
+          clientHeight: element.clientHeight,
+          scrollTop: element.scrollTop,
+          overflowY: getComputedStyle(element).overflowY,
+        };
+      });
+      assert.ok(
+        before.scrollHeight > before.clientHeight,
+        `Workspace content did not overflow its own scroll container: ${JSON.stringify(before)}`,
+      );
+      assert.ok(
+        before.overflowY === "auto" || before.overflowY === "scroll",
+        `Workspace content does not expose vertical scrolling: ${JSON.stringify(before)}`,
+      );
+
+      await browser.execute(() => {
+        document.querySelector('[data-testid="workspace-content"]').scrollTo({ top: 100 });
+      });
+      await browser.waitUntil(
+        async () => (await browser.execute(
+          () => document.querySelector('[data-testid="workspace-content"]').scrollTop,
+        )) > 0,
+        {
+          timeout: 5_000,
+          interval: 100,
+          timeoutMsg: "Workspace scrollTop did not advance after scrolling its content.",
+        },
+      );
+    } finally {
+      await browser.execute(() => {
+        document.querySelector('[data-testid="desktop-scroll-fixture"]')?.remove();
+      });
+    }
+  });
+
 });
