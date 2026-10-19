@@ -8,22 +8,22 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Diagnostic {
-    pub source: String,
-    pub severity: String,
-    pub category: String,
-    pub object_type: Option<String>,
-    pub object_id: Option<String>,
-    pub sbar_ids: Vec<String>,
-    pub checkpoint_index: Option<usize>,
-    pub message: String,
+pub(crate) struct Diagnostic {
+    pub(crate) source: String,
+    pub(crate) severity: String,
+    pub(crate) category: String,
+    pub(crate) object_type: Option<String>,
+    pub(crate) object_id: Option<String>,
+    pub(crate) sbar_ids: Vec<String>,
+    pub(crate) checkpoint_index: Option<usize>,
+    pub(crate) message: String,
 }
 
 impl Diagnostic {
     /// Validate fields that define machine-readable diagnostic identity.
     /// Unknown values are allowed so an unclassifiable upstream diagnostic can
     /// be represented explicitly without inventing a category or severity.
-    pub fn validate(&self) -> Result<(), String> {
+    pub(crate) fn validate(&self) -> Result<(), String> {
         for (field, value) in [
             ("source", self.source.as_str()),
             ("severity", self.severity.as_str()),
@@ -48,7 +48,7 @@ impl Diagnostic {
 ///
 /// message is only a final deterministic tie-breaker; consumers must use the
 /// structured identity fields rather than message text to classify differences.
-pub fn canonical_diagnostics_json(diagnostics: &[Diagnostic]) -> Result<String, String> {
+pub(crate) fn canonical_diagnostics_json(diagnostics: &[Diagnostic]) -> Result<String, String> {
     let mut ordered = diagnostics.to_vec();
     for diagnostic in &ordered {
         diagnostic.validate()?;
