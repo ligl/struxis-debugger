@@ -303,7 +303,10 @@ fn validate_enum_field(
             continue;
         }
         let label = value.as_str().ok_or_else(|| {
-            format!("{kind}[{index}].{field} must be a string{}", if nullable { " or null" } else { "" })
+            format!(
+                "{kind}[{index}].{field} must be a string{}",
+                if nullable { " or null" } else { "" }
+            )
         })?;
         if !allowed.contains(&label) {
             return Err(format!("{kind}[{index}].{field} has unsupported value {label}"));
