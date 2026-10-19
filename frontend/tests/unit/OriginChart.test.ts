@@ -10,6 +10,9 @@ const chartMocks = vi.hoisted(() => ({
   volumeSetData: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
+  timeToCoordinate: vi.fn(),
+  subscribeVisibleLogicalRangeChange: vi.fn(),
+  unsubscribeVisibleLogicalRangeChange: vi.fn(),
   applyChartOptions: vi.fn(),
   applyPriceScaleOptions: vi.fn(),
   subscribeClick: vi.fn(),
@@ -56,7 +59,12 @@ function installChartMock() {
       .mockReturnValueOnce({ setData: chartMocks.candleSetData })
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
-    timeScale: vi.fn(() => ({ fitContent: chartMocks.fitContent })),
+    timeScale: vi.fn(() => ({
+      fitContent: chartMocks.fitContent,
+      timeToCoordinate: chartMocks.timeToCoordinate,
+      subscribeVisibleLogicalRangeChange: chartMocks.subscribeVisibleLogicalRangeChange,
+      unsubscribeVisibleLogicalRangeChange: chartMocks.unsubscribeVisibleLogicalRangeChange,
+    })),
     subscribeClick: chartMocks.subscribeClick,
     unsubscribeClick: chartMocks.unsubscribeClick,
     applyOptions: chartMocks.applyChartOptions,
@@ -69,6 +77,11 @@ function installChartMock() {
 describe("OriginChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    chartMocks.timeToCoordinate.mockImplementation((time: number) => {
+      if (time === 1700000000) return 100;
+      if (time === 1700000060) return 200;
+      return null;
+    });
     installResizeObserverMock();
     installChartMock();
   });
@@ -126,7 +139,12 @@ describe("OriginChart", () => {
     expect(chartPanel.attributes("data-sbar-count")).toBe("2");
     expect(chartPanel.attributes("data-first-sbar-id")).toBe("1700000000000000000");
     expect(chartPanel.attributes("data-second-sbar-id")).toBe("1700000060000000000");
+    const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]');
+    expect(chartHost.attributes("data-first-sbar-x")).toBe("100");
+    expect(chartHost.attributes("data-second-sbar-x")).toBe("200");
+    expect(chartMocks.subscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
     wrapper.unmount();
+    expect(chartMocks.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
   });
 
   it("maps exact chart click times to lossless SBar IDs and rejects clicks without a bar time", () => {
@@ -231,6 +249,7 @@ describe("OriginChart", () => {
     wrapper.unmount();
 
     expect(chartMocks.disconnect).toHaveBeenCalledOnce();
+    expect(chartMocks.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
     expect(chartMocks.chartRemove).toHaveBeenCalledOnce();
   });
 });
