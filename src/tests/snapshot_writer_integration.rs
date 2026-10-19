@@ -477,3 +477,84 @@ fn snapshot_writer_rejects_finalization_when_checkpoints_are_incomplete() {
     drop(writer);
     fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot directory");
 }
+
+#[test]
+fn snapshot_writer_rejects_diagnostic_from_another_checkpoint() {
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("System clock should be after Unix epoch")
+        .as_nanos();
+    let temp_dir = std::env::temp_dir()
+        .join(format!("capitus-snapshot-diagnostic-index-{unique_suffix}"));
+    fs::create_dir_all(&temp_dir).expect("Create isolated Snapshot directory");
+
+    let input = create_test_input(create_test_bars(1));
+    let initial_state = create_initial_run_state(&input);
+    let config = create_effective_config();
+    let mut writer = SnapshotWriter::new(
+        &temp_dir,
+        &input,
+        &test_instrument_id().to_string(),
+    )
+    .expect("SnapshotWriter should be created");
+    writer
+        .initialize(&initial_state, &config)
+        .expect("SnapshotWriter should initialize");
+
+    let sbar_id = input.bars[0].ts_event.to_string();
+    let mut projection = create_minimal_checkpoint(0, &sbar_id);
+    projection.diagnostics.push(crate::diagnostics::Diagnostic {
+        source: "replay".into(),
+        severity: "warning".into(),
+        category: "test-contract".into(),
+        object_type: None,
+        object_id: None,
+        sbar_ids: vec![sbar_id.clone()],
+        checkpoint_index: Some(1),
+        message: "Diagnostic belongs to another checkpoint".into(),
+    });
+
+    let error = writer
+        .commit_checkpoint(0, &sbar_id, &projection)
+        .expect_err("A diagnostic from another checkpoint must be rejected");
+    assert!(
+        error.contains("Checkpoint diagnostic index mismatch"),
+        "Expected the diagnostic-index contract error, got: {error}"
+    );
+
+    // Rejected input must not advance the checkpoint writer; the same checkpoint
+    // can be retried after its diagnostic is corrected.
+    projection.diagnostics[0].checkpoint_index = Some(0);
+    writer
+        .commit_checkpoint(0, &sbar_id, &projection)
+        .expect("Corrected checkpoint should commit");
+
+    let completed_state = RunState {
+        status: RunStatus::Completed,
+        processed_count: 1,
+        ..initial_state
+    };
+    writer
+        .finalize(&completed_state)
+        .expect("Snapshot with a correctly indexed diagnostic should finalize");
+
+    let (manifest, records) = crate::snapshot_store::read_complete_snapshot(writer.published_path())
+        .expect("Published Snapshot should be readable");
+    assert_eq!(manifest.checkpoint_count, 1);
+    assert_eq!(records.len(), 1);
+    crate::diagnostics::validate_canonical_diagnostics_json(&records[0].diagnostics)
+        .expect("Persisted diagnostics must use canonical DTO encoding");
+    assert!(
+        records[0].diagnostics.contains(r#"\"checkpointIndex\":0"#),
+        "checkpointIndex must remain a JSON number: {}",
+        records[0].diagnostics
+    );
+    assert!(
+        !records[0].diagnostics.contains(r#"\"checkpointIndex\":\"0\""#),
+        "checkpointIndex must not be encoded as a JSON string"
+    );
+
+    drop(writer);
+    fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot directory");
+}
+
