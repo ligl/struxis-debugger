@@ -12,21 +12,21 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: ipc.invoke,
 }));
 
-vi.mock("../../src/components/OriginChart.vue", async () => {
+// App integration tests exercise page-level coordination, not the chart's browser
+// lifecycle. Stub the direct child so Lightweight Charts never initializes in jsdom.
+vi.mock("../../src/components/OriginPanel.vue", async () => {
   const { defineComponent, h } = await import("vue");
   return {
     default: defineComponent({
-      name: "OriginChartTestStub",
-      props: ["bars", "originDatasetId"],
+      name: "OriginPanelTestStub",
+      props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
       setup(props) {
-        return () =>
-          h("section", {
-            "data-testid": "origin-chart-panel",
-            "data-origin-dataset-id": props.originDatasetId,
-          }, [
-            h("h3", "Origin SBar chart"),
-            h("span", `${(props.bars as unknown[]).length} SBARS`),
-          ]);
+        return () => h("section", { "data-testid": "origin-panel-test-stub" }, [
+          h("h3", "Origin SBar chart"),
+          h("span", props.origin?.originDatasetId ?? "No validated Origin Dataset"),
+          h("span", props.loadStatus),
+          props.loadError ? h("span", props.loadError) : null,
+        ]);
       },
     }),
   };
