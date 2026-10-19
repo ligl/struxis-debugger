@@ -226,6 +226,14 @@ impl CheckpointSink for SnapshotWriter {
         if projection.last_ts_event.as_deref() != Some(sbar_id) {
             return Err("Checkpoint projection SBar ID mismatch".into());
         }
+        for diagnostic in &projection.diagnostics {
+            if diagnostic.checkpoint_index != Some(index) {
+                return Err(format!(
+                    "Checkpoint diagnostic index mismatch at checkpoint {index}: expected Some({index}), actual={:?}",
+                    diagnostic.checkpoint_index
+                ));
+            }
+        }
         let record = SnapshotCheckpointRecord {
             checkpoint_index: index,
             sbar_id: sbar_id.to_owned(),
@@ -331,6 +339,7 @@ mod tests {
     use crate::{
         catalog::OriginLoad,
         dataset::{sequence_fingerprint, TestDataset},
+        diagnostics::Diagnostic,
     };
     use capitus_struxis::StruxisStateKey;
     use nautilus_model::{
@@ -389,7 +398,20 @@ mod tests {
                 sbar_count: index + 1,
                 sbars: vec![],
                 structure: None,
-            diagnostics: Vec::new(),
+                diagnostics: if index == 1 {
+                    vec![Diagnostic {
+                        source: "replay".into(),
+                        severity: "warning".into(),
+                        category: "TestDiagnostic".into(),
+                        object_type: None,
+                        object_id: None,
+                        sbar_ids: vec![(*sbar_id).into()],
+                        checkpoint_index: Some(index),
+                        message: "diagnostic persistence fixture".into(),
+                    }]
+                } else {
+                    Vec::new()
+                },
             };
             writer.commit_checkpoint(index, sbar_id, &projection).unwrap();
             state.confirm_checkpoint((*sbar_id).into()).unwrap();
@@ -403,6 +425,10 @@ mod tests {
         assert_eq!(manifest.status, STATUS_COMPLETE);
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].diagnostics, "[]");
+        let diagnostics: Vec<Diagnostic> = serde_json::from_str(&records[1].diagnostics).unwrap();
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].category, "TestDiagnostic");
+        assert_eq!(diagnostics[0].checkpoint_index, Some(1));
         drop(writer);
         let _ = fs::remove_dir_all(root);
     }
