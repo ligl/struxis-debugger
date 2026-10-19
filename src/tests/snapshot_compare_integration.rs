@@ -66,7 +66,7 @@ fn checkpoint(input: &LoadedInput, index: usize, high: &str, include_diagnostic:
     let current_id = input.bars[index].ts_event.to_string();
     ReplayCheckpointProjection {
         state_key: format!("{:?}", test_state_key()),
-        last_ts_event: Some(current_id),
+        last_ts_event: Some(current_id.clone()),
         sbar_count: index + 1,
         sbars: Vec::new(),
         structure: Some(StructureCheckpoint {
