@@ -1344,6 +1344,45 @@ body,
   background: var(--dbg-surface-1);
 }
 
+/* Origin range selection is a pointer-transparent overlay over the full chart. */
+.origin-chart-viewport {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.origin-selection-overlay {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.origin-selection-shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgb(217 154 69 / 20%);
+}
+
+.origin-selection-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.origin-selection-line-start,
+.origin-selection-line-end {
+  background: #e4b46f;
+  box-shadow: 0 0 0 1px rgb(228 180 111 / 16%);
+}
+
+.origin-selection-line-preview {
+  border-left: 1px dashed #e4b46f;
+}
+
 .origin-chart-heading {
   display: flex;
   align-items: end;
