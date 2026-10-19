@@ -1,0 +1,122 @@
+import { expect, test, type Page } from "@playwright/test";
+
+const viewports = [
+  { name: "desktop", width: 1440, height: 900 },
+  { name: "compact desktop", width: 1024, height: 768 },
+  { name: "mobile", width: 390, height: 844 },
+  { name: "minimum supported width", width: 320, height: 700 },
+];
+
+async function layoutDiagnostics(page: Page) {
+  return page.evaluate(() => {
+    const selectors = [
+      "[data-testid='debugger-shell']",
+      "[data-testid='workbench-body']",
+      "[data-testid='workbench-main']",
+      "[data-testid='primary-workspace']",
+      "[data-testid='workspace-content']",
+      "[data-testid='catalog-rail']",
+      "[data-testid='inspector-rail']",
+      "[data-testid='diagnostics-dock']",
+    ];
+
+    const elements = selectors.map((selector) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) return { selector, missing: true };
+
+      const rect = element.getBoundingClientRect();
+      return {
+        selector,
+        x: Math.round(rect.x * 100) / 100,
+        y: Math.round(rect.y * 100) / 100,
+        width: Math.round(rect.width * 100) / 100,
+        height: Math.round(rect.height * 100) / 100,
+        right: Math.round(rect.right * 100) / 100,
+        bottom: Math.round(rect.bottom * 100) / 100,
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+        scrollTop: element.scrollTop,
+        overflowX: getComputedStyle(element).overflowX,
+        overflowY: getComputedStyle(element).overflowY,
+      };
+    });
+
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      document: {
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        clientHeight: document.documentElement.clientHeight,
+      },
+      elements,
+    };
+  });
+}
+
+for (const viewport of viewports) {
+  test(`workbench fits horizontally at ${viewport.name} (${viewport.width}×${viewport.height})`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Struxis Debugger" })).toBeVisible();
+
+    const diagnostics = await layoutDiagnostics(page);
+    expect(
+      diagnostics.document.scrollWidth,
+      `Horizontal document overflow at ${viewport.width}×${viewport.height}. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`,
+    ).toBeLessThanOrEqual(diagnostics.document.clientWidth);
+
+    const shell = diagnostics.elements.find(
+      (element) => "selector" in element && element.selector === "[data-testid='debugger-shell']",
+    );
+    expect(shell, `Missing workbench shell. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`).toBeTruthy();
+    if (shell && "width" in shell) {
+      expect(
+        Math.abs(shell.width - viewport.width),
+        `Workbench shell should fill the viewport. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`,
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+}
+
+test("workspace navigation updates the visible workflow", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "02 / Test & Replay" }).click();
+  await expect(page.getByRole("heading", { name: "Test Dataset & Replay" })).toBeVisible();
+
+  await page.getByRole("button", { name: "03 / Snapshots" }).click();
+  await expect(page.getByRole("heading", { name: "Snapshot Inventory" })).toBeVisible();
+
+  await page.getByRole("button", { name: "01 / Origin" }).click();
+  await expect(page.getByRole("heading", { name: "Origin Load" })).toBeVisible();
+});
+
+test("catalog and inspector can collapse and restore", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Collapse Catalog" }).click();
+  await expect(page.getByRole("button", { name: "Expand Catalog" })).toBeVisible();
+  await page.getByRole("button", { name: "Expand Catalog" }).click();
+  await expect(page.getByRole("button", { name: "Collapse Catalog" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Collapse Inspector" }).click();
+  await expect(page.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
+  await page.getByRole("button", { name: "Expand Inspector" }).click();
+  await expect(page.getByRole("button", { name: "Collapse Inspector" })).toBeVisible();
+});
+
+test("diagnostics dock can collapse and restore", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+  await page.getByRole("button", { name: "Hide Diagnostics" }).click();
+  await expect(page.getByTestId("diagnostics-dock")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Diagnostics" }).click();
+  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+});
