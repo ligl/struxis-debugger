@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
+import OriginChart from "./components/OriginChart.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
@@ -291,8 +292,18 @@ onUnmounted(() => {
 
         <div data-testid="primary-workspace" class="primary-workspace">
           <div data-testid="workspace-content" class="workspace-content">
+            <template v-if="origin && workspaceMode !== 'snapshots'">
+              <OriginChart
+                :bars="origin.bars"
+                :origin-dataset-id="origin.originDatasetId"
+                @sbar-click="handleOriginSbarClick"
+                @selection-error="handleOriginSelectionError"
+              />
+              <p class="microcopy chart-selection-hint" data-testid="origin-range-selection-status" aria-live="polite">{{ rangeSelectionStatus }}</p>
+              <p class="source-note">Source: {{ origin.sourceCatalog }} · Chart values are projected from the validated Struxis SBar series; domain IDs remain exact strings.</p>
+            </template>
             <div v-show="workspaceMode === 'origin'" class="workspace-mode">
-              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" :range-selection-status="rangeSelectionStatus" @sbar-click="handleOriginSbarClick" @selection-error="handleOriginSelectionError" />
+              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
             </div>
             <div v-show="workspaceMode === 'replay'" class="workspace-mode">
               <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :range-selection-ready="rangeSelectionReady" :range-selection-pending="rangeSelectionPendingStart !== null" :selected-range-count="selectedRangeCount" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @create="createSelectedTestDataset" />
