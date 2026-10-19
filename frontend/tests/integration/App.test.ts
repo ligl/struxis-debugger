@@ -1,5 +1,5 @@
-import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
 import RunControlPanel from "../../src/components/RunControlPanel.vue";
 import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "../../src/origin-types";
@@ -13,6 +13,8 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 const invokeMock = ipc.invoke;
+
+enableAutoUnmount(afterEach);
 
 const dataset: CatalogDatasetEntry = {
   id: "BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL",
@@ -489,7 +491,7 @@ describe("Test, Run and Snapshot workbench", () => {
     document.dispatchEvent(pauseEvent);
     expect(pauseEvent.defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("pause_run"));
-    await vi.waitFor(() => expect(status).toBe("paused"));
+    await vi.waitFor(() => expect(wrapper.text()).toContain("PAUSED"));
 
     const playEvent = new KeyboardEvent("keydown", {
       key: " ",
@@ -500,7 +502,7 @@ describe("Test, Run and Snapshot workbench", () => {
     document.dispatchEvent(playEvent);
     expect(playEvent.defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("play_run"));
-    await vi.waitFor(() => expect(status).toBe("running"));
+    await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "pause_run" || command === "play_run",
     )).toHaveLength(2);
