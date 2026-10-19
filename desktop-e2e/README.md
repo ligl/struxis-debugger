@@ -21,13 +21,12 @@ The harness uses WebdriverIO with `@wdio/tauri-service` and the external driver 
 From `crates/struxis-debugger`:
 
 ```bash
-cd desktop-e2e
-bun install
-cd ..
 bun run test:e2e:desktop
 ```
 
-The root command first runs `bun install` inside `desktop-e2e/` and verifies that the project-local `node_modules/.bin/wdio` exists, then builds the Tauri binary with `cargo tauri build --debug --no-bundle`, runs WebdriverIO, and verifies that the test-launched application process exits. You do not need to install WebdriverIO globally. Close any existing instance of the same Debugger binary before running it.
+The root command automatically runs `bun install` inside `desktop-e2e/` and verifies that the project-local `node_modules/.bin/wdio` exists, then builds the Tauri binary with `cargo tauri build --debug --no-bundle`, runs WebdriverIO, and verifies that the test-launched application process exits. You do not need to install WebdriverIO globally or install its dependencies manually. Close any existing instance of the same Debugger binary before running it.
+
+The WDIO capability forces classic WebDriver mode via `wdio:enforceWebDriverClassic: true`. Ubuntu 24.04's WebKitWebDriver / tauri-driver combination can reject WDIO 9's automatically negotiated BiDi session; that failure may surface later as repeated `invalid session id` errors. Global WDIO logging is set to `warn` so routine commands do not dump large injected scripts to the terminal.
 
 ## Initial acceptance scope
 
