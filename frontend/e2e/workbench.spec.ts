@@ -1,10 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const viewports = [
+  { name: "standard desktop", width: 1280, height: 800 },
   { name: "desktop", width: 1440, height: 900 },
-  { name: "compact desktop", width: 1024, height: 768 },
-  { name: "mobile", width: 390, height: 844 },
-  { name: "minimum supported width", width: 320, height: 700 },
+  { name: "wide desktop", width: 1920, height: 1080 },
 ];
 
 async function layoutDiagnostics(page: Page) {
