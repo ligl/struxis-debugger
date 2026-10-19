@@ -388,9 +388,19 @@ fn parse_json(value: &str, label: &str) -> Result<Value, CompareRejection> {
 fn classify_snapshot_read_error(message: String) -> CompareRejection {
     let category = if message.contains("Only published") {
         CompareRejectCategory::SnapshotIncomplete
-    } else if message.contains("checksum") || message.contains("canonical")
-        || message.contains("must") || message.contains("mismatch")
-        || message.contains("Invalid") || message.contains("does not")
+    } else if message.contains("checksum")
+        || message.contains("canonical")
+        || message.contains("must")
+        || message.contains("mismatch")
+        || message.contains("Invalid")
+        || message.contains("does not")
+        || message.contains("missing")
+        || message.contains("unexpected")
+        || message.contains("duplicate domain ID")
+        || message.contains("unsupported value")
+        || message.contains("non-negative JSON integer")
+        || message.contains("invalid JSON type")
+        || message.contains("out of u32 range")
     {
         CompareRejectCategory::SnapshotIntegrityFailure
     } else {
