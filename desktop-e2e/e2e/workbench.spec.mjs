@@ -278,4 +278,100 @@ describe("Struxis Debugger native desktop", () => {
   });
 
 
+  it("runs Origin → two-SBar Test Dataset → real Run → verified Snapshot through the native UI and IPC", async () => {
+    const datasetRows = await $$('[data-testid="catalog-dataset-row"]:not(.unavailable)');
+    assert.ok(datasetRows.length > 0, "The configured test Catalog must contain an available Bar stream.");
+
+    await datasetRows[0].click();
+    await $('[data-testid="catalog-load"]').click();
+
+    await browser.waitUntil(
+      async () => {
+        const identity = await $(".result-panel .origin-identity");
+        return identity.isDisplayed();
+      },
+      {
+        timeout: 120_000,
+        interval: 250,
+        timeoutMsg: "Origin Load did not publish a validated SBar projection.",
+      },
+    );
+
+    const originRows = await $$(".result-panel tbody tr");
+    assert.ok(originRows.length >= 2, "Origin preview must expose at least two SBars for a bounded Run.");
+    const firstSbarId = await originRows[0].$("td:first-child").getText();
+    const secondSbarId = await originRows[1].$("td:first-child").getText();
+    assert.ok(firstSbarId.length > 0 && secondSbarId.length > 0 && firstSbarId !== secondSbarId,
+      "Origin preview must expose distinct ordered SBar IDs.");
+
+    const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
+    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+    await $('[data-testid="test-dataset-start-sbar-id"]').setValue(firstSbarId);
+    await $('[data-testid="test-dataset-end-sbar-id"]').setValue(secondSbarId);
+    await $('[data-testid="test-dataset-create"]').click();
+
+    await browser.waitUntil(
+      async () => await $('[data-testid="run-start"]').isEnabled(),
+      {
+        timeout: 15_000,
+        interval: 200,
+        timeoutMsg: "Test Dataset creation did not enable Run Start.",
+      },
+    );
+
+    await $('[data-testid="run-start"]').click();
+    const runStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
+    await browser.waitUntil(
+      async () => (await runStatus.getText()).trim() === "READY",
+      {
+        timeout: 30_000,
+        interval: 200,
+        timeoutMsg: "Backend did not confirm the Run Ready state.",
+      },
+    );
+
+    await $('[data-testid="run-step"]').click();
+    await browser.waitUntil(
+      async () => ["PAUSED", "COMPLETED"].includes((await runStatus.getText()).trim()),
+      {
+        timeout: 30_000,
+        interval: 200,
+        timeoutMsg: "First Step did not publish a stable Run state.",
+      },
+    );
+
+    if ((await runStatus.getText()).trim() !== "COMPLETED") {
+      await $('[data-testid="run-step"]').click();
+      await browser.waitUntil(
+        async () => (await runStatus.getText()).trim() === "COMPLETED",
+        {
+          timeout: 30_000,
+          interval: 200,
+          timeoutMsg: "Second Step did not complete the two-SBar Run.",
+        },
+      );
+    }
+
+    const progress = await $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//div[contains(@class,'detail-list')]//div[span[normalize-space()='PROGRESS']]/strong").getText();
+    assert.equal(progress.replace(/\s/g, ""), "2/2",
+      "Completed Run must confirm both selected SBars.");
+
+    await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
+    await browser.waitUntil(
+      async () => {
+        const rows = await $$(".snapshot-table tbody tr");
+        for (const row of rows) {
+          if ((await row.getText()).includes("COMPLETE / VERIFIED")) return true;
+        }
+        return false;
+      },
+      {
+        timeout: 15_000,
+        interval: 250,
+        timeoutMsg: "The completed Run did not publish a verified Snapshot visible in the UI.",
+      },
+    );
+  });
+
+
 });
