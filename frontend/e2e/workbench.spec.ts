@@ -74,8 +74,8 @@ for (const viewport of viewports) {
     expect(shell, `Missing workbench shell. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`).toBeTruthy();
     if (shell && "width" in shell) {
       expect(
-        Math.abs(shell.width - viewport.width),
-        `Workbench shell should fill the viewport. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`,
+        Math.abs(shell.width - diagnostics.document.clientWidth),
+        `Workbench shell should fill the available viewport width. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`,
       ).toBeLessThanOrEqual(1);
     }
   });
