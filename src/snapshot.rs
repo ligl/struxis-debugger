@@ -736,6 +736,18 @@ mod tests {
     }
 
     #[test]
+    fn persisted_manifest_and_checkpoint_positions_are_json_numbers() {
+        let records = records();
+        let manifest = manifest(&records);
+        let manifest_json = serde_json::to_string(&manifest).unwrap();
+        let checkpoint_json = serde_json::to_string(&records[0]).unwrap();
+
+        assert!(manifest_json.contains(r#""inputBarCount":2"#));
+        assert!(manifest_json.contains(r#""checkpointCount":2"#));
+        assert!(checkpoint_json.contains(r#""checkpointIndex":0"#));
+    }
+
+    #[test]
     fn checksum_encodes_counts_as_strings_and_embedded_state_as_json() {
         let records = records();
         let manifest = manifest(&records);
