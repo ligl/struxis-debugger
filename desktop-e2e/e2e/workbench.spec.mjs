@@ -310,7 +310,7 @@ describe("Struxis Debugger native desktop", () => {
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
 
     const originCanvas = await $('[data-testid="origin-chart-canvas"]');
-    const clickOriginBar = async (index) => {
+    const clickOriginBar = async (index, yFraction = 0.25, click = true) => {
       const coordinateAttribute = index === 0
         ? "data-first-sbar-x"
         : index === 1
@@ -386,7 +386,7 @@ describe("Struxis Debugger native desktop", () => {
       );
       const pointerTarget = {
         x: Math.round(target.left + target.coordinate),
-        y: Math.round(target.top + target.height * 0.25),
+        y: Math.round(target.top + target.height * yFraction),
       };
       assert.ok(
         pointerTarget.x >= 0 &&
@@ -401,27 +401,54 @@ describe("Struxis Debugger native desktop", () => {
           type: "pointer",
           id: "origin-chart-pointer",
           parameters: { pointerType: "mouse" },
-          actions: [
-            { type: "pointerMove", duration: 0, x: pointerTarget.x, y: pointerTarget.y },
-            { type: "pointerDown", button: 0 },
-            { type: "pointerUp", button: 0 },
-          ],
+          actions: click
+            ? [
+                { type: "pointerMove", duration: 0, x: pointerTarget.x, y: pointerTarget.y },
+                { type: "pointerDown", button: 0 },
+                { type: "pointerUp", button: 0 },
+              ]
+            : [
+                { type: "pointerMove", duration: 0, x: pointerTarget.x, y: pointerTarget.y },
+              ],
         }]);
       } finally {
         await browser.releaseActions();
       }
+      return pointerTarget;
     };
 
     // The Test Dataset form intentionally has no editable SBar ID fields.
-    // Select the exact first and second Origin candles through the real chart
-    // event path, then verify the range projected by the workbench.
-    await clickOriginBar(0);
+    // Click at unrelated vertical positions to prove selection depends on x/time,
+    // not on hitting a candle body or wick. The first move previews the overlay
+    // across the full chart height before the second click fixes the endpoint.
+    await clickOriginBar(0, 0.12);
+    await $('[data-testid="origin-selection-start-line"]').waitForDisplayed();
+    await clickOriginBar(1, 0.88, false);
+    await $('[data-testid="origin-selection-preview"]').waitForDisplayed();
+    const previewGeometry = await browser.execute(() => {
+      const host = document.querySelector('[data-testid="origin-chart-canvas"]');
+      const shade = document.querySelector('[data-testid="origin-selection-preview"]');
+      const hostRect = host.getBoundingClientRect();
+      const shadeRect = shade.getBoundingClientRect();
+      return {
+        hostHeight: hostRect.height,
+        shadeHeight: shadeRect.height,
+        shadeTop: shadeRect.top - hostRect.top,
+        shadeBottom: shadeRect.bottom - hostRect.top,
+      };
+    });
+    assert.ok(
+      previewGeometry.shadeHeight >= previewGeometry.hostHeight - 1 &&
+      previewGeometry.shadeTop <= 1 &&
+      previewGeometry.shadeBottom >= previewGeometry.hostHeight - 1,
+      `Origin selection preview must span the full chart height: ${JSON.stringify(previewGeometry)}`,
+    );
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     await originChart.waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
     await originCanvas.waitForDisplayed();
-    await clickOriginBar(1);
+    await clickOriginBar(1, 0.88);
 
     // Do not navigate away immediately after dispatching the native pointer
     // action. Confirm the chart event reached the application state machine
