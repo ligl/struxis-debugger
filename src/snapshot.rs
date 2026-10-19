@@ -190,6 +190,7 @@ pub(crate) fn canonical_structure_state(
         .and_then(serde_json::Value::as_array_mut)
         .ok_or_else(|| "Structure state swings must be an array".to_owned())?;
     sort_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    validate_canonical_structure_state(&state)?;
 
     serde_json::to_string(&state)
         .map_err(|error| format!("Cannot encode canonical structure state: {error}"))
