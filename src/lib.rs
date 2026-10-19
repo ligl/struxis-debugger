@@ -5,6 +5,7 @@ pub mod catalog;
 pub mod compare;
 pub mod checkpoint;
 pub mod dataset;
+pub mod diagnostics;
 pub mod discovery;
 pub mod effective_config;
 pub mod ipc;
