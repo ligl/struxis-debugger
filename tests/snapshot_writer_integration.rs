@@ -162,8 +162,9 @@ fn snapshot_writer_full_lifecycle_with_three_checkpoints() {
     assert!(!manifest.content_checksum.is_empty());
 
     // Cleanup
-    drop(writer);
-    fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot publication test directory");
+    if writer.published_path().exists() {
+        fs::remove_file(writer.published_path()).ok();
+    }
 }
 
 #[test]
@@ -308,7 +309,6 @@ fn snapshot_writer_atomic_publish_renames_temp_to_final() {
     );
 
     // Cleanup
-    if writer.published_path().exists() {
-        fs::remove_file(writer.published_path()).ok();
-    }
+    drop(writer);
+    fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot publication test directory");
 }
