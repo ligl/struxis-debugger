@@ -361,13 +361,14 @@ describe("Struxis Debugger native desktop", () => {
 
     const selectedRange = await $('[data-testid="selected-test-range"]');
     await selectedRange.waitForDisplayed();
-    const selectedIds = await selectedRange.$('code');
-    assert.equal(await selectedIds[0].getText(), firstSbarId,
+    const selectedStart = await selectedRange.$("div:nth-child(1) code");
+    const selectedEnd = await selectedRange.$("div:nth-child(2) code");
+    assert.equal(await selectedStart.getText(), firstSbarId,
       "The first chart click must select the first Origin SBar as the range start.");
-    assert.equal(await selectedIds[1].getText(), secondSbarId,
+    assert.equal(await selectedEnd.getText(), secondSbarId,
       "The second chart click must select the second Origin SBar as the inclusive range end.");
     assert.equal(
-      (await selectedRange.$("div:nth-child(3) strong").getText()).replace(/\\s/g, ""),
+      (await selectedRange.$("div:nth-child(3) strong").getText()).replace(/\s/g, ""),
       "2",
       "Selecting the first two Origin candles must produce an inclusive two-SBar Test Dataset.",
     );
