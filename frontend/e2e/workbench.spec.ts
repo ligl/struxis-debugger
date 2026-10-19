@@ -71,7 +71,7 @@ for (const viewport of viewports) {
       (element) => "selector" in element && element.selector === "[data-testid='debugger-shell']",
     );
     expect(shell, `Missing workbench shell. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`).toBeTruthy();
-    if (shell && "width" in shell) {
+    if (shell && "width" in shell && typeof shell.width === "number") {
       expect(
         Math.abs(shell.width - diagnostics.document.clientWidth),
         `Workbench shell should fill the available viewport width. Layout diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`,
