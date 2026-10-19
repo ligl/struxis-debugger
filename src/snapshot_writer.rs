@@ -23,7 +23,7 @@ use crate::{
     worker::CheckpointSink,
 };
 
-pub struct SnapshotWriter {
+pub(crate) struct SnapshotWriter {
     root: PathBuf,
     temporary_path: PathBuf,
     published_path: PathBuf,
@@ -49,7 +49,7 @@ struct InputMetadata {
 }
 
 impl SnapshotWriter {
-    pub fn new(root: impl AsRef<Path>, input: &LoadedInput, instrument_id: &str) -> Result<Self, String> {
+    pub(crate) fn new(root: impl AsRef<Path>, input: &LoadedInput, instrument_id: &str) -> Result<Self, String> {
         let first = input.bars.first().ok_or_else(|| "Snapshot input is empty".to_owned())?;
         let last = input.bars.last().expect("nonempty input checked above");
         let id = uuid::Uuid::new_v4().to_string();
@@ -79,7 +79,7 @@ impl SnapshotWriter {
     }
 
     #[must_use]
-    pub fn published_path(&self) -> &Path {
+    pub(crate) fn published_path(&self) -> &Path {
         &self.published_path
     }
 
