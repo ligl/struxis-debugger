@@ -300,12 +300,14 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    const originRows = await $$(".result-panel tbody tr");
-    assert.ok(originRows.length >= 2, "Origin preview must expose at least two SBars for a bounded Run.");
-    const firstSbarId = await originRows[0].$("td:first-child").getText();
-    const secondSbarId = await originRows[1].$("td:first-child").getText();
-    assert.ok(firstSbarId.length > 0 && secondSbarId.length > 0 && firstSbarId !== secondSbarId,
-      "Origin preview must expose distinct ordered SBar IDs.");
+    const originChart = await $('[data-testid="origin-chart-panel"]');
+    await originChart.waitForDisplayed();
+    const sbarCount = Number(await originChart.getAttribute("data-sbar-count"));
+    assert.ok(sbarCount >= 2, "Origin chart must contain at least two validated SBars for a bounded Run.");
+    const firstSbarId = await originChart.getAttribute("data-first-sbar-id");
+    const secondSbarId = await originChart.getAttribute("data-second-sbar-id");
+    assert.ok(firstSbarId && secondSbarId && firstSbarId !== secondSbarId,
+      "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
 
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     await $('[data-testid="test-dataset-start-sbar-id"]').setValue(firstSbarId);
