@@ -545,12 +545,12 @@ fn snapshot_writer_rejects_diagnostic_from_another_checkpoint() {
     crate::diagnostics::validate_canonical_diagnostics_json(&records[0].diagnostics)
         .expect("Persisted diagnostics must use canonical DTO encoding");
     assert!(
-        records[0].diagnostics.contains(r#"\"checkpointIndex\":0"#),
+        records[0].diagnostics.contains(r#""checkpointIndex":0"#),
         "checkpointIndex must remain a JSON number: {}",
         records[0].diagnostics
     );
     assert!(
-        !records[0].diagnostics.contains(r#"\"checkpointIndex\":\"0\""#),
+        !records[0].diagnostics.contains(r#""checkpointIndex":"0""#),
         "checkpointIndex must not be encoded as a JSON string"
     );
 
