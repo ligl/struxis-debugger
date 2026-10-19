@@ -143,7 +143,7 @@ fn compares_two_verified_sqlite_snapshots_by_domain_identity() {
     assert_eq!(result.differences.len(), 1);
     assert_eq!(result.differences[0].checkpoint_index, 1);
     assert_eq!(result.differences[0].object_type, "CBar");
-    assert_eq!(result.differences[0].object_id.as_deref(), Some("1700000000000000000"));
+    assert_eq!(result.differences[0].object_id, "1700000000000000000");
     assert_eq!(result.differences[0].kind, crate::compare::DifferenceKind::Modified);
     assert_eq!(result.differences[0].properties.len(), 1);
     assert_eq!(result.differences[0].properties[0].field, "high");
