@@ -20,6 +20,23 @@ else
 fi
 export WEBKIT_WEBDRIVER
 
+if ! command -v bun >/dev/null 2>&1; then
+  echo "ERROR: Bun is required to install and run the desktop E2E dependencies."
+  exit 2
+fi
+
+# Ensure the project-local WebdriverIO CLI exists before spending time on a native build.
+# Running this from the harness directory keeps dependencies isolated from the frontend.
+echo "==> Installing desktop E2E dependencies"
+(
+  cd "$SCRIPT_DIR"
+  bun install
+)
+if [[ ! -x "$SCRIPT_DIR/node_modules/.bin/wdio" ]]; then
+  echo "ERROR: WebdriverIO CLI was not installed at $SCRIPT_DIR/node_modules/.bin/wdio"
+  exit 2
+fi
+
 if ! command -v node >/dev/null 2>&1; then
   echo "ERROR: Node.js 18.20 or later is required by WebdriverIO."
   exit 2
