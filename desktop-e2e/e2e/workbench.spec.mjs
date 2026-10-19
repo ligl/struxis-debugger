@@ -413,7 +413,11 @@ describe("Struxis Debugger native desktop", () => {
     await browser.waitUntil(
       async () => {
         const rows = await $(".snapshot-table tbody tr");
-        return rows.filter(async (row) => (await row.getText()).includes("COMPLETE / VERIFIED")).length >= 2;
+        let completeCount = 0;
+        for (const row of rows) {
+          if ((await row.getText()).includes("COMPLETE / VERIFIED")) completeCount += 1;
+        }
+        return completeCount >= 2;
       },
       {
         timeout: 15_000,
