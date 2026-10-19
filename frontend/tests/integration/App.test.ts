@@ -12,6 +12,26 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: ipc.invoke,
 }));
 
+vi.mock("../../src/components/OriginChart.vue", async () => {
+  const { defineComponent, h } = await import("vue");
+  return {
+    default: defineComponent({
+      name: "OriginChartTestStub",
+      props: ["bars", "originDatasetId"],
+      setup(props) {
+        return () =>
+          h("section", {
+            "data-testid": "origin-chart-panel",
+            "data-origin-dataset-id": props.originDatasetId,
+          }, [
+            h("h3", "Origin SBar chart"),
+            h("span", `${(props.bars as unknown[]).length} SBARS`),
+          ]);
+      },
+    }),
+  };
+});
+
 const invokeMock = ipc.invoke;
 
 enableAutoUnmount(afterEach);
@@ -104,7 +124,7 @@ describe("Origin Load workbench", () => {
     );
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
     expect(wrapper.text()).toContain("2");
-    expect(wrapper.text()).toContain("Oldest-first SBar sample");
+    expect(wrapper.text()).toContain("Origin SBar chart");
   });
 
   it("maps a disabled structure checkbox to enableStructure=false and renders the returned mode", async () => {
