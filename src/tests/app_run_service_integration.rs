@@ -84,21 +84,11 @@ fn app_state_snapshot_discovery_works_on_empty_directory() {
 
     let result = state.discover_snapshots();
 
-    match result {
-        Ok(artifacts) => {
-            assert!(
-                artifacts.is_empty(),
-                "Empty directory should return no artifacts"
-            );
-        }
-        Err(error) => {
-            assert_eq!(error.code, IpcErrorCode::Internal);
-            assert!(
-                error.message.contains("Snapshot"),
-                "Error should mention Snapshot"
-            );
-        }
-    }
+    let artifacts = result.expect("an existing empty Snapshot directory should be a successful discovery");
+    assert!(
+        artifacts.is_empty(),
+        "Empty directory should return no artifacts"
+    );
 
     std::fs::remove_dir_all(snapshot_root).expect("temporary Snapshot root should be removed");
 }
