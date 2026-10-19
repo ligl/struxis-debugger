@@ -19,7 +19,7 @@ function mountApp() {
     global: {
       stubs: {
         OriginPanel: {
-          template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="origin && rangeSelectionStatus">{{ rangeSelectionStatus }}</span><button v-if="origin" data-testid="origin-sbar-click-100" @click="$emit(\\'sbar-click\\', \\'100\\')">Select SBar 100</button><button v-if="origin" data-testid="origin-sbar-click-200" @click="$emit(\\'sbar-click\\', \\'200\\')">Select SBar 200</button><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
+          template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="origin && rangeSelectionStatus">{{ rangeSelectionStatus }}</span><button v-if="origin" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="origin" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
           props: ["origin", "loadStatus", "loadError", "formatTimestamp", "rangeSelectionStatus"],
         },
       },
