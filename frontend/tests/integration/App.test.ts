@@ -408,10 +408,20 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    const readySpaceEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(readySpaceEvent);
+    expect(readySpaceEvent.defaultPrevented).toBe(false);
     const panel = wrapper.getComponent(RunControlPanel);
     panel.vm.$emit("command", "pause");
     await flushPromises();
-    expect(invokeMock.mock.calls.filter(([command]) => command === "pause_run")).toHaveLength(0);
+    expect(invokeMock.mock.calls.filter(([command]) =>
+      command === "pause_run" || command === "play_run",
+    )).toHaveLength(0);
   });
 
   it("rejects Step, Play and Dispose while the confirmed Run is running", async () => {
