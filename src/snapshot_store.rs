@@ -345,6 +345,36 @@ mod tests {
     }
 
     #[test]
+    fn discovery_ignores_files_outside_snapshot_naming_contract() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+
+        let unrelated = [
+            ("ordinary.tmp", b"temporary".as_slice()),
+            ("ordinary.sqlite", b"sqlite".as_slice()),
+            ("visible.snapshot.tmp", b"not a hidden temporary artifact".as_slice()),
+            ("notes.txt", b"notes".as_slice()),
+        ];
+        for (name, bytes) in unrelated {
+            fs::write(root.join(name), bytes).unwrap();
+        }
+        fs::create_dir(root.join("nested.snapshot.sqlite")).unwrap();
+
+        let artifacts = discover_snapshot_artifacts(&root).unwrap();
+
+        assert!(
+            artifacts.is_empty(),
+            "Discovery must only include published .snapshot.sqlite files and hidden .snapshot.tmp files"
+        );
+        for (name, bytes) in unrelated {
+            assert_eq!(fs::read(root.join(name)).unwrap(), bytes);
+        }
+        assert!(root.join("nested.snapshot.sqlite").is_dir());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn malformed_published_artifact_is_reported_instead_of_ignored() {
         let root = temp_root();
         fs::create_dir_all(&root).unwrap();
