@@ -248,7 +248,7 @@ impl AppState {
         let find_published = |snapshot_id: &str| {
             artifacts.iter().find(|artifact| {
                 matches!(
-                    artifact.kind,
+                    &artifact.kind,
                     crate::snapshot_store::SnapshotArtifactKind::Complete
                         | crate::snapshot_store::SnapshotArtifactKind::InvalidPublished
                 ) && (
