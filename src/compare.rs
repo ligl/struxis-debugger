@@ -38,7 +38,6 @@ pub(crate) enum DifferenceKind {
     Added,
     Removed,
     Modified,
-    Unmatched,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
