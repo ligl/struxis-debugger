@@ -14,12 +14,14 @@ use capitus_struxis_debugger::{
     run::{RunState, RunStatus},
     snapshot_writer::SnapshotWriter,
     worker::CheckpointSink,
-    StruxisConfig, StruxisStateKey,
 };
-use nautilus_model::data::Bar;
-use nautilus_model::identifiers::InstrumentId;
-use nautilus_model::types::price::Price;
-use nautilus_model::types::quantity::Quantity;
+use capitus_struxis::{StruxisConfig, StruxisStateKey};
+use nautilus_model::{
+    data::{Bar, BarType},
+    identifiers::InstrumentId,
+    types::{Price, Quantity},
+};
+use std::str::FromStr;
 
 fn test_instrument_id() -> InstrumentId {
     InstrumentId::from("BTCUSDT-PERP.BINANCE")
@@ -33,24 +35,28 @@ fn test_state_key() -> StruxisStateKey {
 }
 
 fn create_test_bars(count: usize) -> Vec<Bar> {
-    let instrument = test_instrument_id();
-    let bar_type = format!("{instrument}-5-MINUTE-LAST-EXTERNAL");
-    let base_ts: i64 = 1_700_000_000_000_000_000;
+    let bar_type = BarType::from_str("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+        .expect("fixture BarType should parse");
+    let base_ts: u64 = 1_700_000_000_000_000_000;
 
     (0..count)
         .map(|i| {
-            let ts_event = base_ts + (i as i64 * 300_000_000_000);
-            Bar {
-                bar_type: bar_type.clone().into(),
-                instrument_id: instrument.clone(),
-                ts_event: ts_event.into(),
-                ts_init: ts_event.into(),
-                open: Price::from(100.0 + (i as f64) * 0.1),
-                high: Price::from(101.0 + (i as f64) * 0.1),
-                low: Price::from(99.0 + (i as f64) * 0.1),
-                close: Price::from(100.5 + (i as f64) * 0.1),
-                volume: Quantity::from(10.0 + (i as f64)),
-            }
+            let offset = i as u64 * 300_000_000_000;
+            let open = format!("{:.1}", 100.0 + i as f64 * 0.1);
+            let high = format!("{:.1}", 101.0 + i as f64 * 0.1);
+            let low = format!("{:.1}", 99.0 + i as f64 * 0.1);
+            let close = format!("{:.1}", 100.5 + i as f64 * 0.1);
+            let volume = (10 + i).to_string();
+            Bar::new(
+                bar_type,
+                Price::from(open),
+                Price::from(high),
+                Price::from(low),
+                Price::from(close),
+                Quantity::from(volume),
+                (base_ts + offset).into(),
+                (base_ts + offset).into(),
+            )
         })
         .collect()
 }
@@ -66,12 +72,12 @@ fn create_test_input(bars: Vec<Bar>) -> LoadedInput {
 }
 
 fn create_initial_run_state(input: &LoadedInput) -> RunState {
-    RunState::new(
+    RunState::ready(
         "run-integration-001".to_string(),
         input.test_dataset_id.clone(),
         input.sbar_sequence_fingerprint.clone(),
         input.bars.len(),
-    )
+    ).expect("test input should produce a valid Ready Run")
 }
 
 fn create_effective_config() -> EffectiveStruxisConfig {
@@ -190,7 +196,7 @@ fn snapshot_writer_rejects_checkpoint_index_out_of_order() {
             .unwrap()
             .flatten()
             .filter(|entry| entry.path().extension().map(|e| e == "tmp").unwrap_or(false))
-            .for_each(|entry| fs::remove_file(entry.path()).ok());
+            .for_each(|entry| { let _ = fs::remove_file(entry.path()); });
     }
 }
 

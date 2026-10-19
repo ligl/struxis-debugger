@@ -12,7 +12,7 @@ use capitus_struxis_debugger::{
 
 fn test_catalog_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../test_data")
+        .join("../../test_data/catalog")
         .canonicalize()
         .unwrap_or_else(|_| PathBuf::from("/nonexistent/catalog"))
 }
@@ -125,4 +125,41 @@ mod concurrent_access {
         handle1.join().expect("Thread 1 should not panic");
         handle2.join().expect("Thread 2 should not panic");
     }
+}
+
+#[test]
+fn active_run_rejects_origin_and_test_dataset_replacement() {
+    let state = AppState::new(test_catalog_path());
+    let entry = state
+        .discover_datasets()
+        .expect("Catalog discovery should succeed")
+        .into_iter()
+        .find(|entry| {
+            entry.available
+                && entry.bar_type.as_deref()
+                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+        })
+        .expect("fixture BTCUSDT stream should be available");
+
+    let origin = state.load_origin(&entry.id, true).expect("Origin should load");
+    assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
+    let test = state
+        .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
+        .expect("Test Dataset should be created");
+    let _run = state.start_run().expect("Run should start");
+
+    let origin_result = state.load_origin(&entry.id, true);
+    assert_eq!(origin_result.unwrap_err().code, IpcErrorCode::Conflict);
+    let test_result = state.create_test_dataset(&origin.first_sbar_id, &origin.last_sbar_id);
+    assert_eq!(test_result.unwrap_err().code, IpcErrorCode::Conflict);
+
+    let current_origin = state.current_origin().expect("current Origin query").expect("Origin remains loaded");
+    let current_test = state.current_test_dataset().expect("current Test query").expect("Test remains loaded");
+    assert_eq!(current_origin.origin_dataset_id, origin.origin_dataset_id);
+    assert_eq!(current_origin.sbar_sequence_fingerprint, origin.sbar_sequence_fingerprint);
+    assert_eq!(current_test.test_dataset_id, test.test_dataset_id);
+    assert_eq!(current_test.sbar_sequence_fingerprint, test.sbar_sequence_fingerprint);
+
+    // A completed Run remains owned until explicit Dispose.
+    state.replay_dispose().expect("Run resources should be disposed");
 }
