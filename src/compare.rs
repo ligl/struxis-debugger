@@ -546,7 +546,7 @@ mod tests {
     fn rejects_state_data_when_declared_count_disagrees_with_collection() {
         let mut before = record(0, "100", r#"[{"cbarId":"10"}]"#, "[]");
         let after = record(0, "100", r#"[{"cbarId":"10"}]"#, "[]");
-        before.state_data = before.state_data.replace("\\"cbarCount\\":1", "\\"cbarCount\\":0");
+        before.state_data = before.state_data.replace(r#""cbarCount":1"#, r#""cbarCount":0"#);
 
         let rejection = compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err();
         assert_eq!(rejection.category, CompareRejectCategory::SnapshotIntegrityFailure);
@@ -557,7 +557,7 @@ mod tests {
     fn rejects_unrecognized_top_level_state_data_fields() {
         let mut before = record(0, "100", "[]", "[]");
         let after = record(0, "100", "[]", "[]");
-        before.state_data = before.state_data.replace("\\\"swings\\\":[]", "\\\"swings\\\":[],\\\"futureField\\\":true");
+        before.state_data = before.state_data.replace(r#""swings":[] "#, r#""swings":[],"futureField":true"#);
 
         let rejection = compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err();
         assert_eq!(rejection.category, CompareRejectCategory::SnapshotIntegrityFailure);
