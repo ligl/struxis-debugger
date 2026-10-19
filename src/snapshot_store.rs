@@ -282,6 +282,27 @@ mod tests {
     }
 
     #[test]
+    fn finalizing_and_failed_temporary_artifacts_are_classified_without_promotion() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let failed_path = root.join(".a-failed.snapshot.tmp");
+        let finalizing_path = root.join(".z-finalizing.snapshot.tmp");
+        create_manifest_database(&failed_path, STATUS_FAILED);
+        create_manifest_database(&finalizing_path, STATUS_FINALIZING);
+
+        let artifacts = discover_snapshot_artifacts(&root).unwrap();
+
+        assert_eq!(artifacts.len(), 2);
+        assert_eq!(artifacts[0].file_name, ".a-failed.snapshot.tmp");
+        assert_eq!(artifacts[0].kind, SnapshotArtifactKind::FailedTemporary);
+        assert_eq!(artifacts[1].file_name, ".z-finalizing.snapshot.tmp");
+        assert_eq!(artifacts[1].kind, SnapshotArtifactKind::FinalizingTemporary);
+        assert!(!root.join("snapshot-test.snapshot.sqlite").exists());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn unreadable_temporary_artifact_is_reported_without_promotion_or_mutation() {
         let root = temp_root();
         fs::create_dir_all(&root).unwrap();
