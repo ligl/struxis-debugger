@@ -10,6 +10,7 @@
     "test:watch": "cd frontend && bun run test:watch",
     "build": "cd frontend && bun run build",
     "check": "cd frontend && bun run check",
-    "preview": "cd frontend && bun run preview"
+    "preview": "cd frontend && bun run preview",
+    "test:e2e": "cd frontend && playwright test"
   }
 }
