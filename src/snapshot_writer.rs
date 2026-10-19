@@ -389,6 +389,7 @@ mod tests {
                 sbar_count: index + 1,
                 sbars: vec![],
                 structure: None,
+            diagnostics: Vec::new(),
             };
             writer.commit_checkpoint(index, sbar_id, &projection).unwrap();
             state.confirm_checkpoint((*sbar_id).into()).unwrap();
@@ -430,6 +431,7 @@ mod tests {
                 sbar_count: index + 1,
                 sbars: vec![],
                 structure: None,
+            diagnostics: Vec::new(),
             };
             writer.commit_checkpoint(index, &sbar_id, &projection).unwrap();
             state.confirm_checkpoint(sbar_id).unwrap();
@@ -476,6 +478,7 @@ mod tests {
             sbar_count: 1,
             sbars: vec![],
             structure: None,
+        diagnostics: Vec::new(),
         };
         assert!(writer.commit_checkpoint(0, "999", &projection).unwrap_err()
             .contains("does not match fixed input"));
@@ -508,6 +511,7 @@ mod tests {
             sbar_count: 1,
             sbars: vec![],
             structure: None,
+        diagnostics: Vec::new(),
         };
         assert!(writer.commit_checkpoint(1, "100", &projection).unwrap_err()
             .contains("Expected checkpoint index 0"));
