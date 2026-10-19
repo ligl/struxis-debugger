@@ -91,3 +91,70 @@ export interface SnapshotArtifactDto {
   checkpointCount: number | null;
   diagnostic: string | null;
 }
+
+export type CompareRejectCategory =
+  | "inputMismatch"
+  | "snapshotUnreadable"
+  | "snapshotIncomplete"
+  | "snapshotIntegrityFailure"
+  | "checkpointTrajectoryConflict"
+  | "stateReconstructionFailure"
+  | "unknown";
+
+export interface CompareRejectionDto {
+  category: CompareRejectCategory;
+  message: string;
+}
+
+export interface SnapshotCompareMetadataDto {
+  snapshotId: string;
+  runId: string;
+  stateKey: string;
+  instrumentId: string;
+  barType: string;
+  snapshotGeneratedAt: string;
+  inputBarCount: number;
+  sbarSequenceFingerprint: string;
+  configFingerprint: string;
+  effectiveConfig: string;
+}
+
+export interface CheckpointCompareSummaryDto {
+  checkpointIndex: number;
+  sbarId: string;
+  tsEvent: string;
+  differenceCount: number;
+}
+
+export interface PropertyDifferenceDto {
+  field: string;
+  baselineValue: unknown | null;
+  candidateValue: unknown | null;
+}
+
+export interface ObjectDifferenceDto {
+  checkpointIndex: number;
+  sbarId: string;
+  objectType: string;
+  kind: "added" | "removed" | "modified" | "unmatched";
+  objectId: string | null;
+  properties: PropertyDifferenceDto[];
+}
+
+export interface DiagnosticsDifferenceDto {
+  checkpointIndex: number;
+  sbarId: string;
+  baseline: unknown;
+  candidate: unknown;
+}
+
+export interface SnapshotCompareResultDto {
+  baseline: SnapshotCompareMetadataDto;
+  candidate: SnapshotCompareMetadataDto;
+  checkpointCount: number;
+  checkpoints: CheckpointCompareSummaryDto[];
+  differences: ObjectDifferenceDto[];
+  firstStructuralDivergence: CheckpointCompareSummaryDto | null;
+  diagnosticsDifferences: DiagnosticsDifferenceDto[];
+  firstDiagnosticsDivergence: number | null;
+}
