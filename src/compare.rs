@@ -432,7 +432,7 @@ mod tests {
         compare_structure_record(&before, &after, &mut differences).unwrap();
         assert_eq!(differences.len(), 1);
         assert_eq!(differences[0].kind, DifferenceKind::Modified);
-        assert_eq!(differences[0].object_id.as_deref(), Some("10"));
+        assert_eq!(differences[0].object_id, "10");
         assert_eq!(differences[0].properties[0].field, "high");
     }
 
