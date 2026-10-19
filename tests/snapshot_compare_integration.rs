@@ -84,6 +84,7 @@ fn checkpoint(input: &LoadedInput, index: usize, high: &str) -> ReplayCheckpoint
             swing_count: 0,
             swings: Vec::new(),
         }),
+        diagnostics: Vec::new(),
     }
 }
 
