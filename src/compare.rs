@@ -363,7 +363,9 @@ fn compare_properties(
     id_field: &str,
 ) -> Vec<PropertyDifference> {
     let fields: std::collections::BTreeSet<_> =
-        baseline.keys().chain(candidate.keys()).filter(|field| field.as_str() != id_field).cloned().collect();
+        baseline.keys().chain(candidate.keys()).filter(|field| {
+            !matches!(field.as_str(), field if field == id_field || field == "createdAt" || field == "updatedAt")
+        }).cloned().collect();
     fields.into_iter().filter_map(|field| {
         let before = baseline.get(&field);
         let after = candidate.get(&field);
@@ -431,6 +433,28 @@ mod tests {
         assert_eq!(differences[0].kind, DifferenceKind::Modified);
         assert_eq!(differences[0].object_id.as_deref(), Some("10"));
         assert_eq!(differences[0].properties[0].field, "high");
+    }
+
+    #[test]
+    fn wall_clock_lifecycle_timestamps_do_not_create_structural_differences() {
+        let before = record(
+            0,
+            "100",
+            r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":"1","fractalType":null,"createdAt":"1000"}]"#,
+            r#"[{"swingId":"20","high":"12","low":"9","createdAt":"1000","updatedAt":"1001"}]"#,
+        );
+        let after = record(
+            0,
+            "100",
+            r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":"1","fractalType":null,"createdAt":"2000"}]"#,
+            r#"[{"swingId":"20","high":"12","low":"9","createdAt":"2000","updatedAt":"2001"}]"#,
+        );
+        let mut differences = Vec::new();
+        compare_structure_record(&before, &after, &mut differences).unwrap();
+        assert!(
+            differences.is_empty(),
+            "wall-clock lifecycle timestamps are operational metadata, not structural state",
+        );
     }
 
     #[test]
