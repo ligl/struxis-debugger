@@ -12,6 +12,15 @@ if ! command -v webkit2gtk-driver >/dev/null 2>&1; then
   exit 2
 fi
 
+if ! command -v node >/dev/null 2>&1; then
+  echo "ERROR: Node.js 18.20 or later is required by WebdriverIO."
+  exit 2
+fi
+if ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major > 18 || (major === 18 && minor >= 20) ? 0 : 1)'; then
+  echo "ERROR: Node.js 18.20 or later is required by WebdriverIO."
+  exit 2
+fi
+
 if ! command -v cargo >/dev/null 2>&1 || ! cargo tauri --version >/dev/null 2>&1; then
   echo "ERROR: Tauri CLI 2.x is required (cargo tauri --version)."
   exit 2
