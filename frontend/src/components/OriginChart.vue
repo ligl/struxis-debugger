@@ -129,13 +129,14 @@ onMounted(() => {
     },
   });
   candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: "#79b58b",
-    downColor: "#d98282",
-    borderUpColor: "#79b58b",
-    borderDownColor: "#d98282",
-    wickUpColor: "#79b58b",
-    wickDownColor: "#d98282",
-    priceLineVisible: false,
+    upColor: "#26a69a",
+    downColor: "#ef5350",
+    borderUpColor: "#26a69a",
+    borderDownColor: "#ef5350",
+    wickUpColor: "#26a69a",
+    wickDownColor: "#ef5350",
+    priceLineVisible: true,
+    lastValueVisible: true,
   });
   volumeSeries = chart.addSeries(HistogramSeries, {
     priceScaleId: "",
