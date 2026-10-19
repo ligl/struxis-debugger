@@ -12,7 +12,7 @@ use crate::{
 };
 
 #[tauri::command]
-pub async fn list_catalog_datasets(
+pub(crate) async fn list_catalog_datasets(
     state: State<'_, AppState>,
 ) -> Result<Vec<CatalogDatasetEntry>, IpcError> {
     let state = state.inner().clone();
@@ -27,7 +27,7 @@ pub async fn list_catalog_datasets(
 }
 
 #[tauri::command]
-pub async fn load_origin(
+pub(crate) async fn load_origin(
     dataset_id: String,
     enable_structure: bool,
     state: State<'_, AppState>,
@@ -46,7 +46,7 @@ pub async fn load_origin(
 }
 
 #[tauri::command]
-pub async fn get_current_origin(
+pub(crate) async fn get_current_origin(
     state: State<'_, AppState>,
 ) -> Result<Option<OriginDatasetDto>, IpcError> {
     let state = state.inner().clone();
@@ -61,7 +61,7 @@ pub async fn get_current_origin(
 }
 
 #[tauri::command]
-pub async fn create_test_dataset(
+pub(crate) async fn create_test_dataset(
     start_sbar_id: String,
     end_sbar_id: String,
     state: State<'_, AppState>,
@@ -80,7 +80,7 @@ pub async fn create_test_dataset(
 }
 
 #[tauri::command]
-pub async fn get_current_test_dataset(
+pub(crate) async fn get_current_test_dataset(
     state: State<'_, AppState>,
 ) -> Result<Option<TestDatasetDto>, IpcError> {
     let state = state.inner().clone();
@@ -95,7 +95,7 @@ pub async fn get_current_test_dataset(
 }
 
 #[tauri::command]
-pub async fn list_snapshots(state: State<'_, AppState>) -> Result<Vec<SnapshotArtifact>, IpcError> {
+pub(crate) async fn list_snapshots(state: State<'_, AppState>) -> Result<Vec<SnapshotArtifact>, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.discover_snapshots())
         .await
@@ -103,7 +103,7 @@ pub async fn list_snapshots(state: State<'_, AppState>) -> Result<Vec<SnapshotAr
 }
 
 #[tauri::command]
-pub async fn compare_snapshots(
+pub(crate) async fn compare_snapshots(
     baseline_snapshot_id: String,
     candidate_snapshot_id: String,
     state: State<'_, AppState>,
@@ -120,7 +120,7 @@ pub async fn compare_snapshots(
 }
 
 #[tauri::command]
-pub async fn start_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn start_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.start_run())
         .await
@@ -128,7 +128,7 @@ pub async fn start_run(state: State<'_, AppState>) -> Result<RunState, IpcError>
 }
 
 #[tauri::command]
-pub async fn restart_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn restart_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.restart_run())
         .await
@@ -136,7 +136,7 @@ pub async fn restart_run(state: State<'_, AppState>) -> Result<RunState, IpcErro
 }
 
 #[tauri::command]
-pub async fn get_run_state(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn get_run_state(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_state())
         .await
@@ -144,7 +144,7 @@ pub async fn get_run_state(state: State<'_, AppState>) -> Result<RunState, IpcEr
 }
 
 #[tauri::command]
-pub async fn step_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn step_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_step())
         .await
@@ -152,7 +152,7 @@ pub async fn step_run(state: State<'_, AppState>) -> Result<RunState, IpcError> 
 }
 
 #[tauri::command]
-pub async fn play_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn play_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_play())
         .await
@@ -160,7 +160,7 @@ pub async fn play_run(state: State<'_, AppState>) -> Result<RunState, IpcError> 
 }
 
 #[tauri::command]
-pub async fn pause_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn pause_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_pause())
         .await
@@ -168,7 +168,7 @@ pub async fn pause_run(state: State<'_, AppState>) -> Result<RunState, IpcError>
 }
 
 #[tauri::command]
-pub async fn stop_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn stop_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_stop())
         .await
@@ -176,7 +176,7 @@ pub async fn stop_run(state: State<'_, AppState>) -> Result<RunState, IpcError> 
 }
 
 #[tauri::command]
-pub async fn dispose_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn dispose_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_dispose())
         .await
