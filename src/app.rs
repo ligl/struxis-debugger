@@ -33,7 +33,7 @@ use crate::{
 /// not retained: Origin stores only the owned result produced after Engine
 /// disposal and complete Struxis SBar validation.
 #[derive(Clone)]
-pub struct AppState {
+pub(crate) struct AppState {
     inner: Arc<AppStateInner>,
 }
 
@@ -64,7 +64,7 @@ struct TestRecord {
 
 impl AppState {
     #[must_use]
-    pub fn new(catalog_path: PathBuf) -> Self {
+    pub(crate) fn new(catalog_path: PathBuf) -> Self {
         Self::with_snapshot_root(catalog_path, configured_snapshot_root())
     }
 
@@ -73,7 +73,7 @@ impl AppState {
     /// This keeps discovery deterministic for isolated tests and callers that
     /// manage Snapshot storage outside the default user data directory.
     #[must_use]
-    pub fn with_snapshot_root(catalog_path: PathBuf, snapshot_root: PathBuf) -> Self {
+    pub(crate) fn with_snapshot_root(catalog_path: PathBuf, snapshot_root: PathBuf) -> Self {
         Self {
             inner: Arc::new(AppStateInner {
                 snapshot_root,
@@ -89,11 +89,11 @@ impl AppState {
     }
 
     #[must_use]
-    pub fn with_configured_catalog() -> Self {
+    pub(crate) fn with_configured_catalog() -> Self {
         Self::new(configured_catalog_root())
     }
 
-    pub fn discover_datasets(&self) -> Result<Vec<CatalogDatasetEntry>, IpcError> {
+    pub(crate) fn discover_datasets(&self) -> Result<Vec<CatalogDatasetEntry>, IpcError> {
         discover_catalog_datasets(&self.inner.catalog_path).map_err(|error| {
             IpcError::new(
                 IpcErrorCode::Internal,
@@ -102,7 +102,7 @@ impl AppState {
         })
     }
 
-    pub fn load_origin(
+    pub(crate) fn load_origin(
         &self,
         dataset_id: &str,
         enable_structure: bool,
@@ -177,7 +177,7 @@ impl AppState {
         Ok(dto)
     }
 
-    pub fn current_origin(&self) -> Result<Option<OriginDatasetDto>, IpcError> {
+    pub(crate) fn current_origin(&self) -> Result<Option<OriginDatasetDto>, IpcError> {
         let datasets = self.inner.datasets.lock().map_err(|_| {
             IpcError::new(
                 IpcErrorCode::Internal,
@@ -187,7 +187,7 @@ impl AppState {
         Ok(datasets.current_origin.as_ref().map(OriginRecord::to_dto))
     }
 
-    pub fn create_test_dataset(
+    pub(crate) fn create_test_dataset(
         &self,
         start_sbar_id: &str,
         end_sbar_id: &str,
@@ -219,7 +219,7 @@ impl AppState {
         Ok(dto)
     }
 
-    pub fn current_test_dataset(&self) -> Result<Option<TestDatasetDto>, IpcError> {
+    pub(crate) fn current_test_dataset(&self) -> Result<Option<TestDatasetDto>, IpcError> {
         let datasets = self.inner.datasets.lock().map_err(|_| {
             IpcError::new(
                 IpcErrorCode::Internal,
@@ -230,11 +230,11 @@ impl AppState {
     }
 
     #[must_use]
-    pub fn snapshot_root(&self) -> &Path {
+    pub(crate) fn snapshot_root(&self) -> &Path {
         &self.inner.snapshot_root
     }
 
-    pub fn compare_snapshots(
+    pub(crate) fn compare_snapshots(
         &self,
         baseline_snapshot_id: &str,
         candidate_snapshot_id: &str,
@@ -262,7 +262,7 @@ impl AppState {
         compare_snapshot_paths(baseline_path, candidate_path)
     }
 
-    pub fn discover_snapshots(&self) -> Result<Vec<SnapshotArtifact>, IpcError> {
+    pub(crate) fn discover_snapshots(&self) -> Result<Vec<SnapshotArtifact>, IpcError> {
         discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|error| {
             IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery failed: {error}"))
         })
@@ -328,39 +328,39 @@ impl AppState {
         Ok((ReplayWorkerConfig { run_id, input, instrument }, Box::new(writer)))
     }
 
-    pub fn start_run(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn start_run(&self) -> Result<RunState, IpcError> {
         let _permit = self.acquire_mutation_permit()?;
         let (config, sink) = self.prepare_run()?;
         self.with_replay_manager(|manager| manager.start(config, sink))
     }
 
-    pub fn restart_run(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn restart_run(&self) -> Result<RunState, IpcError> {
         let _permit = self.acquire_mutation_permit()?;
         let (config, sink) = self.prepare_run()?;
         self.with_replay_manager(|manager| manager.restart(config, sink))
     }
 
-    pub fn replay_state(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn replay_state(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::state)
     }
 
-    pub fn replay_step(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn replay_step(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::step)
     }
 
-    pub fn replay_play(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn replay_play(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::play)
     }
 
-    pub fn replay_pause(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn replay_pause(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::pause)
     }
 
-    pub fn replay_stop(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn replay_stop(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::stop)
     }
 
-    pub fn replay_dispose(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn replay_dispose(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::dispose)
     }
 
@@ -381,7 +381,7 @@ impl AppState {
     }
 
     #[must_use]
-    pub fn catalog_path(&self) -> &Path {
+    pub(crate) fn catalog_path(&self) -> &Path {
         &self.inner.catalog_path
     }
 }
@@ -410,48 +410,48 @@ impl Drop for MutationPermit<'_> {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OriginDatasetDto {
-    pub origin_dataset_id: String,
-    pub source_catalog: String,
-    pub enable_structure: bool,
-    pub instrument_id: String,
-    pub bar_type: String,
-    pub timeframe: String,
-    pub sbar_sequence_fingerprint: String,
-    pub sbar_count: usize,
-    pub first_sbar_id: String,
-    pub last_sbar_id: String,
-    pub first_ts_event: String,
-    pub last_ts_event: String,
-    pub bars: Vec<SBarDto>,
+pub(crate) struct OriginDatasetDto {
+    pub(crate) origin_dataset_id: String,
+    pub(crate) source_catalog: String,
+    pub(crate) enable_structure: bool,
+    pub(crate) instrument_id: String,
+    pub(crate) bar_type: String,
+    pub(crate) timeframe: String,
+    pub(crate) sbar_sequence_fingerprint: String,
+    pub(crate) sbar_count: usize,
+    pub(crate) first_sbar_id: String,
+    pub(crate) last_sbar_id: String,
+    pub(crate) first_ts_event: String,
+    pub(crate) last_ts_event: String,
+    pub(crate) bars: Vec<SBarDto>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TestDatasetDto {
-    pub test_dataset_id: String,
-    pub origin_dataset_id: String,
-    pub instrument_id: String,
-    pub bar_type: String,
-    pub timeframe: String,
-    pub start_sbar_id: String,
-    pub end_sbar_id: String,
-    pub sbar_count: usize,
-    pub sbar_sequence_fingerprint: String,
+pub(crate) struct TestDatasetDto {
+    pub(crate) test_dataset_id: String,
+    pub(crate) origin_dataset_id: String,
+    pub(crate) instrument_id: String,
+    pub(crate) bar_type: String,
+    pub(crate) timeframe: String,
+    pub(crate) start_sbar_id: String,
+    pub(crate) end_sbar_id: String,
+    pub(crate) sbar_count: usize,
+    pub(crate) sbar_sequence_fingerprint: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SBarDto {
-    pub sbar_id: String,
-    pub bar_type: String,
-    pub ts_event: String,
-    pub ts_init: String,
-    pub open: String,
-    pub high: String,
-    pub low: String,
-    pub close: String,
-    pub volume: String,
+pub(crate) struct SBarDto {
+    pub(crate) sbar_id: String,
+    pub(crate) bar_type: String,
+    pub(crate) ts_event: String,
+    pub(crate) ts_init: String,
+    pub(crate) open: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) close: String,
+    pub(crate) volume: String,
 }
 
 impl TestRecord {
