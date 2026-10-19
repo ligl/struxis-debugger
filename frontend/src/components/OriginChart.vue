@@ -7,7 +7,6 @@ import {
   createChart,
   type IChartApi,
   type ISeriesApi,
-  type UTCTimestamp,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import type { SBarDto } from "../origin-types";
@@ -16,8 +15,8 @@ const props = defineProps<{ bars: SBarDto[]; originDatasetId: string }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
 let chart: IChartApi | null = null;
-let candleSeries: ISeriesApi<"Candlestick", UTCTimestamp> | null = null;
-let volumeSeries: ISeriesApi<"Histogram", UTCTimestamp> | null = null;
+let candleSeries: ISeriesApi<"Candlestick"> | null = null;
+let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
 function updateChart(): void {
