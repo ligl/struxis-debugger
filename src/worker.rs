@@ -913,9 +913,9 @@ mod tests {
             let effective = observed.effective_config.lock().expect("effective config");
             let effective = effective.as_ref().expect("sink receives effective Struxis config");
             assert!(effective.enable_structure);
-            assert_eq!(effective.structure_cbars_capacity, "10000");
-            assert_eq!(effective.structure_swings_capacity, "2000");
-            assert_eq!(effective.structure_trends_capacity, "666");
+            assert_eq!(effective.structure_cbars_capacity, 10000);
+            assert_eq!(effective.structure_swings_capacity, 2000);
+            assert_eq!(effective.structure_trends_capacity, 666);
             assert_eq!(
                 effective.fingerprint().expect("effective config fingerprint"),
                 crate::effective_config::fingerprint_canonical_config(
