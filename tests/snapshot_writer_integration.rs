@@ -61,12 +61,17 @@ fn create_test_bars(count: usize) -> Vec<Bar> {
 }
 
 fn create_test_input(bars: Vec<Bar>) -> LoadedInput {
+    let state_key = test_state_key();
+    let sbar_sequence_fingerprint =
+        capitus_struxis_debugger::dataset::sequence_fingerprint(state_key, &bars)
+            .expect("fixture SBar sequence fingerprint should compute");
+
     LoadedInput {
         test_dataset_id: "test-integration-001".to_string(),
-        state_key: test_state_key(),
+        state_key,
         bar_type: "BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL".to_string(),
         bars,
-        sbar_sequence_fingerprint: "sha256-test-fingerprint-for-integration".to_string(),
+        sbar_sequence_fingerprint,
     }
 }
 
