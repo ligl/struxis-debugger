@@ -310,7 +310,6 @@ onUnmounted(() => {
               v-else-if="workspaceMode === 'replay'"
               :origin="origin"
               :test-dataset="testDataset"
-              :run-state="runState"
             />
             <div v-show="workspaceMode === 'origin'" class="workspace-mode">
               <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
