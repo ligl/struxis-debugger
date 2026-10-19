@@ -94,10 +94,16 @@ describe("OriginChart", () => {
 
     expect(chartMocks.createChart).toHaveBeenCalledOnce();
     const chartOptions = chartMocks.createChart.mock.calls[0]?.[1] as {
-      grid?: unknown;
+      grid?: {
+        vertLines?: { visible?: boolean };
+        horzLines?: { visible?: boolean };
+      };
       layout?: { attributionLogo?: boolean };
     };
-    expect(chartOptions.grid).toBeUndefined();
+    expect(chartOptions.grid).toEqual({
+      vertLines: { visible: false },
+      horzLines: { visible: false },
+    });
     expect(chartOptions.layout?.attributionLogo).toBe(false);
     expect(wrapper.find(".chart-attribution").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("TradingView");
@@ -116,6 +122,40 @@ describe("OriginChart", () => {
     expect(chartPanel.attributes("data-sbar-count")).toBe("2");
     expect(chartPanel.attributes("data-first-sbar-id")).toBe("1700000000000000000");
     expect(chartPanel.attributes("data-second-sbar-id")).toBe("1700000060000000000");
+    wrapper.unmount();
+  });
+
+  it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "origin-1",
+      },
+    });
+
+    expect(chartMocks.fitContent).toHaveBeenCalledOnce();
+
+    await wrapper.setProps({
+      bars: [
+        bar(),
+        bar({
+          sbarId: "1700000060000000000",
+          tsEvent: "1700000060000000000",
+          tsInit: "1700000060000000001",
+        }),
+      ],
+    });
+    expect(chartMocks.fitContent).toHaveBeenCalledOnce();
+
+    await wrapper.setProps({
+      originDatasetId: "origin-2",
+      bars: [bar({
+        sbarId: "1700000120000000000",
+        tsEvent: "1700000120000000000",
+        tsInit: "1700000120000000001",
+      })],
+    });
+    expect(chartMocks.fitContent).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 
