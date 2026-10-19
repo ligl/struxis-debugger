@@ -4,6 +4,7 @@ use tauri::State;
 
 use crate::{
     app::{AppState, OriginDatasetDto, TestDatasetDto},
+    compare::{CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     discovery::CatalogDatasetEntry,
     ipc::{IpcError, IpcErrorCode},
     run::RunState,
@@ -99,6 +100,23 @@ pub async fn list_snapshots(state: State<'_, AppState>) -> Result<Vec<SnapshotAr
     tauri::async_runtime::spawn_blocking(move || state.discover_snapshots())
         .await
         .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub async fn compare_snapshots(
+    baseline_snapshot_id: String,
+    candidate_snapshot_id: String,
+    state: State<'_, AppState>,
+) -> Result<SnapshotCompareResult, CompareRejection> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        state.compare_snapshots(&baseline_snapshot_id, &candidate_snapshot_id)
+    })
+    .await
+    .map_err(|error| CompareRejection {
+        category: CompareRejectCategory::Unknown,
+        message: format!("Snapshot Compare worker failed: {error}"),
+    })?
 }
 
 #[tauri::command]
