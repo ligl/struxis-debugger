@@ -364,7 +364,9 @@ fn compare_properties(
 ) -> Vec<PropertyDifference> {
     let fields: std::collections::BTreeSet<_> =
         baseline.keys().chain(candidate.keys()).filter(|field| {
-            !matches!(field.as_str(), field if field == id_field || field == "createdAt" || field == "updatedAt")
+            field.as_str() != id_field
+                && field.as_str() != "createdAt"
+                && field.as_str() != "updatedAt"
         }).cloned().collect();
     fields.into_iter().filter_map(|field| {
         let before = baseline.get(&field);
