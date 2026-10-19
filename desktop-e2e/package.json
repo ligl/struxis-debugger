@@ -1,0 +1,20 @@
+{
+  "name": "capitus-struxis-debugger-desktop-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "bun@1.4.3",
+  "engines": {
+    "node": ">=18.20.0"
+  },
+  "scripts": {
+    "test:wdio": "wdio run wdio.conf.mjs",
+    "test:app": "bash ./run-native-e2e.sh"
+  },
+  "devDependencies": {
+    "@wdio/cli": "^9.19.1",
+    "@wdio/local-runner": "^9.19.1",
+    "@wdio/mocha-framework": "^9.19.1",
+    "@wdio/spec-reporter": "^9.19.1",
+    "@wdio/tauri-service": "^1.4.0"
+  }
+}
