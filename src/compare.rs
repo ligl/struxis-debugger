@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum CompareRejectCategory {
+pub(crate) enum CompareRejectCategory {
     InputMismatch,
     SnapshotUnreadable,
     SnapshotIncomplete,
@@ -27,14 +27,14 @@ pub enum CompareRejectCategory {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CompareRejection {
-    pub category: CompareRejectCategory,
-    pub message: String,
+pub(crate) struct CompareRejection {
+    pub(crate) category: CompareRejectCategory,
+    pub(crate) message: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum DifferenceKind {
+pub(crate) enum DifferenceKind {
     Added,
     Removed,
     Modified,
@@ -43,45 +43,45 @@ pub enum DifferenceKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PropertyDifference {
-    pub field: String,
-    pub baseline_value: Option<Value>,
-    pub candidate_value: Option<Value>,
+pub(crate) struct PropertyDifference {
+    pub(crate) field: String,
+    pub(crate) baseline_value: Option<Value>,
+    pub(crate) candidate_value: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ObjectDifference {
-    pub checkpoint_index: usize,
-    pub sbar_id: String,
-    pub object_type: String,
-    pub kind: DifferenceKind,
-    pub object_id: Option<String>,
-    pub properties: Vec<PropertyDifference>,
+pub(crate) struct ObjectDifference {
+    pub(crate) checkpoint_index: usize,
+    pub(crate) sbar_id: String,
+    pub(crate) object_type: String,
+    pub(crate) kind: DifferenceKind,
+    pub(crate) object_id: Option<String>,
+    pub(crate) properties: Vec<PropertyDifference>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CheckpointCompareSummary {
-    pub checkpoint_index: usize,
-    pub sbar_id: String,
-    pub ts_event: String,
-    pub difference_count: usize,
+pub(crate) struct CheckpointCompareSummary {
+    pub(crate) checkpoint_index: usize,
+    pub(crate) sbar_id: String,
+    pub(crate) ts_event: String,
+    pub(crate) difference_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SnapshotCompareMetadata {
-    pub snapshot_id: String,
-    pub run_id: String,
-    pub state_key: String,
-    pub instrument_id: String,
-    pub bar_type: String,
-    pub snapshot_generated_at: String,
-    pub input_bar_count: usize,
-    pub sbar_sequence_fingerprint: String,
-    pub config_fingerprint: String,
-    pub effective_config: String,
+pub(crate) struct SnapshotCompareMetadata {
+    pub(crate) snapshot_id: String,
+    pub(crate) run_id: String,
+    pub(crate) state_key: String,
+    pub(crate) instrument_id: String,
+    pub(crate) bar_type: String,
+    pub(crate) snapshot_generated_at: String,
+    pub(crate) input_bar_count: usize,
+    pub(crate) sbar_sequence_fingerprint: String,
+    pub(crate) config_fingerprint: String,
+    pub(crate) effective_config: String,
 }
 
 impl From<&SnapshotManifest> for SnapshotCompareMetadata {
@@ -103,29 +103,29 @@ impl From<&SnapshotManifest> for SnapshotCompareMetadata {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DiagnosticsDifference {
-    pub checkpoint_index: usize,
-    pub sbar_id: String,
-    pub baseline: Value,
-    pub candidate: Value,
+pub(crate) struct DiagnosticsDifference {
+    pub(crate) checkpoint_index: usize,
+    pub(crate) sbar_id: String,
+    pub(crate) baseline: Value,
+    pub(crate) candidate: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SnapshotCompareResult {
-    pub baseline: SnapshotCompareMetadata,
-    pub candidate: SnapshotCompareMetadata,
-    pub checkpoint_count: usize,
-    pub checkpoints: Vec<CheckpointCompareSummary>,
-    pub differences: Vec<ObjectDifference>,
-    pub first_structural_divergence: Option<CheckpointCompareSummary>,
-    pub diagnostics_differences: Vec<DiagnosticsDifference>,
-    pub first_diagnostics_divergence: Option<usize>,
+pub(crate) struct SnapshotCompareResult {
+    pub(crate) baseline: SnapshotCompareMetadata,
+    pub(crate) candidate: SnapshotCompareMetadata,
+    pub(crate) checkpoint_count: usize,
+    pub(crate) checkpoints: Vec<CheckpointCompareSummary>,
+    pub(crate) differences: Vec<ObjectDifference>,
+    pub(crate) first_structural_divergence: Option<CheckpointCompareSummary>,
+    pub(crate) diagnostics_differences: Vec<DiagnosticsDifference>,
+    pub(crate) first_diagnostics_divergence: Option<usize>,
 }
 
 /// Strictly compares two complete Snapshots. Every error rejects the entire
 /// operation; no partial result is returned for invalid inputs.
-pub fn compare_snapshot_paths(
+pub(crate) fn compare_snapshot_paths(
     baseline_path: impl AsRef<Path>,
     candidate_path: impl AsRef<Path>,
 ) -> Result<SnapshotCompareResult, CompareRejection> {
