@@ -41,7 +41,7 @@ use crate::{
 ///
 /// Implementations must make `commit_checkpoint` atomic: an error means the
 /// checkpoint is not confirmed and Run progress must not advance.
-pub trait CheckpointSink: Send + 'static {
+pub(crate) trait CheckpointSink: Send + 'static {
     fn initialize(
         &mut self,
         initial_state: &RunState,
@@ -71,10 +71,10 @@ pub trait CheckpointSink: Send + 'static {
 /// Instrument is immutable Nautilus market metadata, not a live runtime
 /// resource. The engine, Cache, Strategy and Struxis are created only after
 /// the worker thread starts.
-pub struct ReplayWorkerConfig {
-    pub run_id: String,
-    pub input: LoadedInput,
-    pub instrument: InstrumentAny,
+pub(crate) struct ReplayWorkerConfig {
+    pub(crate) run_id: String,
+    pub(crate) input: LoadedInput,
+    pub(crate) instrument: InstrumentAny,
 }
 
 enum WorkerCommand {
@@ -87,7 +87,7 @@ enum WorkerCommand {
 }
 
 /// Handle to the worker. It never exposes Nautilus runtime objects.
-pub struct ReplayWorker {
+pub(crate) struct ReplayWorker {
     commands: SyncSender<WorkerCommand>,
     command_gate: ReplayCommandGate,
     join: Option<JoinHandle<()>>,
@@ -97,7 +97,7 @@ pub struct ReplayWorker {
 impl ReplayWorker {
     /// Spawns the worker and returns only after engine setup and sink
     /// initialization succeed. No SBar is processed during initialization.
-    pub fn spawn(
+    pub(crate) fn spawn(
         config: ReplayWorkerConfig,
         mut sink: Box<dyn CheckpointSink>,
     ) -> Result<(Self, RunState), String> {
@@ -151,7 +151,7 @@ impl ReplayWorker {
     /// During Play, the query is handled between SBar checkpoints. This also
     /// makes asynchronous processing failures observable without issuing a
     /// state-changing command such as Stop or Dispose.
-    pub fn state(&mut self) -> Result<RunState, String> {
+    pub(crate) fn state(&mut self) -> Result<RunState, String> {
         if let Some(state) = &self.terminal_state {
             return Ok(state.clone());
         }
@@ -169,7 +169,7 @@ impl ReplayWorker {
 
     /// Processes exactly one next Test SBar and returns after its checkpoint
     /// sink commit and Run progress confirmation.
-    pub fn step(&mut self) -> Result<RunState, String> {
+    pub(crate) fn step(&mut self) -> Result<RunState, String> {
         let _permit = self.command_gate
             .try_enter(ReplayCommandKind::Step)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
@@ -189,17 +189,17 @@ impl ReplayWorker {
     /// Starts or resumes continuous processing. The command returns after
     /// the Run transitions to Running; each subsequent SBar is processed on
     /// the worker thread at a checkpoint boundary.
-    pub fn play(&mut self) -> Result<RunState, String> {
+    pub(crate) fn play(&mut self) -> Result<RunState, String> {
         self.send_state_command(ReplayCommandKind::Play, WorkerCommand::Play)
     }
 
     /// Pauses after the currently executing SBar checkpoint, if any, commits.
-    pub fn pause(&mut self) -> Result<RunState, String> {
+    pub(crate) fn pause(&mut self) -> Result<RunState, String> {
         self.send_state_command(ReplayCommandKind::Pause, WorkerCommand::Pause)
     }
 
     /// Stops the Run at a safe checkpoint boundary and releases its runtime.
-    pub fn stop(&mut self) -> Result<RunState, String> {
+    pub(crate) fn stop(&mut self) -> Result<RunState, String> {
         self.send_terminal_command(ReplayCommandKind::Stop, WorkerCommand::Stop)
     }
 
@@ -258,7 +258,7 @@ impl ReplayWorker {
     }
 
     /// Releases Run-owned resources on the worker thread and joins it.
-    pub fn dispose(&mut self) -> Result<RunState, String> {
+    pub(crate) fn dispose(&mut self) -> Result<RunState, String> {
         if let Some(state) = &self.terminal_state {
             return Ok(state.clone());
         }
