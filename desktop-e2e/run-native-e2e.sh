@@ -6,11 +6,19 @@ CRATE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd -- "$CRATE_DIR/../.." && pwd)"
 APP_BINARY="$REPO_ROOT/target/debug/capitus-struxis-debugger"
 
-if ! command -v webkit2gtk-driver >/dev/null 2>&1; then
-  echo "ERROR: webkit2gtk-driver is required for native Tauri E2E on Ubuntu."
+# Ubuntu's webkit2gtk-driver package provides the WebKitWebDriver executable;
+# the package name itself is not a command.
+if command -v WebKitWebDriver >/dev/null 2>&1; then
+  WEBKIT_WEBDRIVER="$(command -v WebKitWebDriver)"
+elif command -v webkit2gtk-driver >/dev/null 2>&1; then
+  # Keep compatibility with distributions that expose the package-name command.
+  WEBKIT_WEBDRIVER="$(command -v webkit2gtk-driver)"
+else
+  echo "ERROR: WebKitWebDriver is required for native Tauri E2E on Ubuntu."
   echo "Install it with: sudo apt-get install webkit2gtk-driver"
   exit 2
 fi
+export WEBKIT_WEBDRIVER
 
 if ! command -v node >/dev/null 2>&1; then
   echo "ERROR: Node.js 18.20 or later is required by WebdriverIO."
