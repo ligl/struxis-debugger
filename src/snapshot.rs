@@ -6,47 +6,47 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-pub const STATUS_RECORDING: &str = "Recording";
-pub const STATUS_FINALIZING: &str = "Finalizing";
-pub const STATUS_COMPLETE: &str = "Complete";
-pub const STATUS_FAILED: &str = "Failed";
+pub(crate) const STATUS_RECORDING: &str = "Recording";
+pub(crate) const STATUS_FINALIZING: &str = "Finalizing";
+pub(crate) const STATUS_COMPLETE: &str = "Complete";
+pub(crate) const STATUS_FAILED: &str = "Failed";
 
 const SNAPSHOT_HASH_PREFIX: &[u8] = b"capitus.debug-chart.snapshot\0";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SnapshotManifest {
-    pub snapshot_id: String,
-    pub run_id: String,
-    pub state_key: String,
-    pub instrument_id: String,
-    pub bar_type: String,
-    pub input_start_sbar_id: String,
-    pub input_end_sbar_id: String,
-    pub input_start_ts_event: String,
-    pub input_end_ts_event: String,
-    pub snapshot_generated_at: String,
-    pub input_bar_count: usize,
-    pub sbar_sequence_fingerprint: String,
-    pub config_fingerprint: String,
+pub(crate) struct SnapshotManifest {
+    pub(crate) snapshot_id: String,
+    pub(crate) run_id: String,
+    pub(crate) state_key: String,
+    pub(crate) instrument_id: String,
+    pub(crate) bar_type: String,
+    pub(crate) input_start_sbar_id: String,
+    pub(crate) input_end_sbar_id: String,
+    pub(crate) input_start_ts_event: String,
+    pub(crate) input_end_ts_event: String,
+    pub(crate) snapshot_generated_at: String,
+    pub(crate) input_bar_count: usize,
+    pub(crate) sbar_sequence_fingerprint: String,
+    pub(crate) config_fingerprint: String,
     /// Canonical JSON for the complete resolved effective-config DTO.
-    pub effective_config: String,
-    pub status: String,
-    pub checkpoint_count: usize,
-    pub content_checksum: String,
+    pub(crate) effective_config: String,
+    pub(crate) status: String,
+    pub(crate) checkpoint_count: usize,
+    pub(crate) content_checksum: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SnapshotCheckpointRecord {
-    pub checkpoint_index: usize,
-    pub sbar_id: String,
-    pub ts_event: String,
-    pub record_kind: String,
+pub(crate) struct SnapshotCheckpointRecord {
+    pub(crate) checkpoint_index: usize,
+    pub(crate) sbar_id: String,
+    pub(crate) ts_event: String,
+    pub(crate) record_kind: String,
     /// Canonical owned structure state only; never contains the SBar sequence.
-    pub state_data: String,
+    pub(crate) state_data: String,
     /// Canonical JSON array; empty diagnostics are represented as [].
-    pub diagnostics: String,
+    pub(crate) diagnostics: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -89,7 +89,7 @@ impl SnapshotManifest {
     /// Canonical checksum payload. Field order follows snapshot-compare.md;
     /// integer values are encoded as decimal strings and embedded JSON remains
     /// JSON values rather than being double-encoded strings.
-    pub fn calculate_content_checksum(
+    pub(crate) fn calculate_content_checksum(
         &self,
         checkpoints: &[SnapshotCheckpointRecord],
     ) -> Result<String, String> {
@@ -139,7 +139,7 @@ impl SnapshotManifest {
 }
 
 /// Validates the record relationships and the checksum of a published Snapshot.
-pub fn verify_complete_snapshot(
+pub(crate) fn verify_complete_snapshot(
     manifest: &SnapshotManifest,
     checkpoints: &[SnapshotCheckpointRecord],
 ) -> Result<(), String> {
@@ -151,7 +151,7 @@ pub fn verify_complete_snapshot(
     Ok(())
 }
 
-pub fn sha256_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     let mut output = String::with_capacity(64);
     for byte in digest {
@@ -188,7 +188,7 @@ fn normalize_integer_json_values(value: serde_json::Value) -> serde_json::Value 
 /// SBar entities are intentionally excluded. Objects are ordered by their oldest
 /// SBar anchor, then by numeric domain ID, so the encoding does not depend on the
 /// collection's internal iteration implementation.
-pub fn canonical_structure_state(
+pub(crate) fn canonical_structure_state(
     structure: Option<&crate::checkpoint::StructureCheckpoint>,
 ) -> Result<String, String> {
     let mut state = match structure {
@@ -377,7 +377,7 @@ fn sort_domain_objects(
 
 /// Validates persisted relationships without depending on a storage backend.
 /// Until the Delta codec and reconstruction validator exist, this validator rejects Delta records.
-pub fn validate_snapshot_records(
+pub(crate) fn validate_snapshot_records(
     manifest: &SnapshotManifest,
     checkpoints: &[SnapshotCheckpointRecord],
     require_complete: bool,
