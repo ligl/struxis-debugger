@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 
 describe("Struxis Debugger native desktop", () => {
+  before(async () => {
+    // This smoke suite uses only standard WebDriver DOM operations and deliberately
+    // does not register @wdio/tauri-plugin in the app. Mark the single existing
+    // window as explicitly selected so tauri-service does not call its plugin-only
+    // window-state IPC before every findElement command.
+    const handle = await browser.getWindowHandle();
+    await browser.switchToWindow(handle);
+  });
+
   it("opens the real Tauri window and completes Catalog discovery over IPC", async () => {
     const shell = await $('[data-testid="debugger-shell"]');
     await shell.waitForDisplayed({ timeout: 30_000 });
