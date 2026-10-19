@@ -31,6 +31,10 @@ pub(crate) struct SnapshotWriter {
     manifest: Option<SnapshotManifest>,
     checkpoints: Vec<SnapshotCheckpointRecord>,
     connection: Option<Connection>,
+    /// True only after this writer atomically creates the published hard link.
+    /// Prevents failure handling from mutating the same inode through a leftover
+    /// temporary link if temporary-path cleanup fails.
+    published_by_this_writer: bool,
     #[cfg(test)]
     fail_directory_sync: bool,
 }
@@ -73,6 +77,7 @@ impl SnapshotWriter {
             manifest: None,
             checkpoints: Vec::new(),
             connection: None,
+            published_by_this_writer: false,
             #[cfg(test)]
             fail_directory_sync: false,
         })
@@ -112,15 +117,30 @@ impl SnapshotWriter {
 
         let (reopened, records) = read_database(&self.temporary_path)?;
         verify_complete_snapshot(&reopened, &records)?;
-        // Never replace an artifact that appeared after initialization. In
-        // particular, a pre-existing Complete Snapshot must remain untouched.
-        // The UUID makes collisions unlikely; this guard also protects against
-        // a destination created between initialize() and finalize().
-        if self.published_path.exists() {
-            return Err("Snapshot publish destination already exists".to_owned());
+        // hard_link creates the published name atomically and fails if the
+        // destination already exists; unlike rename on Unix, it cannot replace
+        // a Snapshot created concurrently after an earlier existence check.
+        // Both paths are in the same directory, so they are on the same filesystem.
+        fs::hard_link(&self.temporary_path, &self.published_path)
+            .map_err(|e| {
+                if e.kind() == std::io::ErrorKind::AlreadyExists {
+                    "Snapshot publish destination already exists".to_owned()
+                } else {
+                    format!("Atomically publish Snapshot without replacement: {e}")
+                }
+            })?;
+        self.published_by_this_writer = true;
+
+        // The published file is already valid at this point. If unlinking the
+        // temporary hard link fails, keep the published artifact intact and
+        // continue; failure handling must not mutate the shared inode.
+        if let Err(error) = fs::remove_file(&self.temporary_path) {
+            log::warn!(
+                "Published Snapshot {} but could not remove temporary link {}: {error}",
+                self.published_path.display(),
+                self.temporary_path.display(),
+            );
         }
-        fs::rename(&self.temporary_path, &self.published_path)
-            .map_err(|e| format!("Atomically publish Snapshot: {e}"))?;
         self.sync_snapshot_directory()?;
         Ok(())
     }
@@ -278,13 +298,12 @@ impl CheckpointSink for SnapshotWriter {
         // a published artifact remains valid only if its existing checksum verifies.
         if manifest.status == STATUS_COMPLETE
             && !manifest.content_checksum.is_empty()
-            && !self.temporary_path.exists()
+            && self.published_by_this_writer
             && self.published_path.exists()
         {
-            // The writer's artifact has been renamed to the publish destination.
-            // If the temporary file still exists, publication did not complete
-            // (for example, the destination was already occupied), so downgrade
-            // that temporary recovery artifact to Failed instead.
+            // Publication succeeded through an atomic hard link. Even if
+            // temporary-link cleanup failed, both names refer to the same inode;
+            // never rewrite its Complete Manifest through the temporary path.
             self.manifest = Some(manifest);
             return Ok(());
         }
@@ -440,6 +459,7 @@ mod tests {
         writer.finalize(&state).unwrap();
 
         assert!(writer.published_path().is_file());
+        assert!(!writer.temporary_path.exists(), "successful publication removes the temporary link");
         let (manifest, records) = read_database(writer.published_path()).unwrap();
         verify_complete_snapshot(&manifest, &records).unwrap();
         assert_eq!(manifest.status, STATUS_COMPLETE);
