@@ -477,11 +477,22 @@ describe("Struxis Debugger native desktop", () => {
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     const selectedRange = await $('[data-testid="selected-test-range"]');
     await selectedRange.waitForDisplayed();
-    const selectedStart = await selectedRange.$("div:nth-child(1) code");
-    const selectedEnd = await selectedRange.$("div:nth-child(2) code");
-    assert.equal(await selectedStart.getText(), firstSbarId,
+    const selectedStart = await selectedRange.$('[data-testid="selected-test-range-start"]');
+    const selectedEnd = await selectedRange.$('[data-testid="selected-test-range-end"]');
+    const actualStart = await selectedStart.getText();
+    const actualEnd = await selectedEnd.getText();
+    if (actualStart !== firstSbarId || actualEnd !== secondSbarId) {
+      console.error("Origin range ID mismatch:", JSON.stringify({
+        expectedStart: firstSbarId,
+        expectedEnd: secondSbarId,
+        actualStart,
+        actualEnd,
+        rangeStatus: await $('[data-testid="origin-range-selection-status"]').getText(),
+      }, null, 2));
+    }
+    assert.equal(actualStart, firstSbarId,
       "The first chart click must select the first Origin SBar as the range start.");
-    assert.equal(await selectedEnd.getText(), secondSbarId,
+    assert.equal(actualEnd, secondSbarId,
       "The second chart click must select the second Origin SBar as the inclusive range end.");
     assert.equal(
       (await selectedRange.$("div:nth-child(3) strong").getText()).replace(/\s/g, ""),
