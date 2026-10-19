@@ -19,12 +19,17 @@ function mountApp() {
     global: {
       stubs: {
         OriginPanel: {
-          template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
-          props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
+          template: '<section data-testid="origin-panel-test-stub"><h3>Origin SBar chart</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="origin && rangeSelectionStatus">{{ rangeSelectionStatus }}</span><button v-if="origin" data-testid="origin-sbar-click-100" @click="$emit(\\'sbar-click\\', \\'100\\')">Select SBar 100</button><button v-if="origin" data-testid="origin-sbar-click-200" @click="$emit(\\'sbar-click\\', \\'200\\')">Select SBar 200</button><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
+          props: ["origin", "loadStatus", "loadError", "formatTimestamp", "rangeSelectionStatus"],
         },
       },
     },
   });
+}
+
+async function selectOriginRange(wrapper: ReturnType<typeof mountApp>): Promise<void> {
+  await wrapper.get('[data-testid="origin-sbar-click-100"]').trigger("click");
+  await wrapper.get('[data-testid="origin-sbar-click-200"]').trigger("click");
 }
 
 const invokeMock = ipc.invoke;
@@ -319,10 +324,8 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
-    await vi.waitFor(() => expect(wrapper.findAll('[data-testid^="test-dataset-"][data-testid$="-sbar-id"]')).toHaveLength(2));
-    const rangeInputs = wrapper.findAll('[data-testid^="test-dataset-"][data-testid$="-sbar-id"]');
-    expect((rangeInputs[0].element as HTMLInputElement).value).toBe("100");
-    expect((rangeInputs[1].element as HTMLInputElement).value).toBe("200");
+    await selectOriginRange(wrapper);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Selected 2 SBars: 100 → 200 (inclusive)."));
 
     const createButton = wrapper.get('[data-testid="test-dataset-create"]');
     await vi.waitFor(() =>
@@ -367,6 +370,7 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
     const createButton = () => wrapper.get('[data-testid="test-dataset-create"]');
+    await selectOriginRange(wrapper);
     await createButton()!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await createButton()!.trigger("click");
@@ -705,6 +709,7 @@ describe("startup and user-operation coordination", () => {
 
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
+    await selectOriginRange(wrapper);
     const createButton = wrapper.get('[data-testid="test-dataset-create"]');
     await vi.waitFor(() => expect((createButton!.element as HTMLButtonElement).disabled).toBe(false));
     await createButton!.trigger("click");
@@ -832,6 +837,7 @@ describe("startup and user-operation coordination", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
+    await selectOriginRange(wrapper);
     await replaceButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
       startSbarId: "100",
@@ -862,6 +868,7 @@ describe("startup and user-operation coordination", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
+    await selectOriginRange(wrapper);
     await replaceButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("create_test_dataset", {
       startSbarId: "100",
