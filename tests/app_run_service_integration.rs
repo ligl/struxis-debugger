@@ -234,5 +234,20 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     let disposed = state.replay_dispose().expect("Run resources should be disposed");
     assert_eq!(disposed.status, RunStatus::Disposed);
     drop(state);
+
+    // Reconstruct the application service with the same persistent root to
+    // verify discovery does not depend on the original AppState or Run owner.
+    let reopened_state =
+        AppState::with_snapshot_root(test_catalog_path(), snapshot_root.clone());
+    let reopened_artifacts = reopened_state
+        .discover_snapshots()
+        .expect("Completed Snapshot should remain discoverable after AppState reconstruction");
+    assert_eq!(
+        reopened_artifacts.len(),
+        1,
+        "Exactly one completed Snapshot should survive AppState reconstruction"
+    );
+    drop(reopened_state);
+
     std::fs::remove_dir_all(snapshot_root).expect("temporary Snapshot root should be removed");
 }
