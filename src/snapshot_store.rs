@@ -4,6 +4,7 @@
 //! `.snapshot.sqlite` with a Complete Manifest and valid checksum is usable.
 
 use std::{
+    fmt,
     fs,
     path::{Path, PathBuf},
 };
@@ -26,6 +27,28 @@ pub(crate) enum SnapshotArtifactKind {
     FailedTemporary,
     CompleteButUnpublished,
     UnreadableTemporary,
+}
+
+/// Typed failure categories for reading a published Snapshot. Human-readable
+/// messages are retained for display, but callers must branch on the variant.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SnapshotReadError {
+    Unpublished(String),
+    Unreadable(String),
+    Incomplete(String),
+    IntegrityFailure(String),
+}
+
+impl fmt::Display for SnapshotReadError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::Unpublished(message)
+            | Self::Unreadable(message)
+            | Self::Incomplete(message)
+            | Self::IntegrityFailure(message) => message,
+        };
+        formatter.write_str(message)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -79,14 +102,33 @@ pub(crate) fn discover_snapshot_artifacts(root: impl AsRef<Path>) -> Result<Vec<
 }
 
 /// Opens and validates a published Snapshot without permitting writes.
-pub(crate) fn read_complete_snapshot(path: impl AsRef<Path>) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), String> {
+pub(crate) fn read_complete_snapshot(
+    path: impl AsRef<Path>,
+) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), String> {
+    read_complete_snapshot_typed(path).map_err(|error| error.to_string())
+}
+
+/// Typed variant for callers that need stable failure classification.
+pub(crate) fn read_complete_snapshot_typed(
+    path: impl AsRef<Path>,
+) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), SnapshotReadError> {
     let path = path.as_ref();
     let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
     if !file_name.ends_with(".snapshot.sqlite") {
-        return Err("Only published .snapshot.sqlite files can be read as complete Snapshots".into());
+        return Err(SnapshotReadError::Unpublished(
+            "Only published .snapshot.sqlite files can be read as complete Snapshots".into(),
+        ));
     }
-    let (manifest, checkpoints) = read_database(path)?;
-    verify_complete_snapshot(&manifest, &checkpoints)?;
+    let (manifest, checkpoints) = read_database(path)
+        .map_err(SnapshotReadError::Unreadable)?;
+    if manifest.status != STATUS_COMPLETE {
+        return Err(SnapshotReadError::Incomplete(format!(
+            "Snapshot is not Complete (status={})",
+            manifest.status
+        )));
+    }
+    verify_complete_snapshot(&manifest, &checkpoints)
+        .map_err(SnapshotReadError::IntegrityFailure)?;
     Ok((manifest, checkpoints))
 }
 
