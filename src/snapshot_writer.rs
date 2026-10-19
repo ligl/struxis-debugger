@@ -289,6 +289,10 @@ impl CheckpointSink for SnapshotWriter {
             return Ok(());
         }
         manifest.status = STATUS_FAILED.to_owned();
+        // Failed temporary artifacts are recovery records, not valid Snapshots.
+        // Clear any checksum computed for the previous Complete status so the
+        // failed manifest never advertises a checksum for different content.
+        manifest.content_checksum.clear();
         let payload = serde_json::to_string(&manifest)
             .map_err(|e| format!("Encode failed Snapshot Manifest: {e}"))?;
 
