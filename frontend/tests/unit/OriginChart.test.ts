@@ -76,7 +76,18 @@ describe("OriginChart", () => {
   it("projects validated SBar data into candlestick and volume series without grid or branding", () => {
     const wrapper = mount(OriginChart, {
       props: {
-        bars: [bar()],
+        bars: [
+          bar(),
+          bar({
+            sbarId: "1700000060000000000",
+            tsEvent: "1700000060000000000",
+            tsInit: "1700000060000000001",
+            open: "11",
+            high: "13",
+            low: "10",
+            close: "12",
+          }),
+        ],
         originDatasetId: "origin-1",
       },
     });
@@ -99,6 +110,10 @@ describe("OriginChart", () => {
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
     expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-origin-dataset-id"))
       .toBe("origin-1");
+    const chartPanel = wrapper.get('[data-testid="origin-chart-panel"]');
+    expect(chartPanel.attributes("data-sbar-count")).toBe("2");
+    expect(chartPanel.attributes("data-first-sbar-id")).toBe("1700000000000000000");
+    expect(chartPanel.attributes("data-second-sbar-id")).toBe("1700000060000000000");
     wrapper.unmount();
   });
 
