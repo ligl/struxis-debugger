@@ -13,14 +13,14 @@ use crate::{
 
 /// Owns the single active Run worker for one Debugger application session.
 #[derive(Default)]
-pub struct ReplayManager {
+pub(crate) struct ReplayManager {
     active: Option<ReplayWorker>,
     gate: ReplayCommandGate,
 }
 
 impl ReplayManager {
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
@@ -29,7 +29,7 @@ impl ReplayManager {
     /// This is an internal orchestration API, not a production Tauri command.
     /// Its caller must provide the real persistent SnapshotWriter before it can
     /// be connected to the production application workflow.
-    pub fn start(
+    pub(crate) fn start(
         &mut self,
         config: ReplayWorkerConfig,
         sink: Box<dyn CheckpointSink>,
@@ -47,7 +47,7 @@ impl ReplayManager {
         Ok(initial_state)
     }
 
-    pub fn state(&mut self) -> Result<RunState, String> {
+    pub(crate) fn state(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
         self.active
             .as_mut()
@@ -55,7 +55,7 @@ impl ReplayManager {
             .state()
     }
 
-    pub fn step(&mut self) -> Result<RunState, String> {
+    pub(crate) fn step(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Step)?;
         self.active
             .as_mut()
@@ -63,7 +63,7 @@ impl ReplayManager {
             .step()
     }
 
-    pub fn play(&mut self) -> Result<RunState, String> {
+    pub(crate) fn play(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Play)?;
         self.active
             .as_mut()
@@ -71,7 +71,7 @@ impl ReplayManager {
             .play()
     }
 
-    pub fn pause(&mut self) -> Result<RunState, String> {
+    pub(crate) fn pause(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Pause)?;
         self.active
             .as_mut()
@@ -81,7 +81,7 @@ impl ReplayManager {
 
     /// Requests safe-boundary stop. The worker remains owned so its confirmed
     /// terminal state can still be queried and so Restart can enforce cleanup.
-    pub fn stop(&mut self) -> Result<RunState, String> {
+    pub(crate) fn stop(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Stop)?;
         self.active
             .as_mut()
@@ -93,7 +93,7 @@ impl ReplayManager {
     ///
     /// The slot is cleared only after worker Dispose returns a state and join
     /// succeeds. Any error leaves the worker owned and blocks a subsequent Start.
-    pub fn dispose(&mut self) -> Result<RunState, String> {
+    pub(crate) fn dispose(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Dispose)?;
         let worker = self
             .active
@@ -107,7 +107,7 @@ impl ReplayManager {
     /// Disposes the previous Run before creating a replacement from the caller's
     /// fixed Test input. A release failure leaves the old worker owned and blocks
     /// the replacement; it is never silently overwritten.
-    pub fn restart(
+    pub(crate) fn restart(
         &mut self,
         config: ReplayWorkerConfig,
         sink: Box<dyn CheckpointSink>,
@@ -127,7 +127,7 @@ impl ReplayManager {
     }
 
     #[must_use]
-    pub fn has_owned_run(&self) -> bool {
+    pub(crate) fn has_owned_run(&self) -> bool {
         self.active.is_some()
     }
 }
