@@ -738,7 +738,7 @@ mod tests {
             .unwrap_err().contains("canonical unsigned decimal encoding"));
 
         let mut state_records = records();
-        state_records[0].state_data = r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#.into();
+        state_records[0].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"01","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[]}"#.into();
         let state_manifest = manifest(&state_records);
         assert!(validate_snapshot_records(&state_manifest, &state_records, false)
             .unwrap_err().contains("canonical unsigned decimal encoding"));
