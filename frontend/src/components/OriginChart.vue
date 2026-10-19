@@ -101,7 +101,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="origin-chart-panel" aria-label="Origin SBar chart" data-testid="origin-chart-panel">
+  <section
+    class="origin-chart-panel"
+    aria-label="Origin SBar chart"
+    data-testid="origin-chart-panel"
+    :data-sbar-count="bars.length"
+    :data-first-sbar-id="bars[0]?.sbarId ?? ''"
+    :data-second-sbar-id="bars[1]?.sbarId ?? ''"
+  >
     <div class="origin-chart-heading">
       <div>
         <p class="section-index">AUTHORITATIVE STRUXIS PROJECTION</p>
