@@ -33,8 +33,8 @@ const emit = defineEmits<{ create: [] }>();
       <p class="microcopy">Switch to the Origin workspace to choose a continuous, inclusive interval by clicking anywhere in its chart plot. The first click fixes the start; move the pointer to preview a full-height shaded interval, then click to fix the end. Vertical position does not affect the selected SBar. The backend validates both exact SBar IDs before creating the Test Dataset.</p>
 
       <div v-if="rangeSelectionReady" class="detail-list" data-testid="selected-test-range">
-        <div><span>SELECTED START SBAR ID</span><code>{{ startSbarId }}</code></div>
-        <div><span>SELECTED END SBAR ID</span><code>{{ endSbarId }}</code></div>
+        <div><span>SELECTED START SBAR ID</span><code data-testid="selected-test-range-start">{{ startSbarId }}</code></div>
+        <div><span>SELECTED END SBAR ID</span><code data-testid="selected-test-range-end">{{ endSbarId }}</code></div>
         <div><span>INCLUSIVE SBAR COUNT</span><strong>{{ selectedRangeCount.toLocaleString() }}</strong></div>
       </div>
       <div v-else-if="rangeSelectionPending" class="empty-state" data-testid="test-range-awaiting-end">
