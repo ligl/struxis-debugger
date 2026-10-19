@@ -12,6 +12,8 @@ const chartMocks = vi.hoisted(() => ({
   fitContent: vi.fn(),
   applyChartOptions: vi.fn(),
   applyPriceScaleOptions: vi.fn(),
+  subscribeClick: vi.fn(),
+  unsubscribeClick: vi.fn(),
   observe: vi.fn(),
   disconnect: vi.fn(),
 }));
@@ -55,6 +57,8 @@ function installChartMock() {
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({ fitContent: chartMocks.fitContent })),
+    subscribeClick: chartMocks.subscribeClick,
+    unsubscribeClick: chartMocks.unsubscribeClick,
     applyOptions: chartMocks.applyChartOptions,
     remove: chartMocks.chartRemove,
   };
@@ -123,6 +127,37 @@ describe("OriginChart", () => {
     expect(chartPanel.attributes("data-first-sbar-id")).toBe("1700000000000000000");
     expect(chartPanel.attributes("data-second-sbar-id")).toBe("1700000060000000000");
     wrapper.unmount();
+  });
+
+  it("maps exact chart click times to lossless SBar IDs and rejects clicks without a bar time", () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [
+          bar(),
+          bar({
+            sbarId: "1700000060000000000",
+            tsEvent: "1700000060000000000",
+            tsInit: "1700000060000000001",
+          }),
+        ],
+        originDatasetId: "origin-clicks",
+      },
+    });
+
+    const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
+      ((param: { time?: unknown }) => void) | undefined;
+    expect(clickHandler).toBeTypeOf("function");
+
+    clickHandler?.({ time: 1700000060 });
+    expect(wrapper.emitted("sbarClick")).toEqual([["1700000060000000000"]]);
+
+    clickHandler?.({});
+    expect(wrapper.emitted("selectionError")).toEqual([
+      ["Click directly on an SBar candle to select an exact range boundary."],
+    ]);
+
+    wrapper.unmount();
+    expect(chartMocks.unsubscribeClick).toHaveBeenCalledOnce();
   });
 
   it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
