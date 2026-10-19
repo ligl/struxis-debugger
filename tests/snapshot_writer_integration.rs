@@ -28,10 +28,9 @@ fn test_instrument_id() -> InstrumentId {
 }
 
 fn test_state_key() -> StruxisStateKey {
-    StruxisStateKey {
-        instrument_id: test_instrument_id(),
-        timeframe: std::time::Duration::from_secs(300),
-    }
+    let bar_type = BarType::from_str("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+        .expect("fixture BarType should parse");
+    StruxisStateKey::from_bar_type(&bar_type)
 }
 
 fn create_test_bars(count: usize) -> Vec<Bar> {
