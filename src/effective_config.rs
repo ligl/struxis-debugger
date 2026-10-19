@@ -12,16 +12,16 @@ const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 /// match the Snapshot canonical JSON contract.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct EffectiveStruxisConfig {
-    pub enable_structure: bool,
-    pub structure_cbars_capacity: String,
-    pub structure_swings_capacity: String,
-    pub structure_trends_capacity: String,
+pub(crate) struct EffectiveStruxisConfig {
+    pub(crate) enable_structure: bool,
+    pub(crate) structure_cbars_capacity: String,
+    pub(crate) structure_swings_capacity: String,
+    pub(crate) structure_trends_capacity: String,
 }
 
 impl EffectiveStruxisConfig {
     /// Resolves optional overrides through Struxis' own implementation defaults.
-    pub fn from_struxis_config(config: &StruxisConfig) -> Self {
+    pub(crate) fn from_struxis_config(config: &StruxisConfig) -> Self {
         let (cbars, swings, trends) = config.resolved_structure_capacities();
         Self {
             enable_structure: config.enable_structure,
@@ -32,19 +32,19 @@ impl EffectiveStruxisConfig {
     }
 
     /// Returns canonical JSON with deterministic struct-field order.
-    pub fn canonical_json(&self) -> Result<String, String> {
+    pub(crate) fn canonical_json(&self) -> Result<String, String> {
         serde_json::to_string(self)
             .map_err(|error| format!("Effective Struxis config serialization failed: {error}"))
     }
 
     /// Fingerprints exactly the canonical JSON persisted in the Snapshot Manifest.
-    pub fn fingerprint(&self) -> Result<String, String> {
+    pub(crate) fn fingerprint(&self) -> Result<String, String> {
         fingerprint_canonical_config(&self.canonical_json()?)
     }
 }
 
 /// Computes the domain-separated fingerprint of canonical effective-config JSON.
-pub fn fingerprint_canonical_config(canonical_json: &str) -> Result<String, String> {
+pub(crate) fn fingerprint_canonical_config(canonical_json: &str) -> Result<String, String> {
     let config: EffectiveStruxisConfig = serde_json::from_str(canonical_json)
         .map_err(|error| format!("Invalid effective Struxis config schema: {error}"))?;
     let normalized_json = serde_json::to_string(&config)
