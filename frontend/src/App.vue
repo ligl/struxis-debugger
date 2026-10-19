@@ -142,7 +142,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="debugger-shell">
+  <main class="debugger-shell" data-testid="debugger-shell">
     <header class="topbar workbench-topbar">
       <div class="brand-block">
         <p class="eyebrow">CAPITUS / STRUXIS DEBUGGER</p>
@@ -159,8 +159,8 @@ onMounted(async () => {
       </div>
     </header>
 
-    <div class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'inspector-is-collapsed': inspectorCollapsed }">
-      <aside class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
+    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'inspector-is-collapsed': inspectorCollapsed }">
+      <aside data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
         <div class="rail-heading">
           <span class="section-index">SOURCE</span>
           <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
@@ -168,7 +168,7 @@ onMounted(async () => {
         <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
       </aside>
 
-      <section class="workbench-main">
+      <section data-testid="workbench-main" class="workbench-main">
         <div class="workflow-toolbar">
           <div>
             <p class="section-index">{{ workspaceMode === "origin" ? "WORKFLOW / 01" : workspaceMode === "replay" ? "WORKFLOW / 02" : "WORKFLOW / 03" }}</p>
@@ -180,8 +180,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="primary-workspace">
-          <div class="workspace-content">
+        <div data-testid="primary-workspace" class="primary-workspace">
+          <div data-testid="workspace-content" class="workspace-content">
             <div v-show="workspaceMode === 'origin'" class="workspace-mode">
               <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :preview-bars="previewBars" :format-timestamp="formatTimestamp" />
             </div>
@@ -195,7 +195,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <aside class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
+          <aside data-testid="inspector-rail" class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
             <div class="rail-heading">
               <span class="section-index">INSPECTOR</span>
               <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
@@ -211,7 +211,7 @@ onMounted(async () => {
       </section>
     </div>
 
-    <section v-if="!diagnosticsCollapsed" class="diagnostics-dock">
+    <section v-if="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock">
       <div class="diagnostics-heading">
         <div>
           <p class="section-index">DIAGNOSTICS</p>
