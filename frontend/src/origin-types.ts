@@ -126,10 +126,18 @@ export interface CheckpointCompareSummaryDto {
   differenceCount: number;
 }
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 export interface PropertyDifferenceDto {
   field: string;
-  baselineValue: unknown | null;
-  candidateValue: unknown | null;
+  baselineValue: JsonValue;
+  candidateValue: JsonValue;
 }
 
 export interface ObjectDifferenceDto {
