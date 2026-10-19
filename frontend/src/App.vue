@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
+import RunChart from "./components/RunChart.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
@@ -292,7 +293,7 @@ onUnmounted(() => {
 
         <div data-testid="primary-workspace" class="primary-workspace">
           <div data-testid="workspace-content" class="workspace-content">
-            <template v-if="origin && workspaceMode !== 'snapshots'">
+            <template v-if="origin && workspaceMode === 'origin'">
               <OriginChart
                 :bars="origin.bars"
                 :origin-dataset-id="origin.originDatasetId"
@@ -305,6 +306,12 @@ onUnmounted(() => {
               <p class="microcopy chart-selection-hint" data-testid="origin-range-selection-status" aria-live="polite">{{ rangeSelectionStatus }}</p>
               <p class="source-note">Source: {{ origin.sourceCatalog }} · Chart values are projected from the validated Struxis SBar series; domain IDs remain exact strings.</p>
             </template>
+            <RunChart
+              v-else-if="workspaceMode === 'replay'"
+              :origin="origin"
+              :test-dataset="testDataset"
+              :run-state="runState"
+            />
             <div v-show="workspaceMode === 'origin'" class="workspace-mode">
               <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
             </div>
