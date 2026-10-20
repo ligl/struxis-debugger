@@ -314,7 +314,6 @@ describe("Struxis Debugger native desktop", () => {
     assert.ok(firstSbarId && secondSbarId && firstSbarId !== secondSbarId,
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
 
-    const originCanvas = await $('[data-testid="origin-chart-canvas"]');
     const clickOriginTimePosition = async (index, yFraction = 0.25, click = true) => {
       const coordinateAttribute = index === 0
         ? "data-first-sbar-x"
@@ -323,11 +322,10 @@ describe("Struxis Debugger native desktop", () => {
           : null;
       assert.ok(coordinateAttribute, `Unsupported Origin SBar index: ${index}`);
 
-      // v-show keeps the chart instance alive while its workspace is hidden.
-      // A previously finite timeToCoordinate value is not proof that the chart
-      // has recomputed its geometry after becoming visible again. Require the
-      // visible host geometry and native SBar coordinate to settle across
-      // multiple WebDriver polls before calculating a real pointer target.
+      // Workspace changes can unmount and recreate OriginChart. A previously
+      // finite timeToCoordinate value is not proof that the current chart host
+      // has settled. Require visible host geometry and the native SBar coordinate
+      // to remain stable across multiple WebDriver polls before clicking.
       let previousSample = null;
       let stableSamples = 0;
       let target = null;
