@@ -1947,3 +1947,38 @@ th, td { padding: 6px 8px; }
   .primary-workspace { grid-template-columns: minmax(0, 1fr); }
   .inspector-resize-edge { display: none; }
 }
+
+
+/* Dock locations are explicit UI state; domain state remains independent. */
+.debugger-shell.diagnostics-dock-top .diagnostics-dock { order: 1; }
+.debugger-shell.diagnostics-dock-top .workbench-body { order: 2; }
+.debugger-shell.diagnostics-dock-top .diagnostics-dock {
+  border-top: 0;
+  border-bottom: 1px solid #3a444b;
+}
+.primary-workspace.inspector-dock-left {
+  grid-template-columns: var(--inspector-width, 282px) minmax(0, 1fr);
+}
+.primary-workspace.inspector-dock-left .inspector-rail {
+  grid-column: 1;
+  grid-row: 1;
+  border-right: 1px solid #3a444b;
+  border-left: 0;
+}
+.primary-workspace.inspector-dock-left .workspace-content {
+  grid-column: 2;
+  grid-row: 1;
+}
+.primary-workspace.inspector-dock-left .inspector-resize-edge {
+  left: auto;
+  right: -3px;
+}
+.dock-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dock-actions .subtle-button { flex: 0 0 auto; }
+@media (max-width: 920px) {
+  .primary-workspace.inspector-dock-left { grid-template-columns: minmax(0, 1fr); }
+}
