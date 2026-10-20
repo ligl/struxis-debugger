@@ -454,6 +454,16 @@ describe("Struxis Debugger native desktop", () => {
         timeoutMsg: "First Step did not publish a stable Run state.",
       },
     );
+    await browser.waitUntil(
+      async () => await $('[data-testid="inspector-replay-checkpoint"]').isDisplayed(),
+      {
+        timeout: 15_000,
+        interval: 200,
+        timeoutMsg: "The Inspector did not receive the backend-confirmed first Struxis checkpoint.",
+      },
+    );
+    assert.equal(await $('[data-testid="inspector-replay-checkpoint"]').getText(), "0");
+    assert.equal(await $('[data-testid="inspector-replay-sbar-id"]').getText(), firstSbarId);
 
     if ((await runStatus.getText()).trim() !== "COMPLETED") {
       await domClick('[data-testid="run-step"]');
