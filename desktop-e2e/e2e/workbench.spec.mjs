@@ -109,7 +109,7 @@ describe("Struxis Debugger native desktop", () => {
     await $('[aria-label="Expand Inspector"]').click();
     await $('[aria-label="Collapse Inspector"]').waitForDisplayed();
 
-    await $('[data-testid="diagnostics-dock"] button').click();
+    await $('[data-testid="diagnostics-collapse-toggle"]').click();
     await $('[data-testid="diagnostics-dock"]').waitForExist({ reverse: true });
     await $('[data-testid="debugger-shell"] .diagnostics-reopen').waitForDisplayed();
     await assertNoHorizontalOverflow("Diagnostics collapsed");
