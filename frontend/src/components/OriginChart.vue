@@ -87,6 +87,11 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
     emit("selectionError", "The clicked horizontal position does not map to an Origin SBar.");
     return;
   }
+
+  // Render the first boundary immediately from the exact chart click. The
+  // parent still owns the selected SBar ID; its prop update then re-resolves
+  // this marker against the authoritative time axis.
+  if (!props.selectionStartSbarId) selectionStartX.value = pointX;
   emit("sbarClick", sbarId);
 }
 
