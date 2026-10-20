@@ -454,7 +454,8 @@ describe("Struxis Debugger native desktop", () => {
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     await $('[data-testid="run-chart-panel"]').waitForDisplayed();
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
-    await originCanvas.waitForDisplayed();
+    // OriginChart is Dataset-scoped and remounts when returning from Replay.
+    await $('[data-testid="origin-chart-canvas"]').waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await clickOriginTimePosition(1, 0.88);
     await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
