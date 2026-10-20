@@ -287,6 +287,36 @@ function stopPanelResize(): void {
   panelResizeTarget.value = null;
 }
 
+type DockDragTarget = "inspector" | "diagnostics";
+const dockDragMime = "application/x-struxis-debugger-panel";
+
+function startDockDrag(target: DockDragTarget, event: DragEvent): void {
+  if (!event.dataTransfer) return;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData(dockDragMime, target);
+}
+
+function allowDockDrop(event: DragEvent): void {
+  if (!event.dataTransfer) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+}
+
+function dropDockPanel(event: DragEvent, area: "workspace" | "body"): void {
+  const transfer = event.dataTransfer;
+  if (!transfer) return;
+  const target = transfer.getData(dockDragMime);
+  if (target !== "inspector" && target !== "diagnostics") return;
+  event.preventDefault();
+
+  const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  if (target === "inspector" && area === "workspace") {
+    inspectorDock.value = event.clientX < bounds.left + bounds.width / 2 ? "left" : "right";
+  } else if (target === "diagnostics" && area === "body") {
+    diagnosticsDock.value = event.clientY < bounds.top + bounds.height / 2 ? "top" : "bottom";
+  }
+}
+
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
 let originHandoffDuringStartup = false;
@@ -433,7 +463,7 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed }">
+    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed }" @dragover="allowDockDrop" @drop="dropDockPanel($event, 'body')">
       <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
         <div class="rail-heading">
           <span class="section-index">SOURCE</span>
@@ -454,7 +484,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div data-testid="primary-workspace" class="primary-workspace" :class="{ 'inspector-dock-left': inspectorDock === 'left' }">
+        <div data-testid="primary-workspace" class="primary-workspace" :class="{ 'inspector-dock-left': inspectorDock === 'left' }" @dragover="allowDockDrop" @drop="dropDockPanel($event, 'workspace')">
           <div data-testid="workspace-content" class="workspace-content">
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
@@ -490,7 +520,7 @@ onUnmounted(() => {
           <aside data-testid="inspector-rail" class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
             <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" :aria-valuenow="inspectorWidth" aria-valuemin="220" :aria-valuemax="inspectorWidthLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
             <div class="rail-heading">
-              <span class="section-index">INSPECTOR</span>
+              <span class="section-index panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag onto the workspace's left or right half to dock" @dragstart="startDockDrag('inspector', $event)">INSPECTOR</span>
               <details class="dock-menu" data-testid="inspector-dock-menu">
                 <summary class="subtle-button rail-toggle" aria-label="Inspector panel options" title="Inspector panel options">⋯</summary>
                 <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
@@ -520,7 +550,7 @@ onUnmounted(() => {
       <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" aria-orientation="horizontal" :aria-valuenow="diagnosticsHeight" aria-valuemin="100" :aria-valuemax="diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
       <div class="diagnostics-heading">
         <div>
-          <p class="section-index">DIAGNOSTICS</p>
+          <p class="section-index panel-dock-drag-handle" data-testid="diagnostics-dock-drag-handle" draggable="true" title="Drag onto the workbench's upper or lower half to dock" @dragstart="startDockDrag('diagnostics', $event)">DIAGNOSTICS</p>
           <h2>Workflow events &amp; errors</h2>
         </div>
         <div class="dock-actions">
