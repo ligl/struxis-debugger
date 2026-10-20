@@ -71,6 +71,69 @@ export interface RunStateDto {
   failureDiagnostic: string | null;
 }
 
+export interface ReplayInspectorSBarDto {
+  sbarId: string;
+  barType: string;
+  tsEvent: string;
+  tsInit: string;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+  body: string;
+  upperShadow: string;
+  lowerShadow: string;
+  totalRange: string;
+  bodyRatio: number;
+  shadowRatio: number;
+  direction: string;
+}
+
+export interface ReplayInspectorCBarDto {
+  cbarId: string;
+  high: string;
+  low: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  spanSbars: number;
+  fractalType: string | null;
+  createdAt: string;
+}
+
+export interface ReplayInspectorSwingDto {
+  swingId: string;
+  direction: string;
+  high: string;
+  low: string;
+  cbarStartId: string;
+  cbarEndId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  startOi: string | null;
+  endOi: string | null;
+  volume: string;
+  spanSbars: number;
+  state: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReplayInspectorStructureDto {
+  cbarCount: number;
+  cbars: ReplayInspectorCBarDto[];
+  swingCount: number;
+  swings: ReplayInspectorSwingDto[];
+}
+
+export interface ReplayInspectorDto {
+  stateKey: string;
+  checkpointIndex: number;
+  sbarId: string;
+  sbar: ReplayInspectorSBarDto;
+  structure: ReplayInspectorStructureDto | null;
+}
+
 export type SnapshotArtifactKind =
   | "complete"
   | "invalidPublished"
