@@ -153,7 +153,7 @@ impl ReplayWorker {
         if self.terminal_state.is_some() {
             return Ok(None);
         }
-        let _permit = self.command_gate.try_enter(ReplayCommandKind::GetState)?;
+        let _permit = self.command_gate.try_enter(ReplayCommandKind::GetInspector)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
         if let Err(error) = self.commands.send(WorkerCommand::GetInspector(reply_tx)) {
             let detail = format!("Replay worker is unavailable during GetInspector: {error}");
