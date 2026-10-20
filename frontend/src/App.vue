@@ -7,6 +7,7 @@ import RunChart from "./components/RunChart.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
+import ObjectInspector from "./components/ObjectInspector.vue";
 import type { SnapshotArtifactDto } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
@@ -73,6 +74,13 @@ const canLoadOrigin = computed(
   () => canMutateTest.value && !testLoading.value,
 );
 
+const selectedInspectorSbarId = ref<string | null>(null);
+const selectedInspectorSbar = computed(() => {
+  const selectedId = selectedInspectorSbarId.value;
+  if (!selectedId) return null;
+  return origin.value?.bars.find((bar) => bar.sbarId === selectedId) ?? null;
+});
+
 const rangeSelectionPendingStart = ref<string | null>(null);
 const rangeSelectionReady = ref(false);
 const selectedRangeCount = ref(0);
@@ -81,7 +89,13 @@ const rangeSelectionStatus = ref(
 );
 
 function handleOriginSbarClick(sbarId: string): void {
-  if (!origin.value || !canMutateTest.value || testLoading.value) return;
+  if (!origin.value) return;
+  if (origin.value.bars.some((bar) => bar.sbarId === sbarId)) {
+    selectedInspectorSbarId.value = sbarId;
+  }
+  // Inspection remains available when mutation is blocked; range selection
+  // still obeys the existing Origin/Test Dataset/Run lifecycle guard.
+  if (!canMutateTest.value || testLoading.value) return;
   const result = resolveOriginRangeClick(
     origin.value.bars,
     rangeSelectionPendingStart.value,
@@ -216,6 +230,7 @@ async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
+    selectedInspectorSbarId.value = null;
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = false;
     selectedRangeCount.value = 0;
@@ -398,12 +413,12 @@ onUnmounted(() => {
               <button class="subtle-button rail-toggle" aria-label="Move Inspector to opposite side" title="Move Inspector to opposite side" @click="toggleInspectorDock">⇆</button>
               <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
             </div>
-            <div v-if="!inspectorCollapsed" class="inspector-placeholder">
-              <span class="placeholder-mark">[ ]</span>
-              <h3>Object Inspector</h3>
-              <p>Waiting for the authoritative Struxis chart and object-selection projection.</p>
-              <small>UI shell only · no derived domain state</small>
-            </div>
+            <ObjectInspector
+              v-if="!inspectorCollapsed"
+              :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
+              :origin-dataset-id="origin?.originDatasetId ?? null"
+              :workspace-mode="workspaceMode"
+            />
           </aside>
         </div>
       </section>
