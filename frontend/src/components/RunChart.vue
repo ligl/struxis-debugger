@@ -84,33 +84,33 @@ onMounted(() => {
       horzLines: { visible: false },
     },
     layout: {
-      background: { type: ColorType.Solid, color: "#131722" },
-      textColor: "#b2b5be",
+      background: { type: ColorType.Solid, color: "#121619" },
+      textColor: "#a8b2b9",
       attributionLogo: false,
     },
     rightPriceScale: {
-      borderColor: "#2a2e39",
+      borderColor: "#30383f",
       scaleMargins: { top: 0.08, bottom: 0.22 },
     },
     timeScale: {
-      borderColor: "#30353b",
+      borderColor: "#30383f",
       timeVisible: true,
       secondsVisible: false,
       rightOffset: 4,
     },
     crosshair: {
-      vertLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
-      horzLine: { color: "#758696", labelBackgroundColor: "#2a2e39" },
+      vertLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
+      horzLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
     },
   });
   candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: "#26a69a",
-    downColor: "#ef5350",
-    borderUpColor: "#26a69a",
-    borderDownColor: "#ef5350",
-    wickUpColor: "#26a69a",
-    wickDownColor: "#ef5350",
-    priceLineVisible: true,
+    upColor: "#75c6a1",
+    downColor: "#e17e79",
+    borderUpColor: "#75c6a1",
+    borderDownColor: "#e17e79",
+    wickUpColor: "#75c6a1",
+    wickDownColor: "#e17e79",
+    priceLineVisible: false,
     lastValueVisible: true,
   });
   volumeSeries = chart.addSeries(HistogramSeries, {
