@@ -162,7 +162,7 @@ describe("OriginChart", () => {
     expect(chartMocks.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
   });
 
-  it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", () => {
+  it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", async () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [
@@ -183,6 +183,8 @@ describe("OriginChart", () => {
 
     clickHandler?.({ point: { x: 200, y: 12 } });
     clickHandler?.({ point: { x: 200, y: 410 } });
+    await nextTick();
+    expect(wrapper.find('[data-testid="origin-selection-start-line"]').exists()).toBe(true);
     expect(wrapper.emitted("sbarClick")).toEqual([
       ["1700000060000000000"],
       ["1700000060000000000"],
