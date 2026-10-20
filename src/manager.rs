@@ -49,7 +49,7 @@ impl ReplayManager {
     }
 
     pub(crate) fn inspector(&mut self) -> Result<Option<ReplayInspectorProjection>, String> {
-        let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
+        let _permit = self.gate.try_enter(ReplayCommandKind::GetInspector)?;
         let Some(worker) = self.active.as_mut() else {
             return Ok(None);
         };
