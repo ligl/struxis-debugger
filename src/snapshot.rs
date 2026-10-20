@@ -892,6 +892,16 @@ mod tests {
     }
 
     #[test]
+    fn rejects_diagnostic_associated_with_another_checkpoint() {
+        let mut records = records();
+        records[0].diagnostics = r#"[{"source":"struxis","severity":"warning","category":"example","objectType":null,"objectId":null,"sbarIds":[],"checkpointIndex":1,"message":"example"}]"#.into();
+        let manifest = manifest(&records);
+        assert!(validate_snapshot_records(&manifest, &records, false)
+            .unwrap_err()
+            .contains("does not match enclosing checkpointIndex"));
+    }
+
+    #[test]
     fn rejects_sbar_id_timestamp_mismatch() {
         let mut records = records();
         records[1].sbar_id = "201".into();
