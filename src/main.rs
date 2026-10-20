@@ -30,6 +30,7 @@ fn main() {
             commands::start_run,
             commands::restart_run,
             commands::get_run_state,
+            commands::get_replay_inspector,
             commands::step_run,
             commands::play_run,
             commands::pause_run,
