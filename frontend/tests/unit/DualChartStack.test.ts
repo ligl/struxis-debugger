@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 import DualChartStack from "../../src/components/DualChartStack.vue";
 
 describe("DualChartStack", () => {
@@ -59,6 +60,7 @@ describe("DualChartStack", () => {
       }),
     );
     window.dispatchEvent(new MouseEvent("pointermove", { clientY: 240 }));
+    await nextTick();
     expect(splitter.attributes("aria-valuenow")).toBe("60");
     window.dispatchEvent(new MouseEvent("pointerup"));
     wrapper.unmount();
