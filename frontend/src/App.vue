@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
+import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
@@ -459,21 +461,7 @@ onUnmounted(() => {
 
 <template>
   <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px' }" :class="{ 'inspector-dock-left': inspectorDock === 'left', 'diagnostics-dock-top': diagnosticsDock === 'top' }">
-    <header class="topbar workbench-topbar">
-      <div class="brand-block">
-        <p class="eyebrow">CAPITUS / STRUXIS DEBUGGER</p>
-        <h1>Struxis Debugger</h1>
-      </div>
-      <nav class="workspace-switcher" aria-label="Debugger workspace">
-        <button class="workspace-tab" data-testid="workspace-dataset" :class="{ active: workspaceMode === 'dataset' }" @click="workspaceMode = 'dataset'">01 / Dataset</button>
-        <button class="workspace-tab" data-testid="workspace-replay" :class="{ active: workspaceMode === 'replay' }" @click="workspaceMode = 'replay'">02 / Replay</button>
-        <button class="workspace-tab" data-testid="workspace-compare" :class="{ active: workspaceMode === 'compare' }" @click="workspaceMode = 'compare'">03 / Compare</button>
-      </nav>
-      <div class="runtime-mark">
-        <span class="runtime-dot" :class="{ active: origin }"></span>
-        <span>{{ origin ? "ORIGIN AVAILABLE" : "NO ORIGIN LOADED" }}</span>
-      </div>
-    </header>
+    <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
 
     <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed }" @dragover="allowDockDrop" @drop="dropDockPanel($event, 'body')">
       <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
@@ -485,16 +473,13 @@ onUnmounted(() => {
       </aside>
 
       <section data-testid="workbench-main" class="workbench-main">
-        <div class="workflow-toolbar">
-          <div>
-            <p class="section-index">{{ workspaceMode === "dataset" ? "WORKSPACE / 01" : workspaceMode === "replay" ? "WORKSPACE / 02" : "WORKSPACE / 03" }}</p>
-            <h2>{{ workspaceMode === "dataset" ? "Dataset Preparation" : workspaceMode === "replay" ? "Run Replay" : "Snapshot Comparison" }}</h2>
-          </div>
-          <div class="toolbar-actions">
-            <button v-if="workspaceMode === 'dataset'" class="subtle-button" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? "Show Catalog" : "Hide Catalog" }}</button>
-            <button class="subtle-button" @click="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? "Show Diagnostics" : "Hide Diagnostics" }}</button>
-          </div>
-        </div>
+        <WorkspaceToolbar
+          :workspace-mode="workspaceMode"
+          :catalog-collapsed="catalogCollapsed"
+          :diagnostics-collapsed="diagnosticsCollapsed"
+          @toggle-catalog="catalogCollapsed = !catalogCollapsed"
+          @toggle-diagnostics="diagnosticsCollapsed = !diagnosticsCollapsed"
+        />
 
         <div data-testid="primary-workspace" class="primary-workspace" :class="{ 'inspector-dock-left': inspectorDock === 'left' }" @dragover="allowDockDrop" @drop="dropDockPanel($event, 'workspace')">
           <div data-testid="workspace-content" class="workspace-content">
