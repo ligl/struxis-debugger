@@ -16,6 +16,7 @@ use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 use serde::Serialize;
 
 use crate::{
+    checkpoint::ReplayInspectorProjection,
     catalog::{OriginLoad, load_origin as load_origin_candidate},
     compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     dataset::TestDataset,
@@ -350,6 +351,10 @@ impl AppState {
         self.with_replay_manager(ReplayManager::state)
     }
 
+    pub(crate) fn replay_inspector(&self) -> Result<Option<ReplayInspectorProjection>, IpcError> {
+        self.with_replay_manager(ReplayManager::inspector)
+    }
+
     pub(crate) fn replay_step(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::step)
     }
@@ -370,10 +375,10 @@ impl AppState {
         self.with_replay_manager(ReplayManager::dispose)
     }
 
-    fn with_replay_manager(
+    fn with_replay_manager<T>(
         &self,
-        operation: impl FnOnce(&mut ReplayManager) -> Result<RunState, String>,
-    ) -> Result<RunState, IpcError> {
+        operation: impl FnOnce(&mut ReplayManager) -> Result<T, String>,
+    ) -> Result<T, IpcError> {
         let mut manager = self.inner.replay_manager.try_lock().map_err(|error| {
             let message = match error {
                 std::sync::TryLockError::WouldBlock => "Replay command rejected: another command is active",
