@@ -287,14 +287,6 @@ function stopPanelResize(): void {
   panelResizeTarget.value = null;
 }
 
-function toggleInspectorDock(): void {
-  inspectorDock.value = inspectorDock.value === "right" ? "left" : "right";
-}
-
-function toggleDiagnosticsDock(): void {
-  diagnosticsDock.value = diagnosticsDock.value === "bottom" ? "top" : "bottom";
-}
-
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
 let originHandoffDuringStartup = false;
