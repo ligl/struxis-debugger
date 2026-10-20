@@ -295,7 +295,15 @@ onMounted(async () => {
   window.addEventListener("pointermove", handlePanelResize);
   window.addEventListener("pointerup", stopPanelResize);
   window.addEventListener("pointercancel", stopPanelResize);
+  // RunState is the only progress authority exposed by the backend. Poll while
+  // the worker is running so the replay chart follows committed checkpoints.
+  const runPollInterval = window.setInterval(() => {
+    if (runState.value?.status === "running" && !runBusy.value) {
+      void refreshRunState(true);
+    }
+  }, 250);
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
+  onUnmounted(() => window.clearInterval(runPollInterval));
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
   if (!originHandoffDuringStartup) await refreshCurrentTestDataset();
@@ -367,6 +375,7 @@ onUnmounted(() => {
               v-if="workspaceMode === 'replay'"
               :origin="origin"
               :test-dataset="testDataset"
+              :run-state="runState"
             />
             <div v-show="workspaceMode === 'dataset'" class="workspace-mode dataset-preparation-panel">
               <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
