@@ -9,11 +9,12 @@ import {
   type ISeriesApi,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { OriginDatasetDto, SBarDto, TestDatasetDto } from "../origin-types";
+import type { OriginDatasetDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
+  runState: RunStateDto | null;
 }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
@@ -38,7 +39,23 @@ const projectionMessage = computed(() => {
   }
   return "";
 });
-const latestBar = computed(() => bars.value[bars.value.length - 1] ?? null);
+const replayProgressApplies = computed(() =>
+  Boolean(
+    props.runState &&
+    props.testDataset &&
+    props.runState.testDatasetId === props.testDataset.testDatasetId &&
+    props.runState.status !== "ready",
+  ),
+);
+const displayedBar = computed(() => {
+  if (!replayProgressApplies.value) return bars.value[bars.value.length - 1] ?? null;
+  const processedCount = Math.min(props.runState?.processedCount ?? 0, bars.value.length);
+  return processedCount > 0 ? bars.value[processedCount - 1] : null;
+});
+const chartCountLabel = computed(() => replayProgressApplies.value
+  ? `${Math.min(props.runState?.processedCount ?? 0, bars.value.length).toLocaleString()} / ${bars.value.length.toLocaleString()} PROCESSED`
+  : `${bars.value.length.toLocaleString()} SBARS`,
+);
 
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
@@ -56,8 +73,25 @@ function updateChart(): void {
       return;
     }
     const projection = mapOriginBarsToChart(bars.value);
-    candleSeries.setData(projection.candles);
-    volumeSeries.setData(projection.volume);
+    const processedCount = replayProgressApplies.value
+      ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
+      : bars.value.length;
+    const candles = projection.candles.map((candle, index) => {
+      if (!replayProgressApplies.value || index < processedCount) return candle;
+      return {
+        ...candle,
+        color: "#454b53",
+        borderColor: "#454b53",
+        wickColor: "#454b53",
+      };
+    });
+    const volume = projection.volume.map((bar, index) =>
+      replayProgressApplies.value && index >= processedCount
+        ? { ...bar, color: "#454b53" }
+        : bar,
+    );
+    candleSeries.setData(candles);
+    volumeSeries.setData(volume);
     chartError.value = "";
     if (props.testDataset && fittedTestDatasetId !== props.testDataset.testDatasetId) {
       chart.timeScale().fitContent();
@@ -132,7 +166,17 @@ onMounted(() => {
   updateChart();
 });
 
-watch(() => [bars.value, props.testDataset?.testDatasetId, props.origin?.originDatasetId] as const, updateChart);
+watch(
+  () => [
+    bars.value,
+    props.testDataset?.testDatasetId,
+    props.origin?.originDatasetId,
+    props.runState?.testDatasetId,
+    props.runState?.status,
+    props.runState?.processedCount,
+  ] as const,
+  updateChart,
+);
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
@@ -153,16 +197,19 @@ onBeforeUnmount(() => {
         <h3>Test Dataset SBar chart</h3>
         <span class="chart-instrument">{{ testDataset?.barType ?? origin?.barType ?? "No Test Dataset" }}</span>
       </div>
-      <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
+      <span class="chart-bar-count" data-testid="run-chart-progress">{{ chartCountLabel }}</span>
     </div>
-    <div v-if="latestBar" class="chart-data-strip" aria-label="Latest Test SBar OHLCV">
-      <span><small>O</small><strong>{{ latestBar.open }}</strong></span>
-      <span><small>H</small><strong>{{ latestBar.high }}</strong></span>
-      <span><small>L</small><strong>{{ latestBar.low }}</strong></span>
-      <span><small>C</small><strong>{{ latestBar.close }}</strong></span>
-      <span><small>VOL</small><strong>{{ latestBar.volume }}</strong></span>
-      <span class="chart-latest-id"><small>LAST SBAR ID</small><strong>{{ latestBar.sbarId }}</strong></span>
+    <div v-if="displayedBar" class="chart-data-strip" aria-label="Displayed Test SBar OHLCV">
+      <span><small>O</small><strong>{{ displayedBar.open }}</strong></span>
+      <span><small>H</small><strong>{{ displayedBar.high }}</strong></span>
+      <span><small>L</small><strong>{{ displayedBar.low }}</strong></span>
+      <span><small>C</small><strong>{{ displayedBar.close }}</strong></span>
+      <span><small>VOL</small><strong>{{ displayedBar.volume }}</strong></span>
+      <span class="chart-latest-id"><small>{{ replayProgressApplies ? "CURSOR SBAR ID" : "LAST SBAR ID" }}</small><strong>{{ displayedBar.sbarId }}</strong></span>
     </div>
+    <p v-else-if="replayProgressApplies" class="microcopy chart-selection-hint" data-testid="run-chart-awaiting-checkpoint">
+      Waiting for the first backend-confirmed checkpoint. Future input SBars are dimmed.
+    </p>
     <p v-if="projectionMessage" class="microcopy chart-selection-hint" data-testid="run-chart-empty">{{ projectionMessage }}</p>
     <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="run-chart-error">
       <strong>Chart projection rejected</strong><span>{{ chartError }}</span>
