@@ -62,6 +62,31 @@ function updateSbarCoordinates(): void {
   selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
 }
 
+function selectSbarById(sbarId: string): void {
+  if (chartError.value || props.bars.length === 0) return;
+  if (!sbarIdByLogicalIndex.includes(sbarId)) {
+    emit("selectionError", "The selected SBar is not part of the current Origin chart.");
+    return;
+  }
+
+  // This is the shared selection path for pointer input and programmatic
+  // component commands. The parent still owns the range state and validates
+  // the exact ID against the authoritative Origin sequence.
+  if (!props.selectionStartSbarId) {
+    selectionStartX.value = coordinateForSbarId(sbarId);
+  }
+  emit("sbarClick", sbarId);
+}
+
+function handleSbarSelectionRequest(event: Event): void {
+  const detail = (event as CustomEvent<{ sbarId?: unknown }>).detail;
+  if (typeof detail?.sbarId !== "string" || detail.sbarId.length === 0) {
+    emit("selectionError", "A programmatic Origin selection requires an exact SBar ID.");
+    return;
+  }
+  selectSbarById(detail.sbarId);
+}
+
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   if (chartError.value || props.bars.length === 0) return;
   const pointX = param.point?.x;
@@ -88,11 +113,7 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
     return;
   }
 
-  // Render the first boundary immediately from the exact chart click. The
-  // parent still owns the selected SBar ID; its prop update then re-resolves
-  // this marker against the authoritative time axis.
-  if (!props.selectionStartSbarId) selectionStartX.value = pointX;
-  emit("sbarClick", sbarId);
+  selectSbarById(sbarId);
 }
 
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
@@ -129,13 +150,10 @@ function updateChart(): void {
     if (props.bars.length > 0 && fittedOriginDatasetId !== props.originDatasetId) {
       const timeScale = chart.timeScale();
       timeScale.fitContent();
-      // Reserve visible space before the first SBar so its timestamp maps
-      // into the actual plot area rather than onto the clipped left boundary.
-      // Scale the margin with dataset size to keep it useful for both short
-      // and long Origins; retain four trailing logical slots on the right.
-      const leadingMargin = projection.candles.length * 0.05;
+      // Keep the established fixed logical padding. Selection correctness
+      // is handled by the chart time-axis mapping, not by data-size heuristics.
       timeScale.setVisibleLogicalRange({
-        from: -leadingMargin,
+        from: -0.5,
         to: projection.candles.length + 3.5,
       });
       fittedOriginDatasetId = props.originDatasetId;
@@ -253,6 +271,7 @@ onBeforeUnmount(() => {
     class="origin-chart-panel"
     aria-label="Origin SBar chart"
     data-testid="origin-chart-panel"
+    @struxis-select-sbar="handleSbarSelectionRequest"
     :data-sbar-count="bars.length"
     :data-first-sbar-id="bars[0]?.sbarId ?? ''"
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
