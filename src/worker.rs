@@ -31,7 +31,7 @@ use nautilus_model::{
 };
 
 use crate::{
-    checkpoint::ReplayCheckpointProjection,
+    checkpoint::{ReplayCheckpointProjection, ReplayInspectorProjection},
     effective_config::EffectiveStruxisConfig,
     replay::{LoadedInput, ReplayCommandGate, ReplayCommandKind},
     run::{RunState, RunStatus},
@@ -79,6 +79,7 @@ pub(crate) struct ReplayWorkerConfig {
 
 enum WorkerCommand {
     GetState(SyncSender<RunState>),
+    GetInspector(SyncSender<Option<ReplayInspectorProjection>>),
     Step(SyncSender<Result<RunState, String>>),
     Play(SyncSender<Result<RunState, String>>),
     Pause(SyncSender<Result<RunState, String>>),
@@ -144,6 +145,24 @@ impl ReplayWorker {
             },
             initial_state,
         ))
+    }
+
+    /// Returns the latest Struxis-owned checkpoint projection, if any.
+    /// The query is handled at a worker boundary and never exposes live runtime objects.
+    pub(crate) fn inspector(&mut self) -> Result<Option<ReplayInspectorProjection>, String> {
+        if self.terminal_state.is_some() {
+            return Ok(None);
+        }
+        let _permit = self.command_gate.try_enter(ReplayCommandKind::GetState)?;
+        let (reply_tx, reply_rx) = mpsc::sync_channel(0);
+        if let Err(error) = self.commands.send(WorkerCommand::GetInspector(reply_tx)) {
+            let detail = format!("Replay worker is unavailable during GetInspector: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        reply_rx.recv().map_err(|error| {
+            let detail = format!("Replay worker dropped GetInspector response: {error}");
+            self.join_after_transport_failure(detail)
+        })
     }
 
     /// Returns the latest authoritative RunState observed at a worker boundary.
@@ -326,6 +345,7 @@ struct WorkerSession {
     input: LoadedInput,
     state: RunState,
     next_index: usize,
+    latest_inspector: Option<ReplayInspectorProjection>,
 }
 
 impl WorkerSession {
@@ -423,6 +443,7 @@ impl WorkerSession {
             input: config.input,
             state,
             next_index: 0,
+            latest_inspector: None,
         })
     }
 
@@ -541,6 +562,9 @@ impl WorkerSession {
         }
 
         self.state.confirm_checkpoint(bar.ts_event.to_string())?;
+        self.latest_inspector = Some(
+            projection.inspector_projection(self.next_index, &bar.ts_event.to_string())?,
+        );
         self.next_index += 1;
 
         if self.state.status == RunStatus::Completed {
@@ -618,6 +642,9 @@ fn worker_loop(
         match command {
             WorkerCommand::GetState(reply) => {
                 let _ = reply.send(session.state.clone());
+            }
+            WorkerCommand::GetInspector(reply) => {
+                let _ = reply.send(session.latest_inspector.clone());
             }
             WorkerCommand::Step(reply) => {
                 let _ = reply.send(session.step(sink.as_mut(), false));
