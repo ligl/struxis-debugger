@@ -37,7 +37,7 @@ function handleSelection(event: Event): void {
           @change="handleSelection"
         >
           <option value="">Choose completed Snapshot…</option>
-          <option v-for="snapshot in snapshots" :key="snapshot.snapshotId!" :value="snapshot.snapshotId!">
+          <option v-for="snapshot in snapshots" :key="snapshot.snapshotId ?? snapshot.fileName" :value="snapshot.snapshotId ?? ''">
             {{ snapshot.snapshotId }} · {{ snapshot.generatedAt ?? "time unavailable" }}
           </option>
         </select>
