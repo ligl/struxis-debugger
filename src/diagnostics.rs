@@ -82,6 +82,26 @@ pub(crate) fn validate_canonical_diagnostics_json(encoded: &str) -> Result<(), S
     Ok(())
 }
 
+/// Validates diagnostics stored in one checkpoint, including their optional
+/// explicit checkpoint association.
+pub(crate) fn validate_checkpoint_diagnostics_json(
+    encoded: &str,
+    enclosing_checkpoint_index: usize,
+) -> Result<(), String> {
+    let diagnostics: Vec<Diagnostic> = serde_json::from_str(encoded)
+        .map_err(|error| format!("Invalid diagnostics DTO: {error}"))?;
+    for diagnostic in &diagnostics {
+        if let Some(index) = diagnostic.checkpoint_index {
+            if index != enclosing_checkpoint_index {
+                return Err(format!(
+                    "Diagnostic checkpointIndex {index} does not match enclosing checkpointIndex {enclosing_checkpoint_index}"
+                ));
+            }
+        }
+    }
+    validate_canonical_diagnostics_json(encoded)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{canonical_diagnostics_json, Diagnostic};
@@ -133,5 +153,36 @@ mod tests {
         let mut value = diagnostic("replay", "Category", "message");
         value.category.clear();
         assert!(canonical_diagnostics_json(&[value]).is_err());
+    }
+
+    #[test]
+    fn checkpoint_association_must_match_enclosing_checkpoint() {
+        let mut value = diagnostic("replay", "Category", "message");
+        value.checkpoint_index = Some(1);
+        let encoded = canonical_diagnostics_json(&[value]).unwrap();
+        assert!(super::validate_checkpoint_diagnostics_json(&encoded, 1).is_ok());
+        assert!(super::validate_checkpoint_diagnostics_json(&encoded, 0)
+            .unwrap_err()
+            .contains("does not match enclosing checkpointIndex"));
+    }
+
+    #[test]
+    fn null_checkpoint_association_is_allowed() {
+        let mut value = diagnostic("replay", "Category", "message");
+        value.checkpoint_index = None;
+        let encoded = canonical_diagnostics_json(&[value]).unwrap();
+        assert!(super::validate_checkpoint_diagnostics_json(&encoded, 42).is_ok());
+    }
+
+    #[test]
+    fn full_sbar_anchor_list_breaks_sort_ties_deterministically() {
+        let mut a = diagnostic("replay", "Category", "same");
+        a.sbar_ids = vec!["100".into(), "200".into()];
+        let mut b = diagnostic("replay", "Category", "same");
+        b.sbar_ids = vec!["100".into(), "300".into()];
+
+        let forward = canonical_diagnostics_json(&[a.clone(), b.clone()]).unwrap();
+        let reverse = canonical_diagnostics_json(&[b, a]).unwrap();
+        assert_eq!(forward, reverse);
     }
 }
