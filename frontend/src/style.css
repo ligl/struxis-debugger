@@ -2256,3 +2256,20 @@ th, td { padding: 6px 8px; }
   background: var(--dbg-accent-subtle);
 }
 .inspector-list-heading { margin-top: 12px !important; }
+
+/* Native drag handles for changing a panel's dock without moving its contents. */
+.panel-dock-drag-handle {
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px dashed transparent;
+}
+
+.panel-dock-drag-handle:hover {
+  color: var(--dbg-text-primary);
+  border-bottom-color: var(--dbg-accent);
+}
+
+.panel-dock-drag-handle:active {
+  cursor: grabbing;
+}
+
