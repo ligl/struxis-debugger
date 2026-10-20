@@ -29,13 +29,23 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.find('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(false);
   });
 
-  it("does not offer non-complete artifacts as Replay references", async () => {
+  it("does not offer non-complete artifacts as Replay references", () => {
     const wrapper = mount(SnapshotReferencePanel, {
-      props: { snapshots: [], selectedSnapshotId: null },
+      props: {
+        snapshots: [{
+          ...snapshots[0],
+          kind: "failedTemporary",
+          snapshotId: "snapshot-failed-01",
+        }],
+        selectedSnapshotId: "snapshot-failed-01",
+      },
     });
 
-    expect((wrapper.get('[data-testid="replay-reference-select"]').element as HTMLSelectElement).disabled).toBe(true);
+    const select = wrapper.get('[data-testid="replay-reference-select"]');
+    expect((select.element as HTMLSelectElement).disabled).toBe(true);
+    expect(select.findAll("option")).toHaveLength(1);
     expect(wrapper.get('[data-testid="snapshot-reference-empty"]').text()).toContain("No completed Snapshot available");
+    expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(false);
   });
 
   it("emits an explicit selection change", async () => {
