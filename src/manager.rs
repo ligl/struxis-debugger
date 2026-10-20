@@ -50,10 +50,10 @@ impl ReplayManager {
 
     pub(crate) fn inspector(&mut self) -> Result<Option<ReplayInspectorProjection>, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
-        self.active
-            .as_mut()
-            .ok_or_else(|| "GetInspector rejected: ReplayManager has no active Run".to_owned())?
-            .inspector()
+        let Some(worker) = self.active.as_mut() else {
+            return Ok(None);
+        };
+        worker.inspector()
     }
 
     pub(crate) fn state(&mut self) -> Result<RunState, String> {
