@@ -145,7 +145,9 @@ onMounted(() => {
     wickUpColor: "#75c6a1",
     wickDownColor: "#e17e79",
     priceLineVisible: false,
-    lastValueVisible: true,
+    // The last input candle may still be in the future during replay; the
+    // cursor strip, not the final input price label, reports confirmed progress.
+    lastValueVisible: false,
   });
   volumeSeries = chart.addSeries(HistogramSeries, {
     priceScaleId: "",
