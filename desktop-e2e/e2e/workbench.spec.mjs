@@ -71,6 +71,10 @@ describe("Struxis Debugger native desktop", () => {
         timeoutMsg: "The Replay workspace did not become visible.",
       },
     );
+    await $('[data-testid="dual-chart-stack-replay"]').waitForDisplayed();
+    await $('[data-testid="replay-upper-chart-track"]').waitForDisplayed();
+    await $('[data-testid="replay-lower-chart-track"]').waitForDisplayed();
+    await $('[data-testid="replay-chart-splitter"]').waitForDisplayed();
 
     await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
@@ -80,6 +84,10 @@ describe("Struxis Debugger native desktop", () => {
         timeoutMsg: "The Compare workspace did not become visible.",
       },
     );
+    await $('[data-testid="dual-chart-stack-compare"]').waitForDisplayed();
+    await $('[data-testid="compare-candidate-chart"]').waitForDisplayed();
+    await $('[data-testid="compare-baseline-chart"]').waitForDisplayed();
+    await $('[data-testid="compare-chart-splitter"]').waitForDisplayed();
   });
   it("collapses and restores Catalog, Inspector, and Diagnostics without breaking the workbench layout", async () => {
     const shell = await $('[data-testid="debugger-shell"]');
