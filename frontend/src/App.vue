@@ -144,6 +144,36 @@ const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
 
+// Dock dimensions are presentation state only; they never affect Struxis state.
+const inspectorWidth = ref(282);
+const diagnosticsHeight = ref(164);
+type PanelResizeTarget = "inspector" | "diagnostics" | null;
+const panelResizeTarget = ref<PanelResizeTarget>(null);
+let panelResizeStart = 0;
+let panelResizeInitialSize = 0;
+
+function startPanelResize(target: Exclude<PanelResizeTarget, null>, event: PointerEvent): void {
+  if (event.button !== 0) return;
+  panelResizeTarget.value = target;
+  panelResizeStart = target === "inspector" ? event.clientX : event.clientY;
+  panelResizeInitialSize = target === "inspector" ? inspectorWidth.value : diagnosticsHeight.value;
+  event.preventDefault();
+}
+
+function handlePanelResize(event: PointerEvent): void {
+  const target = panelResizeTarget.value;
+  if (!target) return;
+  if (target === "inspector") {
+    inspectorWidth.value = Math.max(220, Math.min(520, panelResizeInitialSize + panelResizeStart - event.clientX));
+  } else {
+    diagnosticsHeight.value = Math.max(100, Math.min(480, panelResizeInitialSize + panelResizeStart - event.clientY));
+  }
+}
+
+function stopPanelResize(): void {
+  panelResizeTarget.value = null;
+}
+
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
 let originHandoffDuringStartup = false;
@@ -241,6 +271,9 @@ function formatTimestamp(value: string | null): string {
 
 onMounted(async () => {
   document.addEventListener("keydown", handleReplayShortcut);
+  window.addEventListener("pointermove", handlePanelResize);
+  window.addEventListener("pointerup", stopPanelResize);
+  window.addEventListener("pointercancel", stopPanelResize);
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
@@ -249,11 +282,14 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener("keydown", handleReplayShortcut);
+  window.removeEventListener("pointermove", handlePanelResize);
+  window.removeEventListener("pointerup", stopPanelResize);
+  window.removeEventListener("pointercancel", stopPanelResize);
 });
 </script>
 
 <template>
-  <main class="debugger-shell" data-testid="debugger-shell">
+  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px' }">
     <header class="topbar workbench-topbar">
       <div class="brand-block">
         <p class="eyebrow">CAPITUS / STRUXIS DEBUGGER</p>
@@ -324,6 +360,7 @@ onUnmounted(() => {
           </div>
 
           <aside data-testid="inspector-rail" class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
+            <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" @pointerdown="startPanelResize('inspector', $event)"></div>
             <div class="rail-heading">
               <span class="section-index">INSPECTOR</span>
               <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
@@ -340,6 +377,7 @@ onUnmounted(() => {
     </div>
 
     <section v-if="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock">
+      <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" @pointerdown="startPanelResize('diagnostics', $event)"></div>
       <div class="diagnostics-heading">
         <div>
           <p class="section-index">DIAGNOSTICS</p>
