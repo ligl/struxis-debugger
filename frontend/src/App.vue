@@ -143,6 +143,8 @@ const workspaceMode = ref<WorkspaceMode>("dataset");
 const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
+const inspectorDock = ref<"left" | "right">("right");
+const diagnosticsDock = ref<"top" | "bottom">("bottom");
 
 // Dock dimensions are presentation state only; they never affect Struxis state.
 const inspectorWidth = ref(282);
@@ -172,6 +174,14 @@ function handlePanelResize(event: PointerEvent): void {
 
 function stopPanelResize(): void {
   panelResizeTarget.value = null;
+}
+
+function toggleInspectorDock(): void {
+  inspectorDock.value = inspectorDock.value === "right" ? "left" : "right";
+}
+
+function toggleDiagnosticsDock(): void {
+  diagnosticsDock.value = diagnosticsDock.value === "bottom" ? "top" : "bottom";
 }
 
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
@@ -289,7 +299,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px' }">
+  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px' }" :class="{ 'inspector-dock-left': inspectorDock === 'left', 'diagnostics-dock-top': diagnosticsDock === 'top' }">
     <header class="topbar workbench-topbar">
       <div class="brand-block">
         <p class="eyebrow">CAPITUS / STRUXIS DEBUGGER</p>
@@ -327,7 +337,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div data-testid="primary-workspace" class="primary-workspace">
+        <div data-testid="primary-workspace" class="primary-workspace" :class="{ 'inspector-dock-left': inspectorDock === 'left' }">
           <div data-testid="workspace-content" class="workspace-content">
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
@@ -363,6 +373,7 @@ onUnmounted(() => {
             <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" @pointerdown="startPanelResize('inspector', $event)"></div>
             <div class="rail-heading">
               <span class="section-index">INSPECTOR</span>
+              <button class="subtle-button rail-toggle" aria-label="Move Inspector to opposite side" title="Move Inspector to opposite side" @click="toggleInspectorDock">⇆</button>
               <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
             </div>
             <div v-if="!inspectorCollapsed" class="inspector-placeholder">
@@ -383,7 +394,7 @@ onUnmounted(() => {
           <p class="section-index">DIAGNOSTICS</p>
           <h2>Workflow events &amp; errors</h2>
         </div>
-        <button class="subtle-button" @click="diagnosticsCollapsed = true">Collapse</button>
+        <div class="dock-actions"><button class="subtle-button" data-testid="diagnostics-dock-toggle" @click="toggleDiagnosticsDock">{{ diagnosticsDock === 'bottom' ? 'Move to Top' : 'Move to Bottom' }}</button><button class="subtle-button" @click="diagnosticsCollapsed = true">Collapse</button></div>
       </div>
       <div class="diagnostics-content">
         <p v-if="loadError || discoveryError || testError || runError || snapshotsError" class="error-message">
