@@ -4,6 +4,7 @@ use tauri::State;
 
 use crate::{
     app::{AppState, OriginDatasetDto, TestDatasetDto},
+    checkpoint::ReplayInspectorProjection,
     compare::{CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     discovery::CatalogDatasetEntry,
     ipc::{IpcError, IpcErrorCode},
@@ -141,6 +142,16 @@ pub(crate) async fn get_run_state(state: State<'_, AppState>) -> Result<RunState
     tauri::async_runtime::spawn_blocking(move || state.replay_state())
         .await
         .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run state worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub(crate) async fn get_replay_inspector(
+    state: State<'_, AppState>,
+) -> Result<Option<ReplayInspectorProjection>, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_inspector())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Replay Inspector worker failed: {error}")))?
 }
 
 #[tauri::command]
