@@ -424,8 +424,43 @@ describe("Struxis Debugger native desktop", () => {
     // Click at unrelated vertical positions to prove selection depends on x/time,
     // not on hitting a candle body or wick. The first move previews the overlay
     // across the full chart height before the second click fixes the endpoint.
-    await clickOriginTimePosition(0, 0.12);
-    await $('[data-testid="origin-selection-start-line"]').waitForDisplayed();
+    const firstClickTarget = await clickOriginTimePosition(0, 0.12);
+    try {
+      await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
+    } catch {
+      const diagnostic = await browser.execute((clickTarget) => {
+        const host = document.querySelector('[data-testid="origin-chart-canvas"]');
+        const status = document.querySelector('[data-testid="origin-range-selection-status"]');
+        const chartError = document.querySelector('[data-testid="origin-chart-error"]');
+        const marker = document.querySelector('[data-testid="origin-selection-start-line"]');
+        const rect = host?.getBoundingClientRect();
+        const hit = document.elementFromPoint(clickTarget.x, clickTarget.y);
+        return {
+          clickTarget,
+          hitElement: hit?.tagName ?? null,
+          hitClass: typeof hit?.className === "string" ? hit.className : null,
+          hitTestId: hit?.getAttribute("data-testid") ?? null,
+          host: host ? {
+            rect: rect ? {
+              x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+              top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left,
+            } : null,
+            display: getComputedStyle(host).display,
+            visibility: getComputedStyle(host).visibility,
+            pointerEvents: getComputedStyle(host).pointerEvents,
+            firstSbarX: host.getAttribute("data-first-sbar-x"),
+            secondSbarX: host.getAttribute("data-second-sbar-x"),
+            selectionStartX: host.getAttribute("data-selection-start-x"),
+          } : null,
+          status: status?.textContent?.trim() ?? null,
+          chartError: chartError?.textContent?.trim() ?? null,
+          startMarkerRendered: Boolean(marker),
+        };
+      }, firstClickTarget);
+      assert.fail(
+        `Origin selection start marker did not appear after the first chart click. Diagnostic: ${JSON.stringify(diagnostic)}`,
+      );
+    }
     await clickOriginTimePosition(1, 0.88, false);
     await $('[data-testid="origin-selection-preview"]').waitForDisplayed();
     const previewGeometry = await browser.execute(() => {
