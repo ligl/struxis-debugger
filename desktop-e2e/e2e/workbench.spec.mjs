@@ -437,6 +437,14 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
+    await browser.waitUntil(
+      async () => await $('[data-testid="run-step"]').isEnabled(),
+      {
+        timeout: 30_000,
+        interval: 200,
+        timeoutMsg: "Run did not become eligible for the first Step after Start settled.",
+      },
+    );
     await domClick('[data-testid="run-step"]');
     await browser.waitUntil(
       async () => ["PAUSED", "COMPLETED"].includes((await runStatus.getText()).trim()),
@@ -493,6 +501,14 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
+    await browser.waitUntil(
+      async () => await $('[data-testid="run-step"]').isEnabled(),
+      {
+        timeout: 30_000,
+        interval: 200,
+        timeoutMsg: "Restarted Run did not become eligible for the first Step after Restart settled.",
+      },
+    );
     await domClick('[data-testid="run-step"]');
     await browser.waitUntil(
       async () => ["PAUSED", "COMPLETED"].includes((await secondRunStatus.getText()).trim()),
