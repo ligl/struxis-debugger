@@ -2,7 +2,7 @@ import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
 import RunControlPanel from "../../src/components/RunControlPanel.vue";
-import type { CatalogDatasetEntry, OriginDatasetDto, TestDatasetDto } from "../../src/origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto, SnapshotArtifactDto, SnapshotCompareResultDto, TestDatasetDto } from "../../src/origin-types";
 
 const ipc = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -162,6 +162,105 @@ describe("Origin Load workbench", () => {
       "Structural-object selection for Replay is not connected",
     );
     expect(wrapper.find('[data-testid="inspector-sbar-id"]').exists()).toBe(false);
+  });
+
+
+  it("links a selected Compare difference to the Inspector and clears it when leaving Compare", async () => {
+    const snapshots: SnapshotArtifactDto[] = [
+      {
+        fileName: "baseline.snapshot.sqlite",
+        path: "/snapshots/baseline.snapshot.sqlite",
+        kind: "complete",
+        snapshotId: "snapshot-baseline",
+        runId: "run-baseline",
+        stateKey: "state-key",
+        generatedAt: "1000",
+        checkpointCount: 2,
+        diagnostic: null,
+      },
+      {
+        fileName: "candidate.snapshot.sqlite",
+        path: "/snapshots/candidate.snapshot.sqlite",
+        kind: "complete",
+        snapshotId: "snapshot-candidate",
+        runId: "run-candidate",
+        stateKey: "state-key",
+        generatedAt: "2000",
+        checkpointCount: 2,
+        diagnostic: null,
+      },
+    ];
+    const compareResult: SnapshotCompareResultDto = {
+      baseline: {
+        snapshotId: "snapshot-baseline",
+        runId: "run-baseline",
+        stateKey: "state-key",
+        instrumentId: dataset.instrumentId!,
+        barType: dataset.barType!,
+        snapshotGeneratedAt: "1000",
+        inputBarCount: 2,
+        sbarSequenceFingerprint: "same-input",
+        configFingerprint: "baseline-config",
+        effectiveConfig: "{}",
+      },
+      candidate: {
+        snapshotId: "snapshot-candidate",
+        runId: "run-candidate",
+        stateKey: "state-key",
+        instrumentId: dataset.instrumentId!,
+        barType: dataset.barType!,
+        snapshotGeneratedAt: "2000",
+        inputBarCount: 2,
+        sbarSequenceFingerprint: "same-input",
+        configFingerprint: "candidate-config",
+        effectiveConfig: "{}",
+      },
+      checkpointCount: 2,
+      checkpoints: [{ checkpointIndex: 1, sbarId: "200", tsEvent: "200", differenceCount: 1 }],
+      differences: [{
+        checkpointIndex: 1,
+        sbarId: "200",
+        objectType: "Swing",
+        kind: "modified",
+        objectId: "swing-123",
+        properties: [{ field: "high", baselineValue: "13.00", candidateValue: "14.00" }],
+      }],
+      firstStructuralDivergence: { checkpointIndex: 1, sbarId: "200", tsEvent: "200", differenceCount: 1 },
+      diagnosticsDifferences: [],
+      firstDiagnosticsDivergence: null,
+    };
+
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve(snapshots);
+      if (command === "compare_snapshots") return Promise.resolve(compareResult);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("snapshot-baseline"));
+    await wrapper.get('[data-testid="workspace-compare"]').trigger("click");
+    await wrapper.get(".compare-controls .primary-button").trigger("click");
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("compare_snapshots", {
+      baselineSnapshotId: "snapshot-baseline",
+      candidateSnapshotId: "snapshot-candidate",
+    }));
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="compare-select-difference-0"]').exists()).toBe(true));
+
+    await wrapper.get('[data-testid="compare-select-difference-0"]').trigger("click");
+    expect(wrapper.get('[data-testid="inspector-difference-object-id"]').text()).toBe("swing-123");
+    expect(wrapper.get('[data-testid="inspector-difference-checkpoint"]').text()).toBe("1");
+    expect(wrapper.get('[data-testid="inspector-difference-sbar-id"]').text()).toBe("200");
+    expect(wrapper.get('[data-testid="inspector-difference-properties"]').text()).toContain("13.00");
+    expect(wrapper.get('[data-testid="inspector-difference-properties"]').text()).toContain("14.00");
+    expect(wrapper.get('[data-testid="compare-difference-row-0"]').classes()).toContain("difference-row-selected");
+
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+    await wrapper.get('[data-testid="workspace-compare"]').trigger("click");
+    expect(wrapper.find('[data-testid="inspector-difference-object-id"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="inspector-empty"]').text()).toContain("Select an object difference");
   });
 
   it("maps a disabled structure checkbox to enableStructure=false and renders the returned mode", async () => {
