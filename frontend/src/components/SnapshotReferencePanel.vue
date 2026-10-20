@@ -11,8 +11,11 @@ const emit = defineEmits<{
   "update:selectedSnapshotId": [snapshotId: string | null];
 }>();
 
+const availableSnapshots = computed(() =>
+  props.snapshots.filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null),
+);
 const selectedSnapshot = computed(
-  () => props.snapshots.find((snapshot) => snapshot.snapshotId === props.selectedSnapshotId) ?? null,
+  () => availableSnapshots.value.find((snapshot) => snapshot.snapshotId === props.selectedSnapshotId) ?? null,
 );
 
 function handleSelection(event: Event): void {
@@ -33,11 +36,11 @@ function handleSelection(event: Event): void {
         <select
           data-testid="replay-reference-select"
           :value="selectedSnapshotId ?? ''"
-          :disabled="snapshots.length === 0"
+          :disabled="availableSnapshots.length === 0"
           @change="handleSelection"
         >
           <option value="">Choose completed Snapshot…</option>
-          <option v-for="snapshot in snapshots" :key="snapshot.snapshotId ?? snapshot.fileName" :value="snapshot.snapshotId ?? ''">
+          <option v-for="snapshot in availableSnapshots" :key="snapshot.snapshotId ?? snapshot.fileName" :value="snapshot.snapshotId ?? ''">
             {{ snapshot.snapshotId }} · {{ snapshot.generatedAt ?? "time unavailable" }}
           </option>
         </select>
@@ -61,8 +64,8 @@ function handleSelection(event: Event): void {
       </p>
     </div>
     <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">
-      <strong>{{ snapshots.length ? "Select a completed Snapshot" : "No completed Snapshot available" }}</strong>
-      <p>{{ snapshots.length ? "Choose a fixed historical result to inspect here." : "A completed Run Snapshot will appear here after it is published and discovered." }}</p>
+      <strong>{{ availableSnapshots.length ? "Select a completed Snapshot" : "No completed Snapshot available" }}</strong>
+      <p>{{ availableSnapshots.length ? "Choose a fixed historical result to inspect here." : "A completed Run Snapshot will appear here after it is published and discovered." }}</p>
     </div>
   </section>
 </template>
