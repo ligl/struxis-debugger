@@ -47,7 +47,17 @@ describe("DualChartStack", () => {
     });
 
     const splitter = wrapper.get('[data-testid="compare-chart-splitter"]');
-    await splitter.trigger("pointerdown", { button: 0, clientY: 200 });
+
+    // jsdom may not expose PointerEvent; dispatch MouseEvents with the
+    // pointer event names so button/clientY are present on the event object.
+    splitter.element.dispatchEvent(
+      new MouseEvent("pointerdown", {
+        button: 0,
+        clientY: 200,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
     window.dispatchEvent(new MouseEvent("pointermove", { clientY: 240 }));
     expect(splitter.attributes("aria-valuenow")).toBe("60");
     window.dispatchEvent(new MouseEvent("pointerup"));
