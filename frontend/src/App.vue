@@ -4,6 +4,9 @@ import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
 import RunChart from "./components/RunChart.vue";
+import DualChartStack from "./components/DualChartStack.vue";
+import SnapshotReferencePanel from "./components/SnapshotReferencePanel.vue";
+import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
@@ -197,6 +200,15 @@ const {
 // Layout-only state: changing workspace or panel visibility never mutates domain state.
 type WorkspaceMode = "dataset" | "replay" | "compare";
 const workspaceMode = ref<WorkspaceMode>("dataset");
+const replayReferenceSnapshots = computed(() =>
+  snapshots.value.filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null),
+);
+const selectedReplayReferenceSnapshotId = ref<string | null>(null);
+watch(replayReferenceSnapshots, (available) => {
+  if (!available.some((snapshot) => snapshot.snapshotId === selectedReplayReferenceSnapshotId.value)) {
+    selectedReplayReferenceSnapshotId.value = null;
+  }
+});
 watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
   if (mode === "replay") void refreshReplayInspector();
@@ -499,20 +511,42 @@ onUnmounted(() => {
               <p class="microcopy chart-selection-hint" data-testid="origin-range-selection-status" aria-live="polite">{{ rangeSelectionStatus }}</p>
               <p class="source-note">Source: {{ origin.sourceCatalog }} · Chart values are projected from the validated Struxis SBar series; domain IDs remain exact strings.</p>
             </template>
-            <RunChart
-              v-if="workspaceMode === 'replay'"
-              :origin="origin"
-              :test-dataset="testDataset"
-              :run-state="runState"
-            />
             <div v-show="workspaceMode === 'dataset'" class="workspace-mode dataset-preparation-panel">
               <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
               <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :range-selection-ready="rangeSelectionReady" :range-selection-pending="rangeSelectionPendingStart !== null" :selected-range-count="selectedRangeCount" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @create="createSelectedTestDataset" />
             </div>
             <div v-show="workspaceMode === 'replay'" class="workspace-mode replay-controls">
               <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
+              <DualChartStack workspace="replay">
+                <template #upper>
+                  <RunChart :origin="origin" :test-dataset="testDataset" :run-state="runState" />
+                </template>
+                <template #lower>
+                  <SnapshotReferencePanel
+                    :snapshots="replayReferenceSnapshots"
+                    :selected-snapshot-id="selectedReplayReferenceSnapshotId"
+                    @update:selected-snapshot-id="selectedReplayReferenceSnapshotId = $event"
+                  />
+                </template>
+              </DualChartStack>
             </div>
-            <div v-show="workspaceMode === 'compare'" class="workspace-mode">
+            <div v-show="workspaceMode === 'compare'" class="workspace-mode compare-workspace">
+              <DualChartStack workspace="compare">
+                <template #upper>
+                  <ComparisonChartPlaceholder
+                    side="candidate"
+                    :has-comparison="Boolean(compareResult)"
+                    :checkpoint-count="compareResult?.checkpointCount ?? null"
+                  />
+                </template>
+                <template #lower>
+                  <ComparisonChartPlaceholder
+                    side="baseline"
+                    :has-comparison="Boolean(compareResult)"
+                    :checkpoint-count="compareResult?.checkpointCount ?? null"
+                  />
+                </template>
+              </DualChartStack>
               <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" :compare-result="compareResult" :compare-loading="compareLoading" :compare-error="compareError" :selected-difference-key="selectedCompareDifferenceKey" @refresh="refreshSnapshots" @compare="runCompare" @select-difference="selectCompareDifference" />
             </div>
           </div>
