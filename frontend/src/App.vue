@@ -416,7 +416,7 @@ onUnmounted(() => {
           <p class="section-index">DIAGNOSTICS</p>
           <h2>Workflow events &amp; errors</h2>
         </div>
-        <div class="dock-actions"><button class="subtle-button" data-testid="diagnostics-dock-toggle" @click="toggleDiagnosticsDock">{{ diagnosticsDock === 'bottom' ? 'Move to Top' : 'Move to Bottom' }}</button><button class="subtle-button" @click="diagnosticsCollapsed = true">Collapse</button></div>
+        <div class="dock-actions"><button class="subtle-button" data-testid="diagnostics-dock-toggle" @click="toggleDiagnosticsDock">{{ diagnosticsDock === 'bottom' ? 'Move to Top' : 'Move to Bottom' }}</button><button class="subtle-button" data-testid="diagnostics-collapse-toggle" @click="diagnosticsCollapsed = true">Collapse</button></div>
       </div>
       <div class="diagnostics-content">
         <p v-if="loadError || discoveryError || testError || runError || snapshotsError" class="error-message">
