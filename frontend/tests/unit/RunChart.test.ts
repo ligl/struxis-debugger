@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RunChart from "../../src/components/RunChart.vue";
-import type { OriginDatasetDto, SBarDto, TestDatasetDto } from "../../src/origin-types";
+import type { OriginDatasetDto, RunStateDto, SBarDto, TestDatasetDto } from "../../src/origin-types";
 
 const mocks = vi.hoisted(() => ({
   createChart: vi.fn(),
@@ -77,6 +77,20 @@ function testDataset(overrides: Partial<TestDatasetDto> = {}): TestDatasetDto {
   };
 }
 
+function runState(overrides: Partial<RunStateDto> = {}): RunStateDto {
+  return {
+    runId: "run-1",
+    testDatasetId: "test-1",
+    inputFingerprint: "input-fingerprint",
+    inputCount: 2,
+    status: "running",
+    processedCount: 1,
+    cursorSbarId: originBars[1]!.sbarId,
+    failureDiagnostic: null,
+    ...overrides,
+  };
+}
+
 function installResizeObserverMock(): void {
   class ResizeObserverMock {
     observe = mocks.observe;
@@ -112,7 +126,7 @@ describe("RunChart", () => {
 
   it("renders only the exact inclusive Test Dataset slice from its matching validated Origin", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset() },
+      props: { origin: origin(), testDataset: testDataset(), runState: null },
     });
     await nextTick();
 
@@ -130,11 +144,44 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("dims future input bars and reports only backend-confirmed cursor progress", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+      },
+    });
+    await nextTick();
+
+    expect(mocks.candleSetData).toHaveBeenLastCalledWith([
+      { time: 1700000060, open: 10, high: 12, low: 9, close: 11 },
+      {
+        time: 1700000120,
+        open: 10,
+        high: 12,
+        low: 9,
+        close: 11,
+        color: "#454b53",
+        borderColor: "#454b53",
+        wickColor: "#454b53",
+      },
+    ]);
+    expect(mocks.volumeSetData).toHaveBeenLastCalledWith([
+      { time: 1700000060, value: 100, color: "#1d756d" },
+      { time: 1700000120, value: 100, color: "#454b53" },
+    ]);
+    expect(wrapper.get('[data-testid="run-chart-progress"]').text()).toBe("1 / 2 PROCESSED");
+    expect(wrapper.get(".chart-latest-id").text()).toContain(originBars[1]!.sbarId);
+    wrapper.unmount();
+  });
+
   it("does not display an Origin projection for a Test Dataset from another Origin", async () => {
     const wrapper = mount(RunChart, {
       props: {
         origin: origin(),
         testDataset: testDataset({ originDatasetId: "origin-other" }),
+        runState: null,
       },
     });
     await nextTick();
