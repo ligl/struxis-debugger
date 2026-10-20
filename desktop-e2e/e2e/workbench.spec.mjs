@@ -157,8 +157,23 @@ describe("Struxis Debugger native desktop", () => {
       document.body.appendChild(input);
     });
     const input = await $('[data-testid="desktop-space-input-fixture"]');
-    await input.click();
-    await browser.keys(" ");
+    await browser.execute(() => {
+      const element = document.querySelector('[data-testid="desktop-space-input-fixture"]');
+      if (!(element instanceof HTMLInputElement)) {
+        throw new Error("Space-key input fixture was not created.");
+      }
+      element.focus();
+    });
+    assert.equal(
+      await browser.execute(() => document.activeElement?.getAttribute("data-testid") ?? ""),
+      "desktop-space-input-fixture",
+      "The input must own keyboard focus before testing native Space editing.",
+    );
+    // Send the key to the actual input element. browser.keys() targets the
+    // current top-level browsing context in WebKit and can lose the intended
+    // element focus, making this assertion test WebDriver focus routing rather
+    // than the app's Space shortcut guard.
+    await input.addValue(" ");
     assert.equal(await input.getValue(), " ",
       "Space in an input must retain its native text-editing behavior.");
 
