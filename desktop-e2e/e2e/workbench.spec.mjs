@@ -53,19 +53,19 @@ describe("Struxis Debugger native desktop", () => {
 
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     await browser.waitUntil(
-      async () => (await $(".workflow-toolbar h2").getText()) === "Test Dataset & Replay",
+      async () => (await $(".workflow-toolbar h2").getText()) === "Run Replay",
       {
         timeout: 10_000,
-        timeoutMsg: "The Test & Replay workspace did not become visible.",
+        timeoutMsg: "The Replay workspace did not become visible.",
       },
     );
 
     await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
     await browser.waitUntil(
-      async () => (await $(".workflow-toolbar h2").getText()) === "Snapshot Inventory",
+      async () => (await $(".workflow-toolbar h2").getText()) === "Snapshot Comparison",
       {
         timeout: 10_000,
-        timeoutMsg: "The Snapshot Inventory workspace did not become visible.",
+        timeoutMsg: "The Compare workspace did not become visible.",
       },
     );
   });
@@ -172,7 +172,7 @@ describe("Struxis Debugger native desktop", () => {
         timeoutMsg: "Space on the focused workspace button did not retain native button behavior.",
       },
     );
-    assert.equal(await $(".workflow-toolbar h2").getText(), "Test Dataset & Replay");
+    assert.equal(await $(".workflow-toolbar h2").getText(), "Run Replay");
   });
 
   it("keeps overflowing workspace content scrollable inside the workspace panel", async () => {

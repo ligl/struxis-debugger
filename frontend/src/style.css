@@ -1552,3 +1552,28 @@ body,
     justify-content: flex-start;
   }
 }
+
+/* Dataset owns Catalog discovery; Replay and Compare reclaim the full workspace width. */
+.workbench-body.catalog-is-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dataset-preparation-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--dbg-border);
+}
+
+.dataset-preparation-panel > .panel {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .dataset-preparation-panel {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+

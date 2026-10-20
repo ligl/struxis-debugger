@@ -21,7 +21,7 @@ const emit = defineEmits<{ create: [] }>();
   <section class="panel operations-panel">
     <div class="panel-heading">
       <div>
-        <p class="section-index">03 / TEST INPUT</p>
+        <p class="section-index">TEST INPUT / IMMUTABLE DATASET</p>
         <h2>Test Dataset</h2>
       </div>
       <span class="status-label" :class="{ loaded: testDataset }">
@@ -30,7 +30,7 @@ const emit = defineEmits<{ create: [] }>();
     </div>
 
     <template v-if="origin">
-      <p class="microcopy">Switch to the Origin workspace to choose a continuous, inclusive interval by clicking anywhere in its chart plot. The first click fixes the start; move the pointer to preview a full-height shaded interval, then click to fix the end. Vertical position does not affect the selected SBar. The backend validates both exact SBar IDs before creating the Test Dataset.</p>
+      <p class="microcopy">Select a continuous, inclusive interval directly on the Origin chart above. The first click fixes the start; move the pointer to preview a full-height shaded interval, then click to fix the end. Vertical position does not affect the selected SBar. The backend validates both exact SBar IDs before creating the immutable Test Dataset.</p>
 
       <div v-if="rangeSelectionReady" class="detail-list" data-testid="selected-test-range">
         <div><span>SELECTED START SBAR ID</span><code data-testid="selected-test-range-start">{{ startSbarId }}</code></div>

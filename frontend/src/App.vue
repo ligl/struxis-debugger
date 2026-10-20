@@ -138,8 +138,8 @@ const {
 } = useCatalogGroups(datasets);
 
 // Layout-only state: changing workspace or panel visibility never mutates domain state.
-type WorkspaceMode = "origin" | "replay" | "snapshots";
-const workspaceMode = ref<WorkspaceMode>("origin");
+type WorkspaceMode = "dataset" | "replay" | "compare";
+const workspaceMode = ref<WorkspaceMode>("dataset");
 const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
@@ -260,9 +260,9 @@ onUnmounted(() => {
         <h1>Struxis Debugger</h1>
       </div>
       <nav class="workspace-switcher" aria-label="Debugger workspace">
-        <button class="workspace-tab" :class="{ active: workspaceMode === 'origin' }" @click="workspaceMode = 'origin'">01 / Origin</button>
-        <button class="workspace-tab" :class="{ active: workspaceMode === 'replay' }" @click="workspaceMode = 'replay'">02 / Test &amp; Replay</button>
-        <button class="workspace-tab" :class="{ active: workspaceMode === 'snapshots' }" @click="workspaceMode = 'snapshots'">03 / Snapshots</button>
+        <button class="workspace-tab" data-testid="workspace-dataset" :class="{ active: workspaceMode === 'dataset' }" @click="workspaceMode = 'dataset'">01 / Dataset</button>
+        <button class="workspace-tab" data-testid="workspace-replay" :class="{ active: workspaceMode === 'replay' }" @click="workspaceMode = 'replay'">02 / Replay</button>
+        <button class="workspace-tab" data-testid="workspace-compare" :class="{ active: workspaceMode === 'compare' }" @click="workspaceMode = 'compare'">03 / Compare</button>
       </nav>
       <div class="runtime-mark">
         <span class="runtime-dot" :class="{ active: origin }"></span>
@@ -270,8 +270,8 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'inspector-is-collapsed': inspectorCollapsed }">
-      <aside data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
+    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed }">
+      <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
         <div class="rail-heading">
           <span class="section-index">SOURCE</span>
           <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
@@ -282,18 +282,18 @@ onUnmounted(() => {
       <section data-testid="workbench-main" class="workbench-main">
         <div class="workflow-toolbar">
           <div>
-            <p class="section-index">{{ workspaceMode === "origin" ? "WORKFLOW / 01" : workspaceMode === "replay" ? "WORKFLOW / 02" : "WORKFLOW / 03" }}</p>
-            <h2>{{ workspaceMode === "origin" ? "Origin Load" : workspaceMode === "replay" ? "Test Dataset & Replay" : "Snapshot Inventory" }}</h2>
+            <p class="section-index">{{ workspaceMode === "dataset" ? "WORKSPACE / 01" : workspaceMode === "replay" ? "WORKSPACE / 02" : "WORKSPACE / 03" }}</p>
+            <h2>{{ workspaceMode === "dataset" ? "Dataset Preparation" : workspaceMode === "replay" ? "Run Replay" : "Snapshot Comparison" }}</h2>
           </div>
           <div class="toolbar-actions">
-            <button class="subtle-button" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? "Show Catalog" : "Hide Catalog" }}</button>
+            <button v-if="workspaceMode === 'dataset'" class="subtle-button" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? "Show Catalog" : "Hide Catalog" }}</button>
             <button class="subtle-button" @click="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? "Show Diagnostics" : "Hide Diagnostics" }}</button>
           </div>
         </div>
 
         <div data-testid="primary-workspace" class="primary-workspace">
           <div data-testid="workspace-content" class="workspace-content">
-            <template v-if="origin && workspaceMode === 'origin'">
+            <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
                 :bars="origin.bars"
                 :origin-dataset-id="origin.originDatasetId"
@@ -307,18 +307,18 @@ onUnmounted(() => {
               <p class="source-note">Source: {{ origin.sourceCatalog }} · Chart values are projected from the validated Struxis SBar series; domain IDs remain exact strings.</p>
             </template>
             <RunChart
-              v-else-if="workspaceMode === 'replay'"
+              v-if="workspaceMode === 'replay'"
               :origin="origin"
               :test-dataset="testDataset"
             />
-            <div v-show="workspaceMode === 'origin'" class="workspace-mode">
+            <div v-show="workspaceMode === 'dataset'" class="workspace-mode dataset-preparation-panel">
               <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
-            </div>
-            <div v-show="workspaceMode === 'replay'" class="workspace-mode">
               <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :range-selection-ready="rangeSelectionReady" :range-selection-pending="rangeSelectionPendingStart !== null" :selected-range-count="selectedRangeCount" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @create="createSelectedTestDataset" />
+            </div>
+            <div v-show="workspaceMode === 'replay'" class="workspace-mode replay-controls">
               <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
             </div>
-            <div v-show="workspaceMode === 'snapshots'" class="workspace-mode">
+            <div v-show="workspaceMode === 'compare'" class="workspace-mode">
               <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" :compare-result="compareResult" :compare-loading="compareLoading" :compare-error="compareError" @refresh="refreshSnapshots" @compare="runCompare" />
             </div>
           </div>
@@ -361,7 +361,7 @@ onUnmounted(() => {
     <button v-else class="diagnostics-reopen" @click="diagnosticsCollapsed = false">＋ Diagnostics</button>
 
     <footer class="footer-bar">
-      <span>STRUXIS DEBUGGER / PHASE 01</span>
+      <span>STRUXIS DEBUGGER / WORKBENCH</span>
       <span>LOAD CONTRACT · COMPLETE INPUT · ATOMIC REPLACEMENT</span>
     </footer>
   </main>

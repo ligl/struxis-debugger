@@ -297,7 +297,7 @@ describe("Test, Run and Snapshot workbench", () => {
     vi.clearAllMocks();
   });
 
-  it("uses independent Origin and Run chart components in their respective workspaces", async () => {
+  it("uses Dataset and Replay workspaces with independent Origin and Run charts", async () => {
     const origin = makeOrigin("origin-existing");
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
@@ -310,13 +310,20 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(true));
     expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
+    expect(wrapper.findAll(".workspace-tab").map((tab) => tab.text())).toEqual([
+      "01 / Dataset",
+      "02 / Replay",
+      "03 / Compare",
+    ]);
+    expect(wrapper.find('[data-testid="catalog-rail"]').exists()).toBe(true);
 
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(false);
-    await wrapper.get('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)').trigger("click");
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+    expect(wrapper.find('[data-testid="catalog-rail"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="run-chart-test-stub"]')).toHaveLength(1);
-    expect(wrapper.get(".workflow-toolbar h2").text()).toBe("Test Dataset & Replay");
+    expect(wrapper.get(".workflow-toolbar h2").text()).toBe("Run Replay");
   });
 
   it("creates a backend-validated Test Dataset and exposes Run controls", async () => {
