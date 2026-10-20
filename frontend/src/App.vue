@@ -166,9 +166,20 @@ function handlePanelResize(event: PointerEvent): void {
   const target = panelResizeTarget.value;
   if (!target) return;
   if (target === "inspector") {
-    inspectorWidth.value = Math.max(220, Math.min(520, panelResizeInitialSize + panelResizeStart - event.clientX));
+    // Dragging the divider away from the chart increases the dock width on
+    // either side: left-docked panels grow to the right, right-docked panels
+    // grow to the left.
+    const delta = inspectorDock.value === "right"
+      ? panelResizeStart - event.clientX
+      : event.clientX - panelResizeStart;
+    inspectorWidth.value = Math.max(220, Math.min(520, panelResizeInitialSize + delta));
   } else {
-    diagnosticsHeight.value = Math.max(100, Math.min(480, panelResizeInitialSize + panelResizeStart - event.clientY));
+    // A top-docked Diagnostics panel grows downward; a bottom-docked panel
+    // grows upward.
+    const delta = diagnosticsDock.value === "bottom"
+      ? panelResizeStart - event.clientY
+      : event.clientY - panelResizeStart;
+    diagnosticsHeight.value = Math.max(100, Math.min(480, panelResizeInitialSize + delta));
   }
 }
 
