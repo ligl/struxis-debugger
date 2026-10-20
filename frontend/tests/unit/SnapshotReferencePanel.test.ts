@@ -33,9 +33,15 @@ describe("SnapshotReferencePanel", () => {
     const wrapper = mount(SnapshotReferencePanel, {
       props: {
         snapshots: [{
-          ...snapshots[0],
+          fileName: "failed.snapshot",
+          path: "/snapshots/failed.snapshot",
           kind: "failedTemporary",
           snapshotId: "snapshot-failed-01",
+          runId: "run-failed",
+          stateKey: "state-key-failed",
+          generatedAt: "2026-10-20T10:00:00Z",
+          checkpointCount: 1,
+          diagnostic: "failed",
         }],
         selectedSnapshotId: "snapshot-failed-01",
       },
