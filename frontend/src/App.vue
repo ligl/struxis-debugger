@@ -224,6 +224,16 @@ function startPanelResize(target: Exclude<PanelResizeTarget, null>, event: Point
   event.preventDefault();
 }
 
+function inspectorWidthLimit(): number {
+  // Preserve a useful chart viewport when the app runs in a smaller window.
+  return Math.max(220, Math.min(520, window.innerWidth - 420));
+}
+
+function diagnosticsHeightLimit(): number {
+  // Keep enough vertical room for the active workspace and its toolbar.
+  return Math.max(100, Math.min(480, window.innerHeight - 260));
+}
+
 function handlePanelResize(event: PointerEvent): void {
   const target = panelResizeTarget.value;
   if (!target) return;
@@ -234,14 +244,42 @@ function handlePanelResize(event: PointerEvent): void {
     const delta = inspectorDock.value === "right"
       ? panelResizeStart - event.clientX
       : event.clientX - panelResizeStart;
-    inspectorWidth.value = Math.max(220, Math.min(520, panelResizeInitialSize + delta));
+    inspectorWidth.value = Math.max(220, Math.min(inspectorWidthLimit(), panelResizeInitialSize + delta));
   } else {
     // A top-docked Diagnostics panel grows downward; a bottom-docked panel
     // grows upward.
     const delta = diagnosticsDock.value === "bottom"
       ? panelResizeStart - event.clientY
       : event.clientY - panelResizeStart;
-    diagnosticsHeight.value = Math.max(100, Math.min(480, panelResizeInitialSize + delta));
+    diagnosticsHeight.value = Math.max(100, Math.min(diagnosticsHeightLimit(), panelResizeInitialSize + delta));
+  }
+}
+
+function handlePanelResizeKey(
+  target: Exclude<PanelResizeTarget, null>,
+  event: KeyboardEvent,
+): void {
+  const increase = target === "inspector"
+    ? (inspectorDock.value === "right" ? event.key === "ArrowLeft" : event.key === "ArrowRight")
+    : (diagnosticsDock.value === "bottom" ? event.key === "ArrowUp" : event.key === "ArrowDown");
+  const decrease = target === "inspector"
+    ? (inspectorDock.value === "right" ? event.key === "ArrowRight" : event.key === "ArrowLeft")
+    : (diagnosticsDock.value === "bottom" ? event.key === "ArrowDown" : event.key === "ArrowUp");
+  if (!increase && !decrease && event.key !== "Home" && event.key !== "End") return;
+
+  event.preventDefault();
+  if (target === "inspector") {
+    inspectorWidth.value = event.key === "Home"
+      ? 220
+      : event.key === "End"
+        ? inspectorWidthLimit()
+        : Math.max(220, Math.min(inspectorWidthLimit(), inspectorWidth.value + (increase ? 12 : -12)));
+  } else {
+    diagnosticsHeight.value = event.key === "Home"
+      ? 100
+      : event.key === "End"
+        ? diagnosticsHeightLimit()
+        : Math.max(100, Math.min(diagnosticsHeightLimit(), diagnosticsHeight.value + (increase ? 12 : -12)));
   }
 }
 
@@ -458,7 +496,7 @@ onUnmounted(() => {
           </div>
 
           <aside data-testid="inspector-rail" class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
-            <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" @pointerdown="startPanelResize('inspector', $event)"></div>
+            <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" :aria-valuenow="inspectorWidth" aria-valuemin="220" :aria-valuemax="inspectorWidthLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
             <div class="rail-heading">
               <span class="section-index">INSPECTOR</span>
               <button class="subtle-button rail-toggle" aria-label="Move Inspector to opposite side" title="Move Inspector to opposite side" @click="toggleInspectorDock">⇆</button>
@@ -481,7 +519,7 @@ onUnmounted(() => {
     </div>
 
     <section v-if="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock">
-      <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" @pointerdown="startPanelResize('diagnostics', $event)"></div>
+      <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" aria-orientation="horizontal" :aria-valuenow="diagnosticsHeight" aria-valuemin="100" :aria-valuemax="diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
       <div class="diagnostics-heading">
         <div>
           <p class="section-index">DIAGNOSTICS</p>
