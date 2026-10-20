@@ -73,6 +73,11 @@ describe("Struxis Debugger native desktop", () => {
     const shell = await $('[data-testid="debugger-shell"]');
     await shell.waitForDisplayed();
 
+    // Each native E2E test shares the same app instance. The preceding workflow
+    // test leaves the app in Compare, where the Dataset-only Catalog is absent.
+    await $('[data-testid="workspace-dataset"]').click();
+    await $('[aria-label="Collapse Catalog"]').waitForDisplayed();
+
     const assertNoHorizontalOverflow = async (stage) => {
       const layout = await browser.execute(() => ({
         viewportWidth: document.documentElement.clientWidth,
@@ -443,11 +448,14 @@ describe("Struxis Debugger native desktop", () => {
       previewGeometry.shadeBottom >= previewGeometry.hostHeight - 1,
       `Origin selection preview must span the full chart height: ${JSON.stringify(previewGeometry)}`,
     );
+    // Pending range selection belongs to Dataset. Switching to Replay must not
+    // destroy it, but its Dataset-only status panel should be asserted after
+    // returning to the workspace that owns Test Dataset preparation.
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     await $('[data-testid="run-chart-panel"]').waitForDisplayed();
-    await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
     await originCanvas.waitForDisplayed();
+    await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await clickOriginTimePosition(1, 0.88);
     await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
     await $('[data-testid="origin-selection-completed"]').waitForDisplayed();
@@ -474,7 +482,6 @@ describe("Struxis Debugger native desktop", () => {
       );
     }
 
-    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
     const selectedRange = await $('[data-testid="selected-test-range"]');
     await selectedRange.waitForDisplayed();
     const selectedStart = await selectedRange.$('[data-testid="selected-test-range-start"]');
@@ -500,6 +507,7 @@ describe("Struxis Debugger native desktop", () => {
       "Selecting the first two Origin candles must produce an inclusive two-SBar Test Dataset.",
     );
     await $('[data-testid="test-dataset-create"]').click();
+    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
 
     await browser.waitUntil(
       async () => await $('[data-testid="run-start"]').isEnabled(),
