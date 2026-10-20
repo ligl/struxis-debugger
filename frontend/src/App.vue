@@ -17,6 +17,8 @@ import { useTestDataset } from "./composables/useTestDataset";
 import { useRunControl } from "./composables/useRunControl";
 import { useCatalogGroups } from "./composables/useCatalogGroups";
 import { resolveOriginRangeClick } from "./origin-range-selection";
+import { getReplayInspector } from "./origin-bridge";
+import type { ReplayInspectorDto } from "./origin-types";
 
 const {
   datasets,
@@ -75,7 +77,23 @@ const canLoadOrigin = computed(
 );
 
 const selectedInspectorSbarId = ref<string | null>(null);
+const replayInspector = ref<ReplayInspectorDto | null>(null);
+const replayInspectorError = ref("");
+let replayInspectorLoading = false;
 const selectedCompareDifferenceKey = ref<string | null>(null);
+
+async function refreshReplayInspector(): Promise<void> {
+  if (replayInspectorLoading) return;
+  replayInspectorLoading = true;
+  replayInspectorError.value = "";
+  try {
+    replayInspector.value = await getReplayInspector();
+  } catch (error) {
+    replayInspectorError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    replayInspectorLoading = false;
+  }
+}
 
 function compareDifferenceKey(difference: ObjectDifferenceDto): string {
   return [difference.checkpointIndex, difference.sbarId, difference.objectType, difference.objectId, difference.kind].join("|");
@@ -176,6 +194,7 @@ type WorkspaceMode = "dataset" | "replay" | "compare";
 const workspaceMode = ref<WorkspaceMode>("dataset");
 watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
+  if (mode === "replay") void refreshReplayInspector();
 });
 const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
@@ -247,6 +266,7 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   )) return;
 
   await executeRunCommand(command);
+  await refreshReplayInspector();
 }
 
 async function startLoad(): Promise<void> {
@@ -338,7 +358,10 @@ onMounted(async () => {
   // the worker is running so the replay chart follows committed checkpoints.
   runPollInterval = window.setInterval(() => {
     if (runState.value?.status === "running" && !runBusy.value) {
-      void refreshRunState(true);
+      void (async () => {
+        await refreshRunState(true);
+        await refreshReplayInspector();
+      })();
     }
   }, 250);
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
@@ -441,6 +464,8 @@ onUnmounted(() => {
               :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
               :origin-dataset-id="origin?.originDatasetId ?? null"
               :workspace-mode="workspaceMode"
+              :replay-inspector="workspaceMode === 'replay' ? replayInspector : null"
+              :replay-inspector-error="replayInspectorError"
               :selected-difference="workspaceMode === 'compare' ? selectedCompareDifference : null"
               :compare-baseline-snapshot-id="compareResult?.baseline.snapshotId ?? null"
               :compare-candidate-snapshot-id="compareResult?.candidate.snapshotId ?? null"
