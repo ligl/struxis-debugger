@@ -590,6 +590,26 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(wrapper.get('[data-testid="debugger-shell"]').attributes("style")).toContain("--diagnostics-height: 176px");
   });
 
+  it("exposes explicit docking choices for both panels", async () => {
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+    const wrapper = mountApp();
+    await flushPromises();
+    await wrapper.get('[data-testid="inspector-dock-left"]').trigger("click");
+    expect(wrapper.get('[data-testid="primary-workspace"]').classes()).toContain("inspector-dock-left");
+    await wrapper.get('[data-testid="inspector-dock-right"]').trigger("click");
+    expect(wrapper.get('[data-testid="primary-workspace"]').classes()).not.toContain("inspector-dock-left");
+    await wrapper.get('[data-testid="diagnostics-dock-top"]').trigger("click");
+    expect(wrapper.get('[data-testid="debugger-shell"]').classes()).toContain("diagnostics-dock-top");
+    await wrapper.get('[data-testid="diagnostics-dock-bottom"]').trigger("click");
+    expect(wrapper.get('[data-testid="debugger-shell"]').classes()).not.toContain("diagnostics-dock-top");
+  });
+
   it("creates a backend-validated Test Dataset and exposes Run controls", async () => {
     const origin = makeOrigin("origin-existing");
     const runState = {
