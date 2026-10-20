@@ -22,13 +22,13 @@ export function useRunControl(
   const runError = ref("");
   const runStatusMessage = ref("");
 
-  async function refreshRunState(): Promise<void> {
+  async function refreshRunState(silent = false): Promise<void> {
     if (runBusy.value) return;
     runBusy.value = true;
     runError.value = "";
     try {
       runState.value = await getRunState();
-      runStatusMessage.value = "Run state refreshed from the backend.";
+      if (!silent) runStatusMessage.value = "Run state refreshed from the backend.";
     } catch (error) {
       runError.value = describeIpcError(error);
     } finally {
