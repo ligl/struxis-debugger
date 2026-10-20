@@ -83,6 +83,11 @@ let replayInspectorLoading = false;
 const selectedCompareDifferenceKey = ref<string | null>(null);
 
 async function refreshReplayInspector(): Promise<void> {
+  if (!runState.value) {
+    replayInspector.value = null;
+    replayInspectorError.value = "";
+    return;
+  }
   if (replayInspectorLoading) return;
   replayInspectorLoading = true;
   replayInspectorError.value = "";
