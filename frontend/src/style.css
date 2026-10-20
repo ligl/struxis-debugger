@@ -1905,3 +1905,45 @@ th, td { padding: 6px 8px; }
   .catalog-rail { width: min(282px, 80vw); }
   .diagnostics-dock { flex-basis: 120px; height: 120px; min-height: 120px; }
 }
+
+
+/* Native dock splitters: pointer-driven, bounded resizing with visible grab affordance. */
+.primary-workspace {
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width, 282px);
+}
+.diagnostics-dock {
+  flex-basis: var(--diagnostics-height, 164px);
+  height: var(--diagnostics-height, 164px);
+  min-height: 100px;
+}
+.panel-resize-edge {
+  position: absolute;
+  z-index: 15;
+  background: transparent;
+  touch-action: none;
+}
+.panel-resize-edge:hover,
+.panel-resize-edge:active {
+  background: #6c8798aa;
+}
+.inspector-resize-edge {
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+.diagnostics-resize-edge {
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+.inspector-rail { position: relative; }
+.diagnostics-dock { position: relative; }
+.inspector-rail.collapsed .inspector-resize-edge { display: none; }
+@media (max-width: 920px) {
+  .primary-workspace { grid-template-columns: minmax(0, 1fr); }
+  .inspector-resize-edge { display: none; }
+}
