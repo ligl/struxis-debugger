@@ -302,7 +302,7 @@ describe("Struxis Debugger native desktop", () => {
     const datasetRows = await $$('[data-testid="catalog-dataset-row"]:not(.unavailable)');
     assert.ok(datasetRows.length > 0, "The configured test Catalog must contain an available Bar stream.");
 
-    await domClick('[data-testid="catalog-dataset-row']:not(.unavailable)');
+    await domClick('[data-testid="catalog-dataset-row"]:not(.unavailable)');
     await domClick('[data-testid="catalog-load"]');
 
     await browser.waitUntil(
@@ -345,9 +345,9 @@ describe("Struxis Debugger native desktop", () => {
     // Pending range selection belongs to Dataset. Switching to Replay must not
     // destroy it, but its Dataset-only status panel should be asserted after
     // returning to the workspace that owns Test Dataset preparation.
-    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+    await domClick('[data-testid="workspace-replay"]');
     await $('[data-testid="run-chart-panel"]').waitForDisplayed();
-    await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
+    await domClick('[data-testid="workspace-dataset"]');
     // OriginChart is Dataset-scoped and remounts when returning from Replay.
     await $('[data-testid="origin-chart-canvas"]').waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
@@ -355,9 +355,8 @@ describe("Struxis Debugger native desktop", () => {
     await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
     await $('[data-testid="origin-selection-completed"]').waitForDisplayed();
 
-    // Do not navigate away immediately after dispatching the native pointer
-    // action. Confirm the chart event reached the application state machine
-    // first, and preserve the visible status if the click was rejected.
+    // Confirm the component selection command reached the application state
+    // machine before creating the Test Dataset.
     const rangeStatus = await $('[data-testid="origin-range-selection-status"]');
     try {
       await browser.waitUntil(
@@ -367,13 +366,13 @@ describe("Struxis Debugger native desktop", () => {
         {
           timeout: 5_000,
           interval: 100,
-          timeoutMsg: "The second native chart click did not complete the expected two-SBar range.",
+          timeoutMsg: "The second component selection command did not complete the expected two-SBar range.",
         },
       );
     } catch (error) {
       const observedStatus = await rangeStatus.getText();
       throw new Error(
-        `Origin range selection failed after the second chart click. Expected first=${firstSbarId}, second=${secondSbarId}; observed status=${JSON.stringify(observedStatus)}. ${String(error)}`,
+        `Origin range selection failed after the second component selection command. Expected first=${firstSbarId}, second=${secondSbarId}; observed status=${JSON.stringify(observedStatus)}. ${String(error)}`,
       );
     }
 
@@ -393,9 +392,9 @@ describe("Struxis Debugger native desktop", () => {
       }, null, 2));
     }
     assert.equal(actualStart, firstSbarId,
-      "The first chart click must select the first Origin SBar as the range start.");
+      "The first component selection command must select the first Origin SBar as the range start.");
     assert.equal(actualEnd, secondSbarId,
-      "The second chart click must select the second Origin SBar as the inclusive range end.");
+      "The second component selection command must select the second Origin SBar as the inclusive range end.");
     assert.equal(
       (await selectedRange.$("div:nth-child(3) strong").getText()).replace(/\s/g, ""),
       "2",
@@ -450,7 +449,7 @@ describe("Struxis Debugger native desktop", () => {
     assert.equal(progress.replace(/\s/g, ""), "2/2",
       "Completed Run must confirm both selected SBars.");
 
-    await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
+    await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
       async () => {
         const rows = await $$(".snapshot-table tbody tr");
