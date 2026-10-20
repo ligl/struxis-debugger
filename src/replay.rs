@@ -19,6 +19,7 @@ use std::sync::{
 pub(crate) enum ReplayCommandKind {
     Start,
     GetState,
+    GetInspector,
     Step,
     Play,
     Pause,
