@@ -564,6 +564,32 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(wrapper.get(".workflow-toolbar h2").text()).toBe("Run Replay");
   });
 
+  it("supports keyboard resizing for the Inspector and Diagnostics docks", async () => {
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await flushPromises();
+
+    const inspectorSplitter = wrapper.get('[data-testid="inspector-resize-edge"]');
+    expect(inspectorSplitter.attributes("tabindex")).toBe("0");
+    expect(inspectorSplitter.attributes("aria-valuenow")).toBe("282");
+    await inspectorSplitter.trigger("keydown", { key: "ArrowLeft" });
+    expect(inspectorSplitter.attributes("aria-valuenow")).toBe("294");
+    expect(wrapper.get('[data-testid="debugger-shell"]').attributes("style")).toContain("--inspector-width: 294px");
+
+    const diagnosticsSplitter = wrapper.get('[data-testid="diagnostics-resize-edge"]');
+    expect(diagnosticsSplitter.attributes("aria-valuenow")).toBe("164");
+    await diagnosticsSplitter.trigger("keydown", { key: "ArrowUp" });
+    expect(diagnosticsSplitter.attributes("aria-valuenow")).toBe("176");
+    expect(wrapper.get('[data-testid="debugger-shell"]').attributes("style")).toContain("--diagnostics-height: 176px");
+  });
+
   it("creates a backend-validated Test Dataset and exposes Run controls", async () => {
     const origin = makeOrigin("origin-existing");
     const runState = {
