@@ -135,6 +135,35 @@ describe("Origin Load workbench", () => {
     expect(wrapper.text()).toContain("Origin SBar chart");
   });
 
+  it("inspects exact SBar fields from the selected validated Origin bar", async () => {
+    const origin = makeOrigin("origin-inspector");
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-inspector"));
+    await wrapper.get('[data-testid="origin-sbar-click-200"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="inspector-sbar-id"]').text()).toBe("200");
+    expect(wrapper.get('[data-testid="inspector-sbar-open"]').text()).toBe("11.00");
+    expect(wrapper.get('[data-testid="inspector-sbar-high"]').text()).toBe("13.00");
+    expect(wrapper.get('[data-testid="inspector-sbar-low"]').text()).toBe("10.00");
+    expect(wrapper.get('[data-testid="inspector-sbar-close"]').text()).toBe("12.00");
+    expect(wrapper.get('[data-testid="inspector-sbar-volume"]').text()).toBe("120");
+    expect(wrapper.text()).toContain("Values shown verbatim from the validated Origin SBar projection");
+
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+    expect(wrapper.get('[data-testid="inspector-empty"]').text()).toContain(
+      "Structural-object selection for Replay is not connected",
+    );
+    expect(wrapper.find('[data-testid="inspector-sbar-id"]').exists()).toBe(false);
+  });
+
   it("maps a disabled structure checkbox to enableStructure=false and renders the returned mode", async () => {
     const origin = makeOrigin("origin-without-structure", false);
     invokeMock.mockImplementation((command) => {
