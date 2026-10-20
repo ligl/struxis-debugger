@@ -442,6 +442,8 @@ onUnmounted(() => {
               :origin-dataset-id="origin?.originDatasetId ?? null"
               :workspace-mode="workspaceMode"
               :selected-difference="workspaceMode === 'compare' ? selectedCompareDifference : null"
+              :compare-baseline-snapshot-id="compareResult?.baseline.snapshotId ?? null"
+              :compare-candidate-snapshot-id="compareResult?.candidate.snapshotId ?? null"
             />
           </aside>
         </div>
