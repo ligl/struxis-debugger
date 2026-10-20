@@ -200,6 +200,46 @@ describe("OriginChart", () => {
     expect(chartMocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
   });
 
+  it("accepts an exact SBar ID through the component selection command and emits the normal selection event", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [
+          bar(),
+          bar({
+            sbarId: "1700000060000000000",
+            tsEvent: "1700000060000000000",
+            tsInit: "1700000060000000001",
+          }),
+        ],
+        originDatasetId: "origin-command",
+      },
+    });
+
+    wrapper.get('[data-testid="origin-chart-panel"]').element.dispatchEvent(
+      new CustomEvent("struxis-select-sbar", {
+        bubbles: true,
+        detail: { sbarId: "1700000060000000000" },
+      }),
+    );
+    await nextTick();
+
+    expect(wrapper.emitted("sbarClick")).toEqual([["1700000060000000000"]]);
+    expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-selection-start-x"))
+      .toBe("200");
+    wrapper.get('[data-testid="origin-chart-panel"]').element.dispatchEvent(
+      new CustomEvent("struxis-select-sbar", {
+        bubbles: true,
+        detail: { sbarId: "9999999999999999999" },
+      }),
+    );
+    await nextTick();
+
+    expect(wrapper.emitted("selectionError")).toEqual([
+      ["The selected SBar is not part of the current Origin chart."],
+    ]);
+    wrapper.unmount();
+  });
+
   it("previews a full-height range overlay and fixes both boundary lines on completion", async () => {
     const wrapper = mount(OriginChart, {
       props: {
