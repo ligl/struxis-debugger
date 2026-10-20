@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CatalogDatasetEntry, OriginDatasetDto, RunStateDto, SnapshotArtifactDto, SnapshotCompareResultDto, TestDatasetDto } from "./origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto, ReplayInspectorDto, RunStateDto, SnapshotArtifactDto, SnapshotCompareResultDto, TestDatasetDto } from "./origin-types";
 
 export function listCatalogDatasets(): Promise<CatalogDatasetEntry[]> {
   return invoke<CatalogDatasetEntry[]>("list_catalog_datasets");
@@ -66,6 +66,10 @@ export function restartRun(): Promise<RunStateDto> {
 
 export function getRunState(): Promise<RunStateDto> {
   return invoke<RunStateDto>("get_run_state");
+}
+
+export function getReplayInspector(): Promise<ReplayInspectorDto | null> {
+  return invoke<ReplayInspectorDto | null>("get_replay_inspector");
 }
 
 export function stepRun(): Promise<RunStateDto> {
