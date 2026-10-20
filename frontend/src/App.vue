@@ -519,7 +519,7 @@ onUnmounted(() => {
               <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
               <DualChartStack workspace="replay">
                 <template #upper>
-                  <RunChart :origin="origin" :test-dataset="testDataset" :run-state="runState" />
+                  <RunChart v-if="workspaceMode === 'replay'" :origin="origin" :test-dataset="testDataset" :run-state="runState" />
                 </template>
                 <template #lower>
                   <SnapshotReferencePanel
