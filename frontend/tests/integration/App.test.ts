@@ -252,6 +252,9 @@ describe("Origin Load workbench", () => {
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("READY"));
+    await vi.waitFor(() => {
+      expect((wrapper.get('[data-testid="run-step"]').element as HTMLButtonElement).disabled).toBe(false);
+    });
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="inspector-replay-checkpoint"]').text()).toBe("0"));
 
