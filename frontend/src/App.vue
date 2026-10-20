@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginPanel from "./components/OriginPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
@@ -8,7 +8,7 @@ import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
-import type { SnapshotArtifactDto } from "./origin-types";
+import type { ObjectDifferenceDto, SnapshotArtifactDto } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -75,6 +75,26 @@ const canLoadOrigin = computed(
 );
 
 const selectedInspectorSbarId = ref<string | null>(null);
+const selectedCompareDifferenceKey = ref<string | null>(null);
+
+function compareDifferenceKey(difference: ObjectDifferenceDto): string {
+  return [difference.checkpointIndex, difference.sbarId, difference.objectType, difference.objectId, difference.kind].join("|");
+}
+
+const selectedCompareDifference = computed(() => {
+  const key = selectedCompareDifferenceKey.value;
+  if (!key || !compareResult.value) return null;
+  return compareResult.value.differences.find((difference) => compareDifferenceKey(difference) === key) ?? null;
+});
+
+function selectCompareDifference(difference: ObjectDifferenceDto): void {
+  selectedCompareDifferenceKey.value = compareDifferenceKey(difference);
+}
+
+watch(compareResult, () => {
+  selectedCompareDifferenceKey.value = null;
+});
+
 const selectedInspectorSbar = computed(() => {
   const selectedId = selectedInspectorSbarId.value;
   if (!selectedId) return null;
@@ -154,6 +174,9 @@ const {
 // Layout-only state: changing workspace or panel visibility never mutates domain state.
 type WorkspaceMode = "dataset" | "replay" | "compare";
 const workspaceMode = ref<WorkspaceMode>("dataset");
+watch(workspaceMode, (mode) => {
+  if (mode !== "compare") selectedCompareDifferenceKey.value = null;
+});
 const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
@@ -402,7 +425,7 @@ onUnmounted(() => {
               <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
             </div>
             <div v-show="workspaceMode === 'compare'" class="workspace-mode">
-              <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" :compare-result="compareResult" :compare-loading="compareLoading" :compare-error="compareError" @refresh="refreshSnapshots" @compare="runCompare" />
+              <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" :compare-result="compareResult" :compare-loading="compareLoading" :compare-error="compareError" :selected-difference-key="selectedCompareDifferenceKey" @refresh="refreshSnapshots" @compare="runCompare" @select-difference="selectCompareDifference" />
             </div>
           </div>
 
@@ -418,6 +441,7 @@ onUnmounted(() => {
               :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
               :origin-dataset-id="origin?.originDatasetId ?? null"
               :workspace-mode="workspaceMode"
+              :selected-difference="workspaceMode === 'compare' ? selectedCompareDifference : null"
             />
           </aside>
         </div>
