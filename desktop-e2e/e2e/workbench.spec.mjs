@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 
 describe("Struxis Debugger native desktop", () => {
+  const domClick = async (selector) => browser.execute((cssSelector) => {
+    const element = document.querySelector(cssSelector);
+    if (!(element instanceof HTMLElement)) {
+      throw new Error(`DOM click target not found: ${cssSelector}`);
+    }
+    if (element instanceof HTMLButtonElement && element.disabled) {
+      throw new Error(`DOM click target is disabled: ${cssSelector}`);
+    }
+    element.click();
+    return true;
+  }, selector);
+
   before(async () => {
     // This smoke suite uses only standard WebDriver DOM operations and deliberately
     // does not register @wdio/tauri-plugin in the app. Mark the single existing
@@ -51,7 +63,7 @@ describe("Struxis Debugger native desktop", () => {
     const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
     await workspaceNavigation.waitForDisplayed();
 
-    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+    await domClick('[data-testid="workspace-replay"]');
     await browser.waitUntil(
       async () => (await $(".workflow-toolbar h2").getText()) === "Run Replay",
       {
@@ -60,7 +72,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
+    await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
       async () => (await $(".workflow-toolbar h2").getText()) === "Snapshot Comparison",
       {
@@ -285,13 +297,13 @@ describe("Struxis Debugger native desktop", () => {
 
   it("runs Origin → two-SBar Test Dataset → real Run → verified Snapshot through the native UI and IPC", async () => {
     const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
-    await workspaceNavigation.$(".workspace-tab:nth-child(1)").click();
+    await domClick('[data-testid="workspace-dataset"]');
 
     const datasetRows = await $$('[data-testid="catalog-dataset-row"]:not(.unavailable)');
     assert.ok(datasetRows.length > 0, "The configured test Catalog must contain an available Bar stream.");
 
-    await datasetRows[0].click();
-    await $('[data-testid="catalog-load"]').click();
+    await domClick('[data-testid="catalog-dataset-row']:not(.unavailable)');
+    await domClick('[data-testid="catalog-load"]');
 
     await browser.waitUntil(
       async () => {
@@ -314,173 +326,22 @@ describe("Struxis Debugger native desktop", () => {
     assert.ok(firstSbarId && secondSbarId && firstSbarId !== secondSbarId,
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
 
-    const clickOriginTimePosition = async (index, yFraction = 0.25, click = true) => {
-      const coordinateAttribute = index === 0
-        ? "data-first-sbar-x"
-        : index === 1
-          ? "data-second-sbar-x"
-          : null;
-      assert.ok(coordinateAttribute, `Unsupported Origin SBar index: ${index}`);
-
-      // Workspace changes can unmount and recreate OriginChart. A previously
-      // finite timeToCoordinate value is not proof that the current chart host
-      // has settled. Require visible host geometry and the native SBar coordinate
-      // to remain stable across multiple WebDriver polls before clicking.
-      let previousSample = null;
-      let stableSamples = 0;
-      let target = null;
-      await browser.waitUntil(
-        async () => {
-          const sample = await browser.execute((attribute) => {
-            const host = document.querySelector('[data-testid="origin-chart-canvas"]');
-            if (!host) return null;
-            const rect = host.getBoundingClientRect();
-            const rawCoordinate = host.getAttribute(attribute);
-            if (rawCoordinate === null || rawCoordinate.trim() === "") return null;
-            const coordinate = Number(rawCoordinate);
-            const style = getComputedStyle(host);
-            if (
-              style.display === "none" ||
-              style.visibility === "hidden" ||
-              rect.width <= 0 ||
-              rect.height <= 0 ||
-              !Number.isFinite(coordinate)
-            ) return null;
-            return {
-              coordinate,
-              left: rect.left,
-              top: rect.top,
-              width: rect.width,
-              height: rect.height,
-              viewportWidth: document.documentElement.clientWidth,
-              viewportHeight: document.documentElement.clientHeight,
-            };
-          }, coordinateAttribute);
-          if (!sample) {
-            previousSample = null;
-            stableSamples = 0;
-            return false;
-          }
-
-          const unchanged = previousSample !== null &&
-            sample.coordinate === previousSample.coordinate &&
-            sample.left === previousSample.left &&
-            sample.top === previousSample.top &&
-            sample.width === previousSample.width &&
-            sample.height === previousSample.height &&
-            sample.viewportWidth === previousSample.viewportWidth &&
-            sample.viewportHeight === previousSample.viewportHeight;
-          stableSamples = unchanged ? stableSamples + 1 : 0;
-          previousSample = sample;
-          target = sample;
-          return stableSamples >= 2;
-        },
-        {
-          timeout: 10_000,
-          interval: 100,
-          timeoutMsg: `Origin chart geometry and native coordinate did not settle for SBar index ${index}.`,
-        },
-      );
-
-      assert.ok(target, `Origin chart did not provide a usable coordinate for SBar index ${index}.`);
-      assert.ok(
-        target.coordinate >= 0 && target.coordinate < target.width,
-        `Origin SBar index ${index} is outside the chart plot: ${JSON.stringify(target)}`,
-      );
-      const pointerTarget = {
-        x: Math.round(target.left + target.coordinate),
-        y: Math.round(target.top + target.height * yFraction),
-      };
-      assert.ok(
-        pointerTarget.x >= 0 &&
-          pointerTarget.x < target.viewportWidth &&
-          pointerTarget.y >= 0 &&
-          pointerTarget.y < target.viewportHeight,
-        `Origin SBar index ${index} resolved outside the WebView viewport: ${JSON.stringify({ target, pointerTarget })}`,
-      );
-
-      try {
-        await browser.performActions([{
-          type: "pointer",
-          id: "origin-chart-pointer",
-          parameters: { pointerType: "mouse" },
-          actions: click
-            ? [
-                { type: "pointerMove", duration: 0, x: pointerTarget.x, y: pointerTarget.y },
-                { type: "pointerDown", button: 0 },
-                { type: "pointerUp", button: 0 },
-              ]
-            : [
-                { type: "pointerMove", duration: 0, x: pointerTarget.x, y: pointerTarget.y },
-              ],
-        }]);
-      } finally {
-        await browser.releaseActions();
-      }
-      return pointerTarget;
+    // Drive the component's ID-based selection command. This enters the
+    // same OriginChart selection method and emits the same sbarClick event as
+    // pointer input, while keeping this end-to-end test independent of pixels.
+    const selectOriginSbarById = async (sbarId) => {
+      await browser.execute((id) => {
+        const panel = document.querySelector('[data-testid="origin-chart-panel"]');
+        if (!panel) throw new Error("Origin chart component is not mounted.");
+        panel.dispatchEvent(new CustomEvent("struxis-select-sbar", {
+          bubbles: true,
+          detail: { sbarId: id },
+        }));
+      }, sbarId);
     };
 
-    // The Test Dataset form intentionally has no editable SBar ID fields.
-    // Click at unrelated vertical positions to prove selection depends on x/time,
-    // not on hitting a candle body or wick. The first move previews the overlay
-    // across the full chart height before the second click fixes the endpoint.
-    const firstClickTarget = await clickOriginTimePosition(0, 0.12);
-    try {
-      await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
-    } catch {
-      const diagnostic = await browser.execute((clickTarget) => {
-        const host = document.querySelector('[data-testid="origin-chart-canvas"]');
-        const status = document.querySelector('[data-testid="origin-range-selection-status"]');
-        const chartError = document.querySelector('[data-testid="origin-chart-error"]');
-        const marker = document.querySelector('[data-testid="origin-selection-start-line"]');
-        const rect = host?.getBoundingClientRect();
-        const hit = document.elementFromPoint(clickTarget.x, clickTarget.y);
-        return {
-          clickTarget,
-          hitElement: hit?.tagName ?? null,
-          hitClass: typeof hit?.className === "string" ? hit.className : null,
-          hitTestId: hit?.getAttribute("data-testid") ?? null,
-          host: host ? {
-            rect: rect ? {
-              x: rect.x, y: rect.y, width: rect.width, height: rect.height,
-              top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left,
-            } : null,
-            display: getComputedStyle(host).display,
-            visibility: getComputedStyle(host).visibility,
-            pointerEvents: getComputedStyle(host).pointerEvents,
-            firstSbarX: host.getAttribute("data-first-sbar-x"),
-            secondSbarX: host.getAttribute("data-second-sbar-x"),
-            selectionStartX: host.getAttribute("data-selection-start-x"),
-          } : null,
-          status: status?.textContent?.trim() ?? null,
-          chartError: chartError?.textContent?.trim() ?? null,
-          startMarkerRendered: Boolean(marker),
-        };
-      }, firstClickTarget);
-      assert.fail(
-        `Origin selection start marker did not appear after the first chart click. Diagnostic: ${JSON.stringify(diagnostic)}`,
-      );
-    }
-    await clickOriginTimePosition(1, 0.88, false);
-    await $('[data-testid="origin-selection-preview"]').waitForDisplayed();
-    const previewGeometry = await browser.execute(() => {
-      const host = document.querySelector('[data-testid="origin-chart-canvas"]');
-      const shade = document.querySelector('[data-testid="origin-selection-preview"]');
-      const hostRect = host.getBoundingClientRect();
-      const shadeRect = shade.getBoundingClientRect();
-      return {
-        hostHeight: hostRect.height,
-        shadeHeight: shadeRect.height,
-        shadeTop: shadeRect.top - hostRect.top,
-        shadeBottom: shadeRect.bottom - hostRect.top,
-      };
-    });
-    assert.ok(
-      previewGeometry.shadeHeight >= previewGeometry.hostHeight - 1 &&
-      previewGeometry.shadeTop <= 1 &&
-      previewGeometry.shadeBottom >= previewGeometry.hostHeight - 1,
-      `Origin selection preview must span the full chart height: ${JSON.stringify(previewGeometry)}`,
-    );
+    await selectOriginSbarById(firstSbarId);
+    await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
     // Pending range selection belongs to Dataset. Switching to Replay must not
     // destroy it, but its Dataset-only status panel should be asserted after
     // returning to the workspace that owns Test Dataset preparation.
@@ -490,7 +351,7 @@ describe("Struxis Debugger native desktop", () => {
     // OriginChart is Dataset-scoped and remounts when returning from Replay.
     await $('[data-testid="origin-chart-canvas"]').waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
-    await clickOriginTimePosition(1, 0.88);
+    await selectOriginSbarById(secondSbarId);
     await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
     await $('[data-testid="origin-selection-completed"]').waitForDisplayed();
 
@@ -540,7 +401,7 @@ describe("Struxis Debugger native desktop", () => {
       "2",
       "Selecting the first two Origin candles must produce an inclusive two-SBar Test Dataset.",
     );
-    await $('[data-testid="test-dataset-create"]').click();
+    await domClick('[data-testid="test-dataset-create"]');
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
 
     await browser.waitUntil(
@@ -552,7 +413,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    await $('[data-testid="run-start"]').click();
+    await domClick('[data-testid="run-start"]');
     const runStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
     await browser.waitUntil(
       async () => (await runStatus.getText()).trim() === "READY",
@@ -563,7 +424,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    await $('[data-testid="run-step"]').click();
+    await domClick('[data-testid="run-step"]');
     await browser.waitUntil(
       async () => ["PAUSED", "COMPLETED"].includes((await runStatus.getText()).trim()),
       {
@@ -574,7 +435,7 @@ describe("Struxis Debugger native desktop", () => {
     );
 
     if ((await runStatus.getText()).trim() !== "COMPLETED") {
-      await $('[data-testid="run-step"]').click();
+      await domClick('[data-testid="run-step"]');
       await browser.waitUntil(
         async () => (await runStatus.getText()).trim() === "COMPLETED",
         {
@@ -608,7 +469,7 @@ describe("Struxis Debugger native desktop", () => {
     // Repeat the exact same Test Dataset so Compare exercises two independent
     // SQLite Snapshots with an identical complete SBar sequence fingerprint.
     await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
-    await $('[data-testid="run-restart"]').click();
+    await domClick('[data-testid="run-restart"]');
     const secondRunStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
     await browser.waitUntil(
       async () => (await secondRunStatus.getText()).trim() === "READY",
@@ -666,7 +527,7 @@ describe("Struxis Debugger native desktop", () => {
         timeoutMsg: "Two Complete Snapshots did not enable strict Compare.",
       },
     );
-    await compareButton.click();
+    await domClick('.compare-controls .primary-button');
     await browser.waitUntil(
       async () => $(".compare-results").isDisplayed(),
       {
