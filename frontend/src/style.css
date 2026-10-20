@@ -2144,3 +2144,47 @@ th, td { padding: 6px 8px; }
 .difference-kind-removed { color: #d77f7f; }
 .difference-kind-modified { color: var(--dbg-accent-hover); }
 
+.inspector-object-list {
+  display: grid;
+  gap: 3px;
+  max-height: 180px;
+  overflow: auto;
+}
+.inspector-object-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 6px;
+  border: 1px solid var(--dbg-border);
+  background: #151a1e;
+  color: var(--dbg-text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+.inspector-object-row > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.inspector-object-row strong,
+.inspector-object-row code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.inspector-object-row small {
+  color: var(--dbg-text-muted);
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+.inspector-object-row:hover,
+.inspector-object-row:focus-visible {
+  border-color: var(--dbg-border-strong);
+  outline: none;
+}
+.inspector-object-row.selected {
+  border-color: var(--dbg-accent);
+  background: var(--dbg-accent-subtle);
+}
+.inspector-list-heading { margin-top: 12px !important; }
