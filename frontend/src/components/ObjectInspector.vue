@@ -6,6 +6,8 @@ defineProps<{
   originDatasetId: string | null;
   workspaceMode: "dataset" | "replay" | "compare";
   selectedDifference: ObjectDifferenceDto | null;
+  compareBaselineSnapshotId: string | null;
+  compareCandidateSnapshotId: string | null;
 }>();
 
 function formatValue(value: unknown): string {
@@ -73,6 +75,14 @@ function formatValue(value: unknown): string {
         <div class="inspector-field inspector-field-wide">
           <dt>Domain Object ID</dt>
           <dd><code data-testid="inspector-difference-object-id" :title="selectedDifference.objectId">{{ selectedDifference.objectId }}</code></dd>
+        </div>
+        <div class="inspector-field inspector-field-wide">
+          <dt>Baseline Snapshot</dt>
+          <dd><code data-testid="inspector-baseline-snapshot">{{ compareBaselineSnapshotId ?? "—" }}</code></dd>
+        </div>
+        <div class="inspector-field inspector-field-wide">
+          <dt>Candidate Snapshot</dt>
+          <dd><code data-testid="inspector-candidate-snapshot">{{ compareCandidateSnapshotId ?? "—" }}</code></dd>
         </div>
         <div class="inspector-field">
           <dt>Object Type</dt>
