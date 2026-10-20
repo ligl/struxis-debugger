@@ -159,11 +159,116 @@ describe("Origin Load workbench", () => {
 
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
     expect(wrapper.get('[data-testid="inspector-empty"]').text()).toContain(
-      "Structural-object selection for Replay is not connected",
+      "Step or Play a Run to inspect its first backend-confirmed Struxis checkpoint",
     );
     expect(wrapper.find('[data-testid="inspector-sbar-id"]').exists()).toBe(false);
   });
 
+
+  it("loads the backend-confirmed Replay checkpoint and selects authoritative CBar and Swing objects", async () => {
+    const readyRun = {
+      runId: "run-replay-inspector",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+      failureDiagnostic: null,
+    };
+    const pausedRun = {
+      ...readyRun,
+      status: "paused",
+      processedCount: 1,
+      cursorSbarId: "100",
+    };
+    const replayInspector = {
+      stateKey: "BTCUSDT-PERP.BINANCE",
+      checkpointIndex: 0,
+      sbarId: "100",
+      sbar: {
+        sbarId: "100",
+        barType: dataset.barType!,
+        tsEvent: "100",
+        tsInit: "101",
+        open: "10.00",
+        high: "12.00",
+        low: "9.00",
+        close: "11.00",
+        volume: "100",
+        body: "1.00",
+        upperShadow: "1.00",
+        lowerShadow: "1.00",
+        totalRange: "3.00",
+        bodyRatio: 0.333,
+        shadowRatio: 0.667,
+        direction: "Bullish",
+      },
+      structure: {
+        cbarCount: 1,
+        cbars: [{
+          cbarId: "100",
+          high: "12.00",
+          low: "9.00",
+          sbarStartId: "100",
+          sbarEndId: "100",
+          spanSbars: 1,
+          fractalType: null,
+          createdAt: "1",
+        }],
+        swingCount: 1,
+        swings: [{
+          swingId: "100",
+          direction: "Up",
+          high: "12.00",
+          low: "9.00",
+          cbarStartId: "100",
+          cbarEndId: "100",
+          sbarStartId: "100",
+          sbarEndId: "100",
+          startOi: null,
+          endOi: null,
+          volume: "100",
+          spanSbars: 1,
+          state: "Extending",
+          createdAt: "1",
+          updatedAt: "1",
+        }],
+      },
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(readyRun);
+      if (command === "step_run") return Promise.resolve(pausedRun);
+      if (command === "get_replay_inspector") return Promise.resolve(replayInspector);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("READY"));
+    await wrapper.get('[data-testid="run-step"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="inspector-replay-checkpoint"]').text()).toBe("0"));
+
+    expect(wrapper.get('[data-testid="inspector-replay-sbar-id"]').text()).toBe("100");
+    expect(wrapper.get('[data-testid="inspector-replay-cbars"]').text()).toContain("100");
+    expect(wrapper.get('[data-testid="inspector-replay-swings"]').text()).toContain("Extending");
+    expect(invokeMock).toHaveBeenCalledWith("get_replay_inspector");
+
+    await wrapper.get('[data-testid="inspector-select-swing-100"]').trigger("click");
+    expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("Extending");
+    expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("12.00");
+
+    await wrapper.get('[data-testid="inspector-select-cbar-100"]').trigger("click");
+    expect(wrapper.get('[data-testid="inspector-replay-selected-cbar"]').text()).toContain("fractalType");
+    expect(wrapper.get('[data-testid="inspector-replay-selected-cbar"]').text()).toContain("null");
+    expect(wrapper.text()).toContain("copied from the latest backend-confirmed Struxis checkpoint");
+  });
 
   it("links a selected Compare difference to the Inspector and clears it when leaving Compare", async () => {
     const snapshots: SnapshotArtifactDto[] = [
