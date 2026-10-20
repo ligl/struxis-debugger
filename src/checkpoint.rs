@@ -25,6 +25,19 @@ pub(crate) struct ReplayCheckpointProjection {
     pub(crate) diagnostics: Vec<Diagnostic>,
 }
 
+/// Small live Inspector payload derived from one backend-confirmed checkpoint.
+/// It excludes the complete SBar history to avoid resending the entire sequence
+/// whenever the UI polls during Replay.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ReplayInspectorProjection {
+    pub(crate) state_key: String,
+    pub(crate) checkpoint_index: usize,
+    pub(crate) sbar_id: String,
+    pub(crate) sbar: SBarCheckpoint,
+    pub(crate) structure: Option<StructureCheckpoint>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SBarCheckpoint {
@@ -89,6 +102,26 @@ pub(crate) struct SwingCheckpoint {
 }
 
 impl ReplayCheckpointProjection {
+    /// Creates a compact Inspector projection from this already confirmed checkpoint.
+    /// All domain values are copied verbatim from the Struxis state projection.
+    pub(crate) fn inspector_projection(
+        &self,
+        checkpoint_index: usize,
+        sbar_id: &str,
+    ) -> Result<ReplayInspectorProjection, String> {
+        let sbar = self.sbars.iter()
+            .find(|sbar| sbar.sbar_id == sbar_id)
+            .cloned()
+            .ok_or_else(|| format!("Confirmed checkpoint SBar {sbar_id} is absent from projection"))?;
+        Ok(ReplayInspectorProjection {
+            state_key: self.state_key.clone(),
+            checkpoint_index,
+            sbar_id: sbar_id.to_owned(),
+            sbar,
+            structure: self.structure.clone(),
+        })
+    }
+
     /// Extracts all currently retained state from a short-lived read-only view.
     ///
     /// Callers must drop the supplied view before the next Strategy callback,
