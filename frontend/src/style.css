@@ -1577,3 +1577,331 @@ body,
   }
 }
 
+
+
+/* Approved workbench reconstruction: dense, full-viewport engineering terminal. */
+:root {
+  --dbg-bg: #101316;
+  --dbg-surface-1: #15191d;
+  --dbg-surface-2: #191e23;
+  --dbg-surface-3: #1d2329;
+  --dbg-border: #30383f;
+  --dbg-border-strong: #46515a;
+  --dbg-text-primary: #e3e8eb;
+  --dbg-text-secondary: #a8b2b9;
+  --dbg-text-muted: #89949d;
+  --dbg-text-disabled: #66727b;
+  --dbg-accent: #83add4;
+  --dbg-accent-hover: #a3c4e3;
+  --dbg-accent-subtle: #202a32;
+  --dbg-success: #75c6a1;
+  --dbg-warning: #d8b16b;
+  --dbg-error: #e17e79;
+  --dbg-info: #83add4;
+  --dbg-error-surface: #321f20;
+  --dbg-selection-border: #596873;
+  --dbg-selection-surface: #242c32;
+  --dbg-chart-up: #75c6a1;
+  --dbg-chart-down: #e17e79;
+  --dbg-chart-neutral: #89949d;
+  --dbg-chart-unprocessed: #454b53;
+  --dbg-chart-volume-up: #345b49;
+  --dbg-chart-volume-down: #663a3d;
+  --dbg-chart-cbar: #a8b2b9;
+  --dbg-chart-swing: #d8b16b;
+  --dbg-chart-trend: #83add4;
+  --dbg-chart-keyzone: #b8a0df;
+  --dbg-chart-crosshair: #89949d;
+  color: var(--dbg-text-primary);
+  background: var(--dbg-bg);
+  font-size: 13px;
+}
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  min-width: 920px;
+  min-height: 0;
+  overflow: hidden;
+}
+body { background: var(--dbg-bg); }
+.debugger-shell {
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  background: var(--dbg-bg);
+}
+.workbench-topbar {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex: 0 0 44px;
+  min-height: 44px;
+  height: 44px;
+  align-items: center;
+  gap: 18px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #171b1f;
+}
+.brand-block { min-width: 190px; }
+.brand-block h1 {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 750;
+  letter-spacing: .06em;
+}
+.brand-block .eyebrow {
+  margin: 0 0 1px;
+  color: var(--dbg-text-muted);
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+.workspace-switcher {
+  position: absolute;
+  left: 40%;
+  top: 0;
+  height: 44px;
+  transform: translateX(-40%);
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.workspace-tab {
+  height: 31px;
+  min-height: 31px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dbg-text-muted);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.workspace-tab.active {
+  border-color: var(--dbg-border) !important;
+  background: #242a30 !important;
+  color: var(--dbg-text-primary);
+  box-shadow: none;
+}
+.runtime-mark {
+  margin-left: auto;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.workbench-body {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
+}
+.workbench-main {
+  min-height: 0;
+  overflow: hidden;
+}
+.workflow-toolbar {
+  min-height: 42px;
+  height: 42px;
+  padding: 0 12px;
+  gap: 8px;
+  background: #171b1f;
+  border-bottom: 1px solid #252c32;
+}
+.workflow-toolbar h2 { font-size: 11px; letter-spacing: .08em; }
+.workflow-toolbar .section-index { font-size: 8px; }
+.toolbar-actions { flex-wrap: nowrap; }
+.subtle-button {
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: #20262c;
+  font-size: 10px;
+}
+.primary-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 282px;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace-content {
+  min-height: 0;
+  gap: 6px;
+  padding: 6px;
+  overflow: auto;
+  background: #101316;
+}
+.inspector-rail {
+  min-height: 0;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #3a444b;
+  background: #15191d;
+}
+.rail-heading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 36px;
+  height: 36px;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #1b2025;
+}
+.rail-heading .section-index { color: var(--dbg-text-muted); }
+.inspector-placeholder {
+  min-height: 0;
+  margin: 10px;
+  padding: 12px;
+  gap: 7px;
+  border: 1px dashed var(--dbg-border);
+  background: #151a1e;
+}
+.inspector-placeholder .placeholder-mark { font-size: 18px; }
+.inspector-placeholder h3 { font-size: 11px; }
+.inspector-placeholder p, .inspector-placeholder small { font-size: 10px; }
+.catalog-rail {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 282px;
+  padding: 8px;
+  border: 1px solid #3a444b;
+  background: #15191d;
+  box-shadow: 0 8px 28px #0005;
+}
+.catalog-rail.collapsed { width: 38px; }
+.workbench-body.catalog-is-hidden .catalog-rail { display: none; }
+.catalog-rail .rail-heading { margin: -8px -8px 8px; }
+.catalog-rail .catalog-panel { margin-top: 4px; }
+.catalog-rail .instrument-group-row { padding: 7px 8px; }
+.catalog-rail .dataset-row { padding: 8px; }
+.catalog-rail .load-options { margin-top: 9px; padding-top: 9px; }
+.dataset-preparation-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px;
+  border-top: 1px solid var(--dbg-border);
+}
+.dataset-preparation-panel > .panel { padding: 10px; }
+.origin-chart-panel, .run-chart-panel {
+  margin: 0;
+  border-color: var(--dbg-border);
+  border-radius: 4px;
+  background: #121619;
+}
+.origin-chart-heading {
+  min-height: 29px;
+  padding: 0 10px;
+  align-items: center;
+  background: #191e22;
+  border-bottom-color: #252c32;
+}
+.chart-title-block { gap: 2px; }
+.chart-title-block h3 { font-size: 10px; letter-spacing: .07em; }
+.chart-title-block .section-index { font-size: 8px; }
+.chart-instrument { font-size: 9px; }
+.chart-bar-count { font-size: 9px; }
+.chart-data-strip {
+  gap: 6px 12px;
+  padding: 6px 10px;
+  background: #121619;
+  border-bottom-color: #252c32;
+}
+.chart-data-strip > span { font-size: 9px; }
+.chart-data-strip small { font-size: 8px; }
+.chart-data-strip strong { font-size: 9px; }
+.origin-chart-host { height: min(42vh, 420px); }
+.run-chart-host { height: min(42vh, 420px); }
+.chart-selection-hint { margin: 5px 9px; font-size: 9px; }
+.diagnostics-dock {
+  position: relative;
+  z-index: 12;
+  flex: 0 0 164px;
+  min-height: 164px;
+  height: 164px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #3a444b;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  background: #15191d;
+}
+.diagnostics-heading {
+  min-height: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #1b2025;
+}
+.diagnostics-heading h2 { font-size: 10px; }
+.diagnostics-content {
+  min-height: 0;
+  height: calc(100% - 36px);
+  padding: 8px 10px;
+  overflow: auto;
+}
+.diagnostics-reopen {
+  position: absolute;
+  z-index: 12;
+  right: 12px;
+  bottom: 8px;
+  margin: 0;
+  font-size: 10px;
+}
+.footer-bar {
+  display: none;
+}
+.panel, .operations-panel, .snapshot-panel {
+  border-color: var(--dbg-border);
+  background: #151a1e;
+}
+.panel-heading {
+  min-height: 28px;
+  margin-bottom: 8px;
+}
+h2 { font-size: 12px; }
+h3 { font-size: 11px; }
+.metric, .origin-identity, .range-summary > div { background: #151a1e; }
+.primary-button {
+  width: auto;
+  padding: 7px 10px;
+  border-radius: 4px;
+  font-size: 9px;
+}
+.compare-controls {
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  background: #14191d;
+}
+.compare-summary > div { padding: 9px; }
+.snapshot-panel { padding: 10px; }
+table { font-size: 9px; }
+th, td { padding: 6px 8px; }
+.error-message { padding: 8px; font-size: 10px; }
+.empty-state { padding: 9px; font-size: 10px; }
+@media (max-width: 1100px) {
+  .workspace-switcher { left: 40%; }
+  .optional { display: none; }
+  .primary-workspace { grid-template-columns: minmax(0, 1fr) 250px; }
+  .dataset-preparation-panel { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 920px) {
+  html, body, #app { min-width: 0; }
+  .workbench-topbar { gap: 8px; padding: 0 9px; }
+  .brand-block { min-width: 120px; }
+  .workspace-switcher { position: static; transform: none; margin-left: auto; }
+  .workspace-tab { padding: 0 7px; }
+  .primary-workspace { grid-template-columns: minmax(0, 1fr); overflow: auto; }
+  .inspector-rail { display: none; }
+  .catalog-rail { width: min(282px, 80vw); }
+  .diagnostics-dock { flex-basis: 120px; height: 120px; min-height: 120px; }
+}
