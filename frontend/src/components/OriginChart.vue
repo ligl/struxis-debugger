@@ -129,11 +129,13 @@ function updateChart(): void {
     if (props.bars.length > 0 && fittedOriginDatasetId !== props.originDatasetId) {
       const timeScale = chart.timeScale();
       timeScale.fitContent();
-      // Keep the first candle inside the plot instead of placing its center
-      // on the clipped left boundary. Four trailing logical slots preserve
-      // the chart's existing right-side breathing room for short datasets.
+      // Reserve visible space before the first SBar so its timestamp maps
+      // into the actual plot area rather than onto the clipped left boundary.
+      // Scale the margin with dataset size to keep it useful for both short
+      // and long Origins; retain four trailing logical slots on the right.
+      const leadingMargin = Math.max(12, projection.candles.length * 0.05);
       timeScale.setVisibleLogicalRange({
-        from: -0.5,
+        from: -leadingMargin,
         to: projection.candles.length + 3.5,
       });
       fittedOriginDatasetId = props.originDatasetId;
