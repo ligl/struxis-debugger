@@ -133,7 +133,7 @@ function updateChart(): void {
       // into the actual plot area rather than onto the clipped left boundary.
       // Scale the margin with dataset size to keep it useful for both short
       // and long Origins; retain four trailing logical slots on the right.
-      const leadingMargin = Math.max(12, projection.candles.length * 0.05);
+      const leadingMargin = projection.candles.length * 0.05;
       timeScale.setVisibleLogicalRange({
         from: -leadingMargin,
         to: projection.candles.length + 3.5,
