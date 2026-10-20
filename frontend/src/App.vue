@@ -499,7 +499,13 @@ onUnmounted(() => {
             <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" :aria-valuenow="inspectorWidth" aria-valuemin="220" :aria-valuemax="inspectorWidthLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
             <div class="rail-heading">
               <span class="section-index">INSPECTOR</span>
-              <button class="subtle-button rail-toggle" aria-label="Move Inspector to opposite side" title="Move Inspector to opposite side" @click="toggleInspectorDock">⇆</button>
+              <details class="dock-menu" data-testid="inspector-dock-menu">
+                <summary class="subtle-button rail-toggle" aria-label="Inspector panel options" title="Inspector panel options">⋯</summary>
+                <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
+                  <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="inspectorDock = 'left'">LEFT</button>
+                  <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="inspectorDock = 'right'">RIGHT</button>
+                </div>
+              </details>
               <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
             </div>
             <ObjectInspector
@@ -525,7 +531,16 @@ onUnmounted(() => {
           <p class="section-index">DIAGNOSTICS</p>
           <h2>Workflow events &amp; errors</h2>
         </div>
-        <div class="dock-actions"><button class="subtle-button" data-testid="diagnostics-dock-toggle" @click="toggleDiagnosticsDock">{{ diagnosticsDock === 'bottom' ? 'Move to Top' : 'Move to Bottom' }}</button><button class="subtle-button" data-testid="diagnostics-collapse-toggle" @click="diagnosticsCollapsed = true">Collapse</button></div>
+        <div class="dock-actions">
+          <details class="dock-menu" data-testid="diagnostics-dock-menu">
+            <summary class="subtle-button" aria-label="Diagnostics panel options" title="Diagnostics panel options">⋯</summary>
+            <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
+              <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="diagnosticsDock = 'top'">TOP</button>
+              <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'">BOTTOM</button>
+            </div>
+          </details>
+          <button class="subtle-button" data-testid="diagnostics-collapse-toggle" @click="diagnosticsCollapsed = true">Collapse</button>
+        </div>
       </div>
       <div class="diagnostics-content">
         <p v-if="loadError || discoveryError || testError || runError || snapshotsError" class="error-message">
