@@ -1239,3 +1239,29 @@ describe("startup and user-operation coordination", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
   });
 });
+
+
+describe("dual chart workspaces", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockInitialIpc();
+  });
+
+  it("renders separate Replay and Compare chart roles with explicit projection gaps", async () => {
+    const wrapper = mountApp();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+    expect(wrapper.get('[data-testid="dual-chart-stack-replay"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="replay-upper-chart-track"]').find('[data-testid="run-chart-panel"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="snapshot-reference-panel"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="replay-chart-splitter"]').attributes("role")).toBe("separator");
+
+    await wrapper.get('[data-testid="workspace-compare"]').trigger("click");
+    expect(wrapper.get('[data-testid="dual-chart-stack-compare"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="compare-candidate-chart"]').text()).toContain("Candidate");
+    expect(wrapper.get('[data-testid="compare-baseline-chart"]').text()).toContain("Baseline");
+    expect(wrapper.get('[data-testid="compare-chart-splitter"]').attributes("role")).toBe("separator");
+    expect(wrapper.text()).toContain("NO SYNTHETIC MARKET DATA");
+  });
+});
