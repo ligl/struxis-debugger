@@ -149,6 +149,7 @@ const diagnosticsDock = ref<"top" | "bottom">("bottom");
 // Dock dimensions are presentation state only; they never affect Struxis state.
 const inspectorWidth = ref(282);
 const diagnosticsHeight = ref(164);
+let runPollInterval: number | null = null;
 type PanelResizeTarget = "inspector" | "diagnostics" | null;
 const panelResizeTarget = ref<PanelResizeTarget>(null);
 let panelResizeStart = 0;
@@ -297,13 +298,12 @@ onMounted(async () => {
   window.addEventListener("pointercancel", stopPanelResize);
   // RunState is the only progress authority exposed by the backend. Poll while
   // the worker is running so the replay chart follows committed checkpoints.
-  const runPollInterval = window.setInterval(() => {
+  runPollInterval = window.setInterval(() => {
     if (runState.value?.status === "running" && !runBusy.value) {
       void refreshRunState(true);
     }
   }, 250);
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
-  onUnmounted(() => window.clearInterval(runPollInterval));
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
   if (!originHandoffDuringStartup) await refreshCurrentTestDataset();
@@ -311,6 +311,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener("keydown", handleReplayShortcut);
+  if (runPollInterval !== null) window.clearInterval(runPollInterval);
+  runPollInterval = null;
   window.removeEventListener("pointermove", handlePanelResize);
   window.removeEventListener("pointerup", stopPanelResize);
   window.removeEventListener("pointercancel", stopPanelResize);
