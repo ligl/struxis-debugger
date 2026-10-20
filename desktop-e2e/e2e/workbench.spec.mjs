@@ -296,7 +296,6 @@ describe("Struxis Debugger native desktop", () => {
 
 
   it("runs Origin → two-SBar Test Dataset → real Run → verified Snapshot through the native UI and IPC", async () => {
-    const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
     await domClick('[data-testid="workspace-dataset"]');
 
     const datasetRows = await $$('[data-testid="catalog-dataset-row"]:not(.unavailable)');
@@ -401,7 +400,7 @@ describe("Struxis Debugger native desktop", () => {
       "Selecting the first two Origin candles must produce an inclusive two-SBar Test Dataset.",
     );
     await domClick('[data-testid="test-dataset-create"]');
-    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+    await domClick('[data-testid="workspace-replay"]');
 
     await browser.waitUntil(
       async () => await $('[data-testid="run-start"]').isEnabled(),
@@ -467,7 +466,7 @@ describe("Struxis Debugger native desktop", () => {
 
     // Repeat the exact same Test Dataset so Compare exercises two independent
     // SQLite Snapshots with an identical complete SBar sequence fingerprint.
-    await workspaceNavigation.$(".workspace-tab:nth-child(2)").click();
+    await domClick('[data-testid="workspace-replay"]');
     await domClick('[data-testid="run-restart"]');
     const secondRunStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
     await browser.waitUntil(
@@ -479,7 +478,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    await $('[data-testid="run-step"]').click();
+    await domClick('[data-testid="run-step"]');
     await browser.waitUntil(
       async () => ["PAUSED", "COMPLETED"].includes((await secondRunStatus.getText()).trim()),
       {
@@ -489,7 +488,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
     if ((await secondRunStatus.getText()).trim() !== "COMPLETED") {
-      await $('[data-testid="run-step"]').click();
+      await domClick('[data-testid="run-step"]');
       await browser.waitUntil(
         async () => (await secondRunStatus.getText()).trim() === "COMPLETED",
         {
@@ -500,7 +499,7 @@ describe("Struxis Debugger native desktop", () => {
       );
     }
 
-    await workspaceNavigation.$(".workspace-tab:nth-child(3)").click();
+    await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
       async () => {
         const rows = await $$(".snapshot-table tbody tr");
