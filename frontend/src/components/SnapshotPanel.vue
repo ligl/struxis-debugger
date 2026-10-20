@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { SnapshotArtifactDto, SnapshotCompareResultDto } from "../origin-types";
+import type { ObjectDifferenceDto, SnapshotArtifactDto, SnapshotCompareResultDto } from "../origin-types";
 
 const props = defineProps<{
   snapshots: SnapshotArtifactDto[];
@@ -11,10 +11,12 @@ const props = defineProps<{
   compareResult: SnapshotCompareResultDto | null;
   compareLoading: boolean;
   compareError: string;
+  selectedDifferenceKey: string | null;
 }>();
 const emit = defineEmits<{
   refresh: [];
   compare: [baselineSnapshotId: string, candidateSnapshotId: string];
+  selectDifference: [difference: ObjectDifferenceDto];
 }>();
 
 const completeSnapshots = computed(() => props.snapshots.filter(
@@ -43,6 +45,10 @@ function requestCompare(): void {
 
 function pretty(value: unknown): string {
   return value === null || value === undefined ? "—" : JSON.stringify(value);
+}
+
+function differenceKey(difference: ObjectDifferenceDto): string {
+  return [difference.checkpointIndex, difference.sbarId, difference.objectType, difference.objectId, difference.kind].join("|");
 }
 </script>
 
@@ -149,12 +155,12 @@ function pretty(value: unknown): string {
         <table class="snapshot-table difference-table">
           <thead><tr><th>CHECKPOINT</th><th>SBAR ID</th><th>OBJECT</th><th>CHANGE</th><th>DOMAIN ID</th><th>PROPERTY DELTAS</th></tr></thead>
           <tbody>
-            <tr v-for="(difference, index) in compareResult.differences" :key="index">
+            <tr v-for="(difference, index) in compareResult.differences" :key="index" :class="{ 'difference-row-selected': selectedDifferenceKey === differenceKey(difference) }" :data-testid="'compare-difference-row-' + index">
               <td>{{ difference.checkpointIndex }}</td>
               <td>{{ difference.sbarId }}</td>
               <td>{{ difference.objectType }}</td>
               <td>{{ difference.kind.toUpperCase() }}</td>
-              <td>{{ difference.objectId }}</td>
+              <td><button class="difference-select-button" :class="{ selected: selectedDifferenceKey === differenceKey(difference) }" :aria-pressed="selectedDifferenceKey === differenceKey(difference)" :data-testid="'compare-select-difference-' + index" @click="emit('selectDifference', difference)">{{ difference.objectId }}</button></td>
               <td><div v-for="property in difference.properties" :key="property.field" class="property-delta"><strong>{{ property.field }}</strong><span>{{ pretty(property.baselineValue) }} → {{ pretty(property.candidateValue) }}</span></div></td>
             </tr>
           </tbody>
