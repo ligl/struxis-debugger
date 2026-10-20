@@ -610,6 +610,36 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(wrapper.get('[data-testid="debugger-shell"]').classes()).not.toContain("diagnostics-dock-top");
   });
 
+  it("supports dragging panel titlebars to the corresponding docking edge", async () => {
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+    const wrapper = mountApp();
+    await flushPromises();
+
+    let draggedPanel = "";
+    const dataTransfer = {
+      effectAllowed: "move",
+      dropEffect: "none",
+      setData: (_type: string, value: string) => { draggedPanel = value; },
+      getData: (_type: string) => draggedPanel,
+    };
+
+    await wrapper.get('[data-testid="inspector-dock-drag-handle"]').trigger("dragstart", { dataTransfer });
+    await wrapper.get('[data-testid="primary-workspace"]').trigger("dragover", { dataTransfer });
+    await wrapper.get('[data-testid="primary-workspace"]').trigger("drop", { dataTransfer, clientX: -1 });
+    expect(wrapper.get('[data-testid="primary-workspace"]').classes()).toContain("inspector-dock-left");
+
+    await wrapper.get('[data-testid="diagnostics-dock-drag-handle"]').trigger("dragstart", { dataTransfer });
+    await wrapper.get('[data-testid="workbench-body"]').trigger("dragover", { dataTransfer });
+    await wrapper.get('[data-testid="workbench-body"]').trigger("drop", { dataTransfer, clientY: -1 });
+    expect(wrapper.get('[data-testid="debugger-shell"]').classes()).toContain("diagnostics-dock-top");
+  });
+
   it("creates a backend-validated Test Dataset and exposes Run controls", async () => {
     const origin = makeOrigin("origin-existing");
     const runState = {
