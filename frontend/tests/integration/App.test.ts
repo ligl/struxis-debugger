@@ -251,6 +251,8 @@ describe("Origin Load workbench", () => {
 
     await wrapper.get('[data-testid="compare-select-difference-0"]').trigger("click");
     expect(wrapper.get('[data-testid="inspector-difference-object-id"]').text()).toBe("swing-123");
+    expect(wrapper.get('[data-testid="inspector-baseline-snapshot"]').text()).toBe("snapshot-baseline");
+    expect(wrapper.get('[data-testid="inspector-candidate-snapshot"]').text()).toBe("snapshot-candidate");
     expect(wrapper.get('[data-testid="inspector-difference-checkpoint"]').text()).toBe("1");
     expect(wrapper.get('[data-testid="inspector-difference-sbar-id"]').text()).toBe("200");
     expect(wrapper.get('[data-testid="inspector-difference-properties"]').text()).toContain("13.00");
