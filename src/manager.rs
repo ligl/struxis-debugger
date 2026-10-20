@@ -226,6 +226,28 @@ mod tests {
     }
 
     #[test]
+    fn inspector_returns_only_the_latest_confirmed_struxis_checkpoint() {
+        let mut manager = ReplayManager::new();
+        manager
+            .start(worker_config("manager-inspector"), sink())
+            .expect("Run starts");
+
+        assert!(manager.inspector().expect("initial Inspector query").is_none());
+
+        let stepped = manager.step().expect("one checkpoint is processed");
+        assert_eq!(stepped.processed_count, 1);
+        let projection = manager.inspector()
+            .expect("Inspector query")
+            .expect("confirmed checkpoint is available");
+        assert_eq!(projection.checkpoint_index, 0);
+        assert_eq!(projection.sbar_id, stepped.cursor_sbar_id.expect("cursor exists"));
+        assert_eq!(projection.sbar.sbar_id, projection.sbar_id);
+        assert_eq!(projection.structure.as_ref().map(|state| state.cbar_count), Some(1));
+
+        manager.dispose().expect("Run cleanup");
+    }
+
+    #[test]
     fn manager_owns_only_one_worker_until_dispose_is_confirmed() {
         let mut manager = ReplayManager::new();
         let initial = manager
