@@ -358,6 +358,8 @@ for (const direction of dockDirections) {
 
     const splitter = page.getByTestId("inspector-resize-edge");
     const before = Number(await splitter.getAttribute("aria-valuenow"));
+    const workspaceBefore = await page.getByTestId("chart-workspace").boundingBox();
+    expect(workspaceBefore).toBeTruthy();
     const bounds = await splitter.boundingBox();
     expect(bounds).toBeTruthy();
     const startX = bounds!.x + bounds!.width / 2;
@@ -373,14 +375,14 @@ for (const direction of dockDirections) {
     await page.mouse.move(endX, endY, { steps: 4 });
     await page.mouse.up();
 
-    const after = Number(await splitter.getAttribute("aria-valuenow"));
-    expect(after, `Inspector size should change when dragging the ${direction} splitter`).toBeGreaterThan(before + 20);
-    const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
-    expect(chartWorkspace).toBeTruthy();
+    await expect.poll(() => splitter.getAttribute("aria-valuenow").then(Number))
+      .toBeGreaterThan(before + 20);
+    const workspaceAfter = await page.getByTestId("chart-workspace").boundingBox();
+    expect(workspaceAfter).toBeTruthy();
     if (direction === "left" || direction === "right") {
-      expect(chartWorkspace!.width).toBeGreaterThan(0);
+      expect(workspaceAfter!.width).toBeLessThan(workspaceBefore!.width - 20);
     } else {
-      expect(chartWorkspace!.height).toBeGreaterThan(0);
+      expect(workspaceAfter!.height).toBeLessThan(workspaceBefore!.height - 20);
     }
   });
 }
@@ -393,6 +395,8 @@ for (const direction of dockDirections) {
 
     const splitter = page.getByTestId("diagnostics-resize-edge");
     const before = Number(await splitter.getAttribute("aria-valuenow"));
+    const workspaceBefore = await page.getByTestId("chart-workspace").boundingBox();
+    expect(workspaceBefore).toBeTruthy();
     const bounds = await splitter.boundingBox();
     expect(bounds).toBeTruthy();
     const startX = bounds!.x + bounds!.width / 2;
@@ -408,14 +412,14 @@ for (const direction of dockDirections) {
     await page.mouse.move(endX, endY, { steps: 4 });
     await page.mouse.up();
 
-    const after = Number(await splitter.getAttribute("aria-valuenow"));
-    expect(after, `Diagnostics size should change when dragging the ${direction} splitter`).toBeGreaterThan(before + 20);
-    const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
-    expect(chartWorkspace).toBeTruthy();
+    await expect.poll(() => splitter.getAttribute("aria-valuenow").then(Number))
+      .toBeGreaterThan(before + 20);
+    const workspaceAfter = await page.getByTestId("chart-workspace").boundingBox();
+    expect(workspaceAfter).toBeTruthy();
     if (direction === "left" || direction === "right") {
-      expect(chartWorkspace!.width).toBeGreaterThan(0);
+      expect(workspaceAfter!.width).toBeLessThan(workspaceBefore!.width - 20);
     } else {
-      expect(chartWorkspace!.height).toBeGreaterThan(0);
+      expect(workspaceAfter!.height).toBeLessThan(workspaceBefore!.height - 20);
     }
   });
 }
