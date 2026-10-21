@@ -422,6 +422,7 @@ mod tests {
             sbar_sequence_fingerprint: fingerprint,
             bar_type: bar_type.to_string(),
             bars,
+            structure: None,
         };
         LoadedInput::from_test(&TestDataset::create(&origin, "100", "200").unwrap()).unwrap()
     }
