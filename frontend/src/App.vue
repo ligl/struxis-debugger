@@ -680,6 +680,7 @@ onUnmounted(() => {
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
                 :bars="origin.bars"
+                :structure="origin.structure"
                 :origin-dataset-id="origin.originDatasetId"
                 :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
                 :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
