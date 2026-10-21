@@ -28,7 +28,7 @@ const testDataset: TestDatasetDto = {
   originDatasetId: "origin-1",
   instrumentId: "AUD/USD.SIM",
   barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
-  timeframe: "300s",
+  timeframe: "5m",
   startSbarId: "100",
   endSbarId: "200",
   sbarCount: 2,
