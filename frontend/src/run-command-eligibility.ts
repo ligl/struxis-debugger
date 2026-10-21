@@ -28,8 +28,9 @@ export function isRunCommandEligible(
     case "restart":
       return canRestartRun;
     case "step":
-    case "play":
       return status === "ready" || status === "paused";
+    case "play":
+      return status === "paused";
     case "pause":
       return status === "running";
     case "stop":
