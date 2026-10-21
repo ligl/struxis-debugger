@@ -2716,8 +2716,10 @@ th, td { padding: 6px 8px; }
 
 .inspector-rail.dock-top,
 .inspector-rail.dock-bottom {
-  left: var(--inspector-offset-left, 0px);
-  right: var(--inspector-offset-right, 0px);
+  /* Horizontal Inspector docks span the full workbench width, regardless of
+     whether Diagnostics is docked to either side. */
+  left: 0;
+  right: 0;
   height: var(--inspector-height, 145px);
   flex-direction: column;
 }
