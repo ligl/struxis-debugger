@@ -3349,6 +3349,15 @@ th, td { padding: 6px 8px; }
   letter-spacing: .04em;
 }
 
+/* Center the vertical title in the 36px collapsed rail; undo the expanded
+   side-dock action clearance, which otherwise shifts the title off-center. */
+.diagnostics-dock.collapsed.dock-left .diagnostics-title-block,
+.diagnostics-dock.collapsed.dock-right .diagnostics-title-block {
+  width: 100%;
+  justify-content: center;
+  padding-right: 0;
+}
+
 .diagnostics-dock.collapsed.dock-left .diagnostics-heading::before,
 .diagnostics-dock.collapsed.dock-right .diagnostics-heading::before {
   content: none;
