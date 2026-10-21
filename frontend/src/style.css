@@ -3436,7 +3436,6 @@ th, td { padding: 6px 8px; }
   align-items: center;
   gap: 9px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--dbg-border);
   background: #14191d;
 }
 
@@ -3668,7 +3667,7 @@ th, td { padding: 6px 8px; }
 
 .chart-panels > .dataset-workspace-content {
   /* Match the frozen prototype's .dataset-layout .chart-stack inset. */
-  padding: 4px 6px 5px;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -3684,15 +3683,12 @@ th, td { padding: 6px 8px; }
   );
 }
 
-.workbench-body:not(.catalog-is-hidden).inspector-dock-right .chart-panels {
-  margin-right: 5px;
-}
-
 .dataset-workspace-content > .origin-chart-panel {
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
   flex-direction: column;
+  margin: 2px 4px 0px;
 }
 
 .dataset-workspace-content > .origin-chart-panel > .origin-chart-viewport {
