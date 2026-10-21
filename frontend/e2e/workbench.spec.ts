@@ -214,7 +214,7 @@ for (const direction of ["left", "right", "top", "bottom"] as const) {
     await expect(categoryTabs.getByRole("button")).toHaveCount(8);
     if (direction === "left" || direction === "right") {
       await expect(titleBlock).toBeVisible();
-      await expect(titleBlock.locator("h2")).toBeVisible();
+      await expect(dock.getByTestId("diagnostics-dock-drag-handle")).toHaveText("Diagnostics");
     } else {
       await expect(titleBlock).toBeHidden();
       await expect(actions).toBeVisible();
@@ -228,6 +228,39 @@ for (const direction of ["left", "right", "top", "bottom"] as const) {
     }
   });
 }
+
+test("dock menus match prototype labels and dismiss after selection or outside click", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const inspectorMenu = page.getByTestId("inspector-dock-menu");
+  await inspectorMenu.locator("summary").click();
+  await expect(inspectorMenu).toHaveJSProperty("open", true);
+  await expect(inspectorMenu.getByTestId("inspector-dock-left")).toHaveText("Dock Left");
+  await expect(inspectorMenu.getByTestId("inspector-dock-right")).toHaveText("Dock Right");
+  await expect(inspectorMenu.getByTestId("inspector-dock-top")).toHaveText("Dock Top");
+  await expect(inspectorMenu.getByTestId("inspector-dock-bottom")).toHaveText("Dock Bottom");
+  await inspectorMenu.getByTestId("inspector-dock-left").click();
+  await expect(inspectorMenu).toHaveJSProperty("open", false);
+
+  await inspectorMenu.locator("summary").click();
+  await expect(inspectorMenu).toHaveJSProperty("open", true);
+  await page.getByTestId("chart-toolbar").click({ position: { x: 10, y: 10 } });
+  await expect(inspectorMenu).toHaveJSProperty("open", false);
+
+  const diagnosticsMenu = page.getByTestId("diagnostics-dock-menu");
+  await diagnosticsMenu.locator("summary").click();
+  await expect(diagnosticsMenu).toHaveJSProperty("open", true);
+  await expect(diagnosticsMenu.getByTestId("diagnostics-dock-bottom")).toHaveText("Dock Bottom");
+  await diagnosticsMenu.getByTestId("diagnostics-dock-bottom").click();
+  await expect(diagnosticsMenu).toHaveJSProperty("open", false);
+
+  const inspectorHeading = page.getByTestId("inspector-panel").locator(".rail-heading");
+  await expect(inspectorHeading.locator(".panel-title")).toHaveText("Inspector");
+  await expect(inspectorHeading.locator(".inspector-object-tag")).toHaveText("OBJECT");
+  await expect(page.getByTestId("diagnostics-dock").getByTestId("diagnostics-dock-drag-handle")).toHaveText("Diagnostics");
+  await expect(page.getByTestId("diagnostics-dock")).not.toContainText("Workflow events & errors");
+});
 
 test("Space preserves native control behavior and is inert without an eligible Run", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
