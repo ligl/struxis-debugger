@@ -350,6 +350,41 @@ for (const direction of dockDirections) {
   });
 }
 
+for (const direction of dockDirections) {
+  test(`Inspector pointer resizing updates the active dock axis (${direction})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
+
+    const splitter = page.getByTestId("inspector-resize-edge");
+    const before = Number(await splitter.getAttribute("aria-valuenow"));
+    const bounds = await splitter.boundingBox();
+    expect(bounds).toBeTruthy();
+    const startX = bounds!.x + bounds!.width / 2;
+    const startY = bounds!.y + bounds!.height / 2;
+    const delta = 48;
+    const endX = direction === "left" ? startX + delta
+      : direction === "right" ? startX - delta : startX;
+    const endY = direction === "top" ? startY + delta
+      : direction === "bottom" ? startY - delta : startY;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(endX, endY, { steps: 4 });
+    await page.mouse.up();
+
+    const after = Number(await splitter.getAttribute("aria-valuenow"));
+    expect(after, `Inspector size should change when dragging the ${direction} splitter`).toBeGreaterThan(before + 20);
+    const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
+    expect(chartWorkspace).toBeTruthy();
+    if (direction === "left" || direction === "right") {
+      expect(chartWorkspace!.width).toBeGreaterThan(0);
+    } else {
+      expect(chartWorkspace!.height).toBeGreaterThan(0);
+    }
+  });
+}
+
 test("opposite horizontal docks preserve a usable Chart Workspace at maximum panel sizes", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
