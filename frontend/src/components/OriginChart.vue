@@ -547,6 +547,7 @@ onBeforeUnmount(() => {
             :style="{ left: `${selectionEndX}px` }"
           ></div>
           <div
+            v-if="selectionEditable !== false"
             class="origin-selection-handle origin-selection-handle-end"
             role="slider"
             tabindex="0"
