@@ -7,7 +7,7 @@ const btcFiveMinute: CatalogDatasetEntry = {
   id: "BTC-5M",
   barType: "BTC-5M",
   instrumentId: "BTCUSDT-PERP.BINANCE",
-  timeframe: "300s",
+  timeframe: "5m",
   available: true,
   diagnostic: null,
 };
