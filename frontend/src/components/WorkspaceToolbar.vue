@@ -14,7 +14,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="workflow-toolbar">
+  <div class="workflow-toolbar" data-testid="chart-toolbar">
     <div>
       <p class="section-index">{{ workspaceMode === "dataset" ? "WORKSPACE / 01" : workspaceMode === "replay" ? "WORKSPACE / 02" : "WORKSPACE / 03" }}</p>
       <h2>{{ workspaceMode === "dataset" ? "Dataset Preparation" : workspaceMode === "replay" ? "Run Replay" : "Snapshot Comparison" }}</h2>
