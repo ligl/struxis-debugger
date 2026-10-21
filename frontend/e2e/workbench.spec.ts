@@ -78,6 +78,14 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
     };
   });
 
+  const topbar = page.getByTestId("topbar");
+  await expect(topbar.locator(".brand-name")).toHaveText("STRUXIS DEBUGGER");
+  await expect(page.getByTestId("workspace-dataset")).toHaveText("01  Dataset");
+  await expect(page.getByTestId("workspace-replay")).toHaveText("02  Replay");
+  await expect(page.getByTestId("workspace-compare")).toHaveText("03  Compare");
+  await expect(topbar.locator(".keycap")).toHaveText("CAPITUS");
+  await expect(topbar).toHaveCSS("height", "44px");
+
   expect(hierarchy.shell).toEqual(["topbar", "workbench"]);
   expect(hierarchy.workbench).toEqual(["chart-workspace", "inspector-panel", "diagnostics-dock"]);
   expect(hierarchy.chartWorkspace).toEqual(["chart-toolbar", "chart-panels"]);
@@ -91,7 +99,7 @@ for (const viewport of viewports) {
   test(`workbench fits horizontally at ${viewport.name} (${viewport.width}×${viewport.height})`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Struxis Debugger" })).toBeVisible();
+    await expect(page.getByTestId("topbar").locator(".brand-name")).toBeVisible();
 
     const diagnostics = await layoutDiagnostics(page);
     expect(
