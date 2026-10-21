@@ -158,7 +158,8 @@ describe("Origin Load workbench", () => {
     await wrapper.get('[data-testid="origin-sbar-click-200"]').trigger("click");
 
     expect(wrapper.get('[data-testid="inspector-sbar-id"]').text()).toBe("200");
-    expect(wrapper.get(".inspector-fields").text()).toContain("1970-01-01 00:00");
+    expect(wrapper.get('[data-testid="inspector-sbar-ts-event"]').text()).toBe("1970-01-01 00:00");
+    expect(wrapper.get('[data-testid="inspector-sbar-ts-init"]').text()).toBe("1970-01-01 00:00");
     expect(wrapper.get('[data-testid="inspector-sbar-open"]').text()).toBe("11.00");
     expect(wrapper.get('[data-testid="inspector-sbar-high"]').text()).toBe("13.00");
     expect(wrapper.get('[data-testid="inspector-sbar-low"]').text()).toBe("10.00");
