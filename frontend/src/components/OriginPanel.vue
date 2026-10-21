@@ -55,12 +55,12 @@ defineProps<{
 
       <div class="range-summary">
         <div>
-          <span class="field-label">FIRST SBAR · EVENT TIME</span>
+          <span class="field-label">FIRST SBAR · EVENT TIME · UTC</span>
           <strong>{{ origin.firstSbarId }}</strong>
           <small>{{ formatDomainTimestamp(origin.firstTsEvent, origin.timeframe) }}</small>
         </div>
         <div>
-          <span class="field-label">LAST SBAR · EVENT TIME</span>
+          <span class="field-label">LAST SBAR · EVENT TIME · UTC</span>
           <strong>{{ origin.lastSbarId }}</strong>
           <small>{{ formatDomainTimestamp(origin.lastTsEvent, origin.timeframe) }}</small>
         </div>
