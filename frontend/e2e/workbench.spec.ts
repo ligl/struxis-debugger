@@ -572,11 +572,11 @@ for (const direction of dockDirections) {
     } else if (direction === "right") {
       expect(Math.abs(inspector!.x + inspector!.width - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
       expect(Math.abs(inspector!.x - (diagnostics!.x + diagnostics!.width))).toBeLessThanOrEqual(1);
-      expect(Math.abs(diagnostics!.x - (chartWorkspace!.x + chartWorkspace!.width) - 5)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.x - (chartWorkspace!.x + chartWorkspace!.width))).toBeLessThanOrEqual(1);
     } else if (direction === "top") {
       expect(Math.abs(inspector!.y - workbench!.y)).toBeLessThanOrEqual(1);
       expect(Math.abs(diagnostics!.y - (inspector!.y + inspector!.height))).toBeLessThanOrEqual(1);
-      expect(Math.abs(chartWorkspace!.y - (diagnostics!.y + diagnostics!.height) - 5)).toBeLessThanOrEqual(1);
+      expect(Math.abs(chartWorkspace!.y - (diagnostics!.y + diagnostics!.height))).toBeLessThanOrEqual(1);
     } else {
       expect(Math.abs(inspector!.y + inspector!.height - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
       expect(Math.abs(inspector!.y - (diagnostics!.y + diagnostics!.height))).toBeLessThanOrEqual(1);
