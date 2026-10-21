@@ -2686,13 +2686,13 @@ th, td { padding: 6px 8px; }
 }
 
 .inspector-rail.dock-left {
-  left: var(--inspector-offset-left, 0px);
+  left: 0;
   right: auto;
   border-right: 1px solid #3a444b;
 }
 
 .inspector-rail.dock-right {
-  right: var(--inspector-offset-right, 0px);
+  right: 0;
   left: auto;
   border-left: 1px solid #3a444b;
 }
@@ -2706,13 +2706,13 @@ th, td { padding: 6px 8px; }
 }
 
 .inspector-rail.dock-top {
-  top: var(--inspector-offset-top, 0px);
+  top: 0;
   bottom: auto;
   border-bottom: 1px solid #3a444b;
 }
 
 .inspector-rail.dock-bottom {
-  bottom: var(--inspector-offset-bottom, 0px);
+  bottom: 0;
   top: auto;
   border-top: 1px solid #3a444b;
 }
@@ -2791,15 +2791,15 @@ th, td { padding: 6px 8px; }
 
 .diagnostics-dock.dock-left,
 .diagnostics-dock.dock-right {
-  top: 0;
-  bottom: 0;
+  top: calc(var(--inspector-reserve-top, 0px) + 5px);
+  bottom: calc(var(--inspector-reserve-bottom, 0px) + 5px);
   width: var(--diagnostics-width, 330px);
   height: auto;
   flex-direction: column;
 }
 
-.diagnostics-dock.dock-left { left: 0; right: auto; border-right: 1px solid #3a444b; }
-.diagnostics-dock.dock-right { right: 0; left: auto; border-left: 1px solid #3a444b; }
+.diagnostics-dock.dock-left { left: var(--inspector-reserve-left, 0px); right: auto; border-right: 1px solid #3a444b; }
+.diagnostics-dock.dock-right { right: var(--inspector-reserve-right, 0px); left: auto; border-left: 1px solid #3a444b; }
 
 .diagnostics-dock.dock-top,
 .diagnostics-dock.dock-bottom {
@@ -2810,8 +2810,8 @@ th, td { padding: 6px 8px; }
   flex-direction: column;
 }
 
-.diagnostics-dock.dock-top { top: 0; bottom: auto; border-bottom: 1px solid #3a444b; }
-.diagnostics-dock.dock-bottom { bottom: 0; top: auto; border-top: 1px solid #3a444b; }
+.diagnostics-dock.dock-top { top: var(--inspector-reserve-top, 0px); bottom: auto; border-bottom: 1px solid #3a444b; }
+.diagnostics-dock.dock-bottom { bottom: var(--inspector-reserve-bottom, 0px); top: auto; border-top: 1px solid #3a444b; }
 
 .diagnostics-dock .diagnostics-heading {
   position: relative;
