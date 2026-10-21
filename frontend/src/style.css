@@ -2847,22 +2847,22 @@ th, td { padding: 6px 8px; }
 .diagnostics-dock .panel-resize-edge { position: absolute; z-index: 15; }
 
 .diagnostics-dock.dock-left .diagnostics-resize-edge {
-  top: 0; right: -3px; bottom: 0; left: auto;
+  top: 0; right: 0; bottom: 0; left: auto;
   width: 6px; height: auto; cursor: ew-resize;
 }
 
 .diagnostics-dock.dock-right .diagnostics-resize-edge {
-  top: 0; right: auto; bottom: 0; left: -3px;
+  top: 0; right: auto; bottom: 0; left: 0;
   width: 6px; height: auto; cursor: ew-resize;
 }
 
 .diagnostics-dock.dock-top .diagnostics-resize-edge {
-  top: auto; right: 0; bottom: -3px; left: 0;
+  top: auto; right: 0; bottom: 0; left: 0;
   width: auto; height: 6px; cursor: ns-resize;
 }
 
 .diagnostics-dock.dock-bottom .diagnostics-resize-edge {
-  top: -3px; right: 0; bottom: auto; left: 0;
+  top: 0; right: 0; bottom: auto; left: 0;
   width: auto; height: 6px; cursor: ns-resize;
 }
 
