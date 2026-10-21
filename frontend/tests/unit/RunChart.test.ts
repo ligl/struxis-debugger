@@ -132,12 +132,18 @@ describe("RunChart", () => {
     await nextTick();
 
     expect(mocks.candleSetData).toHaveBeenCalledWith([
-      { time: 1700000060, open: 10, high: 12, low: 9, close: 11 },
-      { time: 1700000120, open: 10, high: 12, low: 9, close: 11 },
+      {
+        time: 1700000060, open: 10, high: 12, low: 9, close: 11,
+        color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B",
+      },
+      {
+        time: 1700000120, open: 10, high: 12, low: 9, close: 11,
+        color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B",
+      },
     ]);
     expect(mocks.volumeSetData).toHaveBeenCalledWith([
-      { time: 1700000060, value: 100, color: "#1d756d" },
-      { time: 1700000120, value: 100, color: "#1d756d" },
+      { time: 1700000060, value: 100, color: "#557E65" },
+      { time: 1700000120, value: 100, color: "#557E65" },
     ]);
     expect(wrapper.get('[data-testid="run-chart-panel"]').attributes("data-sbar-count")).toBe("2");
     expect(mocks.fitContent).toHaveBeenCalledOnce();
@@ -156,7 +162,10 @@ describe("RunChart", () => {
     await nextTick();
 
     expect(mocks.candleSetData).toHaveBeenLastCalledWith([
-      { time: 1700000060, open: 10, high: 12, low: 9, close: 11 },
+      {
+        time: 1700000060, open: 10, high: 12, low: 9, close: 11,
+        color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B",
+      },
       {
         time: 1700000120,
         open: 10,
@@ -169,7 +178,7 @@ describe("RunChart", () => {
       },
     ]);
     expect(mocks.volumeSetData).toHaveBeenLastCalledWith([
-      { time: 1700000060, value: 100, color: "#1d756d" },
+      { time: 1700000060, value: 100, color: "#557E65" },
       { time: 1700000120, value: 100, color: "#454b53" },
     ]);
     expect(wrapper.get(".run-chart-foot").text()).toContain("1 / 2 PROCESSED");
