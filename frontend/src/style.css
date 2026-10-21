@@ -2639,6 +2639,16 @@ th, td { padding: 6px 8px; }
   flex-direction: column;
 }
 
+/* Keep the Chart Workspace edge 5px above bottom-docked Diagnostics, matching
+   the Inspector-to-Diagnostics gap without shrinking chart content internally. */
+.workbench-body.diagnostics-dock-bottom .workbench-main {
+  bottom: calc(
+    var(--diagnostics-reserve-bottom, 0px) +
+    var(--inspector-reserve-bottom, 0px) +
+    5px
+  );
+}
+
 .chart-panels {
   display: grid;
   grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
