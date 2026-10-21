@@ -164,45 +164,51 @@ fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
 
 
 
-pub(crate) fn structure_from_state_view(state: &StruxisStateView<'_>) -> Option<StructureCheckpoint> {
+pub(crate) fn structure_from_state_view(
+    state: &StruxisStateView<'_>,
+) -> Option<StructureCheckpoint> {
     state.structure().map(|structure| {
-            let cbars = structure.cbars().last_n(structure.cbars().len())
-                .into_iter()
-                .map(|cbar| CBarCheckpoint {
-                    cbar_id: cbar.id.to_string(),
-                    high: cbar.high.to_string(),
-                    low: cbar.low.to_string(),
-                    sbar_start_id: cbar.sbar_start_id.to_string(),
-                    sbar_end_id: cbar.sbar_end_id.to_string(),
-                    span_sbars: cbar.span_sbars,
-                    fractal_type: cbar.fractal_type.map(|kind| format!("{kind:?}")),
-                    created_at: cbar.created_at.to_string(),
-                })
-                .collect::<Vec<_>>();
-            let swings = structure.swings().iter()
-                .map(|swing| SwingCheckpoint {
-                    swing_id: swing.id.to_string(),
-                    direction: format!("{:?}", swing.direction),
-                    high: swing.high.to_string(),
-                    low: swing.low.to_string(),
-                    cbar_start_id: swing.cbar_start_id.to_string(),
-                    cbar_end_id: swing.cbar_end_id.to_string(),
-                    sbar_start_id: swing.sbar_start_id.to_string(),
-                    sbar_end_id: swing.sbar_end_id.to_string(),
-                    start_oi: swing.start_oi.map(|value| value.to_string()),
-                    end_oi: swing.end_oi.map(|value| value.to_string()),
-                    volume: swing.volume.to_string(),
-                    span_sbars: swing.span_sbars,
-                    state: format!("{:?}", swing.state),
-                    created_at: swing.created_at.to_string(),
-                    updated_at: swing.updated_at.to_string(),
-                })
-                .collect::<Vec<_>>();
-            StructureCheckpoint {
-                cbar_count: cbars.len(),
-                cbars,
-                swing_count: swings.len(),
-                swings,
-            }
+        let cbars = structure
+            .cbars()
+            .last_n(structure.cbars().len())
+            .into_iter()
+            .map(|cbar| CBarCheckpoint {
+                cbar_id: cbar.id.to_string(),
+                high: cbar.high.to_string(),
+                low: cbar.low.to_string(),
+                sbar_start_id: cbar.sbar_start_id.to_string(),
+                sbar_end_id: cbar.sbar_end_id.to_string(),
+                span_sbars: cbar.span_sbars,
+                fractal_type: cbar.fractal_type.map(|kind| format!("{kind:?}")),
+                created_at: cbar.created_at.to_string(),
+            })
+            .collect::<Vec<_>>();
+        let swings = structure
+            .swings()
+            .iter()
+            .map(|swing| SwingCheckpoint {
+                swing_id: swing.id.to_string(),
+                direction: format!("{:?}", swing.direction),
+                high: swing.high.to_string(),
+                low: swing.low.to_string(),
+                cbar_start_id: swing.cbar_start_id.to_string(),
+                cbar_end_id: swing.cbar_end_id.to_string(),
+                sbar_start_id: swing.sbar_start_id.to_string(),
+                sbar_end_id: swing.sbar_end_id.to_string(),
+                start_oi: swing.start_oi.map(|value| value.to_string()),
+                end_oi: swing.end_oi.map(|value| value.to_string()),
+                volume: swing.volume.to_string(),
+                span_sbars: swing.span_sbars,
+                state: format!("{:?}", swing.state),
+                created_at: swing.created_at.to_string(),
+                updated_at: swing.updated_at.to_string(),
+            })
+            .collect::<Vec<_>>();
+        StructureCheckpoint {
+            cbar_count: cbars.len(),
+            cbars,
+            swing_count: swings.len(),
+            swings,
+        }
     })
 }
