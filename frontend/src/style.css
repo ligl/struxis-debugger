@@ -2539,3 +2539,171 @@ th, td { padding: 6px 8px; }
   top: 52px;
   bottom: auto;
 }
+
+
+/* Unified four-edge docking: both auxiliary panels reserve only their occupied edge. */
+.workbench-body {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.workbench-main {
+  position: absolute;
+  inset: var(--diagnostics-reserve-top, 0px) var(--diagnostics-reserve-right, 0px)
+    var(--diagnostics-reserve-bottom, 0px) var(--diagnostics-reserve-left, 0px);
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+.workbench-body.diagnostics-is-collapsed .workbench-main {
+  inset: 0;
+}
+.diagnostics-dock {
+  position: absolute;
+  z-index: 12;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #3a444b;
+  background: #15191d;
+}
+.diagnostics-dock.dock-left,
+.diagnostics-dock.dock-right {
+  top: 0;
+  bottom: 0;
+  width: var(--diagnostics-width, 330px);
+  height: auto;
+  flex-direction: column;
+}
+.diagnostics-dock.dock-left { left: 0; right: auto; border-right: 1px solid #3a444b; }
+.diagnostics-dock.dock-right { right: 0; left: auto; border-left: 1px solid #3a444b; }
+.diagnostics-dock.dock-top,
+.diagnostics-dock.dock-bottom {
+  left: 0;
+  right: 0;
+  width: auto;
+  height: var(--diagnostics-height, 164px);
+  flex-direction: column;
+}
+.diagnostics-dock.dock-top { top: 0; bottom: auto; border-bottom: 1px solid #3a444b; }
+.diagnostics-dock.dock-bottom { bottom: 0; top: auto; border-top: 1px solid #3a444b; }
+.diagnostics-dock .diagnostics-heading {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 36px;
+  height: auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 9px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #1b2025;
+}
+.diagnostics-dock .diagnostics-heading > div:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.diagnostics-dock .diagnostics-heading h2 { margin: 0; white-space: nowrap; }
+.diagnostics-dock .diagnostics-heading .section-index { margin: 0; white-space: nowrap; }
+.diagnostics-dock .diagnostics-content {
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.diagnostics-dock .panel-resize-edge { position: absolute; z-index: 15; }
+.diagnostics-dock.dock-left .diagnostics-resize-edge {
+  top: 0; right: -3px; bottom: 0; left: auto; width: 6px; height: auto; cursor: ew-resize;
+}
+.diagnostics-dock.dock-right .diagnostics-resize-edge {
+  top: 0; right: auto; bottom: 0; left: -3px; width: 6px; height: auto; cursor: ew-resize;
+}
+.diagnostics-dock.dock-top .diagnostics-resize-edge {
+  top: auto; right: 0; bottom: -3px; left: 0; width: auto; height: 6px; cursor: ns-resize;
+}
+.diagnostics-dock.dock-bottom .diagnostics-resize-edge {
+  top: -3px; right: 0; bottom: auto; left: 0; width: auto; height: 6px; cursor: ns-resize;
+}
+.diagnostics-dock.dock-left .diagnostics-heading,
+.diagnostics-dock.dock-right .diagnostics-heading {
+  align-items: stretch;
+  flex-direction: column;
+}
+.diagnostics-dock.dock-left .diagnostics-heading > div:first-child,
+.diagnostics-dock.dock-right .diagnostics-heading > div:first-child {
+  justify-content: space-between;
+  min-height: 30px;
+}
+.diagnostics-dock.dock-left .diagnostics-heading h2,
+.diagnostics-dock.dock-right .diagnostics-heading h2 { white-space: normal; }
+.diagnostics-dock.dock-left .dock-actions,
+.diagnostics-dock.dock-right .dock-actions { justify-content: flex-end; }
+.diagnostics-reopen {
+  position: absolute;
+  z-index: 13;
+  margin: 0;
+}
+.workbench-body.diagnostics-dock-left .diagnostics-reopen { left: 6px; top: 8px; right: auto; bottom: auto; writing-mode: vertical-rl; }
+.workbench-body.diagnostics-dock-right .diagnostics-reopen { right: 6px; top: 8px; left: auto; bottom: auto; writing-mode: vertical-rl; }
+.workbench-body.diagnostics-dock-top .diagnostics-reopen { left: 8px; top: 6px; right: auto; bottom: auto; }
+.workbench-body.diagnostics-dock-bottom .diagnostics-reopen { left: 8px; bottom: 6px; right: auto; top: auto; }
+
+.primary-workspace.inspector-dock-top,
+.primary-workspace.inspector-dock-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) var(--inspector-height, 145px);
+  overflow: hidden;
+}
+.primary-workspace.inspector-dock-top {
+  grid-template-rows: var(--inspector-height, 145px) minmax(0, 1fr);
+}
+.primary-workspace.inspector-dock-top .inspector-rail { grid-column: 1; grid-row: 1; border: 1px solid #3a444b; }
+.primary-workspace.inspector-dock-top .workspace-content { grid-column: 1; grid-row: 2; }
+.primary-workspace.inspector-dock-bottom .inspector-rail { grid-column: 1; grid-row: 2; border: 1px solid #3a444b; }
+.primary-workspace.inspector-dock-bottom .workspace-content { grid-column: 1; grid-row: 1; }
+.primary-workspace.inspector-dock-top .inspector-rail,
+.primary-workspace.inspector-dock-bottom .inspector-rail {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  overflow: auto;
+}
+.primary-workspace.inspector-dock-top .inspector-rail.collapsed,
+.primary-workspace.inspector-dock-bottom .inspector-rail.collapsed {
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+.primary-workspace.inspector-dock-top.inspector-is-collapsed,
+.primary-workspace.inspector-dock-bottom.inspector-is-collapsed {
+  grid-template-rows: 36px minmax(0, 1fr);
+}
+.primary-workspace.inspector-dock-bottom.inspector-is-collapsed {
+  grid-template-rows: minmax(0, 1fr) 36px;
+}
+.primary-workspace.inspector-dock-top .inspector-resize-edge {
+  top: auto; right: 0; bottom: -3px; left: 0; width: auto; height: 6px; cursor: ns-resize;
+}
+.primary-workspace.inspector-dock-bottom .inspector-resize-edge {
+  top: -3px; right: 0; bottom: auto; left: 0; width: auto; height: 6px; cursor: ns-resize;
+}
+.primary-workspace.inspector-dock-top .inspector-rail.collapsed .inspector-resize-edge,
+.primary-workspace.inspector-dock-bottom .inspector-rail.collapsed .inspector-resize-edge { display: none; }
+.primary-workspace.inspector-dock-top .rail-heading,
+.primary-workspace.inspector-dock-bottom .rail-heading {
+  position: relative;
+  flex: 0 0 36px;
+}
+.primary-workspace.inspector-dock-top .inspector-rail.collapsed .rail-heading,
+.primary-workspace.inspector-dock-bottom .inspector-rail.collapsed .rail-heading { height: 36px; min-height: 36px; }
