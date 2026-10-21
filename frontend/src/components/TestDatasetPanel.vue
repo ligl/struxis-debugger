@@ -34,7 +34,7 @@ const emit = defineEmits<{ create: [] }>();
         <code data-testid="selected-test-range-start">{{ startSbarId }}</code>
         <span aria-hidden="true">→</span>
         <code data-testid="selected-test-range-end">{{ endSbarId }}</code>
-        <strong>{{ selectedRangeCount.toLocaleString() }} SBARS</strong>
+        <strong data-testid="selected-test-range-count">{{ selectedRangeCount.toLocaleString() }}</strong><span>SBARS</span>
       </div>
       <div v-else-if="rangeSelectionPending" class="dataset-range-pending" data-testid="test-range-awaiting-end">
         START <code>{{ startSbarId }}</code> · Select the inclusive end on the chart
