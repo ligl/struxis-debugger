@@ -34,6 +34,13 @@ function mountApp() {
   });
 }
 
+async function enterReplayWorkspace(wrapper: ReturnType<typeof mountApp>): Promise<void> {
+  // Replay controls intentionally exist only in the Replay workspace toolbar.
+  if (!wrapper.find('[data-testid="run-start"]').exists()) {
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+  }
+}
+
 async function selectOriginRange(wrapper: ReturnType<typeof mountApp>): Promise<void> {
   await wrapper.get('[data-testid="origin-sbar-click-100"]').trigger("click");
   await wrapper.get('[data-testid="origin-sbar-click-200"]').trigger("click");
@@ -249,6 +256,7 @@ describe("Origin Load workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+    await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("READY"));
     await vi.waitFor(() => {
@@ -690,6 +698,7 @@ describe("Test, Run and Snapshot workbench", () => {
     );
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
 
+    await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start"]');
     expect(startButton).toBeDefined();
     await startButton!.trigger("click");
@@ -739,6 +748,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
     await wrapper.get('[data-testid="run-stop"]').trigger("click");
@@ -774,6 +784,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
     const readySpaceEvent = new KeyboardEvent("keydown", {
@@ -813,6 +824,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
     await wrapper.get('[data-testid="run-step"]').trigger("click");
@@ -854,6 +866,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
 
@@ -916,6 +929,7 @@ describe("Test, Run and Snapshot workbench", () => {
     document.dispatchEvent(noRunEvent);
     expect(noRunEvent.defaultPrevented).toBe(false);
 
+    await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
 
@@ -929,7 +943,7 @@ describe("Test, Run and Snapshot workbench", () => {
     document.dispatchEvent(repeatedEvent);
     expect(repeatedEvent.defaultPrevented).toBe(false);
 
-    const input = wrapper.get("input");
+    const input = wrapper.get('[data-testid="catalog-enable-structure"]');
     (input.element as HTMLInputElement).focus();
     const inputEvent = new KeyboardEvent("keydown", {
       key: " ",
@@ -980,6 +994,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     const refreshButton = wrapper.get('[data-testid="run-refresh-state"]');
     expect((refreshButton.element as HTMLButtonElement).disabled).toBe(false);
     await refreshButton.trigger("click");
@@ -1014,6 +1029,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     await startButton.trigger("click");
     await startButton.trigger("click");
@@ -1090,6 +1106,7 @@ describe("startup and user-operation coordination", () => {
       datasetId: dataset.id,
       enableStructure: true,
     }));
+    await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
@@ -1125,6 +1142,7 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
     const loadButton = wrapper.find('[data-testid="catalog-load"]');
@@ -1147,6 +1165,7 @@ describe("startup and user-operation coordination", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     await startButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("start_run"));
@@ -1221,6 +1240,7 @@ describe("startup and user-operation coordination", () => {
       endSbarId: "200",
     }));
 
+    await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
