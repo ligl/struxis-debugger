@@ -259,17 +259,17 @@ onMounted(() => {
     },
   });
   candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: "#75c6a1",
-    downColor: "#e17e79",
-    borderUpColor: "#75c6a1",
-    borderDownColor: "#e17e79",
-    wickUpColor: "#75c6a1",
-    wickDownColor: "#e17e79",
+    upColor: "#79B58B",
+    downColor: "#D98282",
+    borderUpColor: "#79B58B",
+    borderDownColor: "#D98282",
+    wickUpColor: "#79B58B",
+    wickDownColor: "#D98282",
     priceLineVisible: false,
     lastValueVisible: true,
   });
   swingSeries = chart.addSeries(LineSeries, {
-    color: "#b8a0df",
+    color: "#C6A06B",
     lineWidth: 2,
     priceLineVisible: false,
     lastValueVisible: false,
@@ -605,11 +605,11 @@ onBeforeUnmount(() => {
 }
 
 .cbar-dot {
-  background: #83add4;
+  background: #A0A7B0;
 }
 
 .swing-dot {
-  background: #b8a0df;
+  background: #C6A06B;
 }
 
 .volume-dot {
