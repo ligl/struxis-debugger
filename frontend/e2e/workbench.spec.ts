@@ -62,6 +62,8 @@ async function layoutDiagnostics(page: Page) {
 test("default Inspector and Diagnostics preserve prototype optical gaps", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
+  // This geometry assertion covers the expanded layout; the default collapsed state is tested separately.
+  await page.getByTestId("diagnostics-collapse-toggle").click();
 
   const workbench = await page.getByTestId("workbench").boundingBox();
   const inspector = await page.getByTestId("inspector-panel").boundingBox();
@@ -181,19 +183,19 @@ test("Dataset catalog controls remain available and Inspector can collapse and r
   await expect(page.getByRole("button", { name: "Collapse Inspector" })).toBeVisible();
 });
 
-test("diagnostics dock can collapse and restore", async ({ page }) => {
+test("Diagnostics is collapsed by default and can expand and collapse", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
 
   const diagnostics = page.getByTestId("diagnostics-dock");
   await expect(diagnostics).toBeVisible();
-  await page.getByTestId("diagnostics-collapse-toggle").click();
-  await expect(diagnostics).toBeVisible();
   await expect(diagnostics).toHaveClass(/collapsed/);
   expect(Math.abs((await diagnostics.boundingBox())!.height - 36)).toBeLessThanOrEqual(1);
+
   await page.getByTestId("diagnostics-collapse-toggle").click();
-  await expect(diagnostics).toBeVisible();
   await expect(diagnostics).not.toHaveClass(/collapsed/);
+  await page.getByTestId("diagnostics-collapse-toggle").click();
+  await expect(diagnostics).toHaveClass(/collapsed/);
 });
 
 for (const direction of ["left", "right"] as const) {
