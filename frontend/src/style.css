@@ -3412,45 +3412,110 @@ th, td { padding: 6px 8px; }
   color: var(--dbg-warning);
 }
 .replay-toolbar-actions {
+  display: flex;
   min-width: 0;
-  gap: 5px;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  white-space: nowrap;
 }
+
+.replay-transport {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.replay-toolbar-actions .subtle-button {
+  min-height: 27px;
+  padding: 0 7px;
+  border-radius: 2px;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .02em;
+}
+
+.replay-toolbar-actions .replay-play-toggle:not(:disabled) {
+  border-color: #477b66;
+  background: #1c3028;
+  color: #a8d7bf;
+}
+
+.replay-toolbar-actions .replay-play-toggle:hover:not(:disabled) {
+  border-color: #75c6a1;
+}
+
 .run-state {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   color: var(--dbg-text-muted);
   font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
   white-space: nowrap;
 }
-.run-state b { color: var(--dbg-success); font-weight: 650; }
-.progress {
-  width: 76px;
+
+.run-state b {
+  color: var(--dbg-text-secondary);
+  font-weight: 650;
+}
+
+.run-state .run-status-running,
+.run-state .run-status-paused,
+.run-state .run-status-completed {
+  color: var(--dbg-success);
+}
+
+.run-state .run-status-failed {
+  color: var(--dbg-danger, #e17e79);
+}
+
+.run-state .run-status-ready,
+.run-state .run-status-disposed,
+.run-state .run-status-none {
+  color: var(--dbg-text-muted);
+}
+
+.replay-progress {
+  width: 74px;
   height: 4px;
-  flex: 0 1 76px;
+  flex: 0 1 74px;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--dbg-surface-3);
 }
-.progress i {
+
+.replay-progress i {
   display: block;
   height: 100%;
   background: var(--dbg-success);
   transition: width 120ms linear;
 }
+
 .toolbar-error {
-  max-width: 180px;
+  max-width: 160px;
   overflow: hidden;
   font-size: 9px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-@media (max-width: 1280px) {
-  .replay-toolbar-actions { gap: 3px; }
-  .replay-toolbar-actions .subtle-button { padding-inline: 5px; font-size: 9px; }
-  .replay-toolbar-actions .progress { display: none; }
-}
 
+@media (max-width: 1280px) {
+  .replay-toolbar-actions {
+    gap: 5px;
+  }
+
+  .replay-toolbar-actions .subtle-button {
+    padding-inline: 5px;
+    font-size: 8px;
+  }
+
+  .replay-progress {
+    width: 48px;
+    flex-basis: 48px;
+  }
+}
 
 /* Dataset mode follows the prototype's single control row above the Origin chart. */
 .dataset-controls-host {
