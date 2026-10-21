@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { CatalogDatasetEntry } from "../origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto } from "../origin-types";
+import OriginPanel from "./OriginPanel.vue";
 interface InstrumentGroup { key: string; label: string; unresolved: boolean; datasets: CatalogDatasetEntry[]; readyCount: number; }
-defineProps<{ datasets: CatalogDatasetEntry[]; selectedId: string; selectedDataset: CatalogDatasetEntry | null; instrumentGroups: InstrumentGroup[]; collapsedInstrumentIds: Set<string>; refreshing: boolean; loading: boolean; mutationBusy: boolean; discoveryError: string; enableStructure: boolean; }>();
+defineProps<{ datasets: CatalogDatasetEntry[]; selectedId: string; selectedDataset: CatalogDatasetEntry | null; instrumentGroups: InstrumentGroup[]; collapsedInstrumentIds: Set<string>; refreshing: boolean; loading: boolean; mutationBusy: boolean; discoveryError: string; enableStructure: boolean; origin: OriginDatasetDto | null; loadStatus: "idle" | "loading" | "loaded" | "failed"; loadError: string; formatTimestamp: (value: string | null) => string; }>();
 const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup: [key: string]; "update:enableStructure": [value: boolean]; load: []; }>();
 </script>
 
@@ -86,5 +87,14 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
           </button>
           <p class="microcopy">Load reads the complete selected BarType stream. No range is applied.</p>
         </div>
+        <details class="catalog-origin-details" :open="Boolean(loadError)">
+          <summary data-testid="catalog-origin-details-toggle">ORIGIN STATUS</summary>
+          <OriginPanel
+            :origin="origin"
+            :load-status="loadStatus"
+            :load-error="loadError"
+            :format-timestamp="formatTimestamp"
+          />
+        </details>
       </aside>
 </template>
