@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { ObjectDifferenceDto, ReplayInspectorDto, SBarDto } from "../origin-types";
+import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
   selectedSbar: SBarDto | null;
   originDatasetId: string | null;
+  timeframe: string | null;
   workspaceMode: "dataset" | "replay" | "compare";
   selectedDifference: ObjectDifferenceDto | null;
   compareBaselineSnapshotId: string | null;
@@ -44,6 +46,16 @@ function formatValue(value: unknown): string {
   if (typeof value === "string") return value;
   return JSON.stringify(value) ?? String(value);
 }
+
+function formatReplayField(field: string, value: unknown): string {
+  if (field === "tsEvent" || field === "tsInit") {
+    return formatDomainTimestamp(value == null ? null : String(value), props.timeframe);
+  }
+  if (field === "createdAt" || field === "updatedAt") {
+    return formatLifecycleTimestamp(value == null ? null : String(value));
+  }
+  return formatValue(value);
+}
 </script>
 
 <template>
@@ -70,12 +82,12 @@ function formatValue(value: unknown): string {
           <dd><code :title="selectedSbar.barType">{{ selectedSbar.barType }}</code></dd>
         </div>
         <div class="inspector-field inspector-field-wide">
-          <dt>Event Timestamp (ns)</dt>
-          <dd><code>{{ selectedSbar.tsEvent }}</code></dd>
+          <dt>Event Time</dt>
+          <dd><code>{{ formatDomainTimestamp(selectedSbar.tsEvent, timeframe) }}</code></dd>
         </div>
         <div class="inspector-field inspector-field-wide">
-          <dt>Init Timestamp (ns)</dt>
-          <dd><code>{{ selectedSbar.tsInit }}</code></dd>
+          <dt>Init Time</dt>
+          <dd><code>{{ formatDomainTimestamp(selectedSbar.tsInit, timeframe) }}</code></dd>
         </div>
       </dl>
       <div class="inspector-subsection">
@@ -219,7 +231,7 @@ function formatValue(value: unknown): string {
         <p class="section-index">SELECTED CBAR PROPERTIES</p>
         <dl class="inspector-fields">
           <div v-for="(value, field) in selectedReplayCbar" :key="field" class="inspector-field">
-            <dt>{{ field }}</dt><dd><code>{{ formatValue(value) }}</code></dd>
+            <dt>{{ field }}</dt><dd><code>{{ formatReplayField(String(field), value) }}</code></dd>
           </div>
         </dl>
       </div>
