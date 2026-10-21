@@ -535,9 +535,28 @@ onUnmounted(() => {
           :workspace-mode="workspaceMode"
           :catalog-collapsed="catalogCollapsed"
           :diagnostics-collapsed="diagnosticsCollapsed"
-          @toggle-catalog="catalogCollapsed = !catalogCollapsed"
-          @toggle-diagnostics="diagnosticsCollapsed = !diagnosticsCollapsed"
-        />
+        >
+          <template #actions v-if="workspaceMode === 'replay'">
+            <div class="toolbar-actions replay-toolbar-actions">
+              <span class="run-state" data-testid="run-toolbar-status">
+                <b>{{ runState?.status ? runState.status.toUpperCase() : "NO RUN" }}</b>
+                <span>{{ runState ? `${runState.processedCount.toLocaleString()} / ${runState.inputCount.toLocaleString()}` : "—" }}</span>
+              </span>
+              <div class="progress" aria-label="Replay progress" role="progressbar" :aria-valuenow="runState?.processedCount ?? 0" :aria-valuemin="0" :aria-valuemax="runState?.inputCount ?? 0">
+                <i :style="{ width: runState && runState.inputCount > 0 ? (runState.processedCount / runState.inputCount * 100) + '%' : '0%' }"></i>
+              </div>
+              <button class="subtle-button" data-testid="run-start" :disabled="!isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('start')">START</button>
+              <button class="subtle-button" data-testid="run-restart" :disabled="!isRunCommandEligible('restart', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('restart')">RESET</button>
+              <button class="subtle-button" data-testid="run-step" :disabled="!isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('step')">STEP</button>
+              <button class="subtle-button" data-testid="run-play-pause" :disabled="!isRunCommandEligible(runState?.status === 'running' ? 'pause' : 'play', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand(runState?.status === 'running' ? 'pause' : 'play')">{{ runState?.status === 'running' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
+              <button class="subtle-button" data-testid="run-stop" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('stop')">STOP</button>
+              <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
+            </div>
+          </template>
+          <template #actions v-else-if="workspaceMode === 'compare'">
+            <span class="tag amber">STRICT MODE</span>
+          </template>
+        </WorkspaceToolbar>
 
         <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
           <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
@@ -567,7 +586,6 @@ onUnmounted(() => {
               <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :range-selection-ready="rangeSelectionReady" :range-selection-pending="rangeSelectionPendingStart !== null" :selected-range-count="selectedRangeCount" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @create="createSelectedTestDataset" />
             </div>
             <div v-show="workspaceMode === 'replay'" class="workspace-mode replay-controls">
-              <RunControlPanel :run-state="runState" :run-busy="runBusy" :run-error="runError" :run-status-message="runStatusMessage" :can-start-run="canStartRun" :can-restart-run="canRestartRun" @command="handleRunCommand" @refresh="refreshRunState" />
               <DualChartStack workspace="replay">
                 <template #upper>
                   <RunChart v-if="workspaceMode === 'replay'" :origin="origin" :test-dataset="testDataset" :run-state="runState" />
