@@ -279,6 +279,23 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
   previewX.value = typeof pointX === "number" && Number.isFinite(pointX) ? pointX : null;
 }
 
+function toggleLayer(layer: keyof typeof layerVisibility.value): void {
+  layerVisibility.value[layer] = !layerVisibility.value[layer];
+
+  if (layer === "sbar") {
+    candleSeries?.applyOptions({ visible: layerVisibility.value.sbar });
+    return;
+  }
+  if (layer === "volume") {
+    volumeSeries?.applyOptions({ visible: layerVisibility.value.volume });
+    return;
+  }
+
+  // Structure overlays are projections of authoritative DTOs. Recompute their
+  // screen coordinates on both hide and restore; never mutate domain data.
+  updateSbarCoordinates();
+}
+
 function fitContent(): void {
   if (!chart || props.bars.length === 0) return;
   chart.timeScale().fitContent();
