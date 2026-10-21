@@ -74,6 +74,7 @@ function makeOrigin(id: string, enableStructure = true): OriginDatasetDto {
     lastSbarId: "200",
     firstTsEvent: "100",
     lastTsEvent: "200",
+    structure: null,
     bars: [
       {
         sbarId: "100",
