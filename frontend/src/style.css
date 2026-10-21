@@ -3707,15 +3707,15 @@ th, td { padding: 6px 8px; }
 }
 
 /* The side Inspector is positioned at the exact edge reserved by workbench-main.
-   Give Dataset's outer Chart Workspace a real 5px gap; internal chart padding
-   cannot resolve overlapping outer borders. Replay/Compare remain unchanged. */
-.workbench-body:not(.catalog-is-hidden).inspector-dock-left .chart-panels {
-  /* Explicitly reduce the flex item's used width as well as offsetting it.
-     This prevents flex sizing from absorbing the left margin. */
-  flex: 0 0 calc(100% - 5px);
-  width: calc(100% - 5px);
-  margin-left: 5px;
-  box-sizing: border-box;
+   The left-facing frame belongs to the positioned workspace itself, so inset that
+   workspace by 5px rather than trying to move only its inner grid. Replay/Compare
+   remain unchanged. */
+.workbench-body:not(.catalog-is-hidden).inspector-dock-left .workbench-main {
+  left: calc(
+    var(--diagnostics-reserve-left, 0px) +
+    var(--inspector-reserve-left, 0px) +
+    5px
+  );
 }
 
 .workbench-body:not(.catalog-is-hidden).inspector-dock-right .chart-panels {
