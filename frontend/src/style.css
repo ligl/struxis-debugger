@@ -2523,3 +2523,14 @@ th, td { padding: 6px 8px; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* The Diagnostics splitter must stay on the edge facing the workspace. */
+.debugger-shell.diagnostics-dock-top .diagnostics-dock {
+  border-top: 0;
+  border-bottom: 1px solid var(--dbg-border-strong);
+}
+.debugger-shell.diagnostics-dock-top .diagnostics-resize-edge {
+  top: auto;
+  bottom: -3px;
+}
