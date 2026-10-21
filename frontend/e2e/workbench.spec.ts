@@ -201,6 +201,41 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
 });
 
 for (const direction of ["left", "right"] as const) {
+  test(`collapsed Diagnostics controls align with Inspector when docked ${direction}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
+    await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+
+    const inspector = page.getByTestId("inspector-panel");
+    const diagnostics = page.getByTestId("diagnostics-dock");
+    await inspector.getByRole("button", { name: "Collapse Inspector" }).click();
+    await diagnostics.getByTestId("diagnostics-collapse-toggle").click();
+
+    const inspectorBox = await inspector.boundingBox();
+    const diagnosticsBox = await diagnostics.boundingBox();
+    const inspectorCollapseBox = await inspector.getByRole("button", { name: "Expand Inspector" }).boundingBox();
+    const diagnosticsCollapseBox = await diagnostics.getByTestId("diagnostics-collapse-toggle").boundingBox();
+    const inspectorMenuBox = await inspector.getByTestId("inspector-dock-menu").locator("summary").boundingBox();
+    const diagnosticsMenuBox = await diagnostics.getByTestId("diagnostics-dock-menu").locator("summary").boundingBox();
+
+    expect(inspectorBox).not.toBeNull();
+    expect(diagnosticsBox).not.toBeNull();
+    expect(inspectorCollapseBox).not.toBeNull();
+    expect(diagnosticsCollapseBox).not.toBeNull();
+    expect(inspectorMenuBox).not.toBeNull();
+    expect(diagnosticsMenuBox).not.toBeNull();
+
+    const inspectorCollapseOffset = inspectorCollapseBox!.y + inspectorCollapseBox!.height / 2 - inspectorBox!.y;
+    const diagnosticsCollapseOffset = diagnosticsCollapseBox!.y + diagnosticsCollapseBox!.height / 2 - diagnosticsBox!.y;
+    const inspectorMenuOffset = inspectorMenuBox!.y + inspectorMenuBox!.height / 2 - inspectorBox!.y;
+    const diagnosticsMenuOffset = diagnosticsMenuBox!.y + diagnosticsMenuBox!.height / 2 - diagnosticsBox!.y;
+    expect(Math.abs(diagnosticsCollapseOffset - inspectorCollapseOffset)).toBeLessThanOrEqual(1);
+    expect(Math.abs(diagnosticsMenuOffset - inspectorMenuOffset)).toBeLessThanOrEqual(1);
+  });
+}
+
+for (const direction of ["left", "right"] as const) {
   test(`collapsed Diagnostics rail shows the full vertical title when docked ${direction}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
