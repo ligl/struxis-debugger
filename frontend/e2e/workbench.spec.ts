@@ -59,6 +59,28 @@ async function layoutDiagnostics(page: Page) {
   });
 }
 
+test("default Inspector and Diagnostics edges align to the prototype's toolbar and workbench bounds", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const workbench = await page.getByTestId("workbench").boundingBox();
+  const toolbar = await page.getByTestId("chart-toolbar").boundingBox();
+  const inspector = await page.getByTestId("inspector-panel").boundingBox();
+  const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
+
+  expect(workbench).toBeTruthy();
+  expect(toolbar).toBeTruthy();
+  expect(inspector).toBeTruthy();
+  expect(diagnostics).toBeTruthy();
+
+  // Prototype geometry: Inspector starts below the Chart Toolbar, stops at
+  // Diagnostics, and touches the Workbench's right edge.
+  expect(Math.abs(inspector!.y - (toolbar!.y + toolbar!.height))).toBeLessThanOrEqual(1);
+  expect(Math.abs(inspector!.y + inspector!.height - diagnostics!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(inspector!.x + inspector!.width - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
+  expect(Math.abs(diagnostics!.y + diagnostics!.height - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
+});
+
 test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
