@@ -191,32 +191,46 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="run-chart-panel" aria-label="Test Dataset SBar chart" data-testid="run-chart-panel"
+  <section class="run-chart-panel" aria-label="Live Replay SBar chart" data-testid="run-chart-panel"
     :data-test-dataset-id="testDataset?.testDatasetId ?? ''" :data-sbar-count="bars.length">
-    <div class="origin-chart-heading">
-      <div class="chart-title-block">
-        <p class="section-index">FIXED TEST INPUT</p>
-        <h3>Test Dataset SBar chart</h3>
-        <span class="chart-instrument">{{ testDataset?.barType ?? origin?.barType ?? "No Test Dataset" }}</span>
+    <header class="run-chart-heading">
+      <div class="run-chart-title">
+        <div class="run-chart-title-line">
+          <span class="run-chart-name">LIVE REPLAY</span>
+          <span class="tag green">CANDIDATE</span>
+        </div>
+        <span class="run-chart-description">Backend-confirmed prefix · OHLCV projection only</span>
       </div>
-      <span class="chart-bar-count" data-testid="run-chart-progress">{{ chartCountLabel }}</span>
+      <div class="run-chart-meta" aria-label="Displayed SBar OHLC">
+        <span><small>O</small><strong>{{ displayedBar?.open ?? "—" }}</strong></span>
+        <span><small>H</small><strong>{{ displayedBar?.high ?? "—" }}</strong></span>
+        <span><small>L</small><strong>{{ displayedBar?.low ?? "—" }}</strong></span>
+        <span><small>C</small><strong :class="displayedBar && Number(displayedBar.close) >= Number(displayedBar.open) ? 'run-chart-up' : 'run-chart-down'">{{ displayedBar?.close ?? "—" }}</strong></span>
+      </div>
+    </header>
+
+    <div class="run-chart-stage">
+      <p v-if="projectionMessage" class="run-chart-message" data-testid="run-chart-empty">{{ projectionMessage }}</p>
+      <p v-else-if="replayProgressApplies && !displayedBar" class="run-chart-message" data-testid="run-chart-awaiting-checkpoint">
+        Waiting for the first backend-confirmed checkpoint. Future input SBars are dimmed.
+      </p>
+      <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="run-chart-error">
+        <strong>Chart projection rejected</strong><span>{{ chartError }}</span>
+      </div>
+      <div ref="chartHost" class="run-chart-host" data-testid="run-chart-canvas"
+        :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
+      <div class="run-chart-legend" aria-label="Chart legend">
+        <span><i class="run-legend-sbar"></i>SBar</span>
+        <span><i class="run-legend-volume"></i>Volume</span>
+        <span class="run-chart-structure-gap">STRUCTURE OVERLAY NOT PROJECTED</span>
+      </div>
     </div>
-    <div v-if="displayedBar" class="chart-data-strip" aria-label="Displayed Test SBar OHLCV">
-      <span><small>O</small><strong>{{ displayedBar.open }}</strong></span>
-      <span><small>H</small><strong>{{ displayedBar.high }}</strong></span>
-      <span><small>L</small><strong>{{ displayedBar.low }}</strong></span>
-      <span><small>C</small><strong>{{ displayedBar.close }}</strong></span>
-      <span><small>VOL</small><strong>{{ displayedBar.volume }}</strong></span>
-      <span class="chart-latest-id"><small>{{ replayProgressApplies ? "CURSOR SBAR ID" : "LAST SBAR ID" }}</small><strong>{{ displayedBar.sbarId }}</strong></span>
-    </div>
-    <p v-else-if="replayProgressApplies" class="microcopy chart-selection-hint" data-testid="run-chart-awaiting-checkpoint">
-      Waiting for the first backend-confirmed checkpoint. Future input SBars are dimmed.
-    </p>
-    <p v-if="projectionMessage" class="microcopy chart-selection-hint" data-testid="run-chart-empty">{{ projectionMessage }}</p>
-    <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="run-chart-error">
-      <strong>Chart projection rejected</strong><span>{{ chartError }}</span>
-    </div>
-    <div ref="chartHost" class="run-chart-host" data-testid="run-chart-canvas"
-      :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
+
+    <footer class="run-chart-foot">
+      <span>{{ testDataset?.timeframe ?? origin?.timeframe ?? "—" }}</span>
+      <span>VISIBLE <b>{{ chartCountLabel }}</b></span>
+      <span>STATE <b :class="`run-status-${runState?.status ?? 'none'}`">{{ runState?.status?.toUpperCase() ?? "NO RUN" }}</b></span>
+      <span class="run-chart-cursor"><span>{{ replayProgressApplies ? "CURSOR SBAR ID" : "LAST SBAR ID" }}</span><b>{{ displayedBar?.sbarId ?? "—" }}</b></span>
+    </footer>
   </section>
 </template>
