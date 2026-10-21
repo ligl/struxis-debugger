@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ObjectDifferenceDto, SnapshotArtifactDto, SnapshotCompareResultDto } from "../origin-types";
 
-const props = defineProps<{
+defineProps<{
   snapshots: SnapshotArtifactDto[];
   snapshotsLoading: boolean;
   snapshotsError: string;
