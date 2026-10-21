@@ -205,7 +205,7 @@ onBeforeUnmount(() => {
         <span><small>O</small><strong>{{ displayedBar?.open ?? "—" }}</strong></span>
         <span><small>H</small><strong>{{ displayedBar?.high ?? "—" }}</strong></span>
         <span><small>L</small><strong>{{ displayedBar?.low ?? "—" }}</strong></span>
-        <span><small>C</small><strong :class="displayedBar && Number(displayedBar.close) >= Number(displayedBar.open) ? 'run-chart-up' : 'run-chart-down'">{{ displayedBar?.close ?? "—" }}</strong></span>
+        <span><small>C</small><strong :class="displayedBar ? (Number(displayedBar.close) >= Number(displayedBar.open) ? 'run-chart-up' : 'run-chart-down') : ''">{{ displayedBar?.close ?? "—" }}</strong></span>
       </div>
     </header>
 
