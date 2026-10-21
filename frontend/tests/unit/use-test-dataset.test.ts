@@ -19,6 +19,7 @@ const origin = (id: string): OriginDatasetDto => ({
   lastSbarId: "200",
   firstTsEvent: "100",
   lastTsEvent: "200",
+  structure: null,
   bars: [],
 });
 
