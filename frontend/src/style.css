@@ -2921,3 +2921,160 @@ th, td { padding: 6px 8px; }
     border-bottom: 1px solid var(--dbg-border);
   }
 }
+
+/* Prototype spacing pass — keep the workbench dense and align controls to shared rows. */
+:root {
+  line-height: 1.4;
+}
+
+.debugger-shell {
+  gap: 0;
+}
+
+.workflow-toolbar {
+  display: flex;
+  flex: 0 0 42px;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+.workflow-toolbar > div:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflow-toolbar .section-index {
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+  letter-spacing: .06em;
+}
+
+.workflow-toolbar h2 {
+  min-width: 0;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.subtle-button {
+  min-height: 28px;
+  padding: 0 8px;
+  line-height: 1;
+}
+
+.chart-panels {
+  gap: 0;
+}
+
+.chart-panels > .catalog-rail {
+  padding: 8px;
+  border-right: 1px solid var(--dbg-border);
+}
+
+.chart-panels > .workspace-content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  padding: 5px 6px;
+  overflow: auto;
+}
+
+.workspace-mode {
+  min-width: 0;
+  min-height: 0;
+}
+
+.replay-controls,
+.compare-workspace {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0;
+}
+
+.replay-controls > .dual-chart-stack,
+.compare-workspace > .dual-chart-stack {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.inspector-rail {
+  padding: 0;
+}
+
+.inspector-rail .rail-heading {
+  display: flex;
+  flex: 0 0 36px;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #1b2025;
+}
+
+.inspector-rail .rail-heading .panel-dock-drag-handle {
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.inspector-rail .rail-heading .dock-menu {
+  margin-left: auto;
+}
+
+.inspector-rail .object-inspector {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.diagnostics-dock .diagnostics-heading {
+  flex: 0 0 36px;
+  min-height: 36px;
+  padding: 0 9px;
+}
+
+.diagnostics-dock .diagnostics-content {
+  padding: 8px 10px;
+}
+
+@media (max-width: 1100px) {
+  .workflow-toolbar {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+
+  .workflow-toolbar > div:first-child {
+    gap: 7px;
+  }
+
+  .workflow-toolbar h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .toolbar-actions {
+    gap: 4px;
+  }
+}
