@@ -1135,11 +1135,21 @@ body,
 }
 
 .inspector-rail {
+  display: flex;
   min-width: 0;
+  min-height: 0;
+  flex-direction: column;
   padding: 12px;
-  overflow: auto;
+  /* Dock menus must escape the panel's scrollport instead of being clipped. */
+  overflow: visible;
   border-left: 1px solid var(--dbg-border);
   background: var(--dbg-bg);
+}
+
+.inspector-rail > .inspector-object {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 .inspector-rail.collapsed {
@@ -2643,7 +2653,8 @@ th, td { padding: 6px 8px; }
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) var(--inspector-height, 145px);
-  overflow: hidden;
+  /* The workspace content has its own scrollport; let dock menus escape. */
+  overflow: visible;
 }
 .primary-workspace.inspector-dock-top {
   grid-template-rows: var(--inspector-height, 145px) minmax(0, 1fr);
