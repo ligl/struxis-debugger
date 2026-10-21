@@ -236,6 +236,16 @@ function handleOriginSelectionError(message: string): void {
   rangeSelectionStatus.value = message;
 }
 
+function cancelOriginRangeSelection(): void {
+  rangeSelectionPendingStart.value = null;
+  rangeSelectionReady.value = false;
+  startSbarId.value = "";
+  endSbarId.value = "";
+  selectedRangeCount.value = 0;
+  rangeSelectionStatus.value =
+    "Range selection cancelled. Click the chart to choose a new start SBar.";
+}
+
 async function createSelectedTestDataset(): Promise<void> {
   if (!rangeSelectionReady.value) return;
   await createTestDataset();
@@ -717,6 +727,7 @@ onUnmounted(() => {
                 @sbar-click="handleOriginSbarClick"
                 @range-boundary-change="handleOriginBoundaryChange"
                 @selection-error="handleOriginSelectionError"
+                @cancel-range-selection="cancelOriginRangeSelection"
               />
             </template>
             <div v-show="workspaceMode === 'replay'" class="workspace-mode replay-controls">
