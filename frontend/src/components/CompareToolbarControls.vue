@@ -39,7 +39,7 @@ function requestCompare(): void {
   <div class="toolbar-actions compare-toolbar-actions" data-testid="compare-toolbar-controls">
     <label class="compare-toolbar-select">
       <span>BASELINE</span>
-      <select v-model="baselineId" data-testid="compare-baseline-select" :disabled="compareLoading">
+      <select v-model="baselineId" data-testid="compare-baseline-select" aria-label="Baseline Snapshot" :disabled="compareLoading">
         <option value="" disabled>Select baseline</option>
         <option v-for="snapshot in completeSnapshots" :key="snapshot.snapshotId!" :value="snapshot.snapshotId!">
           {{ snapshot.snapshotId }} · {{ snapshot.runId }}
@@ -48,7 +48,7 @@ function requestCompare(): void {
     </label>
     <label class="compare-toolbar-select">
       <span>CANDIDATE</span>
-      <select v-model="candidateId" data-testid="compare-candidate-select" :disabled="compareLoading">
+      <select v-model="candidateId" data-testid="compare-candidate-select" aria-label="Candidate Snapshot" :disabled="compareLoading">
         <option value="" disabled>Select candidate</option>
         <option v-for="snapshot in completeSnapshots" :key="snapshot.snapshotId!" :value="snapshot.snapshotId!">
           {{ snapshot.snapshotId }} · {{ snapshot.runId }}
