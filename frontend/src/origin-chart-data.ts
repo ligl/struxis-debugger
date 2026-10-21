@@ -88,11 +88,21 @@ export function mapOriginBarsToChart(bars: readonly SBarDto[]): OriginChartProje
     }
 
     const time = timeSeconds as UTCTimestamp;
-    candles.push({ time, open, high, low, close });
+    const directionColor = close > open ? "#79B58B" : close < open ? "#D98282" : "#858D97";
+    candles.push({
+      time,
+      open,
+      high,
+      low,
+      close,
+      color: directionColor,
+      borderColor: directionColor,
+      wickColor: directionColor,
+    });
     volume.push({
       time,
       value: barVolume,
-      color: close >= open ? "#1d756d" : "#983b42",
+      color: close > open ? "#557E65" : close < open ? "#8D555B" : "#858D97",
     });
     sbarIdByTime.set(timeSeconds, bar.sbarId);
   }
