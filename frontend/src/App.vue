@@ -192,11 +192,7 @@ const canRestartRun = computed(
     !runBusy.value,
 );
 
-const {
-  collapsedInstrumentIds,
-  instrumentGroups,
-  toggleInstrumentGroup,
-} = useCatalogGroups(datasets);
+const { instrumentGroups } = useCatalogGroups(datasets);
 
 // Layout-only state: changing workspace or panel visibility never mutates domain state.
 type WorkspaceMode = "dataset" | "replay" | "compare";
@@ -611,7 +607,6 @@ onUnmounted(() => {
                     :selected-id="selectedId"
                     :selected-dataset="selectedDataset"
                     :instrument-groups="instrumentGroups"
-                    :collapsed-instrument-ids="collapsedInstrumentIds"
                     :refreshing="refreshing"
                     :loading="loading"
                     :mutation-busy="!canLoadOrigin"
@@ -623,7 +618,6 @@ onUnmounted(() => {
                     :format-timestamp="formatTimestamp"
                     @refresh="refreshDatasets"
                     @select-dataset="selectedId = $event"
-                    @toggle-group="toggleInstrumentGroup"
                     @update:enable-structure="enableStructure = $event"
                     @load="startLoad"
                   />
