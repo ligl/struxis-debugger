@@ -512,22 +512,8 @@ onBeforeUnmount(() => {
           v-if="selectionStartX !== null"
           class="origin-selection-line origin-selection-line-start"
           data-testid="origin-selection-start-line"
-          :style="{ left: `${selectionStartX}px` }"
-        ></div>
-        <div
-          v-if="selectionEditable !== false && !selectionPending && selectionStartX !== null && selectionEndX !== null"
-          class="origin-selection-handle origin-selection-handle-start"
-          role="slider"
-          tabindex="0"
-          aria-label="Adjust Test interval start boundary"
-          :aria-valuemin="0"
-          :aria-valuemax="Math.max(0, bars.length - 1)"
-          :aria-valuenow="Math.max(0, bars.findIndex((bar) => bar.sbarId === selectionStartSbarId))"
-          :aria-valuetext="selectionStartSbarId ?? ''"
-          data-testid="origin-selection-start-handle"
-          :style="{ left: `${selectionStartX}px` }"
+          :style="{ left: `${selectionStartX}px`, pointerEvents: selectionEditable !== false && !selectionPending && selectionEndX !== null ? 'auto' : 'none', cursor: selectionEditable !== false && !selectionPending && selectionEndX !== null ? 'ew-resize' : 'default' }"
           @pointerdown.stop="startBoundaryDrag('start', $event)"
-          @keydown="handleBoundaryKey('start', $event)"
         ></div>
         <div
           v-if="selectionPending && selectionStartX !== null && previewX !== null"
@@ -544,22 +530,8 @@ onBeforeUnmount(() => {
           <div
             class="origin-selection-line origin-selection-line-end"
             data-testid="origin-selection-end-line"
-            :style="{ left: `${selectionEndX}px` }"
-          ></div>
-          <div
-            v-if="selectionEditable !== false"
-            class="origin-selection-handle origin-selection-handle-end"
-            role="slider"
-            tabindex="0"
-            aria-label="Adjust Test interval end boundary"
-            :aria-valuemin="0"
-            :aria-valuemax="Math.max(0, bars.length - 1)"
-            :aria-valuenow="Math.max(0, bars.findIndex((bar) => bar.sbarId === selectionEndSbarId))"
-            :aria-valuetext="selectionEndSbarId ?? ''"
-            data-testid="origin-selection-end-handle"
-            :style="{ left: `${selectionEndX}px` }"
+            :style="{ left: `${selectionEndX}px`, pointerEvents: selectionEditable !== false ? 'auto' : 'none', cursor: selectionEditable !== false ? 'ew-resize' : 'default' }"
             @pointerdown.stop="startBoundaryDrag('end', $event)"
-            @keydown="handleBoundaryKey('end', $event)"
           ></div>
         </template>
       </div>
@@ -795,39 +767,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
   color: #a5b0b7;
   text-overflow: ellipsis;
-}
-
-.origin-selection-handle {
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  bottom: 0;
-  width: 12px;
-  transform: translateX(-50%);
-  cursor: ew-resize;
-  pointer-events: auto;
-  touch-action: none;
-  outline: none;
-}
-
-.origin-selection-handle::after {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 30px;
-  border: 1px solid #171c20;
-  border-radius: 2px;
-  background: #d6a85d;
-  box-shadow: 0 0 0 1px rgb(214 168 93 / 45%);
-  content: "";
-  transform: translate(-50%, -50%);
-}
-
-.origin-selection-handle:focus-visible::after,
-.origin-selection-handle:hover::after {
-  width: 6px;
-  background: #f0c879;
 }
 
 .origin-chart-empty {
