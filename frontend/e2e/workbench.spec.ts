@@ -84,14 +84,20 @@ test("workspace navigation updates the visible workflow", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
 
-  await page.getByRole("button", { name: "02 / Test & Replay" }).click();
-  await expect(page.getByRole("heading", { name: "Test Dataset & Replay" })).toBeVisible();
+  await page.getByTestId("workspace-replay").click();
+  await expect(page.getByTestId("workspace-replay")).toHaveClass(/active/);
+  await expect(page.getByRole("heading", { name: "Run Replay" })).toBeVisible();
+  await expect(page.locator(".replay-controls")).toBeVisible();
 
-  await page.getByRole("button", { name: "03 / Snapshots" }).click();
-  await expect(page.getByRole("heading", { name: "Snapshot Inventory" })).toBeVisible();
+  await page.getByTestId("workspace-compare").click();
+  await expect(page.getByTestId("workspace-compare")).toHaveClass(/active/);
+  await expect(page.getByRole("heading", { name: "Snapshot Comparison" })).toBeVisible();
+  await expect(page.locator(".compare-workspace")).toBeVisible();
 
-  await page.getByRole("button", { name: "01 / Origin" }).click();
-  await expect(page.getByRole("heading", { name: "Origin Load" })).toBeVisible();
+  await page.getByTestId("workspace-dataset").click();
+  await expect(page.getByTestId("workspace-dataset")).toHaveClass(/active/);
+  await expect(page.getByRole("heading", { name: "Dataset Preparation" })).toBeVisible();
+  await expect(page.locator(".dataset-preparation-panel")).toBeVisible();
 });
 
 test("catalog and inspector can collapse and restore", async ({ page }) => {
@@ -237,15 +243,15 @@ test("dock splitters stay on the workspace-facing panel edge", async ({ page }) 
 
   // Bottom-docked layout preserves DOM reading order and keeps the footer last.
   const defaultOrder = await page.evaluate(() => {
+    const shell = document.querySelector<HTMLElement>("[data-testid='debugger-shell']")!.getBoundingClientRect();
     const topbar = document.querySelector<HTMLElement>(".workbench-topbar")!.getBoundingClientRect();
     const body = document.querySelector<HTMLElement>("[data-testid='workbench-body']")!.getBoundingClientRect();
     const diagnostics = document.querySelector<HTMLElement>("[data-testid='diagnostics-dock']")!.getBoundingClientRect();
-    const footer = document.querySelector<HTMLElement>(".footer-bar")!.getBoundingClientRect();
-    return { topbarBottom: topbar.bottom, bodyTop: body.top, bodyBottom: body.bottom, diagnosticsTop: diagnostics.top, diagnosticsBottom: diagnostics.bottom, footerTop: footer.top };
+    return { shellBottom: shell.bottom, topbarBottom: topbar.bottom, bodyTop: body.top, bodyBottom: body.bottom, diagnosticsTop: diagnostics.top, diagnosticsBottom: diagnostics.bottom };
   });
   expect(defaultOrder.topbarBottom).toBeLessThanOrEqual(defaultOrder.bodyTop);
   expect(defaultOrder.bodyBottom).toBeLessThanOrEqual(defaultOrder.diagnosticsTop);
-  expect(defaultOrder.diagnosticsBottom).toBeLessThanOrEqual(defaultOrder.footerTop);
+  expect(defaultOrder.diagnosticsBottom).toBeLessThanOrEqual(defaultOrder.shellBottom);
 
   // Bottom-docked Diagnostics: splitter belongs on the panel's top edge.
   let diagnostics = await diagnosticsGeometry();
@@ -256,17 +262,17 @@ test("dock splitters stay on the workspace-facing panel edge", async ({ page }) 
   await page.getByTestId("diagnostics-dock-top").click();
   await expect(page.getByTestId("debugger-shell")).toHaveClass(/diagnostics-dock-top/);
 
-  // TOP docking must reorder the footer too: header → Diagnostics → workspace → footer.
+  // The frozen prototype has no visible footer/status bar; validate the shell boundary instead.
   const topDockOrder = await page.evaluate(() => {
+    const shell = document.querySelector<HTMLElement>("[data-testid='debugger-shell']")!.getBoundingClientRect();
     const topbar = document.querySelector<HTMLElement>(".workbench-topbar")!.getBoundingClientRect();
     const body = document.querySelector<HTMLElement>("[data-testid='workbench-body']")!.getBoundingClientRect();
     const diagnostics = document.querySelector<HTMLElement>("[data-testid='diagnostics-dock']")!.getBoundingClientRect();
-    const footer = document.querySelector<HTMLElement>(".footer-bar")!.getBoundingClientRect();
-    return { topbarBottom: topbar.bottom, diagnosticsTop: diagnostics.top, diagnosticsBottom: diagnostics.bottom, bodyTop: body.top, bodyBottom: body.bottom, footerTop: footer.top };
+    return { shellBottom: shell.bottom, topbarBottom: topbar.bottom, diagnosticsTop: diagnostics.top, diagnosticsBottom: diagnostics.bottom, bodyTop: body.top, bodyBottom: body.bottom };
   });
   expect(topDockOrder.topbarBottom).toBeLessThanOrEqual(topDockOrder.diagnosticsTop);
   expect(topDockOrder.diagnosticsBottom).toBeLessThanOrEqual(topDockOrder.bodyTop);
-  expect(topDockOrder.bodyBottom).toBeLessThanOrEqual(topDockOrder.footerTop);
+  expect(topDockOrder.bodyBottom).toBeLessThanOrEqual(topDockOrder.shellBottom);
 
   // Top-docked Diagnostics: splitter must move to the panel's bottom edge.
   diagnostics = await diagnosticsGeometry();
