@@ -269,6 +269,8 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() => expect(wrapper.get('[data-testid="inspector-replay-checkpoint"]').text()).toBe("0"));
 
     expect(wrapper.get('[data-testid="inspector-replay-sbar-id"]').text()).toBe("100");
+    expect(wrapper.get('[data-testid="inspector-replay-ts-event"]').text()).toBe("1970-01-01 00:00");
+    expect(wrapper.get('[data-testid="inspector-replay-ts-init"]').text()).toBe("1970-01-01 00:00");
     expect(wrapper.get('[data-testid="inspector-replay-cbars"]').text()).toContain("100");
     expect(wrapper.get('[data-testid="inspector-replay-swings"]').text()).toContain("Extending");
     expect(invokeMock).toHaveBeenCalledWith("get_replay_inspector");
