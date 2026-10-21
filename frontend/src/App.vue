@@ -491,8 +491,21 @@ function formatTimestamp(value: string | null): string {
   return value || "—";
 }
 
+function closeDockMenus(event?: Event): void {
+  const target = event?.target;
+  document.querySelectorAll<HTMLDetailsElement>(".dock-menu[open]").forEach((menu) => {
+    if (target instanceof Element && menu.contains(target)) return;
+    menu.open = false;
+  });
+}
+
+function handleDockMenuPointerDown(event: PointerEvent): void {
+  closeDockMenus(event);
+}
+
 onMounted(async () => {
   document.addEventListener("keydown", handleReplayShortcut);
+  document.addEventListener("pointerdown", handleDockMenuPointerDown);
   window.addEventListener("pointermove", handlePanelResize);
   window.addEventListener("pointerup", stopPanelResize);
   window.addEventListener("pointercancel", stopPanelResize);
@@ -514,6 +527,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener("keydown", handleReplayShortcut);
+  document.removeEventListener("pointerdown", handleDockMenuPointerDown);
   if (runPollInterval !== null) window.clearInterval(runPollInterval);
   runPollInterval = null;
   window.removeEventListener("pointermove", handlePanelResize);
@@ -658,17 +672,19 @@ onUnmounted(() => {
       <aside data-testid="inspector-panel" class="inspector-rail" :class="['dock-' + inspectorDock, { collapsed: inspectorCollapsed }]">
         <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" :aria-orientation="inspectorDock === 'left' || inspectorDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidth : inspectorHeight" :aria-valuemin="inspectorDock === 'left' || inspectorDock === 'right' ? 180 : 100" :aria-valuemax="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidthLimit() : inspectorHeightLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
         <div class="rail-heading">
-          <span class="section-index panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">INSPECTOR</span>
+          <span class="panel-title panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">Inspector</span>
+          <span class="tag inspector-object-tag">OBJECT</span>
+          <span class="spacer"></span>
           <details class="dock-menu" data-testid="inspector-dock-menu">
-            <summary class="subtle-button rail-toggle" aria-label="Inspector panel options" title="Inspector panel options">⋯</summary>
+            <summary class="subtle-button rail-toggle" aria-label="Move Inspector" title="Move or dock panel">⋯</summary>
             <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
-              <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="inspectorDock = 'left'">LEFT</button>
-              <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="inspectorDock = 'right'">RIGHT</button>
-              <button class="dock-menu-option" data-testid="inspector-dock-top" :aria-pressed="inspectorDock === 'top'" @click="inspectorDock = 'top'">TOP</button>
-              <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="inspectorDock = 'bottom'">BOTTOM</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="inspectorDock = 'left'; closeDockMenus()">Dock Left</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="inspectorDock = 'right'; closeDockMenus()">Dock Right</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-top" :aria-pressed="inspectorDock === 'top'" @click="inspectorDock = 'top'; closeDockMenus()">Dock Top</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="inspectorDock = 'bottom'; closeDockMenus()">Dock Bottom</button>
             </div>
           </details>
-          <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
+          <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" :title="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '+' : '−' }}</button>
         </div>
         <ObjectInspector
           v-if="!inspectorCollapsed"
@@ -691,8 +707,7 @@ onUnmounted(() => {
           @dragstart="startDockDrag('diagnostics', $event)"
         >
           <div class="diagnostics-title-block">
-            <p class="section-index" data-testid="diagnostics-dock-drag-handle">DIAGNOSTICS</p>
-            <h2>Workflow events &amp; errors</h2>
+            <span class="panel-title diagnostics-panel-title" data-testid="diagnostics-dock-drag-handle">Diagnostics</span>
           </div>
           <nav class="diagnostics-tabs" data-testid="diagnostics-category-tabs" aria-label="Diagnostic categories">
             <button v-for="category in [
@@ -710,10 +725,10 @@ onUnmounted(() => {
             <details class="dock-menu" data-testid="diagnostics-dock-menu">
               <summary class="subtle-button" aria-label="Diagnostics panel options" title="Diagnostics panel options">⋯</summary>
               <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
-                <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="diagnosticsDock = 'left'">LEFT</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="diagnosticsDock = 'right'">RIGHT</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="diagnosticsDock = 'top'">TOP</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'">BOTTOM</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="diagnosticsDock = 'left'; closeDockMenus()">Dock Left</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="diagnosticsDock = 'right'; closeDockMenus()">Dock Right</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="diagnosticsDock = 'top'; closeDockMenus()">Dock Top</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'; closeDockMenus()">Dock Bottom</button>
               </div>
             </details>
             <button class="subtle-button" data-testid="diagnostics-collapse-toggle"  :aria-label="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" :title="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" @click="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? '+' : '−' }}</button>
