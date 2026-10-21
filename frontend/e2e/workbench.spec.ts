@@ -194,7 +194,7 @@ test("overflowing workspace content scrolls inside its own panel", async ({ page
 });
 
 
-test("both auxiliary panels support four-way docking with edge-aligned splitters", async ({ page }) => {
+test("Inspector supports four-way docking with an edge-aligned splitter", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await expect(page.getByTestId("inspector-rail")).toBeVisible();
@@ -243,6 +243,44 @@ test("both auxiliary panels support four-way docking with edge-aligned splitters
     else expect(inspector.splitterHeight).toBeGreaterThan(0);
     });
   }
+});
+
+
+test("Diagnostics supports four-way docking with an edge-aligned splitter", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+
+  const directions = ["left", "right", "top", "bottom"] as const;
+  const openDockMenu = async (testId: string) => {
+    const menu = page.getByTestId(testId);
+    if (!(await menu.evaluate((element) => (element as HTMLDetailsElement).open))) {
+      await menu.locator("summary").click();
+    }
+    await expect(menu).toHaveJSProperty("open", true);
+  };
+  const chooseDockDirection = async (menuTestId: string, optionTestId: string) => {
+    const menu = page.getByTestId(menuTestId);
+    const option = page.getByTestId(optionTestId);
+    await openDockMenu(menuTestId);
+    await expect(option).toBeVisible();
+    await option.click();
+    await expect(option).toHaveAttribute("aria-pressed", "true");
+    // Docking moves the panel and therefore its menu anchor. Close the native
+    // details popover after each choice so the next iteration measures/clicks
+    // against the newly laid out panel instead of a stale open overlay.
+    await menu.evaluate((element) => { (element as HTMLDetailsElement).open = false; });
+    await expect(menu).toHaveJSProperty("open", false);
+  };
+  const inspectPanel = (testId: string, splitterTestId: string) => page.evaluate(({ testId, splitterTestId }) => {
+    const panel = document.querySelector<HTMLElement>(`[data-testid='${testId}']`)!;
+    const splitter = document.querySelector<HTMLElement>(`[data-testid='${splitterTestId}']`)!;
+    const p = panel.getBoundingClientRect();
+    const s = splitter.getBoundingClientRect();
+    return { left: p.left, right: p.right, top: p.top, bottom: p.bottom,
+      splitterLeft: s.left, splitterRight: s.right, splitterTop: s.top, splitterBottom: s.bottom,
+      splitterWidth: s.width, splitterHeight: s.height };
+  }, { testId, splitterTestId });
 
   for (const direction of directions) {
     await test.step(`Diagnostics docks ${direction}`, async () => {
