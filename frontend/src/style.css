@@ -982,6 +982,13 @@ body,
   letter-spacing: 0;
 }
 
+.workbench-topbar .top-divider {
+  width: 1px;
+  height: 20px;
+  flex: 0 0 1px;
+  border-left: 1px solid #30383f;
+}
+
 .workbench-topbar .workspace-tabs {
   display: flex;
   height: 100%;
@@ -1072,6 +1079,10 @@ body,
   .workbench-topbar .brand {
     gap: 7px;
     font-size: 11px;
+  }
+
+  .workbench-topbar .top-divider {
+    height: 18px;
   }
 
   .workbench-topbar .workspace-tab {
