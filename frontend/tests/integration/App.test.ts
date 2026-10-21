@@ -943,6 +943,7 @@ describe("Test, Run and Snapshot workbench", () => {
     document.dispatchEvent(repeatedEvent);
     expect(repeatedEvent.defaultPrevented).toBe(false);
 
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     const input = wrapper.get('[data-testid="catalog-enable-structure"]');
     (input.element as HTMLInputElement).focus();
     const inputEvent = new KeyboardEvent("keydown", {
@@ -954,6 +955,7 @@ describe("Test, Run and Snapshot workbench", () => {
     input.element.dispatchEvent(inputEvent);
     expect(inputEvent.defaultPrevented).toBe(false);
 
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
     const button = wrapper.get("button.workspace-tab");
     (button.element as HTMLButtonElement).focus();
     const buttonEvent = new KeyboardEvent("keydown", {
@@ -1145,6 +1147,7 @@ describe("startup and user-operation coordination", () => {
     await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     const loadButton = wrapper.find('[data-testid="catalog-load"]');
     expect((loadButton.element as HTMLButtonElement).disabled).toBe(true);
     await loadButton.trigger("click");
@@ -1169,6 +1172,7 @@ describe("startup and user-operation coordination", () => {
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     await startButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("start_run"));
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
 
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     expect((replaceButton.element as HTMLButtonElement).disabled).toBe(true);
