@@ -84,6 +84,8 @@ describe("Struxis Debugger native desktop", () => {
         timeoutMsg: "The Compare workspace did not become visible.",
       },
     );
+    await $('[data-testid="compare-toolbar-controls"]').waitForDisplayed();
+    await $('[data-testid="compare-summary"]').waitForDisplayed();
     await $('[data-testid="dual-chart-stack-compare"]').waitForDisplayed();
     await $('[data-testid="compare-candidate-chart"]').waitForDisplayed();
     await $('[data-testid="compare-baseline-chart"]').waitForDisplayed();
@@ -340,6 +342,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
+    await $('[data-testid="test-dataset-controls"]').waitForDisplayed();
     const originChart = await $('[data-testid="origin-chart-panel"]');
     await originChart.waitForDisplayed();
     const sbarCount = Number(await originChart.getAttribute("data-sbar-count"));
