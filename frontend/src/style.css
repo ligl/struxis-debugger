@@ -3874,3 +3874,48 @@ th, td { padding: 6px 8px; }
   .compare-toolbar-select > span { display: none; }
   .compare-toolbar-select select { width: 100px; max-width: 100px; }
 }
+
+
+/* Collapsed horizontal Inspector rails follow the Diagnostics toolbar geometry. */
+.inspector-rail.collapsed.dock-top,
+.inspector-rail.collapsed.dock-bottom {
+  padding: 0;
+}
+.inspector-rail.collapsed.dock-top .rail-heading,
+.inspector-rail.collapsed.dock-bottom .rail-heading {
+  width: 100%;
+  min-height: 36px;
+  flex: 0 0 36px;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+}
+.inspector-rail.collapsed.dock-top .panel-title,
+.inspector-rail.collapsed.dock-bottom .panel-title,
+.inspector-rail.collapsed.dock-top .inspector-object-tag,
+.inspector-rail.collapsed.dock-bottom .inspector-object-tag,
+.inspector-rail.collapsed.dock-top .dock-menu,
+.inspector-rail.collapsed.dock-bottom .dock-menu {
+  display: none;
+}
+.inspector-rail.collapsed.dock-top .rail-heading > .spacer,
+.inspector-rail.collapsed.dock-bottom .rail-heading > .spacer {
+  display: none;
+}
+.inspector-rail.collapsed.dock-top .rail-heading > .rail-toggle,
+.inspector-rail.collapsed.dock-bottom .rail-heading > .rail-toggle {
+  writing-mode: horizontal-tb;
+  transform: none;
+}
+
+/* Side Diagnostics rails hide the redundant toggle; clicking the title rail reopens. */
+.diagnostics-dock.collapsed.dock-left .dock-actions > [data-testid="diagnostics-collapse-toggle"],
+.diagnostics-dock.collapsed.dock-right .dock-actions > [data-testid="diagnostics-collapse-toggle"] {
+  display: none;
+}
+.diagnostics-dock.collapsed.dock-left .diagnostics-heading,
+.diagnostics-dock.collapsed.dock-right .diagnostics-heading {
+  cursor: pointer;
+}
