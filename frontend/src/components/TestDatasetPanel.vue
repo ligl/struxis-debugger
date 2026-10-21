@@ -15,169 +15,261 @@ defineProps<{
   testError: string;
   testStatus: string;
 }>();
+
 const emit = defineEmits<{ create: [] }>();
 </script>
 
 <template>
-  <section class="dataset-controls" data-testid="test-dataset-controls">
-    <div class="dataset-controls-label">
-      <span class="section-index">TEST INPUT</span>
-      <strong>TEST DATASET</strong>
-      <span class="status-label" :class="{ loaded: testDataset }">
-        {{ testDataset ? "READY" : "NOT CREATED" }}
-      </span>
+  <section class="dataset-controls-wrap" data-testid="test-dataset-controls">
+    <div class="dataset-controls">
+      <slot name="source" />
+
+      <div class="dataset-range-summary">
+        <div v-if="rangeSelectionReady" class="dataset-range-selected" data-testid="selected-test-range">
+          <span>INCLUSIVE INTERVAL</span>
+          <code data-testid="selected-test-range-start">{{ startSbarId }}</code>
+          <span aria-hidden="true">→</span>
+          <code data-testid="selected-test-range-end">{{ endSbarId }}</code>
+          <strong data-testid="selected-test-range-count">{{ selectedRangeCount.toLocaleString() }}</strong>
+          <span>SBARS</span>
+        </div>
+        <div v-else-if="rangeSelectionPending" class="dataset-range-pending" data-testid="test-range-awaiting-end">
+          START <code>{{ startSbarId }}</code> · Select end on chart
+        </div>
+        <div v-else-if="origin" class="dataset-range-empty" data-testid="test-range-not-selected">
+          Select inclusive interval on chart
+        </div>
+        <div v-else class="dataset-range-empty">
+          Load Origin to select interval
+        </div>
+        <span class="dataset-range-status" data-testid="origin-range-selection-status" aria-live="polite">
+          {{ rangeSelectionStatus }}
+        </span>
+      </div>
+
+      <span class="spacer"></span>
+
+      <button
+        class="primary-button dataset-create-button"
+        data-testid="test-dataset-create"
+        :disabled="testLoading || !canMutateTest || !rangeSelectionReady"
+        @click="emit('create')"
+      >
+        {{ testLoading ? "VALIDATING…" : testDataset ? "REPLACE TEST DATASET" : "CREATE TEST DATASET" }}
+      </button>
+
+      <details v-if="testDataset" class="test-dataset-details">
+        <summary data-testid="test-dataset-details-toggle">TEST DETAILS</summary>
+        <div class="test-dataset-detail-list">
+          <div><span>TEST DATASET ID</span><code>{{ testDataset.testDatasetId }}</code></div>
+          <div><span>ORIGIN ID</span><code>{{ testDataset.originDatasetId }}</code></div>
+          <div><span>VALIDATED RANGE</span><code>{{ testDataset.startSbarId }} → {{ testDataset.endSbarId }}</code></div>
+          <div><span>SBAR COUNT</span><strong>{{ testDataset.sbarCount.toLocaleString() }}</strong></div>
+          <div><span>SEQUENCE FINGERPRINT</span><code>{{ testDataset.sbarSequenceFingerprint }}</code></div>
+        </div>
+      </details>
     </div>
 
-    <div class="dataset-range-summary">
-      <div v-if="rangeSelectionReady" class="dataset-range-selected" data-testid="selected-test-range">
-        <span>INCLUSIVE RANGE</span>
-        <code data-testid="selected-test-range-start">{{ startSbarId }}</code>
-        <span aria-hidden="true">→</span>
-        <code data-testid="selected-test-range-end">{{ endSbarId }}</code>
-        <strong data-testid="selected-test-range-count">{{ selectedRangeCount.toLocaleString() }}</strong><span>SBARS</span>
-      </div>
-      <div v-else-if="rangeSelectionPending" class="dataset-range-pending" data-testid="test-range-awaiting-end">
-        START <code>{{ startSbarId }}</code> · Select the inclusive end on the chart
-      </div>
-      <div v-else-if="origin" class="dataset-range-empty" data-testid="test-range-not-selected">
-        Select an inclusive interval directly on the Origin chart
-      </div>
-      <div v-else class="dataset-range-empty">
-        Load a validated Origin before selecting a Test interval.
-      </div>
-      <span class="dataset-range-status" data-testid="origin-range-selection-status" aria-live="polite">
-        {{ rangeSelectionStatus }}
-      </span>
+    <div v-if="!canMutateTest && origin || testError || testStatus" class="dataset-controls-feedback">
+      <p v-if="!canMutateTest && origin" class="dataset-feedback-note">
+        Dispose the current Run before replacing its Test Dataset.
+      </p>
+      <p v-if="testError" class="error-message" role="alert">{{ testError }}</p>
+      <p v-else-if="testStatus" class="success-message" role="status">{{ testStatus }}</p>
     </div>
-
-    <span class="spacer"></span>
-
-    <button
-      class="primary-button dataset-create-button"
-      data-testid="test-dataset-create"
-      :disabled="testLoading || !canMutateTest || !rangeSelectionReady"
-      @click="emit('create')"
-    >
-      {{ testLoading ? "VALIDATING…" : testDataset ? "REPLACE TEST DATASET" : "CREATE TEST DATASET" }}
-    </button>
-
-    <details v-if="testDataset" class="test-dataset-details">
-      <summary data-testid="test-dataset-details-toggle">DETAILS</summary>
-      <div class="test-dataset-detail-list">
-        <div><span>TEST DATASET ID</span><code>{{ testDataset.testDatasetId }}</code></div>
-        <div><span>ORIGIN ID</span><code>{{ testDataset.originDatasetId }}</code></div>
-        <div><span>VALIDATED RANGE</span><code>{{ testDataset.startSbarId }} → {{ testDataset.endSbarId }}</code></div>
-        <div><span>SBAR COUNT</span><strong>{{ testDataset.sbarCount.toLocaleString() }}</strong></div>
-        <div><span>SEQUENCE FINGERPRINT</span><code>{{ testDataset.sbarSequenceFingerprint }}</code></div>
-      </div>
-    </details>
-
-    <p v-if="!canMutateTest && origin" class="dataset-controls-message">
-      Dispose the current Run before replacing its Test Dataset.
-    </p>
-    <p v-if="testError" class="error-message dataset-controls-message" role="alert">{{ testError }}</p>
-    <p v-else-if="testStatus" class="success-message dataset-controls-message" role="status">{{ testStatus }}</p>
   </section>
 </template>
 
 <style scoped>
-.dataset-controls {
-  min-height: 36px;
-  gap: 8px;
-  padding: 4px 9px;
-  border-bottom-color: #252c32;
+.dataset-controls-wrap {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: visible;
+  border-bottom: 1px solid #252c32;
   background: #14191d;
 }
 
-.dataset-controls-label {
-  gap: 6px;
-}
-
-.dataset-controls-label .section-index {
-  display: none;
-}
-
-.dataset-controls-label > strong {
-  font-size: 9px;
-  letter-spacing: .055em;
-}
-
-.dataset-controls-label .status-label {
-  padding: 2px 4px;
-  font-size: 7px;
+.dataset-controls {
+  display: flex;
+  min-width: 0;
+  min-height: 39px;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 9px;
 }
 
 .dataset-range-summary {
-  flex: 1 1 0;
-  gap: 7px;
+  display: flex;
+  flex: 1 1 260px;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
 }
 
 .dataset-range-selected {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-items: center;
   gap: 5px;
-  font-size: 8px;
+  color: #aab4bb;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
 }
 
 .dataset-range-selected > span:first-child {
+  color: #89949d;
   font-size: 7px;
-  letter-spacing: .025em;
+  letter-spacing: .04em;
 }
 
 .dataset-range-selected code {
-  max-width: 190px;
+  max-width: 170px;
   overflow: hidden;
+  color: #e3e8eb;
   font-size: 8px;
   text-overflow: ellipsis;
 }
 
-.dataset-range-selected strong,
-.dataset-range-selected > span:last-child {
-  font-size: 8px;
+.dataset-range-selected strong {
+  color: #75c6a1;
+  font-weight: 600;
 }
 
 .dataset-range-pending,
 .dataset-range-empty {
+  min-width: 0;
+  overflow: hidden;
+  color: #89949d;
   font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataset-range-pending code {
+  color: #e3e8eb;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .dataset-range-status {
-  flex: 0 1 210px;
-  font-size: 8px;
+  flex: 0 1 170px;
+  min-width: 0;
+  overflow: hidden;
+  color: #66727b;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dataset-create-button {
-  min-height: 26px;
-  padding: 0 8px;
+  flex: 0 0 auto;
+  min-height: 27px;
+  padding: 0 9px;
   font-size: 8px;
   letter-spacing: .025em;
+  white-space: nowrap;
+}
+
+.test-dataset-details {
+  position: relative;
+  flex: 0 0 auto;
+  color: #aab4bb;
+  font-size: 9px;
 }
 
 .test-dataset-details > summary {
-  padding: 4px 5px;
-  font-size: 7px;
+  padding: 5px 6px;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  color: #89949d;
+  cursor: pointer;
+  font: 7px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+  list-style: none;
+  white-space: nowrap;
 }
 
-.dataset-controls-message {
-  max-width: 150px;
+.test-dataset-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.test-dataset-details[open] {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 3px);
+  right: 6px;
+  width: min(460px, calc(100vw - 40px));
+  padding: 8px;
+  border: 1px solid #30383f;
+  background: #191e23;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 38%);
+}
+
+.test-dataset-detail-list {
+  display: grid;
+  gap: 6px;
+}
+
+.test-dataset-detail-list > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.test-dataset-detail-list span {
+  color: #89949d;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.test-dataset-detail-list code,
+.test-dataset-detail-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #e3e8eb;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.dataset-controls-feedback {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 9px 6px;
+  border-top: 1px solid #252c32;
+  color: #89949d;
   font-size: 8px;
+}
+
+.dataset-controls-feedback p {
+  margin: 0;
+}
+
+.dataset-controls-feedback .error-message,
+.dataset-controls-feedback .success-message {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 8px;
+}
+
+.dataset-feedback-note {
+  color: #d8b16b;
 }
 
 @media (max-width: 1180px) {
   .dataset-controls {
     flex-wrap: wrap;
-    row-gap: 5px;
+    row-gap: 6px;
   }
 
   .dataset-range-summary {
     flex-basis: 100%;
-    order: 3;
-  }
-
-  .dataset-controls > .spacer {
-    display: none;
+    order: 4;
   }
 
   .dataset-range-status {
-    flex: 1 1 140px;
+    flex: 1 1 120px;
   }
 }
 </style>
