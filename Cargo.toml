@@ -12,7 +12,7 @@ catalog-integration-tests = []
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["devtools"] }
 capitus-struxis = { workspace = true }
 capitus-strategy = { workspace = true }
 nautilus-persistence = { workspace = true }
