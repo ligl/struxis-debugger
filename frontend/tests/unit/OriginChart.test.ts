@@ -486,7 +486,7 @@ describe("OriginChart", () => {
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([]);
     expect(wrapper.findAll('[data-testid="cbar-range-rectangle"]')).toHaveLength(0);
-    expect(chartMocks.swingSetData).toHaveBeenCalledWith([]);
+    expect(wrapper.findAll('[data-testid="swing-state-segment"]')).toHaveLength(0);
     wrapper.unmount();
   });
 
