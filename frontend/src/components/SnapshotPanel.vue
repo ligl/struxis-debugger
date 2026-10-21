@@ -6,7 +6,7 @@ defineProps<{
   snapshotsLoading: boolean;
   snapshotsError: string;
   snapshotKindLabel: (kind: SnapshotArtifactDto["kind"]) => string;
-  formatTimestamp: (value: string | null) => string;
+  formatLifecycleTimestamp: (value: string | null) => string;
   compareResult: SnapshotCompareResultDto | null;
   compareLoading: boolean;
   compareError: string;
@@ -49,7 +49,7 @@ function differenceKey(difference: ObjectDifferenceDto): string {
             <th>ARTIFACT / SNAPSHOT ID</th>
             <th>RUN ID</th>
             <th>STATE KEY</th>
-            <th>GENERATED AT · NS</th>
+            <th>GENERATED AT</th>
             <th>CHECKPOINTS</th>
             <th>CLASSIFICATION</th>
           </tr>
@@ -59,7 +59,7 @@ function differenceKey(difference: ObjectDifferenceDto): string {
             <td><strong>{{ snapshot.snapshotId ?? snapshot.fileName }}</strong><small>{{ snapshot.fileName }}</small></td>
             <td>{{ snapshot.runId ?? "—" }}</td>
             <td>{{ snapshot.stateKey ?? "—" }}</td>
-            <td>{{ formatTimestamp(snapshot.generatedAt) }}</td>
+            <td>{{ formatLifecycleTimestamp(snapshot.generatedAt) }}</td>
             <td>{{ snapshot.checkpointCount ?? "—" }}</td>
             <td><span class="artifact-kind" :class="{ verified: snapshot.kind === 'complete', invalid: snapshot.kind === 'invalidPublished' || snapshot.kind === 'unreadableTemporary' }">{{ snapshotKindLabel(snapshot.kind) }}</span><small v-if="snapshot.diagnostic" class="diagnostic">{{ snapshot.diagnostic }}</small></td>
           </tr>
