@@ -945,56 +945,142 @@ body,
 }
 
 .workbench-topbar {
-  flex: 0 0 auto;
-  min-height: 60px;
-  padding: 10px 16px;
+  flex: 0 0 44px;
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
   gap: 18px;
-  background: var(--dbg-surface-1);
+  padding: 0 16px;
+  border-bottom: 1px solid #30383f;
+  background: #171b1f;
 }
 
-.brand-block {
-  min-width: 190px;
+.workbench-topbar .brand {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  color: #e3e8eb;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
-.brand-block h1 {
-  margin: 3px 0 0;
-  font-size: 17px;
-  letter-spacing: -0.02em;
+.workbench-topbar .brandmark {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  place-items: center;
+  border: 1px solid #64717a;
+  border-radius: 3px;
+  color: #c9d2d8;
+  font: 700 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0;
 }
 
-.brand-block .eyebrow {
-  font-size: 9px;
+.workbench-topbar .workspace-tabs {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
 }
 
-.workspace-switcher,
-.toolbar-actions {
+.workbench-topbar .workspace-tab {
+  height: 31px;
+  min-height: 31px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #89949d;
+  font: 11px/1.2 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.workbench-topbar .workspace-tab:hover {
+  border-color: #30383f;
+  background: #20262c;
+  color: #e3e8eb;
+}
+
+.workbench-topbar .workspace-tab.active {
+  border-color: #30383f;
+  background: #242a30;
+  color: #e3e8eb;
+  box-shadow: none;
+}
+
+.workbench-topbar .top-right {
   display: flex;
   min-width: 0;
+  margin-left: auto;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
+  gap: 14px;
+  color: #89949d;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-.workspace-tab {
-  min-height: 32px;
-  padding: 7px 11px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--dbg-text-secondary);
-  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
-  cursor: pointer;
+.workbench-topbar .runtime-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  color: #89949d;
+  font: 11px/1.2 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0;
 }
 
-.workspace-tab:hover {
-  background: var(--dbg-surface-2);
-  color: var(--dbg-text-primary);
+.workbench-topbar .status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  margin-right: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: #66727b;
+  box-shadow: none;
 }
 
-.workspace-tab.active {
-  border-color: var(--dbg-selection-border);
-  background: var(--dbg-selection-surface);
-  color: var(--dbg-text-primary);
-  box-shadow: inset 0 -2px var(--dbg-accent);
+.workbench-topbar .status-dot.active {
+  background: #75c6a1;
+}
+
+.workbench-topbar .keycap {
+  padding: 2px 5px;
+  border: 1px solid #414a51;
+  border-radius: 3px;
+  color: #b5bec4;
+  font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (max-width: 1050px) {
+  .workbench-topbar {
+    gap: 10px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .workbench-topbar .brand {
+    gap: 7px;
+    font-size: 11px;
+  }
+
+  .workbench-topbar .workspace-tab {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .workbench-topbar .top-right {
+    gap: 8px;
+  }
 }
 
 .workbench-body {
