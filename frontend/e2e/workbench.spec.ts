@@ -175,6 +175,23 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
   await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 });
 
+for (const direction of ["left", "right", "top", "bottom"] as const) {
+  test(`Diagnostics title visibility follows ${direction} docking`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+
+    const titleBlock = page.getByTestId("diagnostics-dock").locator(".diagnostics-heading > div:first-child");
+    if (direction === "left" || direction === "right") {
+      await expect(titleBlock).toBeVisible();
+      await expect(titleBlock.locator("h2")).toBeVisible();
+    } else {
+      await expect(titleBlock).toBeHidden();
+      await expect(page.getByTestId("diagnostics-dock").locator(".dock-actions")).toBeVisible();
+    }
+  });
+}
+
 test("Space preserves native control behavior and is inert without an eligible Run", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
