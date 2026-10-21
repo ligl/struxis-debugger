@@ -57,7 +57,7 @@ function utcParts(nanoseconds: bigint): { year: string; month: string; day: stri
   };
 }
 
-function formatAtPrecision(value: string | null | undefined, precision: "day" | "minute" | "second"): string {
+function formatAtPrecision(value: string | null | undefined, precision: "day" | "hour" | "minute" | "second"): string {
   const nanoseconds = parseEpochNanoseconds(value);
   if (nanoseconds === null) return value == null || value.trim() === "" ? "—" : "Invalid timestamp";
 
@@ -65,6 +65,7 @@ function formatAtPrecision(value: string | null | undefined, precision: "day" | 
   if (!parts) return "Invalid timestamp";
   const date = parts.year + "-" + parts.month + "-" + parts.day;
   if (precision === "day") return date;
+  if (precision === "hour") return date + " " + parts.hour + ":00";
   const minute = date + " " + parts.hour + ":" + parts.minute;
   if (precision === "minute") return minute;
   return minute + ":" + parts.second;
@@ -75,6 +76,7 @@ export function formatDomainTimestamp(value: string | null | undefined, timefram
   const unit = parseTimeframeUnit(timeframe);
   if (!unit) return value == null || value.trim() === "" ? "—" : "Invalid timeframe";
   if (unit === "day" || unit === "week") return formatAtPrecision(value, "day");
+  if (unit === "hour") return formatAtPrecision(value, "hour");
   if (unit === "second") return formatAtPrecision(value, "second");
   return formatAtPrecision(value, "minute");
 }
