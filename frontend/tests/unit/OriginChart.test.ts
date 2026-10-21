@@ -96,7 +96,7 @@ describe("OriginChart", () => {
       return null;
     });
     chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : 1);
-    chartMocks.priceToCoordinate.mockImplementation((price: number) => price === 13 ? 30 : price === 9 ? 70 : null);
+    chartMocks.priceToCoordinate.mockImplementation((price: number) => price === 13 || price === 12 ? 30 : price === 9 ? 70 : null);
     installResizeObserverMock();
     installChartMock();
   });
