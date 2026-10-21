@@ -192,11 +192,15 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
 
-  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+  const diagnostics = page.getByTestId("diagnostics-dock");
+  await expect(diagnostics).toBeVisible();
   await page.getByRole("button", { name: "Hide Diagnostics" }).click();
-  await expect(page.getByTestId("diagnostics-dock")).toBeHidden();
+  await expect(diagnostics).toBeVisible();
+  await expect(diagnostics).toHaveClass(/collapsed/);
+  expect(Math.abs((await diagnostics.boundingBox())!.height - 36)).toBeLessThanOrEqual(1);
   await page.getByRole("button", { name: "Show Diagnostics" }).click();
-  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+  await expect(diagnostics).toBeVisible();
+  await expect(diagnostics).not.toHaveClass(/collapsed/);
 });
 
 for (const direction of ["left", "right", "top", "bottom"] as const) {
