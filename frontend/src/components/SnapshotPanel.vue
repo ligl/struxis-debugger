@@ -49,7 +49,7 @@ function differenceKey(difference: ObjectDifferenceDto): string {
             <th>ARTIFACT / SNAPSHOT ID</th>
             <th>RUN ID</th>
             <th>STATE KEY</th>
-            <th>GENERATED AT</th>
+            <th>GENERATED AT · UTC</th>
             <th>CHECKPOINTS</th>
             <th>CLASSIFICATION</th>
           </tr>
