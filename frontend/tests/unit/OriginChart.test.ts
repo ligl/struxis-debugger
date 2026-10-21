@@ -8,6 +8,9 @@ const chartMocks = vi.hoisted(() => ({
   createChart: vi.fn(),
   candleSetData: vi.fn(),
   volumeSetData: vi.fn(),
+  cbarHighSetData: vi.fn(),
+  cbarLowSetData: vi.fn(),
+  swingSetData: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
   setVisibleLogicalRange: vi.fn(),
@@ -29,6 +32,7 @@ vi.mock("lightweight-charts", () => ({
   CandlestickSeries: { kind: "candlestick" },
   ColorType: { Solid: "solid" },
   HistogramSeries: { kind: "histogram" },
+  LineSeries: { kind: "line" },
   createChart: chartMocks.createChart,
 }));
 
@@ -61,6 +65,9 @@ function installChartMock() {
   const chart = {
     addSeries: vi.fn()
       .mockReturnValueOnce({ setData: chartMocks.candleSetData })
+      .mockReturnValueOnce({ setData: chartMocks.cbarHighSetData })
+      .mockReturnValueOnce({ setData: chartMocks.cbarLowSetData })
+      .mockReturnValueOnce({ setData: chartMocks.swingSetData })
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
@@ -115,6 +122,7 @@ describe("OriginChart", () => {
           }),
         ],
         originDatasetId: "origin-1",
+        structure: null,
       },
     });
 
@@ -162,6 +170,70 @@ describe("OriginChart", () => {
     expect(chartMocks.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
   });
 
+  it("renders only the authoritative CBar extrema and Swing endpoints from the Structure projection", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        high: "13",
+        low: "10",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-structure",
+        structure: {
+          cbarCount: 1,
+          cbars: [{
+            cbarId: "1700000000000000000",
+            high: "13",
+            low: "9",
+            sbarStartId: bars[0]!.sbarId,
+            sbarEndId: bars[1]!.sbarId,
+            spanSbars: 2,
+            fractalType: null,
+            createdAt: "1700000000000000000",
+          }],
+          swingCount: 1,
+          swings: [{
+            swingId: "1700000000000000000",
+            direction: "Up",
+            high: "13",
+            low: "9",
+            cbarStartId: "1700000000000000000",
+            cbarEndId: "1700000000000000000",
+            sbarStartId: bars[0]!.sbarId,
+            sbarEndId: bars[1]!.sbarId,
+            startOi: null,
+            endOi: null,
+            volume: "200",
+            spanSbars: 2,
+            state: "Confirmed",
+            createdAt: "1700000000000000000",
+            updatedAt: "1700000000000000000",
+          }],
+        },
+      },
+    });
+
+    expect(chartMocks.cbarHighSetData).toHaveBeenCalledWith([
+      { time: 1700000060, value: 13 },
+    ]);
+    expect(chartMocks.cbarLowSetData).toHaveBeenCalledWith([
+      { time: 1700000060, value: 9 },
+    ]);
+    expect(chartMocks.swingSetData).toHaveBeenCalledWith([
+      { time: 1700000000, value: 9 },
+      { time: 1700000060, value: 13 },
+    ]);
+    expect(wrapper.text()).toContain("CBar");
+    expect(wrapper.text()).toContain("Swing");
+    wrapper.unmount();
+  });
+
   it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", async () => {
     const wrapper = mount(OriginChart, {
       props: {
@@ -174,6 +246,7 @@ describe("OriginChart", () => {
           }),
         ],
         originDatasetId: "origin-clicks",
+        structure: null,
       },
     });
 
@@ -212,6 +285,7 @@ describe("OriginChart", () => {
           }),
         ],
         originDatasetId: "origin-command",
+        structure: null,
       },
     });
 
@@ -252,6 +326,7 @@ describe("OriginChart", () => {
           }),
         ],
         originDatasetId: "origin-overlay",
+        structure: null,
         selectionStartSbarId: "1700000000000000000",
         selectionEndSbarId: null,
         selectionPending: true,
@@ -292,6 +367,7 @@ describe("OriginChart", () => {
       props: {
         bars: [],
         originDatasetId: "origin-1",
+        structure: null,
       },
     });
 
@@ -357,6 +433,7 @@ describe("OriginChart", () => {
       props: {
         bars: [],
         originDatasetId: "origin-empty",
+        structure: null,
       },
     });
 
