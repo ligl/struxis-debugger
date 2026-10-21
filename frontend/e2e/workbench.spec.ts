@@ -256,17 +256,20 @@ test("dock menus match prototype labels and dismiss after selection or outside c
   await expect(diagnosticsMenu).toHaveJSProperty("open", false);
 
   const inspectorHeading = page.getByTestId("inspector-panel").locator(".rail-heading");
-  const inspectorHeaderButtons = [
+  const diagnosticsActions = page.getByTestId("diagnostics-dock").locator(".dock-actions");
+  const headerIconButtons = [
     inspectorHeading.locator('[data-testid="inspector-dock-menu"] > summary'),
     inspectorHeading.locator(':scope > .rail-toggle'),
+    page.getByTestId("diagnostics-dock-menu").locator(":scope > summary"),
+    diagnosticsActions.getByTestId("diagnostics-collapse-toggle"),
   ];
-  for (const button of inspectorHeaderButtons) {
+  for (const button of headerIconButtons) {
     await expect(button).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
     await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await button.hover();
+    await expect(button).not.toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
+    await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   }
-  const diagnosticsMenuButton = page.getByTestId("diagnostics-dock-menu").locator(":scope > summary");
-  await expect(diagnosticsMenuButton).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
-  await expect(diagnosticsMenuButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(inspectorHeading.locator(".panel-title")).toHaveText("Inspector");
   await expect(inspectorHeading.locator(".inspector-object-tag")).toHaveText("OBJECT");
   await expect(page.getByTestId("diagnostics-dock").getByTestId("diagnostics-dock-drag-handle")).toHaveText("Diagnostics");
