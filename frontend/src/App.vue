@@ -713,6 +713,7 @@ onUnmounted(() => {
                 :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
                 :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
                 :selection-pending="rangeSelectionPendingStart !== null"
+                :selection-editable="canMutateTest && !testLoading"
                 @sbar-click="handleOriginSbarClick"
                 @range-boundary-change="handleOriginBoundaryChange"
                 @selection-error="handleOriginSelectionError"
