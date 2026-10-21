@@ -54,7 +54,7 @@ type SwingSegment = {
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
-  Confirmed: { color: "#C6A06B", dasharray: "" },
+  Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
   Extending: { color: "#8FA9C4", dasharray: "2 3" },
 };
@@ -506,7 +506,7 @@ onBeforeUnmount(() => {
           :x2="segment.x2"
           :y2="segment.y2"
           :stroke="segment.color"
-          stroke-width="2"
+          stroke-width="1.25"
           :stroke-dasharray="segment.dasharray || undefined"
           stroke-linecap="round"
           data-testid="swing-state-segment"
