@@ -23,6 +23,7 @@ const props = defineProps<{
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
+  rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
@@ -60,6 +61,8 @@ const secondSbarX = ref<number | null>(null);
 const selectionStartX = ref<number | null>(null);
 const selectionEndX = ref<number | null>(null);
 const previewX = ref<number | null>(null);
+let draggingBoundary: "start" | "end" | null = null;
+let lastEmittedBoundaryId: string | null = null;
 
 function coordinateForSbarId(sbarId: string | null | undefined): number | null {
   if (!chart || !sbarId) return null;
@@ -202,6 +205,52 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   selectSbarById(sbarId);
 }
 
+function resolveBoundaryDragSbar(clientX: number): string | null {
+  if (!chartHost.value || !Number.isFinite(clientX) || sbarIdByLogicalIndex.length === 0) return null;
+  const bounds = chartHost.value.getBoundingClientRect();
+  const logical = chart?.timeScale().coordinateToLogical(clientX - bounds.left);
+  if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
+
+  let index = Math.round(logical);
+  const currentStart = sbarIdByLogicalIndex.indexOf(props.selectionStartSbarId ?? "");
+  const currentEnd = sbarIdByLogicalIndex.indexOf(props.selectionEndSbarId ?? "");
+  if (currentStart < 0 || currentEnd < 0) return null;
+
+  // Keep a valid inclusive interval throughout the drag. The handles cannot
+  // cross; moving either edge is clamped to the other edge's SBar.
+  index = Math.max(0, Math.min(sbarIdByLogicalIndex.length - 1, index));
+  index = draggingBoundary === "start"
+    ? Math.min(index, currentEnd)
+    : Math.max(index, currentStart);
+  return sbarIdByLogicalIndex[index] ?? null;
+}
+
+function startBoundaryDrag(edge: "start" | "end", event: PointerEvent): void {
+  if (event.button !== 0 || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
+  draggingBoundary = edge;
+  lastEmittedBoundaryId = edge === "start" ? props.selectionStartSbarId : props.selectionEndSbarId;
+  event.preventDefault();
+  window.addEventListener("pointermove", handleBoundaryPointerMove);
+  window.addEventListener("pointerup", stopBoundaryDrag);
+  window.addEventListener("pointercancel", stopBoundaryDrag);
+}
+
+function handleBoundaryPointerMove(event: PointerEvent): void {
+  if (!draggingBoundary) return;
+  const sbarId = resolveBoundaryDragSbar(event.clientX);
+  if (!sbarId || sbarId === lastEmittedBoundaryId) return;
+  lastEmittedBoundaryId = sbarId;
+  emit("rangeBoundaryChange", draggingBoundary, sbarId);
+}
+
+function stopBoundaryDrag(): void {
+  draggingBoundary = null;
+  lastEmittedBoundaryId = null;
+  window.removeEventListener("pointermove", handleBoundaryPointerMove);
+  window.removeEventListener("pointerup", stopBoundaryDrag);
+  window.removeEventListener("pointercancel", stopBoundaryDrag);
+}
+
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
   if (!props.selectionPending || selectionStartX.value === null) {
     previewX.value = null;
@@ -333,6 +382,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  stopBoundaryDrag();
   resizeObserver?.disconnect();
   resizeObserver = null;
   chart?.unsubscribeClick(handleChartClick);
@@ -447,6 +497,16 @@ onBeforeUnmount(() => {
           :style="{ left: `${selectionStartX}px` }"
         ></div>
         <div
+          v-if="!selectionPending && selectionStartX !== null && selectionEndX !== null"
+          class="origin-selection-handle origin-selection-handle-start"
+          role="slider"
+          tabindex="0"
+          aria-label="Adjust Test interval start boundary"
+          data-testid="origin-selection-start-handle"
+          :style="{ left: `${selectionStartX}px` }"
+          @pointerdown.stop="startBoundaryDrag('start', $event)"
+        ></div>
+        <div
           v-if="selectionPending && selectionStartX !== null && previewX !== null"
           class="origin-selection-line origin-selection-line-preview"
           data-testid="origin-selection-preview-line"
@@ -462,6 +522,15 @@ onBeforeUnmount(() => {
             class="origin-selection-line origin-selection-line-end"
             data-testid="origin-selection-end-line"
             :style="{ left: `${selectionEndX}px` }"
+          ></div>
+          <div
+            class="origin-selection-handle origin-selection-handle-end"
+            role="slider"
+            tabindex="0"
+            aria-label="Adjust Test interval end boundary"
+            data-testid="origin-selection-end-handle"
+            :style="{ left: `${selectionEndX}px` }"
+            @pointerdown.stop="startBoundaryDrag('end', $event)"
           ></div>
         </template>
       </div>
@@ -697,6 +766,39 @@ onBeforeUnmount(() => {
   overflow: hidden;
   color: #a5b0b7;
   text-overflow: ellipsis;
+}
+
+.origin-selection-handle {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+  outline: none;
+}
+
+.origin-selection-handle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 30px;
+  border: 1px solid #171c20;
+  border-radius: 2px;
+  background: #d6a85d;
+  box-shadow: 0 0 0 1px rgb(214 168 93 / 45%);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.origin-selection-handle:focus-visible::after,
+.origin-selection-handle:hover::after {
+  width: 6px;
+  background: #f0c879;
 }
 
 .origin-chart-empty {
