@@ -169,7 +169,7 @@ describe("OriginChart", () => {
     expect(chartMocks.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
   });
 
-  it("renders only the authoritative CBar extrema and Swing endpoints from the Structure projection", async () => {
+  it("renders authoritative CBar range rectangles and Swing endpoints from the Structure projection", async () => {
     const bars = [
       bar(),
       bar({
@@ -411,7 +411,7 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
-  it("rejects invalid chart projection and clears both series", async () => {
+  it("rejects invalid chart projection and clears all chart projections", async () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [bar({ close: "NaN" })],
