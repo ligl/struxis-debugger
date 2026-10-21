@@ -739,7 +739,7 @@ onUnmounted(() => {
                 <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'; closeDockMenus()">Dock Bottom</button>
               </div>
             </details>
-            <button class="subtle-button" data-testid="diagnostics-collapse-toggle"  :aria-label="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" :title="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" @click="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? '+' : '−' }}</button>
+            <button class="subtle-button" data-testid="diagnostics-collapse-toggle"  :aria-label="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" :title="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" @click.stop="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? '+' : '−' }}</button>
           </div>
         </div>
         <div class="diagnostics-content">
