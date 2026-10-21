@@ -215,22 +215,19 @@ for (const direction of ["left", "right"] as const) {
     const inspectorBox = await inspector.boundingBox();
     const diagnosticsBox = await diagnostics.boundingBox();
     const inspectorCollapseBox = await inspector.getByRole("button", { name: "Expand Inspector" }).boundingBox();
-    const diagnosticsCollapseBox = await diagnostics.getByTestId("diagnostics-collapse-toggle").boundingBox();
+    await expect(diagnostics.getByTestId("diagnostics-collapse-toggle")).toBeHidden();
     const inspectorMenuBox = await inspector.getByTestId("inspector-dock-menu").locator("summary").boundingBox();
     const diagnosticsMenuBox = await diagnostics.getByTestId("diagnostics-dock-menu").locator("summary").boundingBox();
 
     expect(inspectorBox).not.toBeNull();
     expect(diagnosticsBox).not.toBeNull();
     expect(inspectorCollapseBox).not.toBeNull();
-    expect(diagnosticsCollapseBox).not.toBeNull();
     expect(inspectorMenuBox).not.toBeNull();
     expect(diagnosticsMenuBox).not.toBeNull();
 
     const inspectorCollapseOffset = inspectorCollapseBox!.y + inspectorCollapseBox!.height / 2 - inspectorBox!.y;
-    const diagnosticsCollapseOffset = diagnosticsCollapseBox!.y + diagnosticsCollapseBox!.height / 2 - diagnosticsBox!.y;
     const inspectorMenuOffset = inspectorMenuBox!.y + inspectorMenuBox!.height / 2 - inspectorBox!.y;
     const diagnosticsMenuOffset = diagnosticsMenuBox!.y + diagnosticsMenuBox!.height / 2 - diagnosticsBox!.y;
-    expect(Math.abs(diagnosticsCollapseOffset - inspectorCollapseOffset)).toBeLessThanOrEqual(1);
     expect(Math.abs(diagnosticsMenuOffset - inspectorMenuOffset)).toBeLessThanOrEqual(1);
   });
 }
@@ -258,6 +255,9 @@ for (const direction of ["left", "right"] as const) {
     )).toBeLessThanOrEqual(1);
     await expect(dock.locator(".diagnostics-heading")).not.toHaveCSS("content", '"DIAG"');
     await expect(dock.getByTestId("diagnostics-category-tabs")).toBeHidden();
+    await expect(dock.getByTestId("diagnostics-collapse-toggle")).toBeHidden();
+    await title.click();
+    await expect(dock).not.toHaveClass(/collapsed/);
   });
 }
 
@@ -289,6 +289,31 @@ for (const direction of ["left", "right", "top", "bottom"] as const) {
     }
   });
 }
+
+
+for (const direction of ["top", "bottom"] as const) {
+  test(`collapsed Inspector matches the compact Diagnostics rail when docked ${direction}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
+    const inspector = page.getByTestId("inspector-panel");
+    await inspector.getByRole("button", { name: "Collapse Inspector" }).click();
+    await expect(inspector).toHaveClass(/collapsed/);
+    await expect(inspector.getByTestId("inspector-dock-drag-handle")).toBeHidden();
+    await expect(inspector.getByTestId("inspector-dock-menu")).toBeHidden();
+    const box = await inspector.boundingBox();
+    expect(box).toBeTruthy();
+    expect(Math.abs(box!.height - 36)).toBeLessThanOrEqual(1);
+    await expect(inspector.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
+  });
+}
+
+test("Diagnostics dock menu accessible label matches Inspector wording", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.getByTestId("inspector-dock-menu").locator("summary")).toHaveAttribute("aria-label", "Move Inspector");
+  await expect(page.getByTestId("diagnostics-dock-menu").locator("summary")).toHaveAttribute("aria-label", "Move Diagnostics");
+});
 
 test("dock menus match prototype labels and dismiss after selection or outside click", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
