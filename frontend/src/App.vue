@@ -531,8 +531,6 @@ onUnmounted(() => {
       <section data-testid="chart-workspace" class="workbench-main">
         <WorkspaceToolbar
           :workspace-mode="workspaceMode"
-          :catalog-collapsed="catalogCollapsed"
-          :diagnostics-collapsed="diagnosticsCollapsed"
         >
           <template #actions v-if="workspaceMode === 'replay'">
             <div class="toolbar-actions replay-toolbar-actions">
@@ -551,7 +549,6 @@ onUnmounted(() => {
               <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
             </div>
           </template>
-          <template #actions v-else-if="workspaceMode === 'compare'"></template>
         </WorkspaceToolbar>
 
         <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
