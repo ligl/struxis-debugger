@@ -601,35 +601,35 @@ onUnmounted(() => {
         />
       </aside>
       <section v-show="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock" :class="'dock-' + diagnosticsDock">
-      <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
-      <div class="diagnostics-heading">
-        <div>
-          <p class="section-index panel-dock-drag-handle" data-testid="diagnostics-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('diagnostics', $event)">DIAGNOSTICS</p>
-          <h2>Workflow events &amp; errors</h2>
+        <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
+        <div class="diagnostics-heading">
+          <div>
+            <p class="section-index panel-dock-drag-handle" data-testid="diagnostics-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('diagnostics', $event)">DIAGNOSTICS</p>
+            <h2>Workflow events &amp; errors</h2>
+          </div>
+          <div class="dock-actions">
+            <details class="dock-menu" data-testid="diagnostics-dock-menu">
+              <summary class="subtle-button" aria-label="Diagnostics panel options" title="Diagnostics panel options">⋯</summary>
+              <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
+                <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="diagnosticsDock = 'left'">LEFT</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="diagnosticsDock = 'right'">RIGHT</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="diagnosticsDock = 'top'">TOP</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'">BOTTOM</button>
+              </div>
+            </details>
+            <button class="subtle-button" data-testid="diagnostics-collapse-toggle" @click="diagnosticsCollapsed = true">Collapse</button>
+          </div>
         </div>
-        <div class="dock-actions">
-          <details class="dock-menu" data-testid="diagnostics-dock-menu">
-            <summary class="subtle-button" aria-label="Diagnostics panel options" title="Diagnostics panel options">⋯</summary>
-            <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
-              <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="diagnosticsDock = 'left'">LEFT</button>
-              <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="diagnosticsDock = 'right'">RIGHT</button>
-              <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="diagnosticsDock = 'top'">TOP</button>
-              <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'">BOTTOM</button>
-            </div>
-          </details>
-          <button class="subtle-button" data-testid="diagnostics-collapse-toggle" @click="diagnosticsCollapsed = true">Collapse</button>
+        <div class="diagnostics-content">
+          <p v-if="loadError || discoveryError || testError || runError || snapshotsError" class="error-message">
+            <span v-if="discoveryError">Catalog: {{ discoveryError }}</span>
+            <span v-if="loadError">Origin Load: {{ loadError }}</span>
+            <span v-if="testError">Test Dataset: {{ testError }}</span>
+            <span v-if="runError">Run / Replay: {{ runError }}</span>
+            <span v-if="snapshotsError">Snapshots: {{ snapshotsError }}</span>
+          </p>
+          <p v-else class="empty-state">No active errors. Structured event history and domain diagnostics are not yet connected.</p>
         </div>
-      </div>
-      <div class="diagnostics-content">
-        <p v-if="loadError || discoveryError || testError || runError || snapshotsError" class="error-message">
-          <span v-if="discoveryError">Catalog: {{ discoveryError }}</span>
-          <span v-if="loadError">Origin Load: {{ loadError }}</span>
-          <span v-if="testError">Test Dataset: {{ testError }}</span>
-          <span v-if="runError">Run / Replay: {{ runError }}</span>
-          <span v-if="snapshotsError">Snapshots: {{ snapshotsError }}</span>
-        </p>
-        <p v-else class="empty-state">No active errors. Structured event history and domain diagnostics are not yet connected.</p>
-      </div>
       </section>
     </div>
 
