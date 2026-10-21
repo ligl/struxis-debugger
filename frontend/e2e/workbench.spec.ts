@@ -75,6 +75,8 @@ test("default Inspector and Diagnostics edges align to the prototype's toolbar a
 
   // Prototype geometry: Inspector starts below the Chart Toolbar, stops at
   // Diagnostics, and touches the Workbench's right edge.
+  expect(Math.abs(inspector!.width - 282)).toBeLessThanOrEqual(1);
+  expect(Math.abs(diagnostics!.height - 164)).toBeLessThanOrEqual(1);
   expect(Math.abs(inspector!.y - (toolbar!.y + toolbar!.height))).toBeLessThanOrEqual(1);
   expect(Math.abs(inspector!.y + inspector!.height - diagnostics!.y)).toBeLessThanOrEqual(1);
   expect(Math.abs(inspector!.x + inspector!.width - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
@@ -516,7 +518,16 @@ for (const direction of dockDirections) {
     expect(before).toBeTruthy();
 
     await page.getByTestId("diagnostics-collapse-toggle").click();
-    await expect(page.getByTestId("diagnostics-dock")).toBeHidden();
+    const dock = page.getByTestId("diagnostics-dock");
+    await expect(dock).toBeVisible();
+    await expect(page.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Expand Diagnostics");
+    const collapsedPanel = await dock.boundingBox();
+    expect(collapsedPanel).toBeTruthy();
+    if (direction === "left" || direction === "right") {
+      expect(Math.abs(collapsedPanel!.width - 36)).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(collapsedPanel!.height - 36)).toBeLessThanOrEqual(1);
+    }
     const collapsed = await workspace.boundingBox();
     expect(collapsed).toBeTruthy();
     if (direction === "left" || direction === "right") {
@@ -525,8 +536,8 @@ for (const direction of dockDirections) {
       expect(collapsed!.height).toBeGreaterThan(before!.height + 50);
     }
 
-    await page.getByRole("button", { name: "Show Diagnostics" }).click();
-    await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+    await page.getByTestId("diagnostics-collapse-toggle").click();
+    await expect(page.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Collapse Diagnostics");
     const restored = await workspace.boundingBox();
     expect(restored).toBeTruthy();
     if (direction === "left" || direction === "right") {
