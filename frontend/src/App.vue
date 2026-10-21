@@ -2,6 +2,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
+import CompareToolbarControls from "./components/CompareToolbarControls.vue";
+import CompareSummary from "./components/CompareSummary.vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
 import RunChart from "./components/RunChart.vue";
@@ -549,6 +551,13 @@ onUnmounted(() => {
               <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
             </div>
           </template>
+          <template #actions v-else-if="workspaceMode === 'compare'">
+            <CompareToolbarControls
+              :snapshots="snapshots"
+              :compare-loading="compareLoading"
+              @compare="runCompare"
+            />
+          </template>
         </WorkspaceToolbar>
 
         <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
@@ -604,6 +613,11 @@ onUnmounted(() => {
               </DualChartStack>
             </div>
             <div v-show="workspaceMode === 'compare'" class="workspace-mode compare-workspace">
+              <CompareSummary
+                :compare-result="compareResult"
+                :compare-loading="compareLoading"
+                :compare-error="compareError"
+              />
               <DualChartStack workspace="compare">
                 <template #upper>
                   <ComparisonChartPlaceholder
@@ -620,7 +634,22 @@ onUnmounted(() => {
                   />
                 </template>
               </DualChartStack>
-              <SnapshotPanel :snapshots="snapshots" :snapshots-loading="snapshotsLoading" :snapshots-error="snapshotsError" :snapshot-kind-label="snapshotKindLabel" :format-timestamp="formatTimestamp" :compare-result="compareResult" :compare-loading="compareLoading" :compare-error="compareError" :selected-difference-key="selectedCompareDifferenceKey" @refresh="refreshSnapshots" @compare="runCompare" @select-difference="selectCompareDifference" />
+              <details class="snapshot-store-disclosure" data-testid="snapshot-store-disclosure">
+                <summary data-testid="snapshot-store-toggle">SNAPSHOT STORE / DIFFERENCES</summary>
+                <SnapshotPanel
+                  :snapshots="snapshots"
+                  :snapshots-loading="snapshotsLoading"
+                  :snapshots-error="snapshotsError"
+                  :snapshot-kind-label="snapshotKindLabel"
+                  :format-timestamp="formatTimestamp"
+                  :compare-result="compareResult"
+                  :compare-loading="compareLoading"
+                  :compare-error="compareError"
+                  :selected-difference-key="selectedCompareDifferenceKey"
+                  @refresh="refreshSnapshots"
+                  @select-difference="selectCompareDifference"
+                />
+              </details>
             </div>
           </div>
 
