@@ -23,7 +23,7 @@ defineProps<{
   origin: OriginDatasetDto | null;
   loadStatus: "idle" | "loading" | "loaded" | "failed";
   loadError: string;
-  formatTimestamp: (value: string | null) => string;
+  formatDomainTimestamp: (value: string | null, timeframe: string | null) => string;
 }>();
 
 const emit = defineEmits<{
@@ -104,7 +104,7 @@ const emit = defineEmits<{
           :origin="origin"
           :load-status="loadStatus"
           :load-error="loadError"
-          :format-timestamp="formatTimestamp"
+          :format-domain-timestamp="formatDomainTimestamp"
         />
       </div>
     </details>
