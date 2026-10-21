@@ -12,7 +12,7 @@ describe("semantic timestamp formatting", () => {
     expect(formatDomainTimestamp(timestamp, "1D")).toBe("2026-06-01");
     expect(formatDomainTimestamp(timestamp, "4D")).toBe("2026-06-01");
     expect(formatDomainTimestamp(timestamp, "1W")).toBe("2026-06-01");
-    expect(formatDomainTimestamp(timestamp, "1h")).toBe("2026-06-01 12:05");
+    expect(formatDomainTimestamp(timestamp, "1h")).toBe("2026-06-01 12:00");
     expect(formatDomainTimestamp(timestamp, "5m")).toBe("2026-06-01 12:05");
     expect(formatDomainTimestamp(timestamp, "60m")).toBe("2026-06-01 12:05");
     expect(formatDomainTimestamp(timestamp, "1s")).toBe("2026-06-01 12:05:03");
