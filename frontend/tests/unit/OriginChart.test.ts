@@ -90,6 +90,7 @@ describe("OriginChart", () => {
     chartMocks.timeToCoordinate.mockImplementation((time: number) => {
       if (time === 1700000000) return 100;
       if (time === 1700000060) return 200;
+      if (time === 1700000120) return 300;
       return null;
     });
     chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : 1);
