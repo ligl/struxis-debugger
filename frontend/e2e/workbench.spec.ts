@@ -10,12 +10,14 @@ async function layoutDiagnostics(page: Page) {
   return page.evaluate(() => {
     const selectors = [
       "[data-testid='debugger-shell']",
-      "[data-testid='workbench-body']",
-      "[data-testid='workbench-main']",
-      "[data-testid='primary-workspace']",
+      "[data-testid='topbar']",
+      "[data-testid='workbench']",
+      "[data-testid='chart-workspace']",
+      "[data-testid='chart-toolbar']",
+      "[data-testid='chart-panels']",
       "[data-testid='workspace-content']",
       "[data-testid='catalog-rail']",
-      "[data-testid='inspector-rail']",
+      "[data-testid='inspector-panel']",
       "[data-testid='diagnostics-dock']",
     ];
 
@@ -54,6 +56,36 @@ async function layoutDiagnostics(page: Page) {
     };
   });
 }
+
+test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const hierarchy = await page.evaluate(() => {
+    const directTestIds = (element: Element | null) =>
+      element ? Array.from(element.children, (child) => child.getAttribute("data-testid")) : [];
+    const shell = document.querySelector("[data-testid='debugger-shell']");
+    const workbench = document.querySelector("[data-testid='workbench']");
+    const chartWorkspace = document.querySelector("[data-testid='chart-workspace']");
+    const chartPanels = document.querySelector("[data-testid='chart-panels']");
+    return {
+      shell: directTestIds(shell),
+      workbench: directTestIds(workbench),
+      chartWorkspace: directTestIds(chartWorkspace),
+      chartPanels: directTestIds(chartPanels),
+      hasLegacyFooter: Boolean(document.querySelector(".footer-bar")),
+      hasLegacyPrimaryWorkspace: Boolean(document.querySelector("[data-testid='primary-workspace']")),
+    };
+  });
+
+  expect(hierarchy.shell).toEqual(["topbar", "workbench"]);
+  expect(hierarchy.workbench).toEqual(["chart-workspace", "inspector-panel", "diagnostics-dock"]);
+  expect(hierarchy.chartWorkspace).toEqual(["chart-toolbar", "chart-panels"]);
+  expect(hierarchy.chartPanels).toContain("catalog-rail");
+  expect(hierarchy.chartPanels).toContain("workspace-content");
+  expect(hierarchy.hasLegacyFooter).toBe(false);
+  expect(hierarchy.hasLegacyPrimaryWorkspace).toBe(false);
+});
 
 for (const viewport of viewports) {
   test(`workbench fits horizontally at ${viewport.name} (${viewport.width}×${viewport.height})`, async ({ page }) => {
@@ -197,7 +229,7 @@ test("overflowing workspace content scrolls inside its own panel", async ({ page
 test("Inspector supports four-way docking with an edge-aligned splitter", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByTestId("inspector-rail")).toBeVisible();
+  await expect(page.getByTestId("inspector-panel")).toBeVisible();
   await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 
   const directions = ["left", "right", "top", "bottom"] as const;
@@ -237,7 +269,7 @@ test("Inspector supports four-way docking with an edge-aligned splitter", async 
   for (const direction of directions) {
     await test.step(`Inspector docks ${direction}`, async () => {
     await chooseDockDirection("inspector-dock-menu", `inspector-dock-${direction}`);
-    const inspector = await inspectPanel("inspector-rail", "inspector-resize-edge");
+    const inspector = await inspectPanel("inspector-panel", "inspector-resize-edge");
     if (direction === "left") expect(Math.abs(inspector.splitterRight - inspector.right)).toBeLessThanOrEqual(4);
     if (direction === "right") expect(Math.abs(inspector.splitterLeft - inspector.left)).toBeLessThanOrEqual(4);
     if (direction === "top") expect(Math.abs(inspector.splitterBottom - inspector.bottom)).toBeLessThanOrEqual(4);
@@ -292,23 +324,29 @@ test("Diagnostics supports four-way docking with an edge-aligned splitter", asyn
     await test.step(`Diagnostics docks ${direction}`, async () => {
     await chooseDockDirection("diagnostics-dock-menu", `diagnostics-dock-${direction}`);
     const diagnostics = await inspectPanel("diagnostics-dock", "diagnostics-resize-edge");
-    const main = await page.getByTestId("workbench-main").boundingBox();
-    expect(main).toBeTruthy();
+    const workbench = await page.getByTestId("workbench").boundingBox();
+    const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
+    expect(workbench).toBeTruthy();
+    expect(chartWorkspace).toBeTruthy();
     if (direction === "left") {
       expect(Math.abs(diagnostics.splitterRight - diagnostics.right)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.right - main!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.left - workbench!.x)).toBeLessThanOrEqual(1);
+      expect(chartWorkspace!.x).toBeGreaterThanOrEqual(diagnostics.right - 1);
     }
     if (direction === "right") {
       expect(Math.abs(diagnostics.splitterLeft - diagnostics.left)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.left - (main!.x + main!.width))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.right - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
+      expect(chartWorkspace!.x + chartWorkspace!.width).toBeLessThanOrEqual(diagnostics.left + 1);
     }
     if (direction === "top") {
       expect(Math.abs(diagnostics.splitterBottom - diagnostics.bottom)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.bottom - main!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.top - workbench!.y)).toBeLessThanOrEqual(1);
+      expect(chartWorkspace!.y).toBeGreaterThanOrEqual(diagnostics.bottom - 1);
     }
     if (direction === "bottom") {
       expect(Math.abs(diagnostics.splitterTop - diagnostics.top)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.top - (main!.y + main!.height))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.bottom - (workbench!.y + workbench!.height)).toBeLessThanOrEqual(1);
+      expect(chartWorkspace!.y + chartWorkspace!.height).toBeLessThanOrEqual(diagnostics.top + 1);
     }
     if (direction === "left" || direction === "right") expect(diagnostics.splitterWidth).toBeGreaterThan(0);
     else expect(diagnostics.splitterHeight).toBeGreaterThan(0);
