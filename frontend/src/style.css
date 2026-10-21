@@ -3950,10 +3950,21 @@ th, td { padding: 6px 8px; }
   transform: none;
 }
 
-/* Side Diagnostics rails hide the redundant toggle; clicking the title rail reopens. */
+/* A collapsed side rail keeps its reopen control, not the Dock menu. */
+.diagnostics-dock.collapsed.dock-left .dock-actions > .dock-menu,
+.diagnostics-dock.collapsed.dock-right .dock-actions > .dock-menu {
+  display: none;
+}
 .diagnostics-dock.collapsed.dock-left .dock-actions > [data-testid="diagnostics-collapse-toggle"],
 .diagnostics-dock.collapsed.dock-right .dock-actions > [data-testid="diagnostics-collapse-toggle"] {
-  display: none;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
 }
 .diagnostics-dock.collapsed.dock-left .diagnostics-heading,
 .diagnostics-dock.collapsed.dock-right .diagnostics-heading {
