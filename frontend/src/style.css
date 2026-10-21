@@ -3303,3 +3303,75 @@ th, td { padding: 6px 8px; }
   flex-direction: column;
   gap: 8px;
 }
+
+/* Compact workspace-mode toolbar aligned with the frozen prototype. */
+.workspace-title {
+  flex: 0 0 auto;
+  color: var(--dbg-text-primary);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.toolbar-context {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spacer { flex: 1 1 auto; min-width: 4px; }
+.tag {
+  flex: 0 0 auto;
+  border: 1px solid var(--dbg-border);
+  border-radius: 3px;
+  padding: 3px 6px;
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.tag.amber {
+  border-color: #665438;
+  background: #2c261c;
+  color: var(--dbg-warning);
+}
+.replay-toolbar-actions {
+  min-width: 0;
+  gap: 5px;
+}
+.run-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dbg-text-muted);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
+}
+.run-state b { color: var(--dbg-success); font-weight: 650; }
+.progress {
+  width: 76px;
+  height: 4px;
+  flex: 0 1 76px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--dbg-surface-3);
+}
+.progress i {
+  display: block;
+  height: 100%;
+  background: var(--dbg-success);
+  transition: width 120ms linear;
+}
+.toolbar-error {
+  max-width: 180px;
+  overflow: hidden;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1280px) {
+  .replay-toolbar-actions { gap: 3px; }
+  .replay-toolbar-actions .subtle-button { padding-inline: 5px; font-size: 9px; }
+  .replay-toolbar-actions .progress { display: none; }
+}
