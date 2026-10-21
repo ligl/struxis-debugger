@@ -17,9 +17,8 @@ mod snapshot_store;
 mod effective_config;
 
 #[tauri::command]
-fn open_devtools(_window: tauri::WebviewWindow) {
-    #[cfg(debug_assertions)]
-    _window.open_devtools();
+fn open_devtools(window: tauri::WebviewWindow) {
+    window.open_devtools();
 }
 
 fn main() {
