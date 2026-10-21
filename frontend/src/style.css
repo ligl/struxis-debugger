@@ -3710,7 +3710,12 @@ th, td { padding: 6px 8px; }
    Give Dataset's outer Chart Workspace a real 5px gap; internal chart padding
    cannot resolve overlapping outer borders. Replay/Compare remain unchanged. */
 .workbench-body:not(.catalog-is-hidden).inspector-dock-left .chart-panels {
+  /* Explicitly reduce the flex item's used width as well as offsetting it.
+     This prevents flex sizing from absorbing the left margin. */
+  flex: 0 0 calc(100% - 5px);
+  width: calc(100% - 5px);
   margin-left: 5px;
+  box-sizing: border-box;
 }
 
 .workbench-body:not(.catalog-is-hidden).inspector-dock-right .chart-panels {
