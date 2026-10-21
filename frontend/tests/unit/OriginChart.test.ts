@@ -8,6 +8,8 @@ const chartMocks = vi.hoisted(() => ({
   createChart: vi.fn(),
   candleSetData: vi.fn(),
   volumeSetData: vi.fn(),
+  candleApplyOptions: vi.fn(),
+  volumeApplyOptions: vi.fn(),
   priceToCoordinate: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
@@ -62,8 +64,8 @@ function installResizeObserverMock() {
 function installChartMock() {
   const chart = {
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: chartMocks.candleSetData, priceToCoordinate: chartMocks.priceToCoordinate })
-      .mockReturnValueOnce({ setData: chartMocks.volumeSetData }),
+      .mockReturnValueOnce({ setData: chartMocks.candleSetData, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate })
+      .mockReturnValueOnce({ setData: chartMocks.volumeSetData, applyOptions: chartMocks.volumeApplyOptions }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
       fitContent: chartMocks.fitContent,
@@ -497,6 +499,50 @@ describe("OriginChart", () => {
     expect(wrapper.find('[data-testid="origin-selection-end-line"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="origin-selection-start-handle"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-selection-end-handle"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("toggles SBar, volume, CBar and Swing layers independently", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "origin-layer-visibility",
+        structure: {
+          cbars: [{
+            cbarId: "cbar-1",
+            sbarStartId: "1700000000000000000",
+            sbarEndId: "1700000000000000000",
+            high: "12",
+            low: "9",
+          }],
+          swings: [{
+            swingId: "swing-1",
+            sbarStartId: "1700000000000000000",
+            sbarEndId: "1700000000000000000",
+            high: "12",
+            low: "9",
+            direction: "Up",
+            state: "Confirmed",
+          }],
+          swingCount: 1,
+        } as never,
+      },
+    });
+    await nextTick();
+
+    await wrapper.get('[data-testid="layer-toggle-sbar"]').trigger("click");
+    await wrapper.get('[data-testid="layer-toggle-volume"]').trigger("click");
+    await wrapper.get('[data-testid="layer-toggle-cbar"]').trigger("click");
+    await wrapper.get('[data-testid="layer-toggle-swing"]').trigger("click");
+    await nextTick();
+
+    expect(chartMocks.candleApplyOptions).toHaveBeenCalledWith({ visible: false });
+    expect(chartMocks.volumeApplyOptions).toHaveBeenCalledWith({ visible: false });
+    expect(wrapper.find('[data-testid="cbar-range-rectangle"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="swing-state-segment"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("false");
 
     wrapper.unmount();
   });
