@@ -171,8 +171,8 @@ describe("RunChart", () => {
       { time: 1700000060, value: 100, color: "#1d756d" },
       { time: 1700000120, value: 100, color: "#454b53" },
     ]);
-    expect(wrapper.get('[data-testid="run-chart-progress"]').text()).toBe("1 / 2 PROCESSED");
-    expect(wrapper.get(".chart-latest-id").text()).toContain(originBars[1]!.sbarId);
+    expect(wrapper.get(".run-chart-foot").text()).toContain("1 / 2 PROCESSED");
+    expect(wrapper.get(".run-chart-cursor").text()).toContain(originBars[1]!.sbarId);
     wrapper.unmount();
   });
 
