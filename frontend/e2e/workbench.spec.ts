@@ -235,6 +235,18 @@ test("dock splitters stay on the workspace-facing panel edge", async ({ page }) 
   inspector = await inspectorGeometry();
   expect(Math.abs(inspector.splitterRight - inspector.panelRight)).toBeLessThanOrEqual(4);
 
+  // Bottom-docked layout preserves DOM reading order and keeps the footer last.
+  const defaultOrder = await page.evaluate(() => {
+    const topbar = document.querySelector<HTMLElement>(".workbench-topbar")!.getBoundingClientRect();
+    const body = document.querySelector<HTMLElement>("[data-testid='workbench-body']")!.getBoundingClientRect();
+    const diagnostics = document.querySelector<HTMLElement>("[data-testid='diagnostics-dock']")!.getBoundingClientRect();
+    const footer = document.querySelector<HTMLElement>(".footer-bar")!.getBoundingClientRect();
+    return { topbarBottom: topbar.bottom, bodyTop: body.top, bodyBottom: body.bottom, diagnosticsTop: diagnostics.top, diagnosticsBottom: diagnostics.bottom, footerTop: footer.top };
+  });
+  expect(defaultOrder.topbarBottom).toBeLessThanOrEqual(defaultOrder.bodyTop);
+  expect(defaultOrder.bodyBottom).toBeLessThanOrEqual(defaultOrder.diagnosticsTop);
+  expect(defaultOrder.diagnosticsBottom).toBeLessThanOrEqual(defaultOrder.footerTop);
+
   // Bottom-docked Diagnostics: splitter belongs on the panel's top edge.
   let diagnostics = await diagnosticsGeometry();
   expect(Math.abs(diagnostics.splitterTop - diagnostics.panelTop)).toBeLessThanOrEqual(4);
@@ -243,6 +255,18 @@ test("dock splitters stay on the workspace-facing panel edge", async ({ page }) 
   await page.locator("[data-testid='diagnostics-dock-menu'] summary").click();
   await page.getByTestId("diagnostics-dock-top").click();
   await expect(page.getByTestId("debugger-shell")).toHaveClass(/diagnostics-dock-top/);
+
+  // TOP docking must reorder the footer too: header → Diagnostics → workspace → footer.
+  const topDockOrder = await page.evaluate(() => {
+    const topbar = document.querySelector<HTMLElement>(".workbench-topbar")!.getBoundingClientRect();
+    const body = document.querySelector<HTMLElement>("[data-testid='workbench-body']")!.getBoundingClientRect();
+    const diagnostics = document.querySelector<HTMLElement>("[data-testid='diagnostics-dock']")!.getBoundingClientRect();
+    const footer = document.querySelector<HTMLElement>(".footer-bar")!.getBoundingClientRect();
+    return { topbarBottom: topbar.bottom, diagnosticsTop: diagnostics.top, diagnosticsBottom: diagnostics.bottom, bodyTop: body.top, bodyBottom: body.bottom, footerTop: footer.top };
+  });
+  expect(topDockOrder.topbarBottom).toBeLessThanOrEqual(topDockOrder.diagnosticsTop);
+  expect(topDockOrder.diagnosticsBottom).toBeLessThanOrEqual(topDockOrder.bodyTop);
+  expect(topDockOrder.bodyBottom).toBeLessThanOrEqual(topDockOrder.footerTop);
 
   // Top-docked Diagnostics: splitter must move to the panel's bottom edge.
   diagnostics = await diagnosticsGeometry();
