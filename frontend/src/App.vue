@@ -221,6 +221,11 @@ const canRestartRun = computed(
     Boolean(runState.value) && runState.value?.status !== "running" &&
     !runBusy.value,
 );
+const replayToolbarContext = computed(() => {
+  const test = testDataset.value;
+  if (!test) return "NO TEST DATASET · CREATE AN INCLUSIVE INTERVAL";
+  return `${test.instrumentId} · ${test.timeframe} · ${test.sbarCount.toLocaleString()} SBARS · ${test.startSbarId} → ${test.endSbarId}`;
+});
 
 const { instrumentGroups } = useCatalogGroups(datasets);
 
@@ -588,22 +593,25 @@ onUnmounted(() => {
       <section data-testid="chart-workspace" class="workbench-main">
         <WorkspaceToolbar
           :workspace-mode="workspaceMode"
+          :replay-context="replayToolbarContext"
         >
           <template #actions>
             <div v-if="workspaceMode === 'replay'" class="toolbar-actions replay-toolbar-actions">
+              <div class="replay-transport" role="group" aria-label="Replay transport controls">
+                <button class="subtle-button" data-testid="run-start" title="Start a new replay run" :disabled="!isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('start')">START</button>
+                <button class="subtle-button" data-testid="run-step" title="Process one SBar" :disabled="!isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('step')">STEP ▶|</button>
+                <button class="subtle-button replay-play-toggle" data-testid="run-play-pause" :title="runState?.status === 'running' ? 'Pause replay (Space)' : 'Play replay (Space)'" :disabled="!isRunCommandEligible(runState?.status === 'running' ? 'pause' : 'play', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand(runState?.status === 'running' ? 'pause' : 'play')">{{ runState?.status === 'running' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
+                <button class="subtle-button" data-testid="run-stop" title="Stop the current run" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('stop')">STOP</button>
+                <button class="subtle-button" data-testid="run-restart" title="Reset by restarting the run" :disabled="!isRunCommandEligible('restart', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('restart')">RESET</button>
+              </div>
               <span class="run-state" data-testid="run-toolbar-status">
-                <b>{{ runState?.status ? runState.status.toUpperCase() : "NO RUN" }}</b>
+                <b :class="`run-status-${runState?.status ?? 'none'}`">{{ runState?.status ? runState.status.toUpperCase() : "NO RUN" }}</b>
                 <span>{{ runState ? `${runState.processedCount.toLocaleString()} / ${runState.inputCount.toLocaleString()}` : "—" }}</span>
               </span>
-              <div class="progress" aria-label="Replay progress" role="progressbar" :aria-valuenow="runState?.processedCount ?? 0" :aria-valuemin="0" :aria-valuemax="runState?.inputCount ?? 0">
+              <div class="progress replay-progress" aria-label="Replay progress" role="progressbar" :aria-valuenow="runState?.processedCount ?? 0" :aria-valuemin="0" :aria-valuemax="runState?.inputCount ?? 0">
                 <i :style="{ width: runState && runState.inputCount > 0 ? (runState.processedCount / runState.inputCount * 100) + '%' : '0%' }"></i>
               </div>
-              <button class="subtle-button" data-testid="run-start" :disabled="!isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('start')">START</button>
-              <button class="subtle-button" data-testid="run-restart" :disabled="!isRunCommandEligible('restart', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('restart')">RESET</button>
-              <button class="subtle-button" data-testid="run-step" :disabled="!isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('step')">STEP</button>
-              <button class="subtle-button" data-testid="run-play-pause" :disabled="!isRunCommandEligible(runState?.status === 'running' ? 'pause' : 'play', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand(runState?.status === 'running' ? 'pause' : 'play')">{{ runState?.status === 'running' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
-              <button class="subtle-button" data-testid="run-stop" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('stop')">STOP</button>
-              <button class="subtle-button" data-testid="run-refresh-state" :disabled="runBusy" @click="refreshRunState">REFRESH</button>
+              <button class="subtle-button replay-refresh" data-testid="run-refresh-state" title="Refresh state from the backend" :disabled="runBusy" @click="refreshRunState">REFRESH</button>
               <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
             </div>
             <CompareToolbarControls
