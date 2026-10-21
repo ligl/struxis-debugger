@@ -1075,8 +1075,8 @@ body,
   }
 
   .workbench-topbar .workspace-tab {
-    padding-right: 9px;
-    padding-left: 9px;
+    padding-right: 8px;
+    padding-left: 8px;
   }
 
   .workbench-topbar .top-right {
@@ -3169,9 +3169,9 @@ th, td { padding: 6px 8px; }
 .workbench-topbar .workspace-tabs {
   position: absolute;
   top: 0;
-  left: 40%;
+  left: 50%;
   height: 44px;
-  transform: translateX(-40%);
+  transform: translateX(-50%);
   z-index: 2;
   flex: 0 0 auto;
   gap: 4px;
@@ -3201,8 +3201,8 @@ th, td { padding: 6px 8px; }
 
 @media (max-width: 1050px) {
   .workbench-topbar .workspace-tab {
-    padding-right: 9px;
-    padding-left: 9px;
+    padding-right: 8px;
+    padding-left: 8px;
   }
 
   .workbench-topbar .top-right {
