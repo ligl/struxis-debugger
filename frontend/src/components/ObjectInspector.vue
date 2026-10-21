@@ -195,6 +195,19 @@ function formatReplayField(field: string, value: unknown): string {
           <div class="inspector-volume"><dt>VOLUME</dt><dd>{{ replayInspector.sbar.volume }}</dd></div>
         </dl>
       </div>
+      <div class="inspector-subsection" data-testid="inspector-replay-sbar-times">
+        <p class="section-index">CONFIRMED SBAR TIMES · UTC</p>
+        <dl class="inspector-fields">
+          <div class="inspector-field inspector-field-wide">
+            <dt>Event Time</dt>
+            <dd><code data-testid="inspector-replay-ts-event">{{ formatDomainTimestamp(replayInspector.sbar.tsEvent, timeframe) }}</code></dd>
+          </div>
+          <div class="inspector-field inspector-field-wide">
+            <dt>Init Time</dt>
+            <dd><code data-testid="inspector-replay-ts-init">{{ formatDomainTimestamp(replayInspector.sbar.tsInit, timeframe) }}</code></dd>
+          </div>
+        </dl>
+      </div>
       <div v-if="replayInspector.structure" class="inspector-subsection">
         <p class="section-index">CBARS · {{ replayInspector.structure.cbarCount }}</p>
         <div class="inspector-object-list" data-testid="inspector-replay-cbars">
