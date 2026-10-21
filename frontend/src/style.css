@@ -2534,3 +2534,8 @@ th, td { padding: 6px 8px; }
   top: auto;
   bottom: -3px;
 }
+
+.debugger-shell.diagnostics-dock-top .diagnostics-reopen {
+  top: 52px;
+  bottom: auto;
+}
