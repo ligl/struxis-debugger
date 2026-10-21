@@ -424,6 +424,47 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("drags a completed interval boundary to another exact SBar", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+      }),
+      bar({
+        sbarId: "1700000120000000000",
+        tsEvent: "1700000120000000000",
+        tsInit: "1700000120000000001",
+      }),
+    ];
+    chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : x < 250 ? 1 : 2);
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-boundary-drag",
+        structure: null,
+        selectionStartSbarId: bars[0]!.sbarId,
+        selectionEndSbarId: bars[2]!.sbarId,
+        selectionPending: false,
+      },
+    });
+    await nextTick();
+
+    await wrapper.get('[data-testid="origin-selection-end-handle"]').trigger("pointerdown", {
+      button: 0,
+    });
+    const move = new Event("pointermove");
+    Object.defineProperty(move, "clientX", { value: 200 });
+    window.dispatchEvent(move);
+    window.dispatchEvent(new Event("pointerup"));
+
+    expect(wrapper.emitted("rangeBoundaryChange")).toEqual([
+      ["end", "1700000060000000000"],
+    ]);
+    wrapper.unmount();
+  });
+
   it("allows both completed interval boundaries to be adjusted with the keyboard", async () => {
     const bars = [
       bar(),
