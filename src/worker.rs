@@ -772,6 +772,7 @@ mod tests {
             sbar_sequence_fingerprint: fingerprint,
             bar_type: bar_type.to_string(),
             bars,
+            structure: None,
         };
         TestDataset::create(&origin, "1735689600000000000", "1735689720000000000")
             .expect("fixture Test Dataset")
