@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const viewports = [
+  { name: "compact desktop", width: 1024, height: 800 },
   { name: "standard desktop", width: 1280, height: 800 },
   { name: "desktop", width: 1440, height: 900 },
   { name: "wide desktop", width: 1920, height: 1080 },
@@ -100,7 +101,9 @@ for (const viewport of viewports) {
   test(`workbench fits horizontally at ${viewport.name} (${viewport.width}×${viewport.height})`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/");
-    await expect(page.getByTestId("topbar").locator(".brand-name")).toBeVisible();
+    const topbar = page.getByTestId("topbar");
+    await expect(topbar.locator(".brand-name")).toBeVisible();
+    await expect(topbar).toHaveCSS("flex-wrap", "nowrap");
 
     const diagnostics = await layoutDiagnostics(page);
     expect(
