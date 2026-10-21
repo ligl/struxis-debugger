@@ -29,6 +29,7 @@ const emit = defineEmits<{
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
+const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
@@ -77,7 +78,7 @@ function updateCBarRectangles(): void {
     return;
   }
   const timeScale = chart.timeScale();
-  cbarRectangles.value = (props.structure?.cbars ?? []).flatMap((cbar) => {
+  cbarRectangles.value = layerVisibility.value.cbar ? (props.structure?.cbars ?? []).flatMap((cbar) => {
     const startTime = timeBySbarId.get(cbar.sbarStartId);
     const endTime = timeBySbarId.get(cbar.sbarEndId);
     const high = Number(cbar.high);
@@ -93,7 +94,7 @@ function updateCBarRectangles(): void {
     const top = Math.min(highY as number, lowY as number);
     const bottom = Math.max(highY as number, lowY as number);
     return [{ id: cbar.cbarId, x: left, y: top, width: right - left, height: bottom - top }];
-  });
+  }) : [];
 }
 
 function updateSbarCoordinates(): void {
@@ -119,7 +120,7 @@ function updateSwingSegments(): void {
     return;
   }
   const timeScale = chart.timeScale();
-  swingSegments.value = (props.structure?.swings ?? []).flatMap((swing) => {
+  swingSegments.value = layerVisibility.value.swing ? (props.structure?.swings ?? []).flatMap((swing) => {
     const startTime = timeBySbarId.get(swing.sbarStartId);
     const endTime = timeBySbarId.get(swing.sbarEndId);
     const high = Number(swing.high);
@@ -149,7 +150,7 @@ function updateSwingSegments(): void {
       color: resolvedStyle.color,
       dasharray: resolvedStyle.dasharray,
     }];
-  });
+  }) : [];
 }
 
 function selectSbarById(sbarId: string): void {
@@ -441,6 +442,12 @@ onBeforeUnmount(() => {
         <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
+        <div class="chart-layer-controls" role="group" aria-label="Chart layer visibility">
+          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')">SBAR</button>
+          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')">VOL</button>
+          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')">CBAR</button>
+          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')">SWING</button>
+        </div>
         <div v-if="latestBar" class="chart-meta" aria-label="Latest SBar OHLC">
           <span>O <b>{{ latestBar.open }}</b></span>
           <span>H <b>{{ latestBar.high }}</b></span>
@@ -537,9 +544,9 @@ onBeforeUnmount(() => {
       </div>
       <div class="origin-chart-legend" aria-hidden="true">
         <span><i class="legend-dot sbar-dot"></i>SBar</span>
-        <span v-if="structure"><i class="legend-dot cbar-dot"></i>CBar</span>
-        <span v-if="structure && structure.swingCount > 0"><i class="legend-dot swing-dot"></i>Swing</span>
-        <span><i class="legend-dot volume-dot"></i>Volume</span>
+        <span v-if="layerVisibility.cbar && structure"><i class="legend-dot cbar-dot"></i>CBar</span>
+        <span v-if="layerVisibility.swing && structure && structure.swingCount > 0"><i class="legend-dot swing-dot"></i>Swing</span>
+        <span v-if="layerVisibility.volume"><i class="legend-dot volume-dot"></i>Volume</span>
       </div>
     </div>
     <div class="origin-chart-foot">
@@ -682,6 +689,34 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
+}
+
+.chart-layer-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.chart-layer-toggle {
+  min-height: 21px;
+  padding: 0 5px;
+  border: 1px solid #39434b;
+  border-radius: 2px;
+  background: #1a2025;
+  color: #77838c;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  cursor: pointer;
+}
+
+.chart-layer-toggle.active {
+  border-color: #637b70;
+  background: #26342e;
+  color: #c7d8ce;
+}
+
+.chart-layer-toggle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .origin-chart-legend {
