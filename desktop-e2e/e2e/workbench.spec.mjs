@@ -493,13 +493,7 @@ describe("Struxis Debugger native desktop", () => {
     await domClick('[data-testid="workspace-compare"]');
     await domClick('[data-testid="snapshot-store-toggle"]');
     await browser.waitUntil(
-      async () => {
-        const rows = await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]');
-        for (const row of rows) {
-          if ((await row.getAttribute("data-snapshot-kind")) === "complete") return true;
-        }
-        return false;
-      },
+      async () => (await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]')).length >= 1,
       {
         timeout: 15_000,
         interval: 250,
@@ -552,14 +546,7 @@ describe("Struxis Debugger native desktop", () => {
 
     await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
-      async () => {
-        const rows = await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]');
-        let completeCount = 0;
-        for (const row of rows) {
-          if ((await row.getAttribute("data-snapshot-kind")) === "complete") completeCount += 1;
-        }
-        return completeCount >= 2;
-      },
+      async () => (await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]')).length >= 2,
       {
         timeout: 15_000,
         interval: 250,
