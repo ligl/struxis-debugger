@@ -244,18 +244,49 @@ function startPanelResize(target: Exclude<PanelResizeTarget, null>, event: Point
   event.preventDefault();
 }
 
-function horizontalDockLimit(): number {
-  return Math.max(180, Math.min(520, window.innerWidth * 0.5));
+type DockAxis = "horizontal" | "vertical";
+
+function workbenchExtent(axis: DockAxis): number {
+  const workbench = document.querySelector<HTMLElement>('[data-testid="workbench"]');
+  const measured = axis === "horizontal" ? workbench?.clientWidth : workbench?.clientHeight;
+  return measured && measured > 0
+    ? measured
+    : axis === "horizontal" ? window.innerWidth : window.innerHeight;
 }
 
-function verticalDockLimit(): number {
-  return Math.max(100, Math.min(480, window.innerHeight * 0.55));
+function peerDockReservation(target: Exclude<PanelResizeTarget, null>, axis: DockAxis): number {
+  const peerDirection = target === "inspector" ? diagnosticsDock.value : inspectorDock.value;
+  const peerUsesAxis = axis === "horizontal"
+    ? peerDirection === "left" || peerDirection === "right"
+    : peerDirection === "top" || peerDirection === "bottom";
+  if (!peerUsesAxis) return 0;
+
+  if (target === "inspector") {
+    if (diagnosticsCollapsed.value) return 0;
+    return axis === "horizontal" ? diagnosticsWidth.value : diagnosticsHeight.value;
+  }
+
+  // A collapsed Inspector still reserves its narrow reopen rail.
+  if (inspectorCollapsed.value) return axis === "horizontal" ? 42 : 36;
+  return axis === "horizontal" ? inspectorWidth.value : inspectorHeight.value;
 }
 
-function inspectorWidthLimit(): number { return horizontalDockLimit(); }
-function inspectorHeightLimit(): number { return verticalDockLimit(); }
-function diagnosticsWidthLimit(): number { return horizontalDockLimit(); }
-function diagnosticsHeightLimit(): number { return verticalDockLimit(); }
+function dockSizeLimit(target: Exclude<PanelResizeTarget, null>, axis: DockAxis): number {
+  const minimum = axis === "horizontal" ? 180 : 100;
+  const chartMinimum = axis === "horizontal" ? 320 : 180;
+  const configuredMaximum = axis === "horizontal"
+    ? Math.min(520, window.innerWidth * 0.5)
+    : Math.min(480, window.innerHeight * 0.55);
+  const available = workbenchExtent(axis) - peerDockReservation(target, axis) - chartMinimum;
+  // Preserve a usable workspace when possible; on exceptionally small windows,
+  // the minimum panel size remains the hard floor and responsive layout takes over.
+  return Math.max(minimum, Math.min(configuredMaximum, available));
+}
+
+function inspectorWidthLimit(): number { return dockSizeLimit("inspector", "horizontal"); }
+function inspectorHeightLimit(): number { return dockSizeLimit("inspector", "vertical"); }
+function diagnosticsWidthLimit(): number { return dockSizeLimit("diagnostics", "horizontal"); }
+function diagnosticsHeightLimit(): number { return dockSizeLimit("diagnostics", "vertical"); }
 
 function dockFor(target: Exclude<PanelResizeTarget, null>): DockDirection {
   return target === "inspector" ? inspectorDock.value : diagnosticsDock.value;
