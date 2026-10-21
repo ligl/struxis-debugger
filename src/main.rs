@@ -16,10 +16,17 @@ mod snapshot_writer;
 mod snapshot_store;
 mod effective_config;
 
+#[tauri::command]
+fn open_devtools(window: tauri::WebviewWindow) {
+    #[cfg(debug_assertions)]
+    window.open_devtools();
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(app::AppState::with_configured_catalog())
         .invoke_handler(tauri::generate_handler![
+            open_devtools,
             commands::list_catalog_datasets,
             commands::load_origin,
             commands::get_current_origin,
