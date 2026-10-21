@@ -3,8 +3,6 @@ type WorkspaceMode = "dataset" | "replay" | "compare";
 
 defineProps<{
   workspaceMode: WorkspaceMode;
-  catalogCollapsed: boolean;
-  diagnosticsCollapsed: boolean;
 }>();
 </script>
 
