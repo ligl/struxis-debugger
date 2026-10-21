@@ -225,8 +225,8 @@ const diagnosticsDock = ref<DockDirection>("bottom");
 
 // Dock dimensions are presentation state only; they never affect Struxis state.
 const inspectorWidth = ref(282);
-const inspectorHeight = ref(164);
-const diagnosticsWidth = ref(282);
+const inspectorHeight = ref(145);
+const diagnosticsWidth = ref(330);
 const diagnosticsHeight = ref(164);
 let runPollInterval: number | null = null;
 type PanelResizeTarget = "inspector" | "diagnostics" | null;
