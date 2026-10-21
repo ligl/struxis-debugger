@@ -765,7 +765,7 @@ onBeforeUnmount(() => {
 }
 
 .swing-dot {
-  background: #C6A06B;
+  background: #B49ACD;
 }
 
 .volume-dot {
