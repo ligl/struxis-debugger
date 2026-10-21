@@ -2691,3 +2691,13 @@ th, td { padding: 6px 8px; }
 .primary-workspace.inspector-dock-left.inspector-is-collapsed {
   grid-template-columns: 42px minmax(0, 1fr);
 }
+
+
+/* Four-way menus must remain reachable when a panel is docked into a shallow edge. */
+.primary-workspace.inspector-dock-top .dock-menu-options,
+.primary-workspace.inspector-dock-bottom .dock-menu-options,
+.diagnostics-dock.dock-top .dock-menu-options,
+.diagnostics-dock.dock-bottom .dock-menu-options {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: min(260px, calc(100vw - 24px));
+}
