@@ -544,6 +544,21 @@ describe("OriginChart", () => {
     expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("false");
 
+    // Hidden layers remain represented in the Legend and can be restored from
+    // the same item; no separate toolbar control is required.
+    await wrapper.get('[data-testid="layer-toggle-sbar"]').trigger("click");
+    await wrapper.get('[data-testid="layer-toggle-volume"]').trigger("click");
+    await wrapper.get('[data-testid="layer-toggle-cbar"]').trigger("click");
+    await wrapper.get('[data-testid="layer-toggle-swing"]').trigger("click");
+    await nextTick();
+
+    expect(chartMocks.candleApplyOptions).toHaveBeenCalledWith({ visible: true });
+    expect(chartMocks.volumeApplyOptions).toHaveBeenCalledWith({ visible: true });
+    expect(wrapper.find('[data-testid="cbar-range-rectangle"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="swing-state-segment"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("true");
+
     wrapper.unmount();
   });
 
