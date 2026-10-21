@@ -636,7 +636,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     await wrapper.get('[data-testid="diagnostics-dock-drag-handle"]').trigger("dragstart", { dataTransfer });
     await wrapper.get('[data-testid="workbench-body"]').trigger("dragover", { dataTransfer });
-    await wrapper.get('[data-testid="workbench-body"]').trigger("drop", { dataTransfer, clientY: -1 });
+    await wrapper.get('[data-testid="workbench-body"]').trigger("drop", { dataTransfer, clientX: 0.5, clientY: -1 });
     expect(wrapper.get('[data-testid="workbench-body"]').classes()).toContain("diagnostics-dock-top");
   });
 
