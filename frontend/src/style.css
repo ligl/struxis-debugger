@@ -2862,6 +2862,23 @@ th, td { padding: 6px 8px; }
   );
 }
 
+/* Preserve the same 5px Chart Workspace inset for right/top Diagnostics docks. */
+.workbench-body.diagnostics-dock-right .workbench-main {
+  right: calc(
+    var(--diagnostics-reserve-right, 0px) +
+    var(--inspector-reserve-right, 0px) +
+    5px
+  );
+}
+
+.workbench-body.diagnostics-dock-top .workbench-main {
+  top: calc(
+    var(--diagnostics-reserve-top, 0px) +
+    var(--inspector-reserve-top, 0px) +
+    5px
+  );
+}
+
 .chart-panels {
   display: grid;
   grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
