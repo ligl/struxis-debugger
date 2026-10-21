@@ -326,6 +326,7 @@ describe("Struxis Debugger native desktop", () => {
 
     await domClick('[data-testid="catalog-dataset-row"]:not(.unavailable)');
     await domClick('[data-testid="catalog-load"]');
+    await domClick('[data-testid="catalog-origin-details-toggle"]');
 
     await browser.waitUntil(
       async () => {
@@ -418,7 +419,7 @@ describe("Struxis Debugger native desktop", () => {
     assert.equal(actualEnd, secondSbarId,
       "The second component selection command must select the second Origin SBar as the inclusive range end.");
     assert.equal(
-      (await selectedRange.$("div:nth-child(3) strong").getText()).replace(/\s/g, ""),
+      (await selectedRange.$("[data-testid='selected-test-range-count']").getText()).replace(/\s/g, ""),
       "2",
       "Selecting the first two Origin candles must produce an inclusive two-SBar Test Dataset.",
     );
