@@ -27,9 +27,9 @@ function handleSelection(event: Event): void {
 <template>
   <section class="snapshot-reference-panel" data-testid="snapshot-reference-panel">
     <header class="snapshot-reference-heading">
-      <div>
-        <p class="section-index">FIXED HISTORICAL RESULT</p>
-        <h3>Snapshot Reference</h3>
+      <div class="snapshot-reference-title">
+        <p class="section-index">REFERENCE / IMMUTABLE</p>
+        <h3>SNAPSHOT REFERENCE</h3>
       </div>
       <label class="snapshot-reference-select">
         <span>REFERENCE</span>
@@ -47,25 +47,28 @@ function handleSelection(event: Event): void {
       </label>
     </header>
 
-    <div v-if="selectedSnapshot" class="snapshot-reference-body" data-testid="snapshot-reference-selected">
-      <div class="snapshot-reference-identity">
-        <span class="reference-status-dot" aria-hidden="true"></span>
-        <strong>{{ selectedSnapshot.snapshotId }}</strong>
-        <span class="reference-tag">COMPLETE SNAPSHOT</span>
+    <div class="snapshot-reference-stage" :class="{ 'has-reference': selectedSnapshot }" data-testid="snapshot-reference-stage">
+      <div v-if="selectedSnapshot" class="snapshot-reference-state" data-testid="snapshot-reference-selected">
+        <div class="snapshot-reference-identity">
+          <span class="reference-status-dot" aria-hidden="true"></span>
+          <strong>{{ selectedSnapshot.snapshotId }}</strong>
+          <span class="reference-tag">COMPLETE SNAPSHOT</span>
+        </div>
+        <p class="snapshot-reference-unavailable" role="status">
+          Historical chart unavailable: the current Snapshot IPC exposes artifact metadata, but not the authoritative SBar OHLCV sequence or enough instrument metadata to verify compatibility. No bars or Struxis objects are synthesized.
+        </p>
       </div>
-      <dl class="snapshot-reference-metadata">
-        <div><dt>RUN ID</dt><dd>{{ selectedSnapshot.runId ?? "—" }}</dd></div>
-        <div><dt>STATE KEY</dt><dd>{{ selectedSnapshot.stateKey ?? "—" }}</dd></div>
-        <div><dt>GENERATED</dt><dd>{{ selectedSnapshot.generatedAt ?? "—" }}</dd></div>
-        <div><dt>CHECKPOINTS</dt><dd>{{ selectedSnapshot.checkpointCount ?? "—" }}</dd></div>
-      </dl>
-      <p class="snapshot-reference-unavailable" role="status">
-        The current frontend IPC projection exposes Snapshot artifact metadata, but not the historical SBar OHLCV sequence needed to draw this reference chart. Rendering is withheld until that authoritative projection is available; no market bars or Struxis objects are synthesized.
-      </p>
+      <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">
+        <strong>{{ availableSnapshots.length ? "SELECT A COMPLETED SNAPSHOT" : "NO COMPLETED SNAPSHOT AVAILABLE" }}</strong>
+        <p>{{ availableSnapshots.length ? "Choose an immutable reference from the control above." : "A completed Run Snapshot will appear here after it is published and discovered." }}</p>
+      </div>
     </div>
-    <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">
-      <strong>{{ availableSnapshots.length ? "Select a completed Snapshot" : "No completed Snapshot available" }}</strong>
-      <p>{{ availableSnapshots.length ? "Choose a fixed historical result to inspect here." : "A completed Run Snapshot will appear here after it is published and discovered." }}</p>
-    </div>
+
+    <footer v-if="selectedSnapshot" class="snapshot-reference-foot" data-testid="snapshot-reference-metadata">
+      <span>RUN <b>{{ selectedSnapshot.runId ?? "—" }}</b></span>
+      <span>CHECKPOINTS <b>{{ selectedSnapshot.checkpointCount ?? "—" }}</b></span>
+      <span>GENERATED <b>{{ selectedSnapshot.generatedAt ?? "—" }}</b></span>
+      <span class="snapshot-reference-state-key">STATE KEY <b>{{ selectedSnapshot.stateKey ?? "—" }}</b></span>
+    </footer>
   </section>
 </template>
