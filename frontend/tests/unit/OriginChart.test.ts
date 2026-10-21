@@ -105,6 +105,24 @@ describe("OriginChart", () => {
     vi.unstubAllGlobals();
   });
 
+  it("emits range-selection cancellation on chart right-click", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "origin-context-menu",
+        structure: null,
+        selectionStartSbarId: bar().sbarId,
+        selectionEndSbarId: bar().sbarId,
+        selectionPending: false,
+      },
+    });
+
+    await wrapper.get('[data-testid="origin-chart-panel"]').trigger("contextmenu");
+
+    expect(wrapper.emitted("cancelRangeSelection")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it("projects validated SBar data into candlestick and volume series without grid or branding", async () => {
     const wrapper = mount(OriginChart, {
       props: {
