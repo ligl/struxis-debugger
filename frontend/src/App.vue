@@ -3,7 +3,6 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
-import OriginPanel from "./components/OriginPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
 import RunChart from "./components/RunChart.vue";
 import DualChartStack from "./components/DualChartStack.vue";
@@ -558,10 +557,27 @@ onUnmounted(() => {
               <span class="section-index">SOURCE</span>
               <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
             </div>
-            <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
+            <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
           </aside>
 
           <div data-testid="workspace-content" class="workspace-content">
+            <div v-if="workspaceMode === 'dataset'" class="dataset-controls-host">
+              <TestDatasetPanel
+                :origin="origin"
+                :test-dataset="testDataset"
+                :start-sbar-id="startSbarId"
+                :end-sbar-id="endSbarId"
+                :range-selection-ready="rangeSelectionReady"
+                :range-selection-pending="rangeSelectionPendingStart !== null"
+                :selected-range-count="selectedRangeCount"
+                :range-selection-status="rangeSelectionStatus"
+                :test-loading="testLoading"
+                :can-mutate-test="canMutateTest"
+                :test-error="testError"
+                :test-status="testStatus"
+                @create="createSelectedTestDataset"
+              />
+            </div>
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
                 :bars="origin.bars"
@@ -572,13 +588,7 @@ onUnmounted(() => {
                 @sbar-click="handleOriginSbarClick"
                 @selection-error="handleOriginSelectionError"
               />
-              <p class="microcopy chart-selection-hint" data-testid="origin-range-selection-status" aria-live="polite">{{ rangeSelectionStatus }}</p>
-              <p class="source-note">Source: {{ origin.sourceCatalog }} · Chart values are projected from the validated Struxis SBar series; domain IDs remain exact strings.</p>
             </template>
-            <div v-show="workspaceMode === 'dataset'" class="workspace-mode dataset-preparation-panel">
-              <OriginPanel :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" />
-              <TestDatasetPanel :origin="origin" :test-dataset="testDataset" :start-sbar-id="startSbarId" :end-sbar-id="endSbarId" :range-selection-ready="rangeSelectionReady" :range-selection-pending="rangeSelectionPendingStart !== null" :selected-range-count="selectedRangeCount" :test-loading="testLoading" :can-mutate-test="canMutateTest" :test-error="testError" :test-status="testStatus" @create="createSelectedTestDataset" />
-            </div>
             <div v-show="workspaceMode === 'replay'" class="workspace-mode replay-controls">
               <DualChartStack workspace="replay">
                 <template #upper>
