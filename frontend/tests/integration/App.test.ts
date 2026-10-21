@@ -1281,6 +1281,14 @@ describe("dual chart workspaces", () => {
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
     expect(wrapper.find('[data-testid="dual-chart-stack-replay"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="replay-upper-chart-track"]').find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="replay-toolbar-context"]').text()).toContain("NO TEST DATASET");
+    expect(wrapper.get('[data-testid="run-start"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-step"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-play-pause"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-stop"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-restart"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-toolbar-status"]').exists()).toBe(true);
+    expect(wrapper.get('[role="progressbar"][aria-label="Replay progress"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="snapshot-reference-panel"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="snapshot-reference-stage"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="snapshot-reference-empty"]').exists()).toBe(true);
