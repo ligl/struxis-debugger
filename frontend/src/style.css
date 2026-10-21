@@ -1959,13 +1959,7 @@ th, td { padding: 6px 8px; }
 }
 
 
-/* Dock locations are explicit UI state; domain state remains independent. */
-.debugger-shell.diagnostics-dock-top .diagnostics-dock { order: 1; }
-.debugger-shell.diagnostics-dock-top .workbench-body { order: 2; }
-.debugger-shell.diagnostics-dock-top .diagnostics-dock {
-  border-top: 0;
-  border-bottom: 1px solid #3a444b;
-}
+/* Inspector side docking uses the primary workspace's column tracks. */
 .primary-workspace.inspector-dock-left {
   grid-template-columns: var(--inspector-width, 282px) minmax(0, 1fr);
 }
