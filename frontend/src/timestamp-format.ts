@@ -25,7 +25,7 @@ function parseEpochNanoseconds(value: string | null | undefined): bigint | null 
  */
 export function parseTimeframeUnit(timeframe: string | null | undefined): TimeframeUnit | null {
   if (!timeframe) return null;
-  const match = /^\s*\d+\s*([smhDw])\s*$/.exec(timeframe);
+  const match = /^\s*\d+\s*([smhDWw])\s*$/.exec(timeframe);
   if (!match) return null;
 
   switch (match[1]) {
