@@ -508,13 +508,14 @@ onUnmounted(() => {
         />
 
         <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
-      <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
-        <div class="rail-heading">
-          <span class="section-index">SOURCE</span>
-          <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
-        </div>
-        <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
-      </aside>
+          <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
+            <div class="rail-heading">
+              <span class="section-index">SOURCE</span>
+              <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
+            </div>
+            <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
+          </aside>
+
           <div data-testid="workspace-content" class="workspace-content">
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
@@ -572,33 +573,33 @@ onUnmounted(() => {
 
         </div>
       </section>
-                <aside data-testid="inspector-panel" class="inspector-rail" :class="['dock-' + inspectorDock, { collapsed: inspectorCollapsed }]">
-            <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" :aria-orientation="inspectorDock === 'left' || inspectorDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidth : inspectorHeight" :aria-valuemin="inspectorDock === 'left' || inspectorDock === 'right' ? 180 : 100" :aria-valuemax="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidthLimit() : inspectorHeightLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
-            <div class="rail-heading">
-              <span class="section-index panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">INSPECTOR</span>
-              <details class="dock-menu" data-testid="inspector-dock-menu">
-                <summary class="subtle-button rail-toggle" aria-label="Inspector panel options" title="Inspector panel options">⋯</summary>
-                <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
-                  <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="inspectorDock = 'left'">LEFT</button>
-                  <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="inspectorDock = 'right'">RIGHT</button>
-                  <button class="dock-menu-option" data-testid="inspector-dock-top" :aria-pressed="inspectorDock === 'top'" @click="inspectorDock = 'top'">TOP</button>
-                  <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="inspectorDock = 'bottom'">BOTTOM</button>
-                </div>
-              </details>
-              <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
+                      <aside data-testid="inspector-panel" class="inspector-rail" :class="['dock-' + inspectorDock, { collapsed: inspectorCollapsed }]">
+        <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" :aria-orientation="inspectorDock === 'left' || inspectorDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidth : inspectorHeight" :aria-valuemin="inspectorDock === 'left' || inspectorDock === 'right' ? 180 : 100" :aria-valuemax="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidthLimit() : inspectorHeightLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
+        <div class="rail-heading">
+          <span class="section-index panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">INSPECTOR</span>
+          <details class="dock-menu" data-testid="inspector-dock-menu">
+            <summary class="subtle-button rail-toggle" aria-label="Inspector panel options" title="Inspector panel options">⋯</summary>
+            <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
+              <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="inspectorDock = 'left'">LEFT</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="inspectorDock = 'right'">RIGHT</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-top" :aria-pressed="inspectorDock === 'top'" @click="inspectorDock = 'top'">TOP</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="inspectorDock = 'bottom'">BOTTOM</button>
             </div>
-            <ObjectInspector
-              v-if="!inspectorCollapsed"
-              :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
-              :origin-dataset-id="origin?.originDatasetId ?? null"
-              :workspace-mode="workspaceMode"
-              :replay-inspector="workspaceMode === 'replay' ? replayInspector : null"
-              :replay-inspector-error="replayInspectorError"
-              :selected-difference="workspaceMode === 'compare' ? selectedCompareDifference : null"
-              :compare-baseline-snapshot-id="compareResult?.baseline.snapshotId ?? null"
-              :compare-candidate-snapshot-id="compareResult?.candidate.snapshotId ?? null"
-            />
-          </aside>
+          </details>
+          <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
+        </div>
+        <ObjectInspector
+          v-if="!inspectorCollapsed"
+          :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
+          :origin-dataset-id="origin?.originDatasetId ?? null"
+          :workspace-mode="workspaceMode"
+          :replay-inspector="workspaceMode === 'replay' ? replayInspector : null"
+          :replay-inspector-error="replayInspectorError"
+          :selected-difference="workspaceMode === 'compare' ? selectedCompareDifference : null"
+          :compare-baseline-snapshot-id="compareResult?.baseline.snapshotId ?? null"
+          :compare-candidate-snapshot-id="compareResult?.candidate.snapshotId ?? null"
+        />
+      </aside>
       <section v-show="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock" :class="'dock-' + diagnosticsDock">
       <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
       <div class="diagnostics-heading">
