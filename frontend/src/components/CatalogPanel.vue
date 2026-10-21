@@ -50,7 +50,6 @@ const emit = defineEmits<{
             v-for="dataset in group.datasets"
             :key="dataset.id"
             :value="dataset.id"
-            :disabled="!dataset.available"
           >
             {{ dataset.barType ?? dataset.id }}{{ dataset.timeframe ? " · " + dataset.timeframe : "" }}{{ dataset.available ? "" : " · UNAVAILABLE" }}
           </option>
