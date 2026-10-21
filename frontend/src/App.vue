@@ -37,7 +37,7 @@ function handleContextMenu(event: MouseEvent) {
   devtoolsContextMenu.value = {
     visible: true,
     x: Math.min(event.clientX, window.innerWidth - 190),
-    y: Math.min(event.clientY, window.innerHeight - 54),
+    y: Math.min(event.clientY, window.innerHeight - 82),
   };
 }
 
@@ -48,6 +48,11 @@ function dismissDevtoolsContextMenu() {
 async function openDevtoolsFromContextMenu() {
   dismissDevtoolsContextMenu();
   await invoke("open_devtools");
+}
+
+function refreshPageFromContextMenu() {
+  dismissDevtoolsContextMenu();
+  window.location.reload();
 }
 
 const {
@@ -818,6 +823,7 @@ onUnmounted(() => {
       @contextmenu.prevent
     >
       <button data-testid="open-devtools" type="button" @click="openDevtoolsFromContextMenu">Open DevTools</button>
+      <button data-testid="refresh-page" type="button" @click="refreshPageFromContextMenu">Refresh Page</button>
     </div>
   </main>
 </template>
