@@ -2668,7 +2668,7 @@ th, td { padding: 6px 8px; }
   width: auto;
   min-height: 0;
   padding: 0;
-  overflow: auto;
+  overflow: visible;
 }
 .primary-workspace.inspector-dock-top .inspector-rail.collapsed,
 .primary-workspace.inspector-dock-bottom .inspector-rail.collapsed {
