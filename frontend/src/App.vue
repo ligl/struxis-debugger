@@ -263,7 +263,7 @@ function peerDockReservation(target: Exclude<PanelResizeTarget, null>, axis: Doc
   if (!peerUsesAxis) return 0;
 
   if (target === "inspector") {
-    if (diagnosticsCollapsed.value) return 0;
+    if (diagnosticsCollapsed.value) return 36;
     return axis === "horizontal" ? diagnosticsWidth.value : diagnosticsHeight.value;
   }
 
