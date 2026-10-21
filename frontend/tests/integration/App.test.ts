@@ -438,6 +438,8 @@ describe("Origin Load workbench", () => {
         return Promise.resolve([dataset, dailyDataset, otherInstrumentDataset, unresolvedDataset]);
       }
       if (command === "get_current_origin") return Promise.resolve(null);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
@@ -456,9 +458,8 @@ describe("Origin Load workbench", () => {
     expect(groups[0]!.findAll("option")).toHaveLength(2);
     expect(groups[1]!.findAll("option")).toHaveLength(1);
     expect(groups[2]!.find("option").text()).toContain("UNAVAILABLE");
-    expect(wrapper.text()).toContain("Instrument metadata is missing");
-
     await select.setValue(unresolvedDataset.id);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Instrument metadata is missing"));
     expect((wrapper.get('[data-testid="catalog-load"]').element as HTMLButtonElement).disabled).toBe(true);
     expect(invokeMock.mock.calls.some(([command]) => command === "load_origin")).toBe(false);
   });
