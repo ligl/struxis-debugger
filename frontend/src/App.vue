@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
@@ -24,6 +25,28 @@ import { useCatalogGroups } from "./composables/useCatalogGroups";
 import { resolveOriginRangeClick } from "./origin-range-selection";
 import { getReplayInspector } from "./origin-bridge";
 import type { ReplayInspectorDto } from "./origin-types";
+
+const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
+const devtoolsAvailable = import.meta.env.DEV && isTauri();
+
+function handleContextMenu(event: MouseEvent) {
+  if (!devtoolsAvailable) return;
+  event.preventDefault();
+  devtoolsContextMenu.value = {
+    visible: true,
+    x: Math.min(event.clientX, window.innerWidth - 190),
+    y: Math.min(event.clientY, window.innerHeight - 54),
+  };
+}
+
+function dismissDevtoolsContextMenu() {
+  devtoolsContextMenu.value.visible = false;
+}
+
+async function openDevtoolsFromContextMenu() {
+  dismissDevtoolsContextMenu();
+  await invoke("open_devtools");
+}
 
 const {
   datasets,
@@ -526,7 +549,18 @@ onMounted(async () => {
   if (!originHandoffDuringStartup) await refreshCurrentTestDataset();
 });
 
+onMounted(() => {
+  if (devtoolsAvailable) {
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("click", dismissDevtoolsContextMenu);
+    window.addEventListener("keydown", dismissDevtoolsContextMenu);
+  }
+});
+
 onUnmounted(() => {
+  window.removeEventListener("contextmenu", handleContextMenu);
+  window.removeEventListener("click", dismissDevtoolsContextMenu);
+  window.removeEventListener("keydown", dismissDevtoolsContextMenu);
   document.removeEventListener("keydown", handleReplayShortcut);
   document.removeEventListener("pointerdown", handleDockMenuPointerDown);
   if (runPollInterval !== null) window.clearInterval(runPollInterval);
@@ -773,5 +807,15 @@ onUnmounted(() => {
       </section>
     </div>
 
+    <div
+      v-if="devtoolsAvailable && devtoolsContextMenu.visible"
+      class="devtools-context-menu"
+      data-testid="devtools-context-menu"
+      :style="{ left: devtoolsContextMenu.x + 'px', top: devtoolsContextMenu.y + 'px' }"
+      @click.stop
+      @contextmenu.prevent
+    >
+      <button data-testid="open-devtools" type="button" @click="openDevtoolsFromContextMenu">Open DevTools</button>
+    </div>
   </main>
 </template>
