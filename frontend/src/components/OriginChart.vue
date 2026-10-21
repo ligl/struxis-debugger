@@ -351,3 +351,145 @@ onBeforeUnmount(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.origin-chart-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin: 0;
+  border-color: #30383f;
+  border-radius: 0;
+  background: #121619;
+}
+
+.origin-chart-heading {
+  min-height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 9px;
+  border-bottom-color: #252c32;
+  background: #191e23;
+}
+
+.chart-title-block {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.chart-title-block .section-index {
+  margin: 0;
+  font-size: 7px;
+  letter-spacing: .045em;
+  white-space: nowrap;
+}
+
+.chart-title-block h3 {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chart-instrument {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-heading-actions {
+  gap: 7px;
+}
+
+.chart-bar-count {
+  font-size: 8px;
+}
+
+.chart-tool-button {
+  min-width: 36px;
+  padding: 3px 6px;
+  font-size: 8px;
+}
+
+.chart-data-strip {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 7px 12px;
+  padding: 4px 9px;
+  border-bottom-color: #252c32;
+  background: #15191d;
+}
+
+.chart-data-strip > span {
+  gap: 4px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.chart-data-strip small {
+  font-size: 7px;
+}
+
+.chart-data-strip .chart-latest-id {
+  flex: 1 1 100px;
+  overflow: hidden;
+}
+
+.chart-data-strip .chart-latest-id strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chart-selection-hint {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 3px 9px;
+  border-bottom: 1px solid #252c32;
+  color: #89949d;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.origin-chart-viewport {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+}
+
+.origin-chart-host {
+  height: 100%;
+  min-height: 0;
+}
+
+.origin-chart-empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  font-size: 10px;
+}
+
+.chart-error {
+  flex: 0 0 auto;
+  margin: 6px;
+  padding: 7px 9px;
+  font-size: 9px;
+}
+
+@media (max-width: 1180px) {
+  .chart-title-block .section-index {
+    display: none;
+  }
+
+  .chart-data-strip {
+    overflow-x: auto;
+  }
+}
+</style>
