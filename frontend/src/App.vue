@@ -624,7 +624,7 @@ onUnmounted(() => {
             data-testid="workspace-content"
             class="workspace-content"
             :class="{ 'dataset-workspace-content': workspaceMode === 'dataset' }"
-            :style="workspaceMode === 'dataset' ? { padding: '0', gap: '0' } : undefined"
+            
           >
             <div v-if="workspaceMode === 'dataset'" class="dataset-controls-host">
               <TestDatasetPanel
