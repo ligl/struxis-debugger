@@ -345,7 +345,7 @@ test("Diagnostics supports four-way docking with an edge-aligned splitter", asyn
     }
     if (direction === "bottom") {
       expect(Math.abs(diagnostics.splitterTop - diagnostics.top)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.bottom - (workbench!.y + workbench!.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.bottom - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
       expect(chartWorkspace!.y + chartWorkspace!.height).toBeLessThanOrEqual(diagnostics.top + 1);
     }
     if (direction === "left" || direction === "right") expect(diagnostics.splitterWidth).toBeGreaterThan(0);
