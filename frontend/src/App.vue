@@ -546,6 +546,7 @@ onUnmounted(() => {
               <button class="subtle-button" data-testid="run-step" :disabled="!isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('step')">STEP</button>
               <button class="subtle-button" data-testid="run-play-pause" :disabled="!isRunCommandEligible(runState?.status === 'running' ? 'pause' : 'play', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand(runState?.status === 'running' ? 'pause' : 'play')">{{ runState?.status === 'running' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
               <button class="subtle-button" data-testid="run-stop" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('stop')">STOP</button>
+              <button class="subtle-button" data-testid="run-refresh-state" :disabled="runBusy" @click="refreshRunState">REFRESH</button>
               <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
             </div>
           </template>
