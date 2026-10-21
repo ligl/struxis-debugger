@@ -3700,7 +3700,9 @@ th, td { padding: 6px 8px; }
   z-index: 2;
 }
 
-.dataset-workspace-content {
+.chart-panels > .dataset-workspace-content {
+  /* Match the frozen prototype's .dataset-layout .chart-stack inset. */
+  padding: 4px 6px 5px;
   overflow: hidden;
 }
 
