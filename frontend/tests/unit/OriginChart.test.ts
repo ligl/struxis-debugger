@@ -33,6 +33,7 @@ vi.mock("lightweight-charts", () => ({
   ColorType: { Solid: "solid" },
   HistogramSeries: { kind: "histogram" },
   LineSeries: { kind: "line" },
+  LineStyle: { Solid: 0, Dotted: 1, Dashed: 2, LargeDashed: 3, SparseDotted: 4 },
   createChart: chartMocks.createChart,
 }));
 
