@@ -341,6 +341,11 @@ for (const direction of dockDirections) {
 
     await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
     const inspector = await inspectPanel(page, "inspector-panel", "inspector-resize-edge");
+    if (direction === "left" || direction === "right") {
+      expect(Math.abs(inspector.width - 282)).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(inspector.height - 164)).toBeLessThanOrEqual(1);
+    }
     const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
     expect(chartWorkspace).toBeTruthy();
 
@@ -373,6 +378,11 @@ for (const direction of dockDirections) {
 
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
     const diagnostics = await inspectPanel(page, "diagnostics-dock", "diagnostics-resize-edge");
+    if (direction === "left" || direction === "right") {
+      expect(Math.abs(diagnostics.width - 282)).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(diagnostics.height - 164)).toBeLessThanOrEqual(1);
+    }
     const workbench = await page.getByTestId("workbench").boundingBox();
     const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
     expect(workbench).toBeTruthy();
