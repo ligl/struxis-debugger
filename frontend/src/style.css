@@ -2734,6 +2734,30 @@ th, td { padding: 6px 8px; }
   background: #1b2025;
 }
 
+.inspector-rail .panel-title {
+  color: var(--dbg-text-primary, #e3e8eb);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inspector-rail .inspector-object-tag {
+  padding: 3px 6px;
+}
+
+.inspector-rail.collapsed .panel-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: .04em;
+}
+
+.inspector-rail.collapsed .inspector-object-tag,
+.inspector-rail.collapsed .dock-menu {
+  display: none;
+}
+
 .inspector-rail.collapsed .rail-heading {
   min-height: 36px;
   padding: 6px 2px;
