@@ -8,8 +8,7 @@ const chartMocks = vi.hoisted(() => ({
   createChart: vi.fn(),
   candleSetData: vi.fn(),
   volumeSetData: vi.fn(),
-  cbarHighSetData: vi.fn(),
-  cbarLowSetData: vi.fn(),
+  priceToCoordinate: vi.fn(),
   swingSetData: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
@@ -65,9 +64,7 @@ function installResizeObserverMock() {
 function installChartMock() {
   const chart = {
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: chartMocks.candleSetData })
-      .mockReturnValueOnce({ setData: chartMocks.cbarHighSetData })
-      .mockReturnValueOnce({ setData: chartMocks.cbarLowSetData })
+      .mockReturnValueOnce({ setData: chartMocks.candleSetData, priceToCoordinate: chartMocks.priceToCoordinate })
       .mockReturnValueOnce({ setData: chartMocks.swingSetData })
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
@@ -99,6 +96,7 @@ describe("OriginChart", () => {
       return null;
     });
     chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : 1);
+    chartMocks.priceToCoordinate.mockImplementation((price: number) => price === 13 ? 30 : price === 9 ? 70 : null);
     installResizeObserverMock();
     installChartMock();
   });
@@ -220,12 +218,13 @@ describe("OriginChart", () => {
       },
     });
 
-    expect(chartMocks.cbarHighSetData).toHaveBeenCalledWith([
-      { time: 1700000060, value: 13 },
-    ]);
-    expect(chartMocks.cbarLowSetData).toHaveBeenCalledWith([
-      { time: 1700000060, value: 9 },
-    ]);
+    const cbarRectangle = wrapper.get('[data-testid="cbar-range-rectangle"]');
+    expect(cbarRectangle.attributes("data-cbar-id")).toBe("1700000000000000000");
+    expect(cbarRectangle.attributes("x")).toBe("100");
+    expect(cbarRectangle.attributes("y")).toBe("30");
+    expect(cbarRectangle.attributes("width")).toBe("100");
+    expect(cbarRectangle.attributes("height")).toBe("40");
+    expect(cbarRectangle.attributes("fill")).toBe("none");
     expect(chartMocks.swingSetData).toHaveBeenCalledWith([
       { time: 1700000000, value: 9 },
       { time: 1700000060, value: 13 },
@@ -427,8 +426,7 @@ describe("OriginChart", () => {
       .toContain("SBar 1700000000000000000 has a non-finite close value.");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([]);
-    expect(chartMocks.cbarHighSetData).toHaveBeenCalledWith([]);
-    expect(chartMocks.cbarLowSetData).toHaveBeenCalledWith([]);
+    expect(wrapper.findAll('[data-testid="cbar-range-rectangle"]')).toHaveLength(0);
     expect(chartMocks.swingSetData).toHaveBeenCalledWith([]);
     wrapper.unmount();
   });
