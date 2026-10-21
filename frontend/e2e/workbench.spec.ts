@@ -213,6 +213,9 @@ test("Inspector supports four-way docking with an edge-aligned splitter", async 
     const option = page.getByTestId(optionTestId);
     await openDockMenu(menuTestId);
     await expect(option).toBeVisible();
+    // Visibility alone does not guarantee that overflow ancestors leave the
+    // menu inside the viewport and reachable by a real pointer interaction.
+    await expect(option).toBeInViewport();
     await option.click();
     await expect(option).toHaveAttribute("aria-pressed", "true");
     // Docking moves the panel and therefore its menu anchor. Close the native
@@ -264,6 +267,9 @@ test("Diagnostics supports four-way docking with an edge-aligned splitter", asyn
     const option = page.getByTestId(optionTestId);
     await openDockMenu(menuTestId);
     await expect(option).toBeVisible();
+    // Visibility alone does not guarantee that overflow ancestors leave the
+    // menu inside the viewport and reachable by a real pointer interaction.
+    await expect(option).toBeInViewport();
     await option.click();
     await expect(option).toHaveAttribute("aria-pressed", "true");
     // Docking moves the panel and therefore its menu anchor. Close the native
