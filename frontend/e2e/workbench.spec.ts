@@ -214,6 +214,13 @@ for (const direction of ["left", "right"] as const) {
     await expect(title).toBeVisible();
     await expect(title).toHaveText("Diagnostics");
     await expect(title).toHaveCSS("writing-mode", "vertical-rl");
+    const railBox = await dock.boundingBox();
+    const titleBox = await title.boundingBox();
+    expect(railBox).not.toBeNull();
+    expect(titleBox).not.toBeNull();
+    expect(Math.abs(
+      titleBox!.x + titleBox!.width / 2 - (railBox!.x + railBox!.width / 2),
+    )).toBeLessThanOrEqual(1);
     await expect(dock.locator(".diagnostics-heading")).not.toHaveCSS("content", '"DIAG"');
     await expect(dock.getByTestId("diagnostics-category-tabs")).toBeHidden();
   });
