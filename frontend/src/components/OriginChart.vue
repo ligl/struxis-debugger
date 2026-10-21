@@ -225,6 +225,23 @@ function resolveBoundaryDragSbar(clientX: number): string | null {
   return sbarIdByLogicalIndex[index] ?? null;
 }
 
+function handleBoundaryKey(edge: "start" | "end", event: KeyboardEvent): void {
+  if (props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
+  const delta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+  if (delta === 0) return;
+  event.preventDefault();
+  const currentId = edge === "start" ? props.selectionStartSbarId : props.selectionEndSbarId;
+  const currentIndex = sbarIdByLogicalIndex.indexOf(currentId);
+  if (currentIndex < 0) return;
+  const otherIndex = sbarIdByLogicalIndex.indexOf(
+    edge === "start" ? props.selectionEndSbarId : props.selectionStartSbarId,
+  );
+  const nextIndex = Math.max(0, Math.min(sbarIdByLogicalIndex.length - 1, currentIndex + delta));
+  if (edge === "start" ? nextIndex > otherIndex : nextIndex < otherIndex) return;
+  const nextId = sbarIdByLogicalIndex[nextIndex];
+  if (nextId && nextId !== currentId) emit("rangeBoundaryChange", edge, nextId);
+}
+
 function startBoundaryDrag(edge: "start" | "end", event: PointerEvent): void {
   if (event.button !== 0 || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
   draggingBoundary = edge;
@@ -505,6 +522,7 @@ onBeforeUnmount(() => {
           data-testid="origin-selection-start-handle"
           :style="{ left: `${selectionStartX}px` }"
           @pointerdown.stop="startBoundaryDrag('start', $event)"
+          @keydown="handleBoundaryKey('start', $event)"
         ></div>
         <div
           v-if="selectionPending && selectionStartX !== null && previewX !== null"
@@ -531,6 +549,7 @@ onBeforeUnmount(() => {
             data-testid="origin-selection-end-handle"
             :style="{ left: `${selectionEndX}px` }"
             @pointerdown.stop="startBoundaryDrag('end', $event)"
+            @keydown="handleBoundaryKey('end', $event)"
           ></div>
         </template>
       </div>
