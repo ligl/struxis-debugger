@@ -452,7 +452,7 @@ describe("OriginChart", () => {
     });
     await nextTick();
 
-    await wrapper.get('[data-testid="origin-selection-end-handle"]').trigger("pointerdown", {
+    await wrapper.get('[data-testid="origin-selection-end-line"]').trigger("pointerdown", {
       button: 0,
     });
     const move = new Event("pointermove");
@@ -466,7 +466,7 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
-  it("allows both completed interval boundaries to be adjusted with the keyboard", async () => {
+  it("renders draggable boundary lines without separate handles", async () => {
     const bars = [
       bar(),
       bar({
@@ -493,20 +493,10 @@ describe("OriginChart", () => {
     });
     await nextTick();
 
-    await wrapper.get('[data-testid="origin-selection-start-handle"]').trigger("keydown", {
-      key: "ArrowRight",
-    });
-    expect(wrapper.emitted("rangeBoundaryChange")).toEqual([
-      ["start", "1700000060000000000"],
-    ]);
-
-    await wrapper.get('[data-testid="origin-selection-end-handle"]').trigger("keydown", {
-      key: "ArrowLeft",
-    });
-    expect(wrapper.emitted("rangeBoundaryChange")).toEqual([
-      ["start", "1700000060000000000"],
-      ["end", "1700000060000000000"],
-    ]);
+    expect(wrapper.find('[data-testid="origin-selection-start-line"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-selection-end-line"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-selection-start-handle"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="origin-selection-end-handle"]').exists()).toBe(false);
 
     wrapper.unmount();
   });
