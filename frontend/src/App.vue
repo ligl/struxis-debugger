@@ -214,7 +214,6 @@ watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
   if (mode === "replay") void refreshReplayInspector();
 });
-const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
 const diagnosticsCategory = ref("all");
@@ -546,7 +545,7 @@ onUnmounted(() => {
   <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px', '--inspector-reserve-left': !inspectorCollapsed && inspectorDock === 'left' ? inspectorWidth + 'px' : (inspectorDock === 'left' ? '36px' : '0px'), '--inspector-reserve-right': !inspectorCollapsed && inspectorDock === 'right' ? inspectorWidth + 'px' : (inspectorDock === 'right' ? '36px' : '0px'), '--inspector-reserve-top': !inspectorCollapsed && inspectorDock === 'top' ? inspectorHeight + 'px' : (inspectorDock === 'top' ? '36px' : '0px'), '--inspector-reserve-bottom': !inspectorCollapsed && inspectorDock === 'bottom' ? inspectorHeight + 'px' : (inspectorDock === 'bottom' ? '36px' : '0px') }">
     <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
 
-    <div data-testid="workbench" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--diagnostics-reserve-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
+    <div data-testid="workbench" class="workbench-body" :class="{ 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--diagnostics-reserve-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
 
 
       <section data-testid="chart-workspace" class="workbench-main">
@@ -579,16 +578,17 @@ onUnmounted(() => {
           </template>
         </WorkspaceToolbar>
 
-        <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
-          <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
-            <div class="rail-heading">
-              <span class="section-index">SOURCE</span>
-              <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
-            </div>
-            <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
-          </aside>
-
-          <div data-testid="workspace-content" class="workspace-content" :class="{ 'dataset-workspace-content': workspaceMode === 'dataset' }">
+        <div
+          data-testid="chart-panels"
+          class="chart-panels"
+          :style="workspaceMode === 'dataset' ? { gridTemplateColumns: 'minmax(0, 1fr)' } : undefined"
+        >
+          <div
+            data-testid="workspace-content"
+            class="workspace-content"
+            :class="{ 'dataset-workspace-content': workspaceMode === 'dataset' }"
+            :style="workspaceMode === 'dataset' ? { padding: '0', gap: '0' } : undefined"
+          >
             <div v-if="workspaceMode === 'dataset'" class="dataset-controls-host">
               <TestDatasetPanel
                 :origin="origin"
@@ -604,7 +604,31 @@ onUnmounted(() => {
                 :test-error="testError"
                 :test-status="testStatus"
                 @create="createSelectedTestDataset"
-              />
+              >
+                <template #source>
+                  <CatalogPanel
+                    :datasets="datasets"
+                    :selected-id="selectedId"
+                    :selected-dataset="selectedDataset"
+                    :instrument-groups="instrumentGroups"
+                    :collapsed-instrument-ids="collapsedInstrumentIds"
+                    :refreshing="refreshing"
+                    :loading="loading"
+                    :mutation-busy="!canLoadOrigin"
+                    :discovery-error="discoveryError"
+                    :enable-structure="enableStructure"
+                    :origin="origin"
+                    :load-status="loadStatus"
+                    :load-error="loadError"
+                    :format-timestamp="formatTimestamp"
+                    @refresh="refreshDatasets"
+                    @select-dataset="selectedId = $event"
+                    @toggle-group="toggleInstrumentGroup"
+                    @update:enable-structure="enableStructure = $event"
+                    @load="startLoad"
+                  />
+                </template>
+              </TestDatasetPanel>
             </div>
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
