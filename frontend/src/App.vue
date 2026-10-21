@@ -703,6 +703,8 @@ onUnmounted(() => {
         <div
           class="diagnostics-heading"
           data-testid="diagnostics-heading"
+          :class="{ 'collapsed-side-heading': diagnosticsCollapsed && (diagnosticsDock === 'left' || diagnosticsDock === 'right') }"
+          @click="if (diagnosticsCollapsed && (diagnosticsDock === 'left' || diagnosticsDock === 'right')) diagnosticsCollapsed = false"
           draggable="true"
           @dragstart="startDockDrag('diagnostics', $event)"
         >
@@ -723,7 +725,7 @@ onUnmounted(() => {
           </nav>
           <div class="dock-actions">
             <details class="dock-menu" data-testid="diagnostics-dock-menu">
-              <summary class="subtle-button" aria-label="Diagnostics panel options" title="Diagnostics panel options">⋯</summary>
+              <summary class="subtle-button" aria-label="Move Diagnostics" title="Move or dock panel">⋯</summary>
               <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
                 <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="diagnosticsDock = 'left'; closeDockMenus()">Dock Left</button>
                 <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="diagnosticsDock = 'right'; closeDockMenus()">Dock Right</button>
