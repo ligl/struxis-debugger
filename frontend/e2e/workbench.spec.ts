@@ -181,13 +181,25 @@ for (const direction of ["left", "right", "top", "bottom"] as const) {
     await page.goto("/");
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
 
-    const titleBlock = page.getByTestId("diagnostics-dock").locator(".diagnostics-heading > div:first-child");
+    const dock = page.getByTestId("diagnostics-dock");
+    const titleBlock = dock.locator(".diagnostics-title-block");
+    const categoryTabs = dock.getByTestId("diagnostics-category-tabs");
+    const actions = dock.locator(".dock-actions");
+    await expect(categoryTabs).toBeVisible();
+    await expect(categoryTabs.getByRole("button")).toHaveCount(8);
     if (direction === "left" || direction === "right") {
       await expect(titleBlock).toBeVisible();
       await expect(titleBlock.locator("h2")).toBeVisible();
     } else {
       await expect(titleBlock).toBeHidden();
-      await expect(page.getByTestId("diagnostics-dock").locator(".dock-actions")).toBeVisible();
+      await expect(actions).toBeVisible();
+      const tabsBox = await categoryTabs.boundingBox();
+      const actionsBox = await actions.boundingBox();
+      expect(tabsBox).toBeTruthy();
+      expect(actionsBox).toBeTruthy();
+      expect(actionsBox!.x).toBeGreaterThanOrEqual(tabsBox!.x + tabsBox!.width - 1);
+      expect(actionsBox!.y).toBeGreaterThanOrEqual(tabsBox!.y - 1);
+      expect(actionsBox!.y + actionsBox!.height).toBeLessThanOrEqual(tabsBox!.y + tabsBox!.height + 1);
     }
   });
 }
