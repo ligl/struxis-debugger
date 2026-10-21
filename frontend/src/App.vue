@@ -249,7 +249,7 @@ function horizontalDockLimit(): number {
 }
 
 function verticalDockLimit(): number {
-  return Math.max(100, Math.min(480, window.innerHeight * 0.55);
+  return Math.max(100, Math.min(480, window.innerHeight * 0.55));
 }
 
 function inspectorWidthLimit(): number { return horizontalDockLimit(); }
@@ -601,7 +601,7 @@ onUnmounted(() => {
       <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
       <div class="diagnostics-heading">
         <div>
-          <p class="section-index panel-dock-drag-handle" data-testid="diagnostics-dock-drag-handle" draggable="true" title="Drag onto the workbench's upper or lower half to dock" @dragstart="startDockDrag('diagnostics', $event)">DIAGNOSTICS</p>
+          <p class="section-index panel-dock-drag-handle" data-testid="diagnostics-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('diagnostics', $event)">DIAGNOSTICS</p>
           <h2>Workflow events &amp; errors</h2>
         </div>
         <div class="dock-actions">
