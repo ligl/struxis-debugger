@@ -492,19 +492,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px' }">
+  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px', '--inspector-reserve-left': !inspectorCollapsed && inspectorDock === 'left' ? inspectorWidth + 'px' : (inspectorDock === 'left' ? '42px' : '0px'), '--inspector-reserve-right': !inspectorCollapsed && inspectorDock === 'right' ? inspectorWidth + 'px' : (inspectorDock === 'right' ? '42px' : '0px'), '--inspector-reserve-top': !inspectorCollapsed && inspectorDock === 'top' ? inspectorHeight + 'px' : (inspectorDock === 'top' ? '36px' : '0px'), '--inspector-reserve-bottom': !inspectorCollapsed && inspectorDock === 'bottom' ? inspectorHeight + 'px' : (inspectorDock === 'bottom' ? '36px' : '0px') }">
     <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
 
-    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': !diagnosticsCollapsed && diagnosticsDock === 'left' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-right': !diagnosticsCollapsed && diagnosticsDock === 'right' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-top': !diagnosticsCollapsed && diagnosticsDock === 'top' ? diagnosticsHeight + 'px' : '0px', '--diagnostics-reserve-bottom': !diagnosticsCollapsed && diagnosticsDock === 'bottom' ? diagnosticsHeight + 'px' : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
-      <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
-        <div class="rail-heading">
-          <span class="section-index">SOURCE</span>
-          <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
-        </div>
-        <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
-      </aside>
+    <div data-testid="workbench" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': !diagnosticsCollapsed && diagnosticsDock === 'left' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-right': !diagnosticsCollapsed && diagnosticsDock === 'right' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-top': !diagnosticsCollapsed && diagnosticsDock === 'top' ? diagnosticsHeight + 'px' : '0px', '--diagnostics-reserve-bottom': !diagnosticsCollapsed && diagnosticsDock === 'bottom' ? diagnosticsHeight + 'px' : '0px', '--inspector-offset-left': inspectorDock === 'left' && diagnosticsDock === 'left' && !diagnosticsCollapsed ? diagnosticsWidth + 'px' : '0px', '--inspector-offset-right': inspectorDock === 'right' && diagnosticsDock === 'right' && !diagnosticsCollapsed ? diagnosticsWidth + 'px' : '0px', '--inspector-offset-top': inspectorDock === 'top' && diagnosticsDock === 'top' && !diagnosticsCollapsed ? diagnosticsHeight + 'px' : '0px', '--inspector-offset-bottom': inspectorDock === 'bottom' && diagnosticsDock === 'bottom' && !diagnosticsCollapsed ? diagnosticsHeight + 'px' : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
 
-      <section data-testid="workbench-main" class="workbench-main">
+
+      <section data-testid="chart-workspace" class="workbench-main">
         <WorkspaceToolbar
           :workspace-mode="workspaceMode"
           :catalog-collapsed="catalogCollapsed"
@@ -513,7 +507,14 @@ onUnmounted(() => {
           @toggle-diagnostics="diagnosticsCollapsed = !diagnosticsCollapsed"
         />
 
-        <div data-testid="primary-workspace" class="primary-workspace" :class="{ ['inspector-dock-' + inspectorDock]: true, 'inspector-is-collapsed': inspectorCollapsed }">
+        <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
+      <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
+        <div class="rail-heading">
+          <span class="section-index">SOURCE</span>
+          <button class="subtle-button rail-toggle" :aria-label="catalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'" @click="catalogCollapsed = !catalogCollapsed">{{ catalogCollapsed ? '›' : '‹' }}</button>
+        </div>
+        <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
+      </aside>
           <div data-testid="workspace-content" class="workspace-content">
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
@@ -568,7 +569,10 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <aside data-testid="inspector-rail" class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
+
+        </div>
+      </section>
+                <aside data-testid="inspector-panel" class="inspector-rail" :class="['dock-' + inspectorDock, { collapsed: inspectorCollapsed }]">
             <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" :aria-orientation="inspectorDock === 'left' || inspectorDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidth : inspectorHeight" :aria-valuemin="inspectorDock === 'left' || inspectorDock === 'right' ? 180 : 100" :aria-valuemax="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidthLimit() : inspectorHeightLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
             <div class="rail-heading">
               <span class="section-index panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">INSPECTOR</span>
@@ -595,8 +599,6 @@ onUnmounted(() => {
               :compare-candidate-snapshot-id="compareResult?.candidate.snapshotId ?? null"
             />
           </aside>
-        </div>
-      </section>
       <section v-if="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock" :class="'dock-' + diagnosticsDock">
       <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
       <div class="diagnostics-heading">
@@ -628,12 +630,7 @@ onUnmounted(() => {
         <p v-else class="empty-state">No active errors. Structured event history and domain diagnostics are not yet connected.</p>
       </div>
       </section>
-      <button v-else class="diagnostics-reopen" @click="diagnosticsCollapsed = false">＋ Diagnostics</button>
     </div>
 
-    <footer class="footer-bar">
-      <span>STRUXIS DEBUGGER / WORKBENCH</span>
-      <span>LOAD CONTRACT · COMPLETE INPUT · ATOMIC REPLACEMENT</span>
-    </footer>
   </main>
 </template>
