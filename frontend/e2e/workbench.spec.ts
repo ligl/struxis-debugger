@@ -186,3 +186,65 @@ test("overflowing workspace content scrolls inside its own panel", async ({ page
   await content.evaluate((element) => element.scrollTo({ top: 100 }));
   await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 });
+
+
+test("dock splitters stay on the workspace-facing panel edge", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.getByTestId("inspector-rail")).toBeVisible();
+  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+
+  const inspectorGeometry = () => page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>("[data-testid='inspector-rail']")!;
+    const splitter = document.querySelector<HTMLElement>("[data-testid='inspector-resize-edge']")!;
+    const panelRect = panel.getBoundingClientRect();
+    const splitterRect = splitter.getBoundingClientRect();
+    return {
+      panelLeft: panelRect.left,
+      panelRight: panelRect.right,
+      splitterLeft: splitterRect.left,
+      splitterRight: splitterRect.right,
+      splitterWidth: splitterRect.width,
+    };
+  });
+
+  const diagnosticsGeometry = () => page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>("[data-testid='diagnostics-dock']")!;
+    const splitter = document.querySelector<HTMLElement>("[data-testid='diagnostics-resize-edge']")!;
+    const panelRect = panel.getBoundingClientRect();
+    const splitterRect = splitter.getBoundingClientRect();
+    return {
+      panelTop: panelRect.top,
+      panelBottom: panelRect.bottom,
+      splitterTop: splitterRect.top,
+      splitterBottom: splitterRect.bottom,
+      splitterHeight: splitterRect.height,
+    };
+  });
+
+  // Right-docked Inspector: its splitter belongs on the panel's left edge.
+  let inspector = await inspectorGeometry();
+  expect(Math.abs(inspector.splitterLeft - inspector.panelLeft)).toBeLessThanOrEqual(4);
+  expect(inspector.splitterWidth).toBeGreaterThan(0);
+
+  await page.locator("[data-testid='inspector-dock-menu'] summary").click();
+  await page.getByTestId("inspector-dock-left").click();
+  await expect(page.getByTestId("primary-workspace")).toHaveClass(/inspector-dock-left/);
+
+  // Left-docked Inspector: its splitter moves to the panel's right edge.
+  inspector = await inspectorGeometry();
+  expect(Math.abs(inspector.splitterRight - inspector.panelRight)).toBeLessThanOrEqual(4);
+
+  // Bottom-docked Diagnostics: splitter belongs on the panel's top edge.
+  let diagnostics = await diagnosticsGeometry();
+  expect(Math.abs(diagnostics.splitterTop - diagnostics.panelTop)).toBeLessThanOrEqual(4);
+  expect(diagnostics.splitterHeight).toBeGreaterThan(0);
+
+  await page.locator("[data-testid='diagnostics-dock-menu'] summary").click();
+  await page.getByTestId("diagnostics-dock-top").click();
+  await expect(page.getByTestId("debugger-shell")).toHaveClass(/diagnostics-dock-top/);
+
+  // Top-docked Diagnostics: splitter must move to the panel's bottom edge.
+  diagnostics = await diagnosticsGeometry();
+  expect(Math.abs(diagnostics.splitterBottom - diagnostics.panelBottom)).toBeLessThanOrEqual(4);
+});
