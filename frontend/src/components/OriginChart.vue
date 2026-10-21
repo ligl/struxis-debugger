@@ -35,6 +35,7 @@ let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let overlayUpdateFrame: number | null = null;
 let fittedOriginDatasetId: string | null = null;
 let sbarIdByLogicalIndex: readonly string[] = [];
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
@@ -96,6 +97,17 @@ function updateCBarRectangles(): void {
     const bottom = Math.max(highY as number, lowY as number);
     return [{ id: cbar.cbarId, x: left, y: top, width: right - left, height: bottom - top }];
   }) : [];
+}
+
+function scheduleOverlayUpdate(): void {
+  // Lightweight Charts updates its internal canvases during wheel zoom/pan.
+  // Read the final public coordinate transforms on the next paint so SVG
+  // overlays never lag one interaction frame behind the SBar series.
+  if (overlayUpdateFrame !== null) cancelAnimationFrame(overlayUpdateFrame);
+  overlayUpdateFrame = requestAnimationFrame(() => {
+    overlayUpdateFrame = null;
+    updateSbarCoordinates();
+  });
 }
 
 function updateSbarCoordinates(): void {
@@ -401,7 +413,7 @@ onMounted(() => {
   });
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
-  chart.timeScale().subscribeVisibleLogicalRangeChange(updateSbarCoordinates);
+  chart.timeScale().subscribeVisibleLogicalRangeChange(scheduleOverlayUpdate);
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
     if (!chart || !entry) return;
@@ -430,7 +442,11 @@ onBeforeUnmount(() => {
   resizeObserver = null;
   chart?.unsubscribeClick(handleChartClick);
   chart?.unsubscribeCrosshairMove(handleChartMove);
-  chart?.timeScale().unsubscribeVisibleLogicalRangeChange(updateSbarCoordinates);
+  chart?.timeScale().unsubscribeVisibleLogicalRangeChange(scheduleOverlayUpdate);
+  if (overlayUpdateFrame !== null) {
+    cancelAnimationFrame(overlayUpdateFrame);
+    overlayUpdateFrame = null;
+  }
   chart?.remove();
   chart = null;
   candleSeries = null;
