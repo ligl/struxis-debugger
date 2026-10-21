@@ -2812,28 +2812,75 @@ th, td { padding: 6px 8px; }
 .diagnostics-dock.dock-bottom { bottom: 0; top: auto; border-top: 1px solid #3a444b; }
 
 .diagnostics-dock .diagnostics-heading {
+  position: relative;
   display: flex;
   flex: 0 0 auto;
   min-width: 0;
   min-height: 36px;
-  height: auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 4px 9px;
-  border-bottom: 1px solid var(--dbg-border);
+  padding: 0 9px;
   background: #1b2025;
 }
 
-.diagnostics-dock .diagnostics-heading > div:first-child {
+.diagnostics-dock .diagnostics-title-block {
   display: flex;
+  flex: 0 0 auto;
   min-width: 0;
   align-items: center;
   gap: 8px;
 }
 
-.diagnostics-dock .diagnostics-heading h2 { margin: 0; white-space: nowrap; }
-.diagnostics-dock .diagnostics-heading .section-index { margin: 0; white-space: nowrap; }
+.diagnostics-dock .diagnostics-title-block h2 {
+  margin: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.diagnostics-dock .diagnostics-title-block .section-index {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.diagnostics-dock .diagnostics-tabs {
+  display: flex;
+  flex: 1 1 0%;
+  align-self: stretch;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #39454e transparent;
+}
+
+.diagnostics-dock .diagnostics-tabs button {
+  flex: 0 0 auto;
+  height: 100%;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--dbg-text-secondary);
+  font-size: 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.diagnostics-dock .diagnostics-tabs button.active {
+  border-bottom-color: var(--dbg-accent, #6a9fbe);
+  color: var(--dbg-text-primary, #e2e8ec);
+}
+
+.diagnostics-dock .dock-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
 
 .diagnostics-dock .diagnostics-content {
   flex: 1 1 0;
@@ -2866,45 +2913,70 @@ th, td { padding: 6px 8px; }
   width: auto; height: 6px; cursor: ns-resize;
 }
 
+/* Side docks stack the title row above the category row, as in the frozen prototype. */
 .diagnostics-dock.dock-left .diagnostics-heading,
 .diagnostics-dock.dock-right .diagnostics-heading {
+  min-height: 66px;
   align-items: stretch;
   flex-direction: column;
+  gap: 0;
+  padding: 0 7px;
 }
 
-.diagnostics-dock.dock-left .diagnostics-heading > div:first-child,
-.diagnostics-dock.dock-right .diagnostics-heading > div:first-child {
-  justify-content: space-between;
-  min-height: 30px;
+.diagnostics-dock.dock-left .diagnostics-title-block,
+.diagnostics-dock.dock-right .diagnostics-title-block {
+  min-height: 36px;
 }
 
-.diagnostics-dock.dock-left .diagnostics-heading h2,
-.diagnostics-dock.dock-right .diagnostics-heading h2 { white-space: normal; }
+.diagnostics-dock.dock-left .diagnostics-tabs,
+.diagnostics-dock.dock-right .diagnostics-tabs {
+  flex: 0 0 28px;
+  width: 100%;
+  height: 28px;
+  min-height: 28px;
+}
 
 .diagnostics-dock.dock-left .dock-actions,
-.diagnostics-dock.dock-right .dock-actions { justify-content: flex-end; }
-
-/*
- * The frozen prototype only shows the Diagnostics panel title in side docks.
- * Top/bottom docks keep the action strip available, but suppress the title block
- * so the horizontal panel gives its vertical space back to diagnostic content.
- */
-.diagnostics-dock.dock-top .diagnostics-heading,
-.diagnostics-dock.dock-bottom .diagnostics-heading {
-  min-height: 28px;
-  padding: 0 9px;
-  border-bottom: 0;
+.diagnostics-dock.dock-right .dock-actions {
+  position: absolute;
+  top: 5px;
+  right: 7px;
 }
 
-.diagnostics-dock.dock-top .diagnostics-heading > div:first-child,
-.diagnostics-dock.dock-bottom .diagnostics-heading > div:first-child {
+.diagnostics-dock.dock-left .diagnostics-title-block,
+.diagnostics-dock.dock-right .diagnostics-title-block {
+  padding-right: 64px;
+}
+
+/* Horizontal docks hide only the title block. Categories lead the row and
+   the same action controls follow immediately on their right. */
+.diagnostics-dock.dock-top .diagnostics-heading,
+.diagnostics-dock.dock-bottom .diagnostics-heading {
+  min-height: 36px;
+  height: 36px;
+  flex-direction: row;
+  gap: 10px;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+}
+
+.diagnostics-dock.dock-top .diagnostics-title-block,
+.diagnostics-dock.dock-bottom .diagnostics-title-block {
   display: none;
 }
 
-.diagnostics-dock.dock-top .diagnostics-heading .dock-actions,
-.diagnostics-dock.dock-bottom .diagnostics-heading .dock-actions {
-  width: 100%;
-  justify-content: flex-end;
+.diagnostics-dock.dock-top .diagnostics-tabs,
+.diagnostics-dock.dock-bottom .diagnostics-tabs {
+  flex: 1 1 0%;
+  min-width: 0;
+  order: 0;
+}
+
+.diagnostics-dock.dock-top .dock-actions,
+.diagnostics-dock.dock-bottom .dock-actions {
+  position: static;
+  order: 1;
+  margin-left: 0;
 }
 
 .diagnostics-reopen {
