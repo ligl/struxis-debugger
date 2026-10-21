@@ -39,6 +39,7 @@ describe("semantic timestamp formatting", () => {
     expect(parseTimeframeUnit("15m")).toBe("minute");
     expect(parseTimeframeUnit("1h")).toBe("hour");
     expect(parseTimeframeUnit("1D")).toBe("day");
+    expect(parseTimeframeUnit("1d")).toBe("day");
     expect(parseTimeframeUnit("1W")).toBe("week");
     expect(parseTimeframeUnit("300s")).toBe("second");
     expect(parseTimeframeUnit("BTC-5-MINUTE-LAST")).toBeNull();
