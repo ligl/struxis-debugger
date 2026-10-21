@@ -560,7 +560,7 @@ onUnmounted(() => {
             <CatalogPanel v-if="!catalogCollapsed" :datasets="datasets" :selected-id="selectedId" :selected-dataset="selectedDataset" :instrument-groups="instrumentGroups" :collapsed-instrument-ids="collapsedInstrumentIds" :refreshing="refreshing" :loading="loading" :mutation-busy="!canLoadOrigin" :discovery-error="discoveryError" :enable-structure="enableStructure" :origin="origin" :load-status="loadStatus" :load-error="loadError" :format-timestamp="formatTimestamp" @refresh="refreshDatasets" @select-dataset="selectedId = $event" @toggle-group="toggleInstrumentGroup" @update:enable-structure="enableStructure = $event" @load="startLoad" />
           </aside>
 
-          <div data-testid="workspace-content" class="workspace-content">
+          <div data-testid="workspace-content" class="workspace-content" :class="{ 'dataset-workspace-content': workspaceMode === 'dataset' }">
             <div v-if="workspaceMode === 'dataset'" class="dataset-controls-host">
               <TestDatasetPanel
                 :origin="origin"
