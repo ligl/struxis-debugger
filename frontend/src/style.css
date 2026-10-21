@@ -3078,3 +3078,48 @@ th, td { padding: 6px 8px; }
     gap: 4px;
   }
 }
+
+/* Match the frozen prototype's Topbar tab anchor and compact control geometry. */
+.workbench-topbar .workspace-tabs {
+  position: absolute;
+  top: 0;
+  left: 40%;
+  height: 44px;
+  transform: translateX(-40%);
+  z-index: 2;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.workbench-topbar .workspace-tab {
+  height: 31px;
+  min-height: 31px;
+  padding: 0 15px;
+  line-height: 1.2;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.workbench-topbar .brand {
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.workbench-topbar .top-right {
+  position: relative;
+  z-index: 3;
+  gap: 14px;
+  margin-left: auto;
+}
+
+@media (max-width: 1050px) {
+  .workbench-topbar .workspace-tab {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .workbench-topbar .top-right {
+    gap: 8px;
+  }
+}
