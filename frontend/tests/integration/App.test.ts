@@ -129,7 +129,7 @@ describe("Origin Load workbench", () => {
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
     // Wait for the async discovery result to be rendered and selected before Load.
-    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
+    await vi.waitFor(() => expect((wrapper.get('[data-testid="catalog-dataset-select"]').element as HTMLSelectElement).value).toBe(dataset.id));
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("load_origin", {
@@ -395,7 +395,7 @@ describe("Origin Load workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
+    await vi.waitFor(() => expect((wrapper.get('[data-testid="catalog-dataset-select"]').element as HTMLSelectElement).value).toBe(dataset.id));
 
     const structureCheckbox = wrapper.get('[data-testid="catalog-enable-structure"]');
     expect((structureCheckbox.element as HTMLInputElement).checked).toBe(true);
@@ -435,51 +435,32 @@ describe("Origin Load workbench", () => {
     };
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") {
-        return Promise.resolve([
-          dataset,
-          dailyDataset,
-          otherInstrumentDataset,
-          unresolvedDataset,
-        ]);
+        return Promise.resolve([dataset, dailyDataset, otherInstrumentDataset, unresolvedDataset]);
       }
       if (command === "get_current_origin") return Promise.resolve(null);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.findAll('[data-testid="catalog-instrument-group"]')).toHaveLength(3));
-    expect(wrapper.text()).toContain("BTCUSDT-PERP.BINANCE");
-    expect(wrapper.text()).toContain("2 DATASETS");
-    expect(wrapper.text()).toContain("ETHUSDT-PERP.BINANCE");
-    expect(wrapper.text()).toContain("Unresolved / Unavailable");
+    await vi.waitFor(() => {
+      expect((wrapper.get('[data-testid="catalog-dataset-select"]').element as HTMLSelectElement).value).toBe(dataset.id);
+    });
+
+    const select = wrapper.get('[data-testid="catalog-dataset-select"]');
+    const groups = select.findAll("optgroup");
+    expect(groups.map((group) => group.attributes("label"))).toEqual([
+      "BTCUSDT-PERP.BINANCE",
+      "ETHUSDT-PERP.BINANCE",
+      "Unresolved / Unavailable",
+    ]);
+    expect(groups[0]!.findAll("option")).toHaveLength(2);
+    expect(groups[1]!.findAll("option")).toHaveLength(1);
+    expect(groups[2]!.find("option").text()).toContain("UNAVAILABLE");
     expect(wrapper.text()).toContain("Instrument metadata is missing");
 
-    const btcGroup = wrapper
-      .findAll('[data-testid="catalog-instrument-group"]')
-      .find((row) => row.attributes("data-instrument-key") === "BTCUSDT-PERP.BINANCE")!;
-    await btcGroup.trigger("click");
-    expect(
-      wrapper.findAll('[data-testid="catalog-dataset-row"]').some((row) =>
-        row.attributes("data-dataset-id") === dataset.id,
-      ),
-    ).toBe(false);
-    expect(
-      invokeMock.mock.calls.some(([command]) => command === "load_origin"),
-    ).toBe(false);
-
-    const reopenedBtcGroup = wrapper
-      .findAll('[data-testid="catalog-instrument-group"]')
-      .find((row) => row.attributes("data-instrument-key") === "BTCUSDT-PERP.BINANCE")!;
-    await reopenedBtcGroup.trigger("click");
-    const unresolvedRow = wrapper
-      .findAll('[data-testid="catalog-dataset-row"]')
-      .find((row) => row.attributes("data-dataset-id") === unresolvedDataset.id);
-    expect(unresolvedRow).toBeDefined();
-    await unresolvedRow!.trigger("click");
+    await select.setValue(unresolvedDataset.id);
     expect((wrapper.get('[data-testid="catalog-load"]').element as HTMLButtonElement).disabled).toBe(true);
-    expect(
-      invokeMock.mock.calls.some(([command]) => command === "load_origin"),
-    ).toBe(false);
+    expect(invokeMock.mock.calls.some(([command]) => command === "load_origin")).toBe(false);
   });
 
   it("retains the previously published Origin when a replacement load fails", async () => {
@@ -516,7 +497,7 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("list_catalog_datasets"),
     );
-    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
+    await vi.waitFor(() => expect((wrapper.get('[data-testid="catalog-dataset-select"]').element as HTMLSelectElement).value).toBe(dataset.id));
     const button = wrapper.get('[data-testid="catalog-load"]');
     await button.trigger("click");
     await button.trigger("click");
@@ -565,11 +546,11 @@ describe("Test, Run and Snapshot workbench", () => {
       "02\u00a0 Replay",
       "03\u00a0 Compare",
     ]);
-    expect(wrapper.find('[data-testid="catalog-rail"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="catalog-controls"]').exists()).toBe(true);
 
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(false);
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
-    expect(wrapper.find('[data-testid="catalog-rail"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="catalog-controls"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="run-chart-test-stub"]')).toHaveLength(1);
@@ -1074,7 +1055,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.find('[data-testid="catalog-dataset-row"]').exists()).toBe(true));
+    await vi.waitFor(() => expect((wrapper.get('[data-testid="catalog-dataset-select"]').element as HTMLSelectElement).value).toBe(dataset.id));
 
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
