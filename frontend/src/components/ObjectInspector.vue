@@ -239,7 +239,7 @@ function formatReplayField(field: string, value: unknown): string {
         <p class="section-index">SELECTED SWING PROPERTIES</p>
         <dl class="inspector-fields">
           <div v-for="(value, field) in selectedReplaySwing" :key="field" class="inspector-field">
-            <dt>{{ field }}</dt><dd><code>{{ formatValue(value) }}</code></dd>
+            <dt>{{ field }}</dt><dd><code>{{ formatReplayField(String(field), value) }}</code></dd>
           </div>
         </dl>
       </div>
