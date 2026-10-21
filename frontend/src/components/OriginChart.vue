@@ -520,6 +520,10 @@ onBeforeUnmount(() => {
           role="slider"
           tabindex="0"
           aria-label="Adjust Test interval start boundary"
+          :aria-valuemin="0"
+          :aria-valuemax="Math.max(0, bars.length - 1)"
+          :aria-valuenow="Math.max(0, bars.findIndex((bar) => bar.sbarId === selectionStartSbarId))"
+          :aria-valuetext="selectionStartSbarId ?? ''"
           data-testid="origin-selection-start-handle"
           :style="{ left: `${selectionStartX}px` }"
           @pointerdown.stop="startBoundaryDrag('start', $event)"
@@ -547,6 +551,10 @@ onBeforeUnmount(() => {
             role="slider"
             tabindex="0"
             aria-label="Adjust Test interval end boundary"
+            :aria-valuemin="0"
+            :aria-valuemax="Math.max(0, bars.length - 1)"
+            :aria-valuenow="Math.max(0, bars.findIndex((bar) => bar.sbarId === selectionEndSbarId))"
+            :aria-valuetext="selectionEndSbarId ?? ''"
             data-testid="origin-selection-end-handle"
             :style="{ left: `${selectionEndX}px` }"
             @pointerdown.stop="startBoundaryDrag('end', $event)"
@@ -566,7 +574,7 @@ onBeforeUnmount(() => {
       <span v-if="latestBar">VOL <b>{{ latestBar.volume }}</b></span>
       <span v-if="latestBar" class="origin-chart-last-id" :title="latestBar.sbarId">LAST ID <code>{{ latestBar.sbarId }}</code></span>
       <span class="origin-chart-selection-status">
-        {{ selectionPending ? "SELECT END · MOVE TO PREVIEW" : selectionStartSbarId && selectionEndSbarId ? "INCLUSIVE INTERVAL FIXED" : selectionStartSbarId ? "SELECT END ON CHART" : "CLICK CHART TO SELECT START" }}
+        {{ selectionPending ? "SELECT END · MOVE TO PREVIEW" : selectionStartSbarId && selectionEndSbarId ? (selectionEditable !== false ? "DRAG EDGES · ADJUST INTERVAL" : "INCLUSIVE INTERVAL FIXED") : selectionStartSbarId ? "SELECT END ON CHART" : "CLICK CHART TO SELECT START" }}
       </span>
     </div>
   </section>
