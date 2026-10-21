@@ -10,6 +10,7 @@ const timestamp = "1780315503000000000"; // 2026-06-01 12:05:03 UTC
 describe("semantic timestamp formatting", () => {
   it("formats domain event timestamps by Timeframe unit, not duration", () => {
     expect(formatDomainTimestamp(timestamp, "1D")).toBe("2026-06-01");
+    expect(formatDomainTimestamp(timestamp, "1d")).toBe("2026-06-01");
     expect(formatDomainTimestamp(timestamp, "4D")).toBe("2026-06-01");
     expect(formatDomainTimestamp(timestamp, "1W")).toBe("2026-06-01");
     expect(formatDomainTimestamp(timestamp, "1h")).toBe("2026-06-01 12:00");
@@ -21,6 +22,7 @@ describe("semantic timestamp formatting", () => {
 
   it("keeps lifecycle timestamps at second precision regardless of market timeframe", () => {
     expect(formatLifecycleTimestamp(timestamp)).toBe("2026-06-01 12:05:03");
+    expect(formatLifecycleTimestamp("1780315502000000000")).toBe("2026-06-01 12:05:02");
   });
 
   it("uses UTC consistently regardless of the host local timezone", () => {
