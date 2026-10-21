@@ -83,11 +83,11 @@ function formatReplayField(field: string, value: unknown): string {
         </div>
         <div class="inspector-field inspector-field-wide">
           <dt>Event Time</dt>
-          <dd><code>{{ formatDomainTimestamp(selectedSbar.tsEvent, timeframe) }}</code></dd>
+          <dd><code data-testid="inspector-sbar-ts-event">{{ formatDomainTimestamp(selectedSbar.tsEvent, timeframe) }}</code></dd>
         </div>
         <div class="inspector-field inspector-field-wide">
           <dt>Init Time</dt>
-          <dd><code>{{ formatDomainTimestamp(selectedSbar.tsInit, timeframe) }}</code></dd>
+          <dd><code data-testid="inspector-sbar-ts-init">{{ formatDomainTimestamp(selectedSbar.tsInit, timeframe) }}</code></dd>
         </div>
       </dl>
       <div class="inspector-subsection">
