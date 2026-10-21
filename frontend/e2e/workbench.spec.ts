@@ -349,3 +349,52 @@ for (const direction of dockDirections) {
     else expect(diagnostics.splitterHeight).toBeGreaterThan(0);
   });
 }
+
+test("opposite horizontal docks preserve a usable Chart Workspace at maximum panel sizes", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await chooseDockDirection(page, "diagnostics-dock-menu", "diagnostics-dock-left");
+  await chooseDockDirection(page, "inspector-dock-menu", "inspector-dock-right");
+
+  const inspectorSplitter = page.getByTestId("inspector-resize-edge");
+  await inspectorSplitter.focus();
+  await inspectorSplitter.press("End");
+  const diagnosticsSplitter = page.getByTestId("diagnostics-resize-edge");
+  await diagnosticsSplitter.focus();
+  await diagnosticsSplitter.press("End");
+
+  const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
+  const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
+  const inspector = await page.getByTestId("inspector-panel").boundingBox();
+  expect(chartWorkspace).toBeTruthy();
+  expect(diagnostics).toBeTruthy();
+  expect(inspector).toBeTruthy();
+  expect(chartWorkspace!.width).toBeGreaterThanOrEqual(319);
+  expect(chartWorkspace!.x).toBeGreaterThanOrEqual(diagnostics!.x + diagnostics!.width - 1);
+  expect(chartWorkspace!.x + chartWorkspace!.width).toBeLessThanOrEqual(inspector!.x + 1);
+});
+
+test("opposite vertical docks preserve a usable Chart Workspace at maximum panel sizes", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await chooseDockDirection(page, "inspector-dock-menu", "inspector-dock-top");
+  await chooseDockDirection(page, "diagnostics-dock-menu", "diagnostics-dock-bottom");
+
+  const inspectorSplitter = page.getByTestId("inspector-resize-edge");
+  await inspectorSplitter.focus();
+  await inspectorSplitter.press("End");
+  const diagnosticsSplitter = page.getByTestId("diagnostics-resize-edge");
+  await diagnosticsSplitter.focus();
+  await diagnosticsSplitter.press("End");
+
+  const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
+  const inspector = await page.getByTestId("inspector-panel").boundingBox();
+  const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
+  expect(chartWorkspace).toBeTruthy();
+  expect(inspector).toBeTruthy();
+  expect(diagnostics).toBeTruthy();
+  expect(chartWorkspace!.height).toBeGreaterThanOrEqual(179);
+  expect(chartWorkspace!.y).toBeGreaterThanOrEqual(inspector!.y + inspector!.height - 1);
+  expect(chartWorkspace!.y + chartWorkspace!.height).toBeLessThanOrEqual(diagnostics!.y + 1);
+});
+
