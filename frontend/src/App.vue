@@ -313,7 +313,11 @@ function dockSizeLimit(target: Exclude<PanelResizeTarget, null>, axis: DockAxis)
   const configuredMaximum = axis === "horizontal"
     ? Math.min(520, window.innerWidth * 0.5)
     : Math.min(480, window.innerHeight * 0.55);
-  const available = workbenchExtent(axis) - peerDockReservation(target, axis) - chartMinimum;
+  // The prototype keeps a 5px optical inset between the dock edge and Chart Workspace.
+  // Reserve that inset too, otherwise two maximum vertical docks leave only 175px
+  // of usable chart height despite the 180px minimum contract.
+  const layoutInset = 5;
+  const available = workbenchExtent(axis) - peerDockReservation(target, axis) - chartMinimum - layoutInset;
   // Preserve a usable workspace when possible; on exceptionally small windows,
   // the minimum panel size remains the hard floor and responsive layout takes over.
   return Math.max(minimum, Math.min(configuredMaximum, available));
