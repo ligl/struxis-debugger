@@ -278,6 +278,7 @@ describe("Origin Load workbench", () => {
     await wrapper.get('[data-testid="inspector-select-swing-100"]').trigger("click");
     expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("Extending");
     expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("12.00");
+    expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("1970-01-01 00:00:00");
 
     await wrapper.get('[data-testid="inspector-select-cbar-100"]').trigger("click");
     expect(wrapper.get('[data-testid="inspector-replay-selected-cbar"]').text()).toContain("fractalType");
