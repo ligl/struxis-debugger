@@ -6,22 +6,28 @@ defineProps<{
   catalogCollapsed: boolean;
   diagnosticsCollapsed: boolean;
 }>();
-
-const emit = defineEmits<{
-  "toggle-catalog": [];
-  "toggle-diagnostics": [];
-}>();
 </script>
 
 <template>
   <div class="workflow-toolbar" data-testid="chart-toolbar">
-    <div>
-      <p class="section-index">{{ workspaceMode === "dataset" ? "WORKSPACE / 01" : workspaceMode === "replay" ? "WORKSPACE / 02" : "WORKSPACE / 03" }}</p>
-      <h2>{{ workspaceMode === "dataset" ? "Dataset Preparation" : workspaceMode === "replay" ? "Run Replay" : "Snapshot Comparison" }}</h2>
-    </div>
-    <div class="toolbar-actions">
-      <button v-if="workspaceMode === 'dataset'" class="subtle-button" @click="emit('toggle-catalog')">{{ catalogCollapsed ? "Show Catalog" : "Hide Catalog" }}</button>
-      <button class="subtle-button" @click="emit('toggle-diagnostics')">{{ diagnosticsCollapsed ? "Show Diagnostics" : "Hide Diagnostics" }}</button>
-    </div>
+    <template v-if="workspaceMode === 'dataset'">
+      <span class="workspace-title">DATASET</span>
+      <span class="toolbar-context">CATALOG / ORIGIN / INCLUSIVE INTERVAL</span>
+      <span class="spacer"></span>
+      <span class="tag">ORIGIN LOAD</span>
+    </template>
+    <template v-else-if="workspaceMode === 'replay'">
+      <span class="workspace-title">REPLAY</span>
+      <span class="toolbar-context">LIVE + SNAPSHOT REFERENCE</span>
+      <span class="spacer"></span>
+      <slot name="actions" />
+    </template>
+    <template v-else>
+      <span class="workspace-title">COMPARE</span>
+      <span class="toolbar-context">STRICT · ORDERED · BAR-BY-BAR</span>
+      <span class="spacer"></span>
+      <span class="tag amber">STRICT MODE</span>
+      <slot name="actions" />
+    </template>
   </div>
 </template>
