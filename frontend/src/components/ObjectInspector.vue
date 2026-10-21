@@ -199,11 +199,11 @@ function formatReplayField(field: string, value: unknown): string {
         <p class="section-index">CONFIRMED SBAR TIMES · UTC</p>
         <dl class="inspector-fields">
           <div class="inspector-field inspector-field-wide">
-            <dt>Event Time</dt>
+            <dt>Event Time · UTC</dt>
             <dd><code data-testid="inspector-replay-ts-event">{{ formatDomainTimestamp(replayInspector.sbar.tsEvent, timeframe) }}</code></dd>
           </div>
           <div class="inspector-field inspector-field-wide">
-            <dt>Init Time</dt>
+            <dt>Init Time · UTC</dt>
             <dd><code data-testid="inspector-replay-ts-init">{{ formatDomainTimestamp(replayInspector.sbar.tsInit, timeframe) }}</code></dd>
           </div>
         </dl>
