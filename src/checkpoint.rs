@@ -128,7 +128,44 @@ impl ReplayCheckpointProjection {
     /// Struxis mutation, worker message wait, or thread boundary.
     pub(crate) fn from_state_view(state: &StruxisStateView<'_>) -> Self {
         let sbars = project_sbars(state.sbars());
-        let structure = state.structure().map(|structure| {
+        let structure = structure_from_state_view(state);
+
+        Self {
+            state_key: format!("{:?}", state.key()),
+            last_ts_event: state.last_ts_event().map(|value| value.to_string()),
+            sbar_count: sbars.len(),
+            sbars,
+            structure,
+            diagnostics: Vec::new(),
+        }
+    }
+}
+
+fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
+    series.last_n(series.len()).into_iter().map(|bar| SBarCheckpoint {
+        sbar_id: bar.id().to_string(),
+        bar_type: bar.bar_type.to_string(),
+        ts_event: bar.ts_event.to_string(),
+        ts_init: bar.ts_init.to_string(),
+        open: bar.open.to_string(),
+        high: bar.high.to_string(),
+        low: bar.low.to_string(),
+        close: bar.close.to_string(),
+        volume: bar.volume.to_string(),
+        body: bar.body().to_string(),
+        upper_shadow: bar.upper_shadow().to_string(),
+        lower_shadow: bar.lower_shadow().to_string(),
+        total_range: bar.total_range().to_string(),
+        body_ratio: bar.body_ratio(),
+        shadow_ratio: bar.shadow_ratio(),
+        direction: format!("{:?}", bar.direction()),
+    }).collect()
+}
+
+
+
+pub(crate) fn structure_from_state_view(state: &StruxisStateView<'_>) -> Option<StructureCheckpoint> {
+    state.structure().map(|structure| {
             let cbars = structure.cbars().last_n(structure.cbars().len())
                 .into_iter()
                 .map(|cbar| CBarCheckpoint {
@@ -167,37 +204,5 @@ impl ReplayCheckpointProjection {
                 swing_count: swings.len(),
                 swings,
             }
-        });
-
-        Self {
-            state_key: format!("{:?}", state.key()),
-            last_ts_event: state.last_ts_event().map(|value| value.to_string()),
-            sbar_count: sbars.len(),
-            sbars,
-            structure,
-            diagnostics: Vec::new(),
-        }
-    }
+    })
 }
-
-fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
-    series.last_n(series.len()).into_iter().map(|bar| SBarCheckpoint {
-        sbar_id: bar.id().to_string(),
-        bar_type: bar.bar_type.to_string(),
-        ts_event: bar.ts_event.to_string(),
-        ts_init: bar.ts_init.to_string(),
-        open: bar.open.to_string(),
-        high: bar.high.to_string(),
-        low: bar.low.to_string(),
-        close: bar.close.to_string(),
-        volume: bar.volume.to_string(),
-        body: bar.body().to_string(),
-        upper_shadow: bar.upper_shadow().to_string(),
-        lower_shadow: bar.lower_shadow().to_string(),
-        total_range: bar.total_range().to_string(),
-        body_ratio: bar.body_ratio(),
-        shadow_ratio: bar.shadow_ratio(),
-        direction: format!("{:?}", bar.direction()),
-    }).collect()
-}
-
