@@ -80,6 +80,7 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
 
   const topbar = page.getByTestId("topbar");
   await expect(topbar.locator(".brand-name")).toHaveText("STRUXIS DEBUGGER");
+  await expect(topbar.locator(".top-divider")).toBeVisible();
   await expect(page.getByTestId("workspace-dataset")).toHaveText("01  Dataset");
   await expect(page.getByTestId("workspace-replay")).toHaveText("02  Replay");
   await expect(page.getByTestId("workspace-compare")).toHaveText("03  Compare");
