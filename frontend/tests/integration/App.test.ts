@@ -357,6 +357,9 @@ describe("Origin Load workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("snapshot-baseline"));
     await wrapper.get('[data-testid="workspace-compare"]').trigger("click");
+    await vi.waitFor(() => {
+      expect((wrapper.get('[data-testid="compare-run"]').element as HTMLButtonElement).disabled).toBe(false);
+    });
     await wrapper.get('[data-testid="compare-run"]').trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("compare_snapshots", {
       baselineSnapshotId: "snapshot-baseline",
