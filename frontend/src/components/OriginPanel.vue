@@ -4,7 +4,7 @@ defineProps<{
   origin: OriginDatasetDto | null;
   loadStatus: "idle" | "loading" | "loaded" | "failed";
   loadError: string;
-  formatTimestamp: (value: string | null) => string;
+  formatDomainTimestamp: (value: string | null, timeframe: string | null) => string;
 }>();
 </script>
 
@@ -57,12 +57,12 @@ defineProps<{
         <div>
           <span class="field-label">FIRST SBAR · EVENT TIME</span>
           <strong>{{ origin.firstSbarId }}</strong>
-          <small>{{ formatTimestamp(origin.firstTsEvent) }}</small>
+          <small>{{ formatDomainTimestamp(origin.firstTsEvent, origin.timeframe) }}</small>
         </div>
         <div>
           <span class="field-label">LAST SBAR · EVENT TIME</span>
           <strong>{{ origin.lastSbarId }}</strong>
-          <small>{{ formatTimestamp(origin.lastTsEvent) }}</small>
+          <small>{{ formatDomainTimestamp(origin.lastTsEvent, origin.timeframe) }}</small>
         </div>
       </div>
 
