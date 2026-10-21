@@ -4,6 +4,8 @@ use std::path::Path;
 
 use anyhow::{bail, Result};
 use nautilus_model::data::Bar;
+
+use crate::checkpoint::{StructureCheckpoint, structure_from_state_view};
 use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 
 /// Loads every bar for one exact Nautilus BarType from a catalog.
@@ -78,6 +80,7 @@ pub(crate) struct OriginLoad {
     pub(crate) sbar_sequence_fingerprint: String,
     pub(crate) bar_type: String,
     pub(crate) bars: Vec<Bar>,
+    pub(crate) structure: Option<StructureCheckpoint>,
 }
 
 /// Loads a complete Catalog BarType through Nautilus → Strategy → Struxis,
@@ -140,7 +143,7 @@ pub(crate) fn load_origin(
         ..BacktestEngineConfig::default()
     };
     let mut engine = BacktestEngine::new(engine_config)?;
-    let setup_result = (|| -> Result<Vec<Bar>> {
+    let setup_result = (|| -> Result<(Vec<Bar>, Option<StructureCheckpoint>)> {
         engine.add_venue(
             SimulatedVenueConfig::builder()
                 .venue(venue)
@@ -182,15 +185,20 @@ pub(crate) fn load_origin(
                 enable_structure || state.structure().is_none(),
                 "Origin Load configured enable_structure=false but Struxis created Structure"
             );
+            anyhow::ensure!(
+                !enable_structure || state.structure().is_some(),
+                "Origin Load configured enable_structure=true but Struxis did not create Structure"
+            );
             validate_sbar_series(&origin_bars, state.sbars())?;
             let extracted = state.sbars().last_n(state.sbars().len());
+            let structure = structure_from_state_view(&state);
             anyhow::ensure!(
                 state.last_ts_event() == origin_bars.last().map(|bar| bar.ts_event),
                 "Origin Load ended at {:?}, expected {:?}",
                 state.last_ts_event(),
                 origin_bars.last().map(|bar| bar.ts_event)
             );
-            extracted
+            (extracted, structure)
         };
 
         Ok(owned_projection)
@@ -198,7 +206,7 @@ pub(crate) fn load_origin(
 
     // Dispose the temporary engine even when strategy processing or validation fails.
     engine.dispose();
-    let bars = setup_result?;
+    let (bars, structure) = setup_result?;
     let sbar_sequence_fingerprint = crate::dataset::sequence_fingerprint(state_key, &bars)?;
 
     Ok(OriginLoad {
@@ -207,6 +215,7 @@ pub(crate) fn load_origin(
         sbar_sequence_fingerprint,
         bar_type: parsed_bar_type.to_string(),
         bars,
+        structure,
     })
 }
 
