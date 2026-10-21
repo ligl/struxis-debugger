@@ -9,7 +9,6 @@ const chartMocks = vi.hoisted(() => ({
   candleSetData: vi.fn(),
   volumeSetData: vi.fn(),
   priceToCoordinate: vi.fn(),
-  swingSetData: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
   setVisibleLogicalRange: vi.fn(),
@@ -31,7 +30,6 @@ vi.mock("lightweight-charts", () => ({
   CandlestickSeries: { kind: "candlestick" },
   ColorType: { Solid: "solid" },
   HistogramSeries: { kind: "histogram" },
-  LineSeries: { kind: "line" },
   LineStyle: { Solid: 0, Dotted: 1, Dashed: 2, LargeDashed: 3, SparseDotted: 4 },
   createChart: chartMocks.createChart,
 }));
@@ -65,7 +63,6 @@ function installChartMock() {
   const chart = {
     addSeries: vi.fn()
       .mockReturnValueOnce({ setData: chartMocks.candleSetData, priceToCoordinate: chartMocks.priceToCoordinate })
-      .mockReturnValueOnce({ setData: chartMocks.swingSetData })
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
@@ -225,12 +222,74 @@ describe("OriginChart", () => {
     expect(cbarRectangle.attributes("width")).toBe("100");
     expect(cbarRectangle.attributes("height")).toBe("40");
     expect(cbarRectangle.attributes("fill")).toBe("none");
-    expect(chartMocks.swingSetData).toHaveBeenCalledWith([
-      { time: 1700000000, value: 9 },
-      { time: 1700000060, value: 13 },
-    ]);
+    const swingSegment = wrapper.get('[data-testid="swing-state-segment"]');
+    expect(swingSegment.attributes("data-swing-id")).toBe("1700000000000000000");
+    expect(swingSegment.attributes("data-swing-state")).toBe("Confirmed");
+    expect(swingSegment.attributes("x1")).toBe("100");
+    expect(swingSegment.attributes("y1")).toBe("70");
+    expect(swingSegment.attributes("x2")).toBe("200");
+    expect(swingSegment.attributes("y2")).toBe("30");
+    expect(swingSegment.attributes("stroke")).toBe("#C6A06B");
+    expect(swingSegment.attributes("stroke-dasharray")).toBeUndefined();
     expect(wrapper.text()).toContain("CBar");
     expect(wrapper.text()).toContain("Swing");
+    wrapper.unmount();
+  });
+
+  it("encodes every authoritative SwingState with its documented color and line pattern", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        high: "13",
+        low: "10",
+      }),
+    ];
+    const baseSwing = {
+      direction: "Up",
+      high: "13",
+      low: "9",
+      cbarStartId: bars[0]!.sbarId,
+      cbarEndId: bars[1]!.sbarId,
+      sbarStartId: bars[0]!.sbarId,
+      sbarEndId: bars[1]!.sbarId,
+      startOi: null,
+      endOi: null,
+      volume: "200",
+      spanSbars: 2,
+      createdAt: "1700000000000000000",
+      updatedAt: "1700000000000000000",
+    };
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-swing-states",
+        structure: {
+          cbarCount: 0,
+          cbars: [],
+          swingCount: 3,
+          swings: [
+            { ...baseSwing, swingId: "1", state: "Confirmed" },
+            { ...baseSwing, swingId: "2", state: "Tentative" },
+            { ...baseSwing, swingId: "3", state: "Extending" },
+          ],
+        },
+      },
+    });
+
+    const segments = wrapper.findAll('[data-testid="swing-state-segment"]');
+    expect(segments).toHaveLength(3);
+    expect(segments.map((segment) => [
+      segment.attributes("data-swing-state"),
+      segment.attributes("stroke"),
+      segment.attributes("stroke-dasharray") ?? "",
+    ])).toEqual([
+      ["Confirmed", "#C6A06B", ""],
+      ["Tentative", "#D6A85D", "6 3"],
+      ["Extending", "#8FA9C4", "2 3"],
+    ]);
     wrapper.unmount();
   });
 
