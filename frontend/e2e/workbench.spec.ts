@@ -228,7 +228,10 @@ for (const direction of ["left", "right"] as const) {
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
 
     const dock = page.getByTestId("diagnostics-dock");
-    await dock.getByTestId("diagnostics-collapse-toggle").click();
+    const collapseToggle = dock.getByTestId("diagnostics-collapse-toggle");
+    await collapseToggle.click();
+    await expect(dock).toHaveClass(/collapsed/);
+    await expect(collapseToggle).toBeHidden();
     await expect(dock).toHaveClass(/collapsed/);
 
     const title = dock.getByTestId("diagnostics-dock-drag-handle");
@@ -290,6 +293,10 @@ for (const direction of ["top", "bottom"] as const) {
     await expect(inspector).toHaveClass(/collapsed/);
     await expect(inspector.getByTestId("inspector-dock-drag-handle")).toBeHidden();
     await expect(inspector.getByTestId("inspector-dock-menu")).toBeHidden();
+    const heading = inspector.locator(".rail-heading");
+    await expect(heading).toHaveCSS("flex-direction", "row");
+    await expect(heading).toHaveCSS("align-items", "center");
+    await expect(heading).toHaveCSS("height", "36px");
     const box = await inspector.boundingBox();
     expect(box).toBeTruthy();
     expect(Math.abs(box!.height - 36)).toBeLessThanOrEqual(1);
