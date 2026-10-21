@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const viewports = [
+  { name: "minimum supported desktop", width: 920, height: 800 },
   { name: "compact desktop", width: 1024, height: 800 },
   { name: "standard desktop", width: 1280, height: 800 },
   { name: "desktop", width: 1440, height: 900 },
@@ -104,6 +105,10 @@ for (const viewport of viewports) {
     const topbar = page.getByTestId("topbar");
     await expect(topbar.locator(".brand-name")).toBeVisible();
     await expect(topbar).toHaveCSS("flex-wrap", "nowrap");
+    if (viewport.width === 920) {
+      await expect(page.getByTestId("inspector-panel")).toBeVisible();
+      await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+    }
 
     const diagnostics = await layoutDiagnostics(page);
     expect(
