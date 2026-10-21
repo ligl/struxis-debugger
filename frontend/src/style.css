@@ -3329,20 +3329,29 @@ th, td { padding: 6px 8px; }
   border-bottom: 0;
 }
 
-.diagnostics-dock.collapsed.dock-left .diagnostics-title-block,
-.diagnostics-dock.collapsed.dock-right .diagnostics-title-block,
 .diagnostics-dock.collapsed.dock-left .diagnostics-tabs,
 .diagnostics-dock.collapsed.dock-right .diagnostics-tabs {
   display: none;
 }
 
-.diagnostics-dock.collapsed.dock-left .diagnostics-heading::before,
-.diagnostics-dock.collapsed.dock-right .diagnostics-heading::before {
-  content: "DIAG";
-  color: var(--dbg-text-secondary);
-  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+/* Keep the real Diagnostics title, vertically oriented like the Inspector rail. */
+.diagnostics-dock.collapsed.dock-left .diagnostics-title-block,
+.diagnostics-dock.collapsed.dock-right .diagnostics-title-block {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.diagnostics-dock.collapsed.dock-left .diagnostics-panel-title,
+.diagnostics-dock.collapsed.dock-right .diagnostics-panel-title {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+  letter-spacing: .04em;
+}
+
+.diagnostics-dock.collapsed.dock-left .diagnostics-heading::before,
+.diagnostics-dock.collapsed.dock-right .diagnostics-heading::before {
+  content: none;
 }
 
 .diagnostics-dock.collapsed.dock-left .dock-actions,
