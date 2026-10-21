@@ -491,9 +491,10 @@ describe("Struxis Debugger native desktop", () => {
       "Completed Run must confirm both selected SBars.");
 
     await domClick('[data-testid="workspace-compare"]');
+    await domClick('[data-testid="snapshot-store-toggle"]');
     await browser.waitUntil(
       async () => {
-        const rows = await $$(".snapshot-table tbody tr");
+        const rows = await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]');
         for (const row of rows) {
           if ((await row.getAttribute("data-snapshot-kind")) === "complete") return true;
         }
@@ -552,7 +553,7 @@ describe("Struxis Debugger native desktop", () => {
     await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
       async () => {
-        const rows = await $$(".snapshot-table tbody tr");
+        const rows = await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]');
         let completeCount = 0;
         for (const row of rows) {
           if ((await row.getAttribute("data-snapshot-kind")) === "complete") completeCount += 1;
@@ -566,7 +567,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    const compareButton = $(".compare-controls .primary-button");
+    const compareButton = $('[data-testid="compare-run"]');
     await browser.waitUntil(
       async () => compareButton.isEnabled(),
       {
@@ -575,7 +576,7 @@ describe("Struxis Debugger native desktop", () => {
         timeoutMsg: "Two Complete Snapshots did not enable strict Compare.",
       },
     );
-    await domClick('.compare-controls .primary-button');
+    await domClick('[data-testid="compare-run"]');
     await browser.waitUntil(
       async () => $(".compare-results").isDisplayed(),
       {
@@ -585,18 +586,18 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
     assert.equal(
-      await $(".compare-summary > div:first-child strong").getText(),
-      "No structural divergence",
+      await $('[data-testid="compare-summary-first-divergence"]').getText(),
+      "NONE",
       "Repeated deterministic Runs over the same input should have identical structure.",
     );
     assert.equal(
-      await $(".compare-summary > div:nth-child(2) strong").getText(),
-      "2",
+      await $('[data-testid="compare-summary-sequence"]').getText(),
+      "2 / 2",
       "Compare should include the full two-checkpoint input trajectory.",
     );
     assert.equal(
-      await $(".compare-summary > div:nth-child(3) strong").getText(),
-      "0",
+      await $('[data-testid="compare-summary-difference-count"]').getText(),
+      "00",
       "Repeated deterministic Runs should not produce structural object differences.",
     );
   });
