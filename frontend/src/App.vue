@@ -27,10 +27,12 @@ import { getReplayInspector } from "./origin-bridge";
 import type { ReplayInspectorDto } from "./origin-types";
 
 const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
-const devtoolsAvailable = import.meta.env.DEV && isTauri();
+const devtoolsAvailable = import.meta.env.DEV;
 
 function handleContextMenu(event: MouseEvent) {
-  if (!devtoolsAvailable) return;
+  // Check Tauri at event time rather than module initialization. The native
+  // bridge may not be detectable yet when this module is first evaluated.
+  if (!devtoolsAvailable || !isTauri()) return;
   event.preventDefault();
   devtoolsContextMenu.value = {
     visible: true,
