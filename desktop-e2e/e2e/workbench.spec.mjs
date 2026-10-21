@@ -26,7 +26,7 @@ describe("Struxis Debugger native desktop", () => {
     const shell = await $('[data-testid="debugger-shell"]');
     await shell.waitForDisplayed({ timeout: 30_000 });
 
-    assert.equal(await $("h1").getText(), "Struxis Debugger");
+    assert.equal(await $('[data-testid="product-wordmark"]').getText(), "STRUXIS DEBUGGER");
 
     const catalog = await $(".catalog-panel");
     await catalog.waitForDisplayed();
@@ -60,7 +60,7 @@ describe("Struxis Debugger native desktop", () => {
   });
 
   it("switches workflows in the real desktop window", async () => {
-    const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
+    const workspaceNavigation = $('[data-testid="workspace-navigation"]');
     await workspaceNavigation.waitForDisplayed();
 
     await domClick('[data-testid="workspace-replay"]');
@@ -189,7 +189,7 @@ describe("Struxis Debugger native desktop", () => {
       document.querySelector('[data-testid="desktop-space-input-fixture"]').remove();
     });
 
-    const workspaceNavigation = $('nav[aria-label="Debugger workspace"]');
+    const workspaceNavigation = $('[data-testid="workspace-navigation"]');
     const replayTab = workspaceNavigation.$(".workspace-tab:nth-child(2)");
     await browser.execute(() => {
       const tab = document.querySelector('nav[aria-label="Debugger workspace"] .workspace-tab:nth-child(2)');
