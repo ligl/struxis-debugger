@@ -214,6 +214,7 @@ describe("OriginChart", () => {
         },
       },
     });
+    await nextTick();
 
     const cbarRectangle = wrapper.get('[data-testid="cbar-range-rectangle"]');
     expect(cbarRectangle.attributes("data-cbar-id")).toBe("1700000000000000000");
@@ -278,6 +279,7 @@ describe("OriginChart", () => {
         },
       },
     });
+    await nextTick();
 
     const segments = wrapper.findAll('[data-testid="swing-state-segment"]');
     expect(segments).toHaveLength(3);
