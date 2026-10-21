@@ -223,10 +223,6 @@ function updateChart(): void {
     const projection = mapOriginBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
-    const timeById = new Map(
-      props.bars.map((bar, index) => [bar.sbarId, projection.candles[index]?.time] as const)
-        .filter((entry): entry is readonly [string, Time] => entry[1] !== undefined),
-    );
     sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
     timeBySbarId = new Map(
       props.bars.flatMap((bar, index) => {
