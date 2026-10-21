@@ -1194,6 +1194,7 @@ describe("startup and user-operation coordination", () => {
       cursorSbarId: null,
       failureDiagnostic: null,
     });
+    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
   });
 
