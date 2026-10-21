@@ -245,8 +245,6 @@ test("overflowing workspace content scrolls inside its own panel", async ({ page
 
 
 const dockDirections = ["left", "right", "top", "bottom"] as const;
-type DockDirection = (typeof dockDirections)[number];
-
 async function chooseDockDirection(page: Page, menuTestId: string, optionTestId: string) {
   const menu = page.getByTestId(menuTestId);
   const option = page.getByTestId(optionTestId);
