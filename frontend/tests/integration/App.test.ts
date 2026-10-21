@@ -1,7 +1,6 @@
 import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
-import RunControlPanel from "../../src/components/RunControlPanel.vue";
 import type { CatalogDatasetEntry, OriginDatasetDto, SnapshotArtifactDto, SnapshotCompareResultDto, TestDatasetDto } from "../../src/origin-types";
 
 const ipc = vi.hoisted(() => ({
@@ -740,10 +739,9 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
-    const panel = wrapper.getComponent(RunControlPanel);
-    for (const command of ["step", "play", "pause", "stop", "dispose"] as const) {
-      panel.vm.$emit("command", command);
-    }
+    await wrapper.get('[data-testid="run-step"]').trigger("click");
+    await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
+    await wrapper.get('[data-testid="run-stop"]').trigger("click");
     await flushPromises();
 
     const runIpcCommands = [
@@ -786,8 +784,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
     document.dispatchEvent(readySpaceEvent);
     expect(readySpaceEvent.defaultPrevented).toBe(false);
-    const panel = wrapper.getComponent(RunControlPanel);
-    panel.vm.$emit("command", "pause");
+    await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
     await flushPromises();
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "pause_run" || command === "play_run",
@@ -818,10 +815,8 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
-    const panel = wrapper.getComponent(RunControlPanel);
-    for (const command of ["step", "play", "dispose"] as const) {
-      panel.vm.$emit("command", command);
-    }
+    await wrapper.get('[data-testid="run-step"]').trigger("click");
+    await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
     await flushPromises();
     expect(invokeMock.mock.calls.filter(([command]) =>
       ["step_run", "play_run", "dispose_run"].includes(String(command)),
@@ -1098,8 +1093,8 @@ describe("startup and user-operation coordination", () => {
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
-    wrapper.getComponent(RunControlPanel).vm.$emit("command", "restart");
+    await wrapper.get('[data-testid="run-start"]').trigger("click");
+    await wrapper.get('[data-testid="run-restart"]').trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "start_run" || command === "restart_run",
     )).toHaveLength(0);
@@ -1229,8 +1224,8 @@ describe("startup and user-operation coordination", () => {
     const startButton = wrapper.get('[data-testid="run-start"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    wrapper.getComponent(RunControlPanel).vm.$emit("command", "start");
-    wrapper.getComponent(RunControlPanel).vm.$emit("command", "restart");
+    await wrapper.get('[data-testid="run-start"]').trigger("click");
+    await wrapper.get('[data-testid="run-restart"]').trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "start_run" || command === "restart_run",
     )).toHaveLength(0);
