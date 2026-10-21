@@ -2678,10 +2678,10 @@ th, td { padding: 6px 8px; }
 
 .inspector-rail.dock-left,
 .inspector-rail.dock-right {
-  /* In the frozen prototype, side Inspector begins below the 42px Chart Toolbar
-     and ends exactly at the Diagnostics dock boundary. */
-  top: calc(42px + var(--inspector-offset-top, 0px));
-  bottom: var(--inspector-offset-bottom, 0px);
+  /* The prototype overlays the toolbar's right/left edge, with a 5px optical
+     gap from the workbench top and from the opposing horizontal dock. */
+  top: calc(var(--inspector-offset-top, 0px) + 5px);
+  bottom: calc(var(--inspector-offset-bottom, 0px) + 5px);
   width: var(--inspector-width, 282px);
 }
 
