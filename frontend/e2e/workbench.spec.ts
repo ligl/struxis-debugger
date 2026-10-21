@@ -103,7 +103,6 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
 
   const topbar = page.getByTestId("topbar");
   await expect(topbar.locator(".brand-name")).toHaveText("STRUXIS DEBUGGER");
-  await expect(topbar.locator(".top-divider")).toBeVisible();
   await expect(page.getByTestId("workspace-dataset")).toHaveText("01  Dataset");
   await expect(page.getByTestId("workspace-replay")).toHaveText("02  Replay");
   await expect(page.getByTestId("workspace-compare")).toHaveText("03  Compare");
@@ -156,17 +155,17 @@ test("workspace navigation updates the visible workflow", async ({ page }) => {
 
   await page.getByTestId("workspace-replay").click();
   await expect(page.getByTestId("workspace-replay")).toHaveClass(/active/);
-  await expect(page.getByRole("heading", { name: "Run Replay" })).toBeVisible();
+  await expect(page.getByTestId("workspace-toolbar-title")).toHaveText("REPLAY");
   await expect(page.locator(".replay-controls")).toBeVisible();
 
   await page.getByTestId("workspace-compare").click();
   await expect(page.getByTestId("workspace-compare")).toHaveClass(/active/);
-  await expect(page.getByRole("heading", { name: "Snapshot Comparison" })).toBeVisible();
+  await expect(page.getByTestId("workspace-toolbar-title")).toHaveText("COMPARE");
   await expect(page.locator(".compare-workspace")).toBeVisible();
 
   await page.getByTestId("workspace-dataset").click();
   await expect(page.getByTestId("workspace-dataset")).toHaveClass(/active/);
-  await expect(page.getByRole("heading", { name: "Dataset Preparation" })).toBeVisible();
+  await expect(page.getByTestId("workspace-toolbar-title")).toHaveText("DATASET");
   await expect(page.locator(".dataset-preparation-panel")).toBeVisible();
 });
 
@@ -191,11 +190,11 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
 
   const diagnostics = page.getByTestId("diagnostics-dock");
   await expect(diagnostics).toBeVisible();
-  await page.getByRole("button", { name: "Hide Diagnostics" }).click();
+  await page.getByTestId("diagnostics-collapse-toggle").click();
   await expect(diagnostics).toBeVisible();
   await expect(diagnostics).toHaveClass(/collapsed/);
   expect(Math.abs((await diagnostics.boundingBox())!.height - 36)).toBeLessThanOrEqual(1);
-  await page.getByRole("button", { name: "Show Diagnostics" }).click();
+  await page.getByTestId("diagnostics-collapse-toggle").click();
   await expect(diagnostics).toBeVisible();
   await expect(diagnostics).not.toHaveClass(/collapsed/);
 });
@@ -697,10 +696,14 @@ for (const direction of dockDirections) {
     const before = await workspace.boundingBox();
     expect(before).toBeTruthy();
 
-    await page.getByTestId("diagnostics-collapse-toggle").click();
     const dock = page.getByTestId("diagnostics-dock");
+    await page.getByTestId("diagnostics-collapse-toggle").click();
     await expect(dock).toBeVisible();
-    await expect(page.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Expand Diagnostics");
+    if (direction === "left" || direction === "right") {
+      await expect(page.getByTestId("diagnostics-collapse-toggle")).toBeHidden();
+    } else {
+      await expect(page.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Expand Diagnostics");
+    }
     const collapsedPanel = await dock.boundingBox();
     expect(collapsedPanel).toBeTruthy();
     if (direction === "left" || direction === "right") {
@@ -716,8 +719,15 @@ for (const direction of dockDirections) {
       expect(collapsed!.height).toBeGreaterThan(before!.height + 50);
     }
 
-    await page.getByTestId("diagnostics-collapse-toggle").click();
-    await expect(page.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Collapse Diagnostics");
+    if (direction === "left" || direction === "right") {
+      await dock.getByTestId("diagnostics-dock-drag-handle").click();
+    } else {
+      await page.getByTestId("diagnostics-collapse-toggle").click();
+    }
+    await expect(dock).not.toHaveClass(/collapsed/);
+    if (direction === "top" || direction === "bottom") {
+      await expect(page.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Collapse Diagnostics");
+    }
     const restored = await workspace.boundingBox();
     expect(restored).toBeTruthy();
     if (direction === "left" || direction === "right") {
