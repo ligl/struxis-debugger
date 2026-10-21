@@ -447,6 +447,7 @@ describe("OriginChart", () => {
         selectionStartSbarId: bars[0]!.sbarId,
         selectionEndSbarId: bars[2]!.sbarId,
         selectionPending: false,
+        selectionEditable: true,
       },
     });
     await nextTick();
@@ -487,6 +488,7 @@ describe("OriginChart", () => {
         selectionStartSbarId: bars[0]!.sbarId,
         selectionEndSbarId: bars[2]!.sbarId,
         selectionPending: false,
+        selectionEditable: true,
       },
     });
     await nextTick();
