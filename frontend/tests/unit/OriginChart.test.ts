@@ -423,6 +423,50 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("allows both completed interval boundaries to be adjusted with the keyboard", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+      }),
+      bar({
+        sbarId: "1700000120000000000",
+        tsEvent: "1700000120000000000",
+        tsInit: "1700000120000000001",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-boundary-edit",
+        structure: null,
+        selectionStartSbarId: bars[0]!.sbarId,
+        selectionEndSbarId: bars[2]!.sbarId,
+        selectionPending: false,
+      },
+    });
+    await nextTick();
+
+    await wrapper.get('[data-testid="origin-selection-start-handle"]').trigger("keydown", {
+      key: "ArrowRight",
+    });
+    expect(wrapper.emitted("rangeBoundaryChange")).toEqual([
+      ["start", "1700000060000000000"],
+    ]);
+
+    await wrapper.get('[data-testid="origin-selection-end-handle"]').trigger("keydown", {
+      key: "ArrowLeft",
+    });
+    expect(wrapper.emitted("rangeBoundaryChange")).toEqual([
+      ["start", "1700000060000000000"],
+      ["end", "1700000060000000000"],
+    ]);
+
+    wrapper.unmount();
+  });
+
   it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
     const wrapper = mount(OriginChart, {
       props: {
