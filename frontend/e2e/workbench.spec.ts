@@ -786,3 +786,34 @@ test("opposite vertical docks preserve a usable Chart Workspace at maximum panel
   expect(chartWorkspace!.y + chartWorkspace!.height).toBeLessThanOrEqual(diagnostics!.y + 1);
 });
 
+for (const inspectorDirection of ["top", "bottom"] as const) {
+  for (const diagnosticsDirection of ["left", "right"] as const) {
+    test(`Inspector ${inspectorDirection.toUpperCase()} spans the workbench with Diagnostics ${diagnosticsDirection.toUpperCase()}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/");
+      await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${inspectorDirection}`);
+      await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${diagnosticsDirection}`);
+
+      const workbench = await page.getByTestId("workbench").boundingBox();
+      const inspector = await page.getByTestId("inspector-panel").boundingBox();
+      const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
+      expect(workbench).toBeTruthy();
+      expect(inspector).toBeTruthy();
+      expect(diagnostics).toBeTruthy();
+
+      // Inspector's horizontal docks span the full workbench, not only the
+      // region remaining beside a left/right Diagnostics dock.
+      expect(Math.abs(inspector!.x - workbench!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs((inspector!.x + inspector!.width) - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
+
+      // The side Diagnostics dock remains below a top Inspector or above a
+      // bottom Inspector, preserving the existing vertical reservation.
+      if (inspectorDirection === "top") {
+        expect(diagnostics!.y).toBeGreaterThanOrEqual(inspector!.y + inspector!.height - 1);
+      } else {
+        expect(diagnostics!.y + diagnostics!.height).toBeLessThanOrEqual(inspector!.y + 1);
+      }
+    });
+  }
+}
+
