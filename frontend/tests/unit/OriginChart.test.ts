@@ -416,6 +416,7 @@ describe("OriginChart", () => {
       props: {
         bars: [bar({ close: "NaN" })],
         originDatasetId: "origin-invalid",
+        structure: null,
       },
     });
     // onMounted updates reactive chartError; wait for Vue to render that state.
@@ -425,6 +426,9 @@ describe("OriginChart", () => {
       .toContain("SBar 1700000000000000000 has a non-finite close value.");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([]);
+    expect(chartMocks.cbarHighSetData).toHaveBeenCalledWith([]);
+    expect(chartMocks.cbarLowSetData).toHaveBeenCalledWith([]);
+    expect(chartMocks.swingSetData).toHaveBeenCalledWith([]);
     wrapper.unmount();
   });
 
