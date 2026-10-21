@@ -4,7 +4,6 @@ import {
   CandlestickSeries,
   ColorType,
   HistogramSeries,
-  LineSeries,
   createChart,
   type IChartApi,
   type ISeriesApi,
@@ -31,7 +30,6 @@ const chartError = ref("");
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
-let swingSeries: ISeriesApi<"Line"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedOriginDatasetId: string | null = null;
 let sbarIdByLogicalIndex: readonly string[] = [];
@@ -39,7 +37,24 @@ let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
+type SwingSegment = {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  state: string;
+  color: string;
+  dasharray: string;
+};
 const cbarRectangles = ref<CBarRectangle[]>([]);
+const swingSegments = ref<SwingSegment[]>([]);
+const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
+  Confirmed: { color: "#C6A06B", dasharray: "" },
+  Tentative: { color: "#D6A85D", dasharray: "6 3" },
+  Extending: { color: "#8FA9C4", dasharray: "2 3" },
+};
+const unknownSwingStates = new Set<string>();
 const firstSbarX = ref<number | null>(null);
 const secondSbarX = ref<number | null>(null);
 const selectionStartX = ref<number | null>(null);
@@ -91,6 +106,46 @@ function updateSbarCoordinates(): void {
   selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
   selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
   updateCBarRectangles();
+  updateSwingSegments();
+}
+
+function updateSwingSegments(): void {
+  if (!chart || !candleSeries) {
+    swingSegments.value = [];
+    return;
+  }
+  const timeScale = chart.timeScale();
+  swingSegments.value = (props.structure?.swings ?? []).flatMap((swing) => {
+    const startTime = timeBySbarId.get(swing.sbarStartId);
+    const endTime = timeBySbarId.get(swing.sbarEndId);
+    const high = Number(swing.high);
+    const low = Number(swing.low);
+    if (startTime === undefined || endTime === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
+    const startX = timeScale.timeToCoordinate(startTime);
+    const endX = timeScale.timeToCoordinate(endTime);
+    const startsAtLow = swing.direction === "Up";
+    const startY = candleSeries.priceToCoordinate(startsAtLow ? low : high);
+    const endY = candleSeries.priceToCoordinate(startsAtLow ? high : low);
+    if ([startX, endX, startY, endY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return [];
+    const style = swingStyleByState[swing.state];
+    if (!style) {
+      if (!unknownSwingStates.has(swing.state)) {
+        unknownSwingStates.add(swing.state);
+        console.warn(`Unknown Struxis SwingState received by OriginChart: ${swing.state}`);
+      }
+    }
+    const resolvedStyle = style ?? { color: "#A0A7B0", dasharray: "4 3" };
+    return [{
+      id: swing.swingId,
+      x1: startX as number,
+      y1: startY as number,
+      x2: endX as number,
+      y2: endY as number,
+      state: swing.state,
+      color: resolvedStyle.color,
+      dasharray: resolvedStyle.dasharray,
+    }];
+  });
 }
 
 function selectSbarById(sbarId: string): void {
@@ -163,7 +218,7 @@ function fitContent(): void {
 }
 
 function updateChart(): void {
-  if (!chart || !candleSeries || !volumeSeries || !swingSeries) return;
+  if (!chart || !candleSeries || !volumeSeries) return;
   try {
     const projection = mapOriginBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
@@ -172,27 +227,6 @@ function updateChart(): void {
       props.bars.map((bar, index) => [bar.sbarId, projection.candles[index]?.time] as const)
         .filter((entry): entry is readonly [string, Time] => entry[1] !== undefined),
     );
-    const structure = props.structure;
-    const rawSwingPoints = (structure?.swings ?? []).flatMap((swing) => {
-      const startTime = timeById.get(swing.sbarStartId);
-      const endTime = timeById.get(swing.sbarEndId);
-      const high = Number(swing.high);
-      const low = Number(swing.low);
-      if (startTime === undefined || endTime === undefined || !Number.isFinite(high) || !Number.isFinite(low)) {
-        return [];
-      }
-      const startsAtLow = swing.direction.toLowerCase() === "up";
-      return [
-        { time: startTime, value: startsAtLow ? low : high },
-        { time: endTime, value: startsAtLow ? high : low },
-      ];
-    });
-    // Adjacent swings may share their pivot SBar. Lightweight Charts requires
-    // strictly increasing times, so keep one point for a shared boundary.
-    const swingPoints = rawSwingPoints.filter((point, index) =>
-      index === 0 || point.time !== rawSwingPoints[index - 1]?.time
-    );
-    swingSeries.setData(swingPoints);
     sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
     timeBySbarId = new Map(
       props.bars.flatMap((bar, index) => {
@@ -224,7 +258,7 @@ function updateChart(): void {
     candleSeries.setData([]);
     volumeSeries.setData([]);
     cbarRectangles.value = [];
-    swingSeries.setData([]);
+    swingSegments.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
   }
 }
@@ -267,14 +301,6 @@ onMounted(() => {
     wickDownColor: "#D98282",
     priceLineVisible: false,
     lastValueVisible: true,
-  });
-  swingSeries = chart.addSeries(LineSeries, {
-    color: "#C6A06B",
-    lineWidth: 2,
-    priceLineVisible: false,
-    lastValueVisible: false,
-    crosshairMarkerVisible: false,
-    title: "Swing",
   });
   volumeSeries = chart.addSeries(HistogramSeries, {
     priceScaleId: "",
@@ -320,6 +346,8 @@ onBeforeUnmount(() => {
   chart = null;
   candleSeries = null;
   volumeSeries = null;
+  cbarRectangles.value = [];
+  swingSegments.value = [];
   sbarIdByLogicalIndex = [];
   timeBySbarId = new Map();
   firstSbarTime = null;
@@ -380,6 +408,21 @@ onBeforeUnmount(() => {
         :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
       ></div>
       <svg class="origin-structure-overlay" data-testid="origin-structure-overlay" aria-hidden="true">
+        <line
+          v-for="segment in swingSegments"
+          :key="segment.id"
+          :x1="segment.x1"
+          :y1="segment.y1"
+          :x2="segment.x2"
+          :y2="segment.y2"
+          :stroke="segment.color"
+          stroke-width="2"
+          :stroke-dasharray="segment.dasharray || undefined"
+          stroke-linecap="round"
+          data-testid="swing-state-segment"
+          :data-swing-id="segment.id"
+          :data-swing-state="segment.state"
+        />
         <rect
           v-for="rectangle in cbarRectangles"
           :key="rectangle.id"
@@ -564,7 +607,8 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.origin-structure-overlay rect {
+.origin-structure-overlay rect,
+.origin-structure-overlay line {
   vector-effect: non-scaling-stroke;
 }
 
