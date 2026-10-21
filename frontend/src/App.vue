@@ -533,8 +533,8 @@ onUnmounted(() => {
         <WorkspaceToolbar
           :workspace-mode="workspaceMode"
         >
-          <template #actions v-if="workspaceMode === 'replay'">
-            <div class="toolbar-actions replay-toolbar-actions">
+          <template #actions>
+            <div v-if="workspaceMode === 'replay'" class="toolbar-actions replay-toolbar-actions">
               <span class="run-state" data-testid="run-toolbar-status">
                 <b>{{ runState?.status ? runState.status.toUpperCase() : "NO RUN" }}</b>
                 <span>{{ runState ? `${runState.processedCount.toLocaleString()} / ${runState.inputCount.toLocaleString()}` : "—" }}</span>
@@ -550,14 +550,12 @@ onUnmounted(() => {
               <button class="subtle-button" data-testid="run-refresh-state" :disabled="runBusy" @click="refreshRunState">REFRESH</button>
               <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
             </div>
-          </template>
-          <template #actions v-else-if="workspaceMode === 'compare'">
             <CompareToolbarControls
+              v-show="workspaceMode === 'compare'"
               :snapshots="snapshots"
               :compare-loading="compareLoading"
               @compare="runCompare"
             />
-          </template>
         </WorkspaceToolbar>
 
         <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
