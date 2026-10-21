@@ -12,7 +12,7 @@ describe("isRunCommandEligible", () => {
       start: [],
       restart: [],
       step: ["ready", "paused"],
-      play: ["ready", "paused"],
+      play: ["paused"],
       pause: ["running"],
       stop: ["ready", "running", "paused"],
       dispose: ["ready", "paused", "completed", "failed", "disposed"],
