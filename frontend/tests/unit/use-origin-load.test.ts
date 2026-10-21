@@ -13,7 +13,7 @@ const dataset = (id: string): CatalogDatasetEntry => ({
 
 const origin = (id: string): OriginDatasetDto => ({
   originDatasetId: id, sourceCatalog: "/catalog", enableStructure: true,
-  instrumentId: id, barType: `${id}-BAR`, timeframe: "300s",
+  instrumentId: id, barType: `${id}-BAR`, timeframe: "5m",
   sbarSequenceFingerprint: `fingerprint-${id}`, sbarCount: 1,
   firstSbarId: "100", lastSbarId: "100", firstTsEvent: "100", lastTsEvent: "100", structure: null,
   bars: [],
