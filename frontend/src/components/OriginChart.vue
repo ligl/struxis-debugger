@@ -157,7 +157,7 @@ function updateChart(): void {
       const value = Number(cbar.low);
       return time !== undefined && Number.isFinite(value) ? [{ time, value }] : [];
     });
-    const swingPoints = (structure?.swings ?? []).flatMap((swing) => {
+    const rawSwingPoints = (structure?.swings ?? []).flatMap((swing) => {
       const startTime = timeById.get(swing.sbarStartId);
       const endTime = timeById.get(swing.sbarEndId);
       const high = Number(swing.high);
@@ -171,6 +171,11 @@ function updateChart(): void {
         { time: endTime, value: startsAtLow ? high : low },
       ];
     });
+    // Adjacent swings may share their pivot SBar. Lightweight Charts requires
+    // strictly increasing times, so keep one point for a shared boundary.
+    const swingPoints = rawSwingPoints.filter((point, index) =>
+      index === 0 || point.time !== rawSwingPoints[index - 1]?.time
+    );
     cbarHighSeries.setData(cbarHigh);
     cbarLowSeries.setData(cbarLow);
     swingSeries.setData(swingPoints);
