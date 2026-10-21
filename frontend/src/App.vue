@@ -218,11 +218,14 @@ watch(workspaceMode, (mode) => {
 const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
-const inspectorDock = ref<"left" | "right">("right");
-const diagnosticsDock = ref<"top" | "bottom">("bottom");
+type DockDirection = "left" | "right" | "top" | "bottom";
+const inspectorDock = ref<DockDirection>("right");
+const diagnosticsDock = ref<DockDirection>("bottom");
 
 // Dock dimensions are presentation state only; they never affect Struxis state.
 const inspectorWidth = ref(282);
+const inspectorHeight = ref(145);
+const diagnosticsWidth = ref(330);
 const diagnosticsHeight = ref(164);
 let runPollInterval: number | null = null;
 type PanelResizeTarget = "inspector" | "diagnostics" | null;
@@ -233,68 +236,93 @@ let panelResizeInitialSize = 0;
 function startPanelResize(target: Exclude<PanelResizeTarget, null>, event: PointerEvent): void {
   if (event.button !== 0) return;
   panelResizeTarget.value = target;
-  panelResizeStart = target === "inspector" ? event.clientX : event.clientY;
-  panelResizeInitialSize = target === "inspector" ? inspectorWidth.value : diagnosticsHeight.value;
+  const dock = target === "inspector" ? inspectorDock.value : diagnosticsDock.value;
+  panelResizeStart = dock === "left" || dock === "right" ? event.clientX : event.clientY;
+  panelResizeInitialSize = target === "inspector"
+    ? (dock === "left" || dock === "right" ? inspectorWidth.value : inspectorHeight.value)
+    : (dock === "left" || dock === "right" ? diagnosticsWidth.value : diagnosticsHeight.value);
   event.preventDefault();
 }
 
-function inspectorWidthLimit(): number {
-  // Preserve a useful chart viewport when the app runs in a smaller window.
-  return Math.max(220, Math.min(520, window.innerWidth - 420));
+function horizontalDockLimit(): number {
+  return Math.max(180, Math.min(520, window.innerWidth * 0.5));
 }
 
-function diagnosticsHeightLimit(): number {
-  // Keep enough vertical room for the active workspace and its toolbar.
-  return Math.max(100, Math.min(480, window.innerHeight - 260));
+function verticalDockLimit(): number {
+  return Math.max(100, Math.min(480, window.innerHeight * 0.55);
+}
+
+function inspectorWidthLimit(): number { return horizontalDockLimit(); }
+function inspectorHeightLimit(): number { return verticalDockLimit(); }
+function diagnosticsWidthLimit(): number { return horizontalDockLimit(); }
+function diagnosticsHeightLimit(): number { return verticalDockLimit(); }
+
+function dockFor(target: Exclude<PanelResizeTarget, null>): DockDirection {
+  return target === "inspector" ? inspectorDock.value : diagnosticsDock.value;
+}
+
+function resizeIsHorizontal(target: Exclude<PanelResizeTarget, null>): boolean {
+  const dock = dockFor(target);
+  return dock === "left" || dock === "right";
+}
+
+function resizeValue(target: Exclude<PanelResizeTarget, null>, value: number): void {
+  const dock = dockFor(target);
+  const horizontal = dock === "left" || dock === "right";
+  if (target === "inspector") {
+    if (horizontal) inspectorWidth.value = value;
+    else inspectorHeight.value = value;
+  } else {
+    if (horizontal) diagnosticsWidth.value = value;
+    else diagnosticsHeight.value = value;
+  }
+}
+
+function resizeLimit(target: Exclude<PanelResizeTarget, null>): number {
+  return target === "inspector"
+    ? (resizeIsHorizontal(target) ? inspectorWidthLimit() : inspectorHeightLimit())
+    : (resizeIsHorizontal(target) ? diagnosticsWidthLimit() : diagnosticsHeightLimit());
+}
+
+function resizeMinimum(target: Exclude<PanelResizeTarget, null>): number {
+  return resizeIsHorizontal(target) ? 180 : 100;
 }
 
 function handlePanelResize(event: PointerEvent): void {
   const target = panelResizeTarget.value;
   if (!target) return;
-  if (target === "inspector") {
-    // Dragging the divider away from the chart increases the dock width on
-    // either side: left-docked panels grow to the right, right-docked panels
-    // grow to the left.
-    const delta = inspectorDock.value === "right"
-      ? panelResizeStart - event.clientX
-      : event.clientX - panelResizeStart;
-    inspectorWidth.value = Math.max(220, Math.min(inspectorWidthLimit(), panelResizeInitialSize + delta));
-  } else {
-    // A top-docked Diagnostics panel grows downward; a bottom-docked panel
-    // grows upward.
-    const delta = diagnosticsDock.value === "bottom"
-      ? panelResizeStart - event.clientY
-      : event.clientY - panelResizeStart;
-    diagnosticsHeight.value = Math.max(100, Math.min(diagnosticsHeightLimit(), panelResizeInitialSize + delta));
-  }
+  const dock = dockFor(target);
+  const horizontal = dock === "left" || dock === "right";
+  const coordinate = horizontal ? event.clientX : event.clientY;
+  const growsTowardPositive = dock === "left" || dock === "top";
+  const delta = growsTowardPositive ? coordinate - panelResizeStart : panelResizeStart - coordinate;
+  const value = Math.max(resizeMinimum(target), Math.min(resizeLimit(target), panelResizeInitialSize + delta));
+  resizeValue(target, value);
 }
 
-function handlePanelResizeKey(
-  target: Exclude<PanelResizeTarget, null>,
-  event: KeyboardEvent,
-): void {
-  const increase = target === "inspector"
-    ? (inspectorDock.value === "right" ? event.key === "ArrowLeft" : event.key === "ArrowRight")
-    : (diagnosticsDock.value === "bottom" ? event.key === "ArrowUp" : event.key === "ArrowDown");
-  const decrease = target === "inspector"
-    ? (inspectorDock.value === "right" ? event.key === "ArrowRight" : event.key === "ArrowLeft")
-    : (diagnosticsDock.value === "bottom" ? event.key === "ArrowDown" : event.key === "ArrowUp");
+function handlePanelResizeKey(target: Exclude<PanelResizeTarget, null>, event: KeyboardEvent): void {
+  const dock = dockFor(target);
+  const horizontal = dock === "left" || dock === "right";
+  const positiveKey = horizontal ? "ArrowRight" : "ArrowDown";
+  const negativeKey = horizontal ? "ArrowLeft" : "ArrowUp";
+  const increase = dock === "left" || dock === "top"
+    ? event.key === positiveKey
+    : event.key === negativeKey;
+  const decrease = dock === "left" || dock === "top"
+    ? event.key === negativeKey
+    : event.key === positiveKey;
   if (!increase && !decrease && event.key !== "Home" && event.key !== "End") return;
-
   event.preventDefault();
-  if (target === "inspector") {
-    inspectorWidth.value = event.key === "Home"
-      ? 220
-      : event.key === "End"
-        ? inspectorWidthLimit()
-        : Math.max(220, Math.min(inspectorWidthLimit(), inspectorWidth.value + (increase ? 12 : -12)));
-  } else {
-    diagnosticsHeight.value = event.key === "Home"
-      ? 100
-      : event.key === "End"
-        ? diagnosticsHeightLimit()
-        : Math.max(100, Math.min(diagnosticsHeightLimit(), diagnosticsHeight.value + (increase ? 12 : -12)));
-  }
+  const minimum = resizeMinimum(target);
+  const maximum = resizeLimit(target);
+  const current = target === "inspector"
+    ? (horizontal ? inspectorWidth.value : inspectorHeight.value)
+    : (horizontal ? diagnosticsWidth.value : diagnosticsHeight.value);
+  resizeValue(target, event.key === "Home"
+    ? minimum
+    : event.key === "End"
+      ? maximum
+      : Math.max(minimum, Math.min(maximum, current + (increase ? 12 : -12))));
 }
 
 function stopPanelResize(): void {
@@ -316,19 +344,23 @@ function allowDockDrop(event: DragEvent): void {
   event.dataTransfer.dropEffect = "move";
 }
 
-function dropDockPanel(event: DragEvent, area: "workspace" | "body"): void {
+function dropDockPanel(event: DragEvent): void {
   const transfer = event.dataTransfer;
   if (!transfer) return;
   const target = transfer.getData(dockDragMime);
   if (target !== "inspector" && target !== "diagnostics") return;
   event.preventDefault();
-
   const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
-  if (target === "inspector" && area === "workspace") {
-    inspectorDock.value = event.clientX < bounds.left + bounds.width / 2 ? "left" : "right";
-  } else if (target === "diagnostics" && area === "body") {
-    diagnosticsDock.value = event.clientY < bounds.top + bounds.height / 2 ? "top" : "bottom";
-  }
+  const x = (event.clientX - bounds.left) / Math.max(1, bounds.width);
+  const y = (event.clientY - bounds.top) / Math.max(1, bounds.height);
+  let dock: DockDirection | null = null;
+  if (x < 0.13) dock = "left";
+  else if (x > 0.87) dock = "right";
+  else if (y < 0.16) dock = "top";
+  else if (y > 0.84) dock = "bottom";
+  if (!dock) return;
+  if (target === "inspector") inspectorDock.value = dock;
+  else diagnosticsDock.value = dock;
 }
 
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
@@ -460,10 +492,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px' }" :class="{ 'inspector-dock-left': inspectorDock === 'left', 'diagnostics-dock-top': diagnosticsDock === 'top' }">
+  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px' }">
     <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
 
-    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed }" @dragover="allowDockDrop" @drop="dropDockPanel($event, 'body')">
+    <div data-testid="workbench-body" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': !diagnosticsCollapsed && diagnosticsDock === 'left' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-right': !diagnosticsCollapsed && diagnosticsDock === 'right' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-top': !diagnosticsCollapsed && diagnosticsDock === 'top' ? diagnosticsHeight + 'px' : '0px', '--diagnostics-reserve-bottom': !diagnosticsCollapsed && diagnosticsDock === 'bottom' ? diagnosticsHeight + 'px' : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
       <aside v-if="workspaceMode === 'dataset'" data-testid="catalog-rail" class="catalog-rail" :class="{ collapsed: catalogCollapsed }">
         <div class="rail-heading">
           <span class="section-index">SOURCE</span>
@@ -481,7 +513,7 @@ onUnmounted(() => {
           @toggle-diagnostics="diagnosticsCollapsed = !diagnosticsCollapsed"
         />
 
-        <div data-testid="primary-workspace" class="primary-workspace" :class="{ 'inspector-dock-left': inspectorDock === 'left' }" @dragover="allowDockDrop" @drop="dropDockPanel($event, 'workspace')">
+        <div data-testid="primary-workspace" class="primary-workspace" :class="{ ['inspector-dock-' + inspectorDock]: true, 'inspector-is-collapsed': inspectorCollapsed }">
           <div data-testid="workspace-content" class="workspace-content">
             <template v-if="origin && workspaceMode === 'dataset'">
               <OriginChart
@@ -537,14 +569,16 @@ onUnmounted(() => {
           </div>
 
           <aside data-testid="inspector-rail" class="inspector-rail" :class="{ collapsed: inspectorCollapsed }">
-            <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" :aria-valuenow="inspectorWidth" aria-valuemin="220" :aria-valuemax="inspectorWidthLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
+            <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" :aria-orientation="inspectorDock === 'left' || inspectorDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidth : inspectorHeight" :aria-valuemin="inspectorDock === 'left' || inspectorDock === 'right' ? 180 : 100" :aria-valuemax="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidthLimit() : inspectorHeightLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
             <div class="rail-heading">
-              <span class="section-index panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag onto the workspace's left or right half to dock" @dragstart="startDockDrag('inspector', $event)">INSPECTOR</span>
+              <span class="section-index panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">INSPECTOR</span>
               <details class="dock-menu" data-testid="inspector-dock-menu">
                 <summary class="subtle-button rail-toggle" aria-label="Inspector panel options" title="Inspector panel options">⋯</summary>
                 <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
                   <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="inspectorDock = 'left'">LEFT</button>
                   <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="inspectorDock = 'right'">RIGHT</button>
+                  <button class="dock-menu-option" data-testid="inspector-dock-top" :aria-pressed="inspectorDock === 'top'" @click="inspectorDock = 'top'">TOP</button>
+                  <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="inspectorDock = 'bottom'">BOTTOM</button>
                 </div>
               </details>
               <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '‹' : '›' }}</button>
@@ -563,10 +597,8 @@ onUnmounted(() => {
           </aside>
         </div>
       </section>
-    </div>
-
-    <section v-if="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock">
-      <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" aria-orientation="horizontal" :aria-valuenow="diagnosticsHeight" aria-valuemin="100" :aria-valuemax="diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
+      <section v-if="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock" :class="'dock-' + diagnosticsDock">
+      <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
       <div class="diagnostics-heading">
         <div>
           <p class="section-index panel-dock-drag-handle" data-testid="diagnostics-dock-drag-handle" draggable="true" title="Drag onto the workbench's upper or lower half to dock" @dragstart="startDockDrag('diagnostics', $event)">DIAGNOSTICS</p>
@@ -576,6 +608,8 @@ onUnmounted(() => {
           <details class="dock-menu" data-testid="diagnostics-dock-menu">
             <summary class="subtle-button" aria-label="Diagnostics panel options" title="Diagnostics panel options">⋯</summary>
             <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
+              <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="diagnosticsDock = 'left'">LEFT</button>
+              <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="diagnosticsDock = 'right'">RIGHT</button>
               <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="diagnosticsDock = 'top'">TOP</button>
               <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'">BOTTOM</button>
             </div>
@@ -593,8 +627,9 @@ onUnmounted(() => {
         </p>
         <p v-else class="empty-state">No active errors. Structured event history and domain diagnostics are not yet connected.</p>
       </div>
-    </section>
-    <button v-else class="diagnostics-reopen" @click="diagnosticsCollapsed = false">＋ Diagnostics</button>
+      </section>
+      <button v-else class="diagnostics-reopen" @click="diagnosticsCollapsed = false">＋ Diagnostics</button>
+    </div>
 
     <footer class="footer-bar">
       <span>STRUXIS DEBUGGER / WORKBENCH</span>
