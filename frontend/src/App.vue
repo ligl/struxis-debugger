@@ -25,6 +25,7 @@ import { useCatalogGroups } from "./composables/useCatalogGroups";
 import { resolveOriginRangeClick } from "./origin-range-selection";
 import { getReplayInspector } from "./origin-bridge";
 import type { ReplayInspectorDto } from "./origin-types";
+import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
 
 const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
 const devtoolsAvailable = import.meta.env.DEV;
@@ -565,9 +566,6 @@ function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
   return labels[kind];
 }
 
-function formatTimestamp(value: string | null): string {
-  return value || "—";
-}
 
 function closeDockMenus(event?: Event): void {
   const target = event?.target;
@@ -706,7 +704,7 @@ onUnmounted(() => {
                     :origin="origin"
                     :load-status="loadStatus"
                     :load-error="loadError"
-                    :format-timestamp="formatTimestamp"
+                    :format-domain-timestamp="formatDomainTimestamp"
                     @refresh="refreshDatasets"
                     @select-dataset="selectedId = $event"
                     @update:enable-structure="enableStructure = $event"
@@ -773,7 +771,7 @@ onUnmounted(() => {
                   :snapshots-loading="snapshotsLoading"
                   :snapshots-error="snapshotsError"
                   :snapshot-kind-label="snapshotKindLabel"
-                  :format-timestamp="formatTimestamp"
+                  :format-lifecycle-timestamp="formatLifecycleTimestamp"
                   :compare-result="compareResult"
                   :compare-loading="compareLoading"
                   :compare-error="compareError"
@@ -809,6 +807,7 @@ onUnmounted(() => {
           v-if="!inspectorCollapsed"
           :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
           :origin-dataset-id="origin?.originDatasetId ?? null"
+          :timeframe="workspaceMode === 'replay' ? (testDataset?.timeframe ?? origin?.timeframe ?? null) : (origin?.timeframe ?? null)"
           :workspace-mode="workspaceMode"
           :replay-inspector="workspaceMode === 'replay' ? replayInspector : null"
           :replay-inspector-error="replayInspectorError"
