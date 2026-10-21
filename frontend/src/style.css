@@ -3706,6 +3706,17 @@ th, td { padding: 6px 8px; }
   overflow: hidden;
 }
 
+/* The side Inspector is positioned at the exact edge reserved by workbench-main.
+   Give Dataset's outer Chart Workspace a real 5px gap; internal chart padding
+   cannot resolve overlapping outer borders. Replay/Compare remain unchanged. */
+.workbench-body:not(.catalog-is-hidden).inspector-dock-left .chart-panels {
+  margin-left: 5px;
+}
+
+.workbench-body:not(.catalog-is-hidden).inspector-dock-right .chart-panels {
+  margin-right: 5px;
+}
+
 .dataset-workspace-content > .origin-chart-panel {
   display: flex;
   flex: 1 1 auto;
