@@ -153,7 +153,7 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
 
   await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
   await page.getByRole("button", { name: "Hide Diagnostics" }).click();
-  await expect(page.getByTestId("diagnostics-dock")).toHaveCount(0);
+  await expect(page.getByTestId("diagnostics-dock")).toBeHidden();
   await page.getByRole("button", { name: "Show Diagnostics" }).click();
   await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 });
