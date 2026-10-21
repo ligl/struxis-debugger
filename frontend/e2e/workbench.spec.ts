@@ -243,108 +243,75 @@ test("overflowing workspace content scrolls inside its own panel", async ({ page
 });
 
 
-test("Inspector supports four-way docking with an edge-aligned splitter", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
-  await expect(page.getByTestId("inspector-panel")).toBeVisible();
-  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 
-  const directions = ["left", "right", "top", "bottom"] as const;
-  const openDockMenu = async (testId: string) => {
-    const menu = page.getByTestId(testId);
-    if (!(await menu.evaluate((element) => (element as HTMLDetailsElement).open))) {
-      await menu.locator("summary").click();
-    }
-    await expect(menu).toHaveJSProperty("open", true);
-  };
-  const chooseDockDirection = async (menuTestId: string, optionTestId: string) => {
-    const menu = page.getByTestId(menuTestId);
-    const option = page.getByTestId(optionTestId);
-    await openDockMenu(menuTestId);
-    await expect(option).toBeVisible();
-    // Visibility alone does not guarantee that overflow ancestors leave the
-    // menu inside the viewport and reachable by a real pointer interaction.
-    await expect(option).toBeInViewport();
-    await option.click();
-    await expect(option).toHaveAttribute("aria-pressed", "true");
-    // Docking moves the panel and therefore its menu anchor. Close the native
-    // details popover after each choice so the next iteration measures/clicks
-    // against the newly laid out panel instead of a stale open overlay.
-    await menu.evaluate((element) => { (element as HTMLDetailsElement).open = false; });
-    await expect(menu).toHaveJSProperty("open", false);
-  };
-  const inspectPanel = (testId: string, splitterTestId: string) => page.evaluate(({ testId, splitterTestId }) => {
+const dockDirections = ["left", "right", "top", "bottom"] as const;
+type DockDirection = (typeof dockDirections)[number];
+
+async function chooseDockDirection(page: Page, menuTestId: string, optionTestId: string) {
+  const menu = page.getByTestId(menuTestId);
+  const option = page.getByTestId(optionTestId);
+  if (!(await menu.evaluate((element) => (element as HTMLDetailsElement).open))) {
+    await menu.locator("summary").click();
+  }
+  await expect(menu).toHaveJSProperty("open", true);
+  await expect(option).toBeVisible();
+  await expect(option).toBeInViewport();
+  await option.click();
+  await expect(option).toHaveAttribute("aria-pressed", "true");
+  // A dock change moves the menu anchor. Close the native details popover
+  // before ending this test so each direction starts from a clean page state.
+  await menu.evaluate((element) => { (element as HTMLDetailsElement).open = false; });
+  await expect(menu).toHaveJSProperty("open", false);
+}
+
+async function inspectPanel(page: Page, testId: string, splitterTestId: string) {
+  return page.evaluate(({ testId, splitterTestId }) => {
     const panel = document.querySelector<HTMLElement>(`[data-testid='${testId}']`)!;
     const splitter = document.querySelector<HTMLElement>(`[data-testid='${splitterTestId}']`)!;
     const p = panel.getBoundingClientRect();
     const s = splitter.getBoundingClientRect();
-    return { left: p.left, right: p.right, top: p.top, bottom: p.bottom,
+    return {
+      left: p.left, right: p.right, top: p.top, bottom: p.bottom,
       splitterLeft: s.left, splitterRight: s.right, splitterTop: s.top, splitterBottom: s.bottom,
-      splitterWidth: s.width, splitterHeight: s.height };
+      splitterWidth: s.width, splitterHeight: s.height,
+    };
   }, { testId, splitterTestId });
+}
 
-  for (const direction of directions) {
-    await test.step(`Inspector docks ${direction}`, async () => {
-    await chooseDockDirection("inspector-dock-menu", `inspector-dock-${direction}`);
-    const inspector = await inspectPanel("inspector-panel", "inspector-resize-edge");
+// Keep each dock direction in its own test. The former four-direction loop
+// could consume the shared 15s test budget, and a timeout did not identify
+// which direction or interaction stalled.
+for (const direction of dockDirections) {
+  test(`Inspector docks ${direction} with an edge-aligned splitter`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await expect(page.getByTestId("inspector-panel")).toBeVisible();
+    await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+
+    await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
+    const inspector = await inspectPanel(page, "inspector-panel", "inspector-resize-edge");
     if (direction === "left") expect(Math.abs(inspector.splitterRight - inspector.right)).toBeLessThanOrEqual(4);
     if (direction === "right") expect(Math.abs(inspector.splitterLeft - inspector.left)).toBeLessThanOrEqual(4);
     if (direction === "top") expect(Math.abs(inspector.splitterBottom - inspector.bottom)).toBeLessThanOrEqual(4);
     if (direction === "bottom") expect(Math.abs(inspector.splitterTop - inspector.top)).toBeLessThanOrEqual(4);
     if (direction === "left" || direction === "right") expect(inspector.splitterWidth).toBeGreaterThan(0);
     else expect(inspector.splitterHeight).toBeGreaterThan(0);
-    });
-  }
-});
+  });
+}
 
+for (const direction of dockDirections) {
+  test(`Diagnostics docks ${direction} with an edge-aligned splitter and reserved workspace area`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 
-test("Diagnostics supports four-way docking with an edge-aligned splitter", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
-  await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
-
-  const directions = ["left", "right", "top", "bottom"] as const;
-  const openDockMenu = async (testId: string) => {
-    const menu = page.getByTestId(testId);
-    if (!(await menu.evaluate((element) => (element as HTMLDetailsElement).open))) {
-      await menu.locator("summary").click();
-    }
-    await expect(menu).toHaveJSProperty("open", true);
-  };
-  const chooseDockDirection = async (menuTestId: string, optionTestId: string) => {
-    const menu = page.getByTestId(menuTestId);
-    const option = page.getByTestId(optionTestId);
-    await openDockMenu(menuTestId);
-    await expect(option).toBeVisible();
-    // Visibility alone does not guarantee that overflow ancestors leave the
-    // menu inside the viewport and reachable by a real pointer interaction.
-    await expect(option).toBeInViewport();
-    await option.click();
-    await expect(option).toHaveAttribute("aria-pressed", "true");
-    // Docking moves the panel and therefore its menu anchor. Close the native
-    // details popover after each choice so the next iteration measures/clicks
-    // against the newly laid out panel instead of a stale open overlay.
-    await menu.evaluate((element) => { (element as HTMLDetailsElement).open = false; });
-    await expect(menu).toHaveJSProperty("open", false);
-  };
-  const inspectPanel = (testId: string, splitterTestId: string) => page.evaluate(({ testId, splitterTestId }) => {
-    const panel = document.querySelector<HTMLElement>(`[data-testid='${testId}']`)!;
-    const splitter = document.querySelector<HTMLElement>(`[data-testid='${splitterTestId}']`)!;
-    const p = panel.getBoundingClientRect();
-    const s = splitter.getBoundingClientRect();
-    return { left: p.left, right: p.right, top: p.top, bottom: p.bottom,
-      splitterLeft: s.left, splitterRight: s.right, splitterTop: s.top, splitterBottom: s.bottom,
-      splitterWidth: s.width, splitterHeight: s.height };
-  }, { testId, splitterTestId });
-
-  for (const direction of directions) {
-    await test.step(`Diagnostics docks ${direction}`, async () => {
-    await chooseDockDirection("diagnostics-dock-menu", `diagnostics-dock-${direction}`);
-    const diagnostics = await inspectPanel("diagnostics-dock", "diagnostics-resize-edge");
+    await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+    const diagnostics = await inspectPanel(page, "diagnostics-dock", "diagnostics-resize-edge");
     const workbench = await page.getByTestId("workbench").boundingBox();
     const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
     expect(workbench).toBeTruthy();
     expect(chartWorkspace).toBeTruthy();
+
     if (direction === "left") {
       expect(Math.abs(diagnostics.splitterRight - diagnostics.right)).toBeLessThanOrEqual(4);
       expect(Math.abs(diagnostics.left - workbench!.x)).toBeLessThanOrEqual(1);
@@ -362,11 +329,10 @@ test("Diagnostics supports four-way docking with an edge-aligned splitter", asyn
     }
     if (direction === "bottom") {
       expect(Math.abs(diagnostics.splitterTop - diagnostics.top)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.bottom - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.bottom - (workbench!.y + workbench!.height)).toBeLessThanOrEqual(1);
       expect(chartWorkspace!.y + chartWorkspace!.height).toBeLessThanOrEqual(diagnostics.top + 1);
     }
     if (direction === "left" || direction === "right") expect(diagnostics.splitterWidth).toBeGreaterThan(0);
     else expect(diagnostics.splitterHeight).toBeGreaterThan(0);
-    });
-  }
-});
+  });
+}
