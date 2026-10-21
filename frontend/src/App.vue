@@ -556,6 +556,7 @@ onUnmounted(() => {
               :compare-loading="compareLoading"
               @compare="runCompare"
             />
+          </template>
         </WorkspaceToolbar>
 
         <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
