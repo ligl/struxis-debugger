@@ -549,9 +549,9 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(true));
     expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
     expect(wrapper.findAll(".workspace-tab").map((tab) => tab.text())).toEqual([
-      "01 / Dataset",
-      "02 / Replay",
-      "03 / Compare",
+      "01\u00a0 Dataset",
+      "02\u00a0 Replay",
+      "03\u00a0 Compare",
     ]);
     expect(wrapper.find('[data-testid="catalog-rail"]').exists()).toBe(true);
 
