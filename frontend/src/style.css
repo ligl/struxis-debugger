@@ -2670,7 +2670,7 @@ th, td { padding: 6px 8px; }
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  padding: 12px;
+  padding: 0;
   overflow: visible;
   border: 1px solid #3a444b;
   background: #15191d;
@@ -2678,7 +2678,9 @@ th, td { padding: 6px 8px; }
 
 .inspector-rail.dock-left,
 .inspector-rail.dock-right {
-  top: var(--inspector-offset-top, 0px);
+  /* In the frozen prototype, side Inspector begins below the 42px Chart Toolbar
+     and ends exactly at the Diagnostics dock boundary. */
+  top: calc(42px + var(--inspector-offset-top, 0px));
   bottom: var(--inspector-offset-bottom, 0px);
   width: var(--inspector-width, 282px);
 }
