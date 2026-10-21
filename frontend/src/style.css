@@ -1348,17 +1348,6 @@ body,
 }
 
 @media (max-width: 1050px) {
-  .workbench-topbar {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-  .brand-block {
-    flex: 1 1 180px;
-  }
-  .workspace-switcher {
-    order: 3;
-    width: 100%;
-  }
   .primary-workspace {
     grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
   }
@@ -2936,12 +2925,6 @@ th, td { padding: 6px 8px; }
 @media (min-width: 1600px) {
   .chart-panels { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
   .chart-panels.catalog-is-collapsed { grid-template-columns: 42px minmax(0, 1fr); }
-}
-
-@media (max-width: 1050px) {
-  .workbench-topbar { align-items: flex-start; flex-wrap: wrap; }
-  .brand-block { flex: 1 1 180px; }
-  .workspace-switcher { order: 3; width: 100%; }
 }
 
 @media (max-width: 760px) {
