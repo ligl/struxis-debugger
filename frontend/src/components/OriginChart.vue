@@ -26,6 +26,7 @@ const emit = defineEmits<{
   sbarClick: [sbarId: string];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
+  cancelRangeSelection: [];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
@@ -167,6 +168,12 @@ function selectSbarById(sbarId: string): void {
     selectionStartX.value = coordinateForSbarId(sbarId);
   }
   emit("sbarClick", sbarId);
+}
+
+function handleChartContextMenu(): void {
+  // Right-click cancels the current in-progress or completed range selection.
+  // The parent owns the authoritative selection state and clears it atomically.
+  emit("cancelRangeSelection");
 }
 
 function handleSbarSelectionRequest(event: Event): void {
@@ -448,6 +455,7 @@ onBeforeUnmount(() => {
     aria-label="Origin SBar chart"
     data-testid="origin-chart-panel"
     @struxis-select-sbar="handleSbarSelectionRequest"
+    @contextmenu.prevent="handleChartContextMenu"
     :data-sbar-count="bars.length"
     :data-first-sbar-id="bars[0]?.sbarId ?? ''"
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
