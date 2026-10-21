@@ -288,10 +288,25 @@ for (const direction of dockDirections) {
 
     await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
     const inspector = await inspectPanel(page, "inspector-panel", "inspector-resize-edge");
-    if (direction === "left") expect(Math.abs(inspector.splitterRight - inspector.right)).toBeLessThanOrEqual(4);
-    if (direction === "right") expect(Math.abs(inspector.splitterLeft - inspector.left)).toBeLessThanOrEqual(4);
-    if (direction === "top") expect(Math.abs(inspector.splitterBottom - inspector.bottom)).toBeLessThanOrEqual(4);
-    if (direction === "bottom") expect(Math.abs(inspector.splitterTop - inspector.top)).toBeLessThanOrEqual(4);
+    const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
+    expect(chartWorkspace).toBeTruthy();
+
+    if (direction === "left") {
+      expect(Math.abs(inspector.splitterRight - inspector.right)).toBeLessThanOrEqual(4);
+      expect(chartWorkspace!.x).toBeGreaterThanOrEqual(inspector.right - 1);
+    }
+    if (direction === "right") {
+      expect(Math.abs(inspector.splitterLeft - inspector.left)).toBeLessThanOrEqual(4);
+      expect(chartWorkspace!.x + chartWorkspace!.width).toBeLessThanOrEqual(inspector.left + 1);
+    }
+    if (direction === "top") {
+      expect(Math.abs(inspector.splitterBottom - inspector.bottom)).toBeLessThanOrEqual(4);
+      expect(chartWorkspace!.y).toBeGreaterThanOrEqual(inspector.bottom - 1);
+    }
+    if (direction === "bottom") {
+      expect(Math.abs(inspector.splitterTop - inspector.top)).toBeLessThanOrEqual(4);
+      expect(chartWorkspace!.y + chartWorkspace!.height).toBeLessThanOrEqual(inspector.top + 1);
+    }
     if (direction === "left" || direction === "right") expect(inspector.splitterWidth).toBeGreaterThan(0);
     else expect(inspector.splitterHeight).toBeGreaterThan(0);
   });
