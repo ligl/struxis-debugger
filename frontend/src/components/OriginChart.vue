@@ -19,6 +19,7 @@ const props = defineProps<{
   selectionStartSbarId?: string | null;
   selectionEndSbarId?: string | null;
   selectionPending?: boolean;
+  selectionEditable?: boolean;
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -226,7 +227,7 @@ function resolveBoundaryDragSbar(clientX: number): string | null {
 }
 
 function handleBoundaryKey(edge: "start" | "end", event: KeyboardEvent): void {
-  if (props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
+  if (props.selectionEditable === false || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
   const delta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
   if (delta === 0) return;
   event.preventDefault();
@@ -243,7 +244,7 @@ function handleBoundaryKey(edge: "start" | "end", event: KeyboardEvent): void {
 }
 
 function startBoundaryDrag(edge: "start" | "end", event: PointerEvent): void {
-  if (event.button !== 0 || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
+  if (event.button !== 0 || props.selectionEditable === false || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
   draggingBoundary = edge;
   lastEmittedBoundaryId = edge === "start" ? props.selectionStartSbarId : props.selectionEndSbarId;
   event.preventDefault();
@@ -514,7 +515,7 @@ onBeforeUnmount(() => {
           :style="{ left: `${selectionStartX}px` }"
         ></div>
         <div
-          v-if="!selectionPending && selectionStartX !== null && selectionEndX !== null"
+          v-if="selectionEditable !== false && !selectionPending && selectionStartX !== null && selectionEndX !== null"
           class="origin-selection-handle origin-selection-handle-start"
           role="slider"
           tabindex="0"
