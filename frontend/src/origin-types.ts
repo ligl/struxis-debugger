@@ -33,6 +33,7 @@ export interface OriginDatasetDto {
   firstTsEvent: string;
   lastTsEvent: string;
   bars: SBarDto[];
+  structure: ReplayInspectorStructureDto | null;
 }
 
 export interface TestDatasetDto {
