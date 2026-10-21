@@ -178,7 +178,7 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
 test("Space preserves native control behavior and is inert without an eligible Run", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Struxis Debugger" })).toBeVisible();
+  await expect(page.getByText("STRUXIS DEBUGGER", { exact: true })).toBeVisible();
 
   await page.evaluate(() => {
     document.body.tabIndex = -1;
