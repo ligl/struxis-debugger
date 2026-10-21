@@ -79,3 +79,105 @@ const emit = defineEmits<{ create: [] }>();
     <p v-else-if="testStatus" class="success-message dataset-controls-message" role="status">{{ testStatus }}</p>
   </section>
 </template>
+
+<style scoped>
+.dataset-controls {
+  min-height: 36px;
+  gap: 8px;
+  padding: 4px 9px;
+  border-bottom-color: #252c32;
+  background: #14191d;
+}
+
+.dataset-controls-label {
+  gap: 6px;
+}
+
+.dataset-controls-label .section-index {
+  display: none;
+}
+
+.dataset-controls-label > strong {
+  font-size: 9px;
+  letter-spacing: .055em;
+}
+
+.dataset-controls-label .status-label {
+  padding: 2px 4px;
+  font-size: 7px;
+}
+
+.dataset-range-summary {
+  flex: 1 1 0;
+  gap: 7px;
+}
+
+.dataset-range-selected {
+  gap: 5px;
+  font-size: 8px;
+}
+
+.dataset-range-selected > span:first-child {
+  font-size: 7px;
+  letter-spacing: .025em;
+}
+
+.dataset-range-selected code {
+  max-width: 190px;
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+}
+
+.dataset-range-selected strong,
+.dataset-range-selected > span:last-child {
+  font-size: 8px;
+}
+
+.dataset-range-pending,
+.dataset-range-empty {
+  font-size: 8px;
+}
+
+.dataset-range-status {
+  flex: 0 1 210px;
+  font-size: 8px;
+}
+
+.dataset-create-button {
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: 8px;
+  letter-spacing: .025em;
+}
+
+.test-dataset-details > summary {
+  padding: 4px 5px;
+  font-size: 7px;
+}
+
+.dataset-controls-message {
+  max-width: 150px;
+  font-size: 8px;
+}
+
+@media (max-width: 1180px) {
+  .dataset-controls {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+
+  .dataset-range-summary {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .dataset-controls > .spacer {
+    display: none;
+  }
+
+  .dataset-range-status {
+    flex: 1 1 140px;
+  }
+}
+</style>
