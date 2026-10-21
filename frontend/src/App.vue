@@ -218,6 +218,7 @@ watch(workspaceMode, (mode) => {
 const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
+const diagnosticsCategory = ref("all");
 type DockDirection = "left" | "right" | "top" | "bottom";
 const inspectorDock = ref<DockDirection>("right");
 const diagnosticsDock = ref<DockDirection>("bottom");
@@ -633,11 +634,28 @@ onUnmounted(() => {
       </aside>
       <section v-show="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock" :class="'dock-' + diagnosticsDock">
         <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
-        <div class="diagnostics-heading">
-          <div>
-            <p class="section-index panel-dock-drag-handle" data-testid="diagnostics-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('diagnostics', $event)">DIAGNOSTICS</p>
+        <div
+          class="diagnostics-heading"
+          data-testid="diagnostics-heading"
+          draggable="true"
+          @dragstart="startDockDrag('diagnostics', $event)"
+        >
+          <div class="diagnostics-title-block">
+            <p class="section-index">DIAGNOSTICS</p>
             <h2>Workflow events &amp; errors</h2>
           </div>
+          <nav class="diagnostics-tabs" data-testid="diagnostics-category-tabs" aria-label="Diagnostic categories">
+            <button v-for="category in [
+              { id: 'all', label: 'ALL' },
+              { id: 'errors', label: 'ERRORS' },
+              { id: 'warnings', label: 'WARNINGS' },
+              { id: 'replay', label: 'REPLAY' },
+              { id: 'structure', label: 'STRUCTURE' },
+              { id: 'snapshots', label: 'SNAPSHOTS' },
+              { id: 'validation', label: 'VALIDATION' },
+              { id: 'differences', label: 'DIFFERENCES' },
+            ]" :key="category.id" :class="{ active: diagnosticsCategory === category.id }" :aria-pressed="diagnosticsCategory === category.id" @click="diagnosticsCategory = category.id">{{ category.label }}</button>
+          </nav>
           <div class="dock-actions">
             <details class="dock-menu" data-testid="diagnostics-dock-menu">
               <summary class="subtle-button" aria-label="Diagnostics panel options" title="Diagnostics panel options">⋯</summary>
@@ -648,7 +666,7 @@ onUnmounted(() => {
                 <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'">BOTTOM</button>
               </div>
             </details>
-            <button class="subtle-button" data-testid="diagnostics-collapse-toggle" @click="diagnosticsCollapsed = true">Collapse</button>
+            <button class="subtle-button" data-testid="diagnostics-collapse-toggle" aria-label="Collapse Diagnostics" title="Collapse Diagnostics" @click="diagnosticsCollapsed = true">−</button>
           </div>
         </div>
         <div class="diagnostics-content">
