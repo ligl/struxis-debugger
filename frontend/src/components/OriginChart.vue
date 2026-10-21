@@ -278,24 +278,21 @@ onBeforeUnmount(() => {
   >
     <div class="origin-chart-heading">
       <div class="chart-title-block">
-        <p class="section-index">AUTHORITATIVE STRUXIS PROJECTION</p>
-        <h3>Origin SBar chart</h3>
-        <span class="chart-instrument">{{ latestBar?.barType ?? originDatasetId }}</span>
+        <h3>ORIGIN · {{ latestBar?.barType ?? originDatasetId }}</h3>
+        <span class="tag green">CATALOG SOURCE</span>
+        <span class="chart-desc">K-line + volume</span>
       </div>
       <div class="chart-heading-actions">
+        <div v-if="latestBar" class="chart-meta" aria-label="Latest SBar OHLC">
+          <span>O <b>{{ latestBar.open }}</b></span>
+          <span>H <b>{{ latestBar.high }}</b></span>
+          <span>L <b>{{ latestBar.low }}</b></span>
+          <span>C <b>{{ latestBar.close }}</b></span>
+        </div>
         <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
         <button class="chart-tool-button" type="button" :disabled="bars.length === 0" @click="fitContent">FIT</button>
       </div>
     </div>
-    <div v-if="latestBar" class="chart-data-strip" aria-label="Latest SBar OHLCV">
-      <span><small>O</small><strong>{{ latestBar.open }}</strong></span>
-      <span><small>H</small><strong>{{ latestBar.high }}</strong></span>
-      <span><small>L</small><strong>{{ latestBar.low }}</strong></span>
-      <span><small>C</small><strong>{{ latestBar.close }}</strong></span>
-      <span><small>VOL</small><strong>{{ latestBar.volume }}</strong></span>
-      <span class="chart-latest-id"><small>LAST SBAR ID</small><strong>{{ latestBar.sbarId }}</strong></span>
-    </div>
-    <p class="microcopy chart-selection-hint">Click anywhere in the chart plot to set the start; move to preview the shaded interval, then click again to fix the inclusive end. Selection uses horizontal time position only.</p>
     <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="origin-chart-error">
       <strong>Chart projection rejected</strong>
       <span>{{ chartError }}</span>
@@ -348,6 +345,18 @@ onBeforeUnmount(() => {
           ></div>
         </template>
       </div>
+      <div class="origin-chart-legend" aria-hidden="true">
+        <span><i class="legend-dot sbar-dot"></i>SBar</span>
+        <span><i class="legend-dot volume-dot"></i>Volume</span>
+      </div>
+    </div>
+    <div class="origin-chart-foot">
+      <span>SBARS <b>{{ bars.length.toLocaleString() }}</b></span>
+      <span v-if="latestBar">VOL <b>{{ latestBar.volume }}</b></span>
+      <span v-if="latestBar" class="origin-chart-last-id" :title="latestBar.sbarId">LAST ID <code>{{ latestBar.sbarId }}</code></span>
+      <span class="origin-chart-selection-status">
+        {{ selectionPending ? "SELECT END · MOVE TO PREVIEW" : selectionStartSbarId && selectionEndSbarId ? "INCLUSIVE INTERVAL FIXED" : selectionStartSbarId ? "SELECT END ON CHART" : "CLICK CHART TO SELECT START" }}
+      </span>
     </div>
   </section>
 </template>
@@ -360,119 +369,198 @@ onBeforeUnmount(() => {
   flex: 1 1 auto;
   flex-direction: column;
   margin: 0;
-  border-color: #30383f;
-  border-radius: 0;
+  overflow: hidden;
+  border: 1px solid #30383f;
+  border-radius: 4px;
   background: #121619;
 }
 
 .origin-chart-heading {
-  min-height: 30px;
-  flex: 0 0 auto;
+  display: flex;
+  height: 29px;
+  min-height: 29px;
+  flex: 0 0 29px;
   align-items: center;
-  gap: 8px;
-  padding: 4px 9px;
-  border-bottom-color: #252c32;
-  background: #191e23;
+  gap: 9px;
+  padding: 0 10px;
+  overflow: hidden;
+  border-bottom: 1px solid #252c32;
+  background: #191e22;
 }
 
 .chart-title-block {
   display: flex;
   min-width: 0;
-  align-items: baseline;
-  gap: 7px;
-}
-
-.chart-title-block .section-index {
-  margin: 0;
-  font-size: 7px;
-  letter-spacing: .045em;
+  align-items: center;
+  gap: 9px;
+  overflow: hidden;
   white-space: nowrap;
 }
 
 .chart-title-block h3 {
+  min-width: 0;
   margin: 0;
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: .045em;
-  text-transform: uppercase;
+  overflow: hidden;
+  color: #e3e8eb;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.chart-instrument {
-  min-width: 0;
-  overflow: hidden;
+.chart-title-block .tag {
+  flex: 0 0 auto;
   font-size: 8px;
+}
+
+.chart-desc {
+  overflow: hidden;
+  color: #89949d;
+  font-size: 9px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .chart-heading-actions {
-  gap: 7px;
-}
-
-.chart-bar-count {
-  font-size: 8px;
-}
-
-.chart-tool-button {
-  min-width: 36px;
-  padding: 3px 6px;
-  font-size: 8px;
-}
-
-.chart-data-strip {
+  display: flex;
+  min-width: 0;
   flex: 0 0 auto;
-  flex-wrap: nowrap;
-  gap: 7px 12px;
-  padding: 4px 9px;
-  border-bottom-color: #252c32;
-  background: #15191d;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
 }
 
-.chart-data-strip > span {
-  gap: 4px;
-  font-size: 8px;
+.chart-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a5b0b7;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
   white-space: nowrap;
 }
 
-.chart-data-strip small {
-  font-size: 7px;
+.chart-meta b {
+  color: #d6dfe3;
+  font-weight: 500;
 }
 
-.chart-data-strip .chart-latest-id {
-  flex: 1 1 100px;
-  overflow: hidden;
+.chart-bar-count {
+  color: #a5b0b7;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
 }
 
-.chart-data-strip .chart-latest-id strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.chart-selection-hint {
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 3px 9px;
-  border-bottom: 1px solid #252c32;
-  color: #89949d;
-  font-size: 8px;
-  line-height: 1.35;
+.chart-tool-button {
+  min-width: 34px;
+  min-height: 22px;
+  padding: 0 6px;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  background: #20262c;
+  color: #c4cdd2;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .origin-chart-viewport {
+  position: relative;
   flex: 1 1 0;
+  width: 100%;
   height: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .origin-chart-host {
+  width: 100%;
   height: 100%;
   min-height: 0;
 }
 
+.origin-chart-legend {
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #9aa5ac;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  pointer-events: none;
+}
+
+.origin-chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+}
+
+.sbar-dot {
+  background: #75c6a1;
+}
+
+.volume-dot {
+  background: #c4a16b;
+}
+
+.origin-chart-foot {
+  display: flex;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 9px;
+  overflow: hidden;
+  border-top: 1px solid #252c32;
+  color: #89949d;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.origin-chart-foot b {
+  color: #d6dfe3;
+  font-weight: 500;
+}
+
+.origin-chart-last-id {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.origin-chart-last-id code {
+  min-width: 0;
+  overflow: hidden;
+  color: #a5b0b7;
+  text-overflow: ellipsis;
+}
+
+.origin-chart-selection-status {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: #a5b0b7;
+  text-overflow: ellipsis;
+}
+
 .origin-chart-empty {
-  flex: 1 1 auto;
+  display: grid;
   min-height: 0;
+  flex: 1 1 auto;
+  place-items: center;
+  padding: 12px;
+  color: #89949d;
   font-size: 10px;
 }
 
@@ -484,12 +572,26 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1180px) {
-  .chart-title-block .section-index {
+  .chart-desc {
     display: none;
   }
 
-  .chart-data-strip {
-    overflow-x: auto;
+  .chart-meta {
+    gap: 6px;
+  }
+
+  .origin-chart-foot {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .chart-meta {
+    display: none;
+  }
+
+  .origin-chart-last-id {
+    display: none;
   }
 }
 </style>
