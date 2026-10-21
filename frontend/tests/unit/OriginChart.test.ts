@@ -251,7 +251,7 @@ describe("OriginChart", () => {
     expect(swingSegment.attributes("y1")).toBe("70");
     expect(swingSegment.attributes("x2")).toBe("200");
     expect(swingSegment.attributes("y2")).toBe("30");
-    expect(swingSegment.attributes("stroke")).toBe("#C6A06B");
+    expect(swingSegment.attributes("stroke")).toBe("#B49ACD");
     expect(swingSegment.attributes("stroke-dasharray")).toBeUndefined();
     expect(wrapper.text()).toContain("CBar");
     expect(wrapper.text()).toContain("Swing");
@@ -309,7 +309,7 @@ describe("OriginChart", () => {
       segment.attributes("stroke"),
       segment.attributes("stroke-dasharray") ?? "",
     ])).toEqual([
-      ["Confirmed", "#C6A06B", ""],
+      ["Confirmed", "#B49ACD", ""],
       ["Tentative", "#D6A85D", "6 3"],
       ["Extending", "#8FA9C4", "2 3"],
     ]);
