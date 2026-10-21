@@ -35,8 +35,7 @@ function mountApp() {
 }
 
 async function enterReplayWorkspace(wrapper: ReturnType<typeof mountApp>): Promise<void> {
-  // Toolbar controls stay mounted with v-show so their state survives workspace changes.
-  // Determine the active workspace from a stable DOM attribute, not button existence or text.
+  // Run controls are rendered only in Replay. Determine the active workspace from a stable DOM attribute.
   const replayTab = wrapper.get('[data-testid="workspace-replay"]');
   if (replayTab.attributes("aria-current") !== "page") {
     await replayTab.trigger("click");
@@ -574,7 +573,7 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="run-chart-test-stub"]')).toHaveLength(1);
-    expect(wrapper.get(".workflow-toolbar h2").text()).toBe("Run Replay");
+    expect(wrapper.get('[data-testid="workspace-toolbar-title"]').text()).toBe("REPLAY");
   });
 
   it("supports keyboard resizing for the Inspector and Diagnostics docks", async () => {
@@ -708,7 +707,7 @@ describe("Test, Run and Snapshot workbench", () => {
     const startButton = wrapper.get('[data-testid="run-start"]');
     expect(startButton).toBeDefined();
     await startButton!.trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     await vi.waitFor(() => expect(wrapper.text()).toContain("COMPLETE / VERIFIED"));
     expect(invokeMock).toHaveBeenCalledWith("start_run");
     expect(invokeMock).toHaveBeenCalledWith("list_snapshots");
@@ -792,7 +791,7 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     const readySpaceEvent = new KeyboardEvent("keydown", {
       key: " ",
       code: "Space",
@@ -1006,7 +1005,7 @@ describe("Test, Run and Snapshot workbench", () => {
     const refreshButton = wrapper.get('[data-testid="run-refresh-state"]');
     expect((refreshButton.element as HTMLButtonElement).disabled).toBe(false);
     await refreshButton.trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("step rejected by backend"));
     expect(wrapper.text()).toContain("READY");
@@ -1043,7 +1042,7 @@ describe("Test, Run and Snapshot workbench", () => {
     await startButton.trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(1);
     resolveStart(readyRun);
-    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
   });
 
 });
@@ -1125,6 +1124,7 @@ describe("startup and user-operation coordination", () => {
     )).toHaveLength(0);
 
     resolveLoad(makeOrigin("origin-reloaded"));
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-reloaded"));
   });
 
@@ -1152,7 +1152,7 @@ describe("startup and user-operation coordination", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     const loadButton = wrapper.find('[data-testid="catalog-load"]');
     expect((loadButton.element as HTMLButtonElement).disabled).toBe(true);
@@ -1194,7 +1194,7 @@ describe("startup and user-operation coordination", () => {
       cursorSbarId: null,
       failureDiagnostic: null,
     });
-    await vi.waitFor(() => expect(wrapper.text()).toContain("run-1"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
   });
 
   it("blocks Origin Load while Test Dataset replacement is pending", async () => {
@@ -1261,6 +1261,7 @@ describe("startup and user-operation coordination", () => {
     )).toHaveLength(0);
 
     resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
   });
 });
