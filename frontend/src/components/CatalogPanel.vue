@@ -15,7 +15,6 @@ defineProps<{
   selectedId: string;
   selectedDataset: CatalogDatasetEntry | null;
   instrumentGroups: InstrumentGroup[];
-  collapsedInstrumentIds: Set<string>;
   refreshing: boolean;
   loading: boolean;
   mutationBusy: boolean;
@@ -30,7 +29,6 @@ defineProps<{
 const emit = defineEmits<{
   refresh: [];
   selectDataset: [id: string];
-  toggleGroup: [key: string];
   "update:enableStructure": [value: boolean];
   load: [];
 }>();
