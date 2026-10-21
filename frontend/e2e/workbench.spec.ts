@@ -214,21 +214,10 @@ for (const direction of ["left", "right"] as const) {
 
     const inspectorBox = await inspector.boundingBox();
     const diagnosticsBox = await diagnostics.boundingBox();
-    const inspectorCollapseBox = await inspector.getByRole("button", { name: "Expand Inspector" }).boundingBox();
+    await expect(inspector.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
     await expect(diagnostics.getByTestId("diagnostics-collapse-toggle")).toBeHidden();
-    const inspectorMenuBox = await inspector.getByTestId("inspector-dock-menu").locator("summary").boundingBox();
-    const diagnosticsMenuBox = await diagnostics.getByTestId("diagnostics-dock-menu").locator("summary").boundingBox();
-
-    expect(inspectorBox).not.toBeNull();
-    expect(diagnosticsBox).not.toBeNull();
-    expect(inspectorCollapseBox).not.toBeNull();
-    expect(inspectorMenuBox).not.toBeNull();
-    expect(diagnosticsMenuBox).not.toBeNull();
-
-    const inspectorCollapseOffset = inspectorCollapseBox!.y + inspectorCollapseBox!.height / 2 - inspectorBox!.y;
-    const inspectorMenuOffset = inspectorMenuBox!.y + inspectorMenuBox!.height / 2 - inspectorBox!.y;
-    const diagnosticsMenuOffset = diagnosticsMenuBox!.y + diagnosticsMenuBox!.height / 2 - diagnosticsBox!.y;
-    expect(Math.abs(diagnosticsMenuOffset - inspectorMenuOffset)).toBeLessThanOrEqual(1);
+    expect(Math.abs(inspectorBox!.width - 36)).toBeLessThanOrEqual(1);
+    expect(Math.abs(diagnosticsBox!.width - 36)).toBeLessThanOrEqual(1);
   });
 }
 
