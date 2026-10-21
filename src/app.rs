@@ -599,6 +599,8 @@ mod tests {
             .expect("valid inclusive selection should create Test");
 
         assert_eq!(test.origin_dataset_id, origin.origin_dataset_id);
+        assert_eq!(origin.timeframe, "5m", "Origin DTO must preserve the BarSpecification unit");
+        assert_eq!(test.timeframe, "5m", "Test DTO must preserve the BarSpecification unit");
         assert_eq!(test.start_sbar_id, "200");
         assert_eq!(test.end_sbar_id, "300");
         assert_eq!(test.sbar_count, 2);
