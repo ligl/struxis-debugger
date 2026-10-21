@@ -3688,7 +3688,7 @@ th, td { padding: 6px 8px; }
   flex: 1 1 auto;
   min-height: 0;
   flex-direction: column;
-  margin: 2px 6px 0px;
+  margin: 4px 6px 0px;
 }
 
 .dataset-workspace-content > .origin-chart-panel > .origin-chart-viewport {
