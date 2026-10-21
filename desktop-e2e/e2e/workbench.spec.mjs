@@ -493,7 +493,7 @@ describe("Struxis Debugger native desktop", () => {
     await domClick('[data-testid="workspace-compare"]');
     await domClick('[data-testid="snapshot-store-toggle"]');
     await browser.waitUntil(
-      async () => (await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]')).length >= 1,
+      async () => await browser.execute(() => document.querySelectorAll('[data-testid="snapshot-row"][data-snapshot-kind="complete"]').length) >= 1,
       {
         timeout: 15_000,
         interval: 250,
@@ -546,7 +546,7 @@ describe("Struxis Debugger native desktop", () => {
 
     await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
-      async () => (await $('[data-testid="snapshot-row"][data-snapshot-kind="complete"]')).length >= 2,
+      async () => await browser.execute(() => document.querySelectorAll('[data-testid="snapshot-row"][data-snapshot-kind="complete"]').length) >= 2,
       {
         timeout: 15_000,
         interval: 250,
