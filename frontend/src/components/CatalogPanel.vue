@@ -98,3 +98,136 @@ const emit = defineEmits<{ refresh: []; selectDataset: [id: string]; toggleGroup
         </details>
       </aside>
 </template>
+
+<style scoped>
+.catalog-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0;
+  overflow: hidden;
+  color: #e3e8eb;
+}
+
+.catalog-panel > .panel-heading {
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 9px;
+  border-bottom: 1px solid #252c32;
+}
+
+.catalog-panel .panel-heading h2 {
+  margin: 0;
+  color: #e3e8eb;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+.catalog-panel .subtle-button {
+  min-height: 25px;
+  padding: 3px 7px;
+  font-size: 9px;
+}
+
+.catalog-panel .error-message,
+.catalog-panel .empty-state {
+  margin: 7px 8px;
+  padding: 8px;
+  font-size: 10px;
+}
+
+.catalog-panel .instrument-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.catalog-panel .instrument-group-row {
+  min-height: 29px;
+  gap: 5px;
+  padding: 5px 8px;
+  border-bottom-color: #252c32;
+}
+
+.catalog-panel .instrument-group-name {
+  min-width: 0;
+  font-size: 10px;
+}
+
+.catalog-panel .group-count,
+.catalog-panel .group-ready {
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.catalog-panel .dataset-row {
+  min-height: 42px;
+  gap: 7px;
+  padding: 6px 8px;
+}
+
+.catalog-panel .dataset-details {
+  gap: 2px;
+}
+
+.catalog-panel .dataset-details strong {
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.catalog-panel .dataset-details small,
+.catalog-panel .dataset-state {
+  font-size: 8px;
+}
+
+.catalog-panel .load-options {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px;
+  border-top: 1px solid #30383f;
+  background: #14191d;
+}
+
+.catalog-panel .toggle-row {
+  gap: 7px;
+  font-size: 9px;
+}
+
+.catalog-panel .toggle-row strong {
+  font-size: 9px;
+  font-weight: 550;
+}
+
+.catalog-panel .toggle-row small,
+.catalog-panel .microcopy {
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.catalog-panel .load-options > .primary-button {
+  width: 100%;
+  min-height: 29px;
+  justify-content: space-between;
+  margin-top: 7px;
+  padding: 5px 8px;
+  font-size: 9px;
+}
+
+.catalog-panel .catalog-origin-details {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 7px 8px;
+  border-top: 1px solid #252c32;
+}
+
+.catalog-panel .catalog-origin-details > summary {
+  font-size: 8px;
+}
+</style>
