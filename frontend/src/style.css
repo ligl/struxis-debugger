@@ -3628,6 +3628,22 @@ th, td { padding: 6px 8px; }
   background: #2c261c;
   color: var(--dbg-warning);
 }
+.tag.green {
+  border-color: #477b66;
+  background: #1c3028;
+  color: #a8d7bf;
+}
+
+.run-chart-foot .run-status-running,
+.run-chart-foot .run-status-paused,
+.run-chart-foot .run-status-completed {
+  color: var(--dbg-success);
+}
+
+.run-chart-foot .run-status-failed {
+  color: var(--dbg-error, #e17e79);
+}
+
 .replay-toolbar-actions {
   display: flex;
   min-width: 0;
