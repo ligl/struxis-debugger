@@ -1442,21 +1442,238 @@ body,
 
 /* Run chart has an independent chart instance and no Origin range-selection state. */
 .run-chart-panel {
+  display: flex;
   min-width: 0;
-  margin-top: 2px;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
   border: 1px solid var(--dbg-border);
   background: var(--dbg-surface-1);
 }
 
-.run-chart-host {
-  width: 100%;
+.run-chart-heading {
+  display: flex;
   min-width: 0;
-  height: 460px;
+  min-height: 43px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #191e22;
+}
+
+.run-chart-title {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.run-chart-title-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.run-chart-name {
+  color: var(--dbg-text-primary);
+  font: 700 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.run-chart-description {
+  overflow: hidden;
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-chart-meta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 13px;
+}
+
+.run-chart-meta > span {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.run-chart-meta small {
+  color: var(--dbg-text-muted);
+  font-size: 8px;
+}
+
+.run-chart-meta strong {
+  color: var(--dbg-text-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.run-chart-meta .run-chart-up {
+  color: var(--dbg-success);
+}
+
+.run-chart-meta .run-chart-down {
+  color: var(--dbg-error, #e17e79);
+}
+
+.run-chart-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: #121619;
+}
+
+.run-chart-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.run-chart-message {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  max-width: min(540px, calc(100% - 24px));
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--dbg-border);
+  background: rgb(21 26 30 / 94%);
+  color: var(--dbg-text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.run-chart-stage > .chart-error {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  right: 8px;
+  max-width: min(500px, calc(100% - 16px));
+  margin: 0;
+}
+
+.run-chart-legend {
+  position: absolute;
+  z-index: 2;
+  right: 10px;
+  bottom: 8px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  pointer-events: none;
+}
+
+.run-chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.run-chart-legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+}
+
+.run-legend-sbar {
+  background: var(--dbg-success);
+}
+
+.run-legend-volume {
+  background: #c4a16b;
+}
+
+.run-chart-legend .run-chart-structure-gap {
+  color: var(--dbg-warning);
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
+.run-chart-foot {
+  display: flex;
+  min-width: 0;
+  min-height: 27px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 10px;
+  border-top: 1px solid var(--dbg-border);
+  background: #191e22;
+  color: var(--dbg-text-muted);
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+}
+
+.run-chart-foot > span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.run-chart-foot b {
+  color: var(--dbg-text-secondary);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.run-chart-foot .run-chart-cursor {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 120px;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.run-chart-cursor b {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 720px) {
-  .run-chart-host {
-    height: 340px;
+  .run-chart-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .run-chart-meta {
+    gap: 9px;
+  }
+
+  .run-chart-description {
+    white-space: normal;
+  }
+
+  .run-chart-foot {
+    flex-wrap: wrap;
+    gap: 5px 10px;
+  }
+
+  .run-chart-foot .run-chart-cursor {
+    flex-basis: 100%;
+    justify-content: flex-start;
   }
 }
 
