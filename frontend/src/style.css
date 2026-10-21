@@ -2884,6 +2884,29 @@ th, td { padding: 6px 8px; }
 .diagnostics-dock.dock-left .dock-actions,
 .diagnostics-dock.dock-right .dock-actions { justify-content: flex-end; }
 
+/*
+ * The frozen prototype only shows the Diagnostics panel title in side docks.
+ * Top/bottom docks keep the action strip available, but suppress the title block
+ * so the horizontal panel gives its vertical space back to diagnostic content.
+ */
+.diagnostics-dock.dock-top .diagnostics-heading,
+.diagnostics-dock.dock-bottom .diagnostics-heading {
+  min-height: 28px;
+  padding: 0 9px;
+  border-bottom: 0;
+}
+
+.diagnostics-dock.dock-top .diagnostics-heading > div:first-child,
+.diagnostics-dock.dock-bottom .diagnostics-heading > div:first-child {
+  display: none;
+}
+
+.diagnostics-dock.dock-top .diagnostics-heading .dock-actions,
+.diagnostics-dock.dock-bottom .diagnostics-heading .dock-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
 .diagnostics-reopen {
   position: absolute;
   z-index: 13;
