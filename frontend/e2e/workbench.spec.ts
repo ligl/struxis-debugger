@@ -112,8 +112,7 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
   expect(hierarchy.shell).toEqual(["topbar", "workbench"]);
   expect(hierarchy.workbench).toEqual(["chart-workspace", "inspector-panel", "diagnostics-dock"]);
   expect(hierarchy.chartWorkspace).toEqual(["chart-toolbar", "chart-panels"]);
-  expect(hierarchy.chartPanels).toContain("catalog-rail");
-  expect(hierarchy.chartPanels).toContain("workspace-content");
+  expect(hierarchy.chartPanels).toEqual(["workspace-content"]);
   expect(hierarchy.hasLegacyFooter).toBe(false);
   expect(hierarchy.hasLegacyPrimaryWorkspace).toBe(false);
 });
@@ -166,17 +165,15 @@ test("workspace navigation updates the visible workflow", async ({ page }) => {
   await page.getByTestId("workspace-dataset").click();
   await expect(page.getByTestId("workspace-dataset")).toHaveClass(/active/);
   await expect(page.getByTestId("workspace-toolbar-title")).toHaveText("DATASET");
-  await expect(page.locator(".dataset-preparation-panel")).toBeVisible();
+  await expect(page.getByTestId("catalog-controls")).toBeVisible();
+  await expect(page.locator(".dataset-controls-host")).toBeVisible();
 });
 
-test("catalog and inspector can collapse and restore", async ({ page }) => {
+test("Dataset catalog controls remain available and Inspector can collapse and restore", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Collapse Catalog" }).click();
-  await expect(page.getByRole("button", { name: "Expand Catalog" })).toBeVisible();
-  await page.getByRole("button", { name: "Expand Catalog" }).click();
-  await expect(page.getByRole("button", { name: "Collapse Catalog" })).toBeVisible();
+  await expect(page.getByTestId("catalog-controls")).toBeVisible();
 
   await page.getByRole("button", { name: "Collapse Inspector" }).click();
   await expect(page.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
@@ -232,7 +229,7 @@ for (const direction of ["left", "right"] as const) {
     const collapseToggle = dock.getByTestId("diagnostics-collapse-toggle");
     await collapseToggle.click();
     await expect(dock).toHaveClass(/collapsed/);
-    await expect(collapseToggle).toBeHidden();
+    await expect(collapseToggle).toBeVisible();
     await expect(dock).toHaveClass(/collapsed/);
 
     const title = dock.getByTestId("diagnostics-dock-drag-handle");
@@ -570,20 +567,20 @@ for (const direction of dockDirections) {
 
     if (direction === "left") {
       expect(Math.abs(inspector!.x - workbench!.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(diagnostics!.x - (inspector!.x + inspector!.width))).toBeLessThanOrEqual(1);
-      expect(Math.abs(chartWorkspace!.x - (diagnostics!.x + diagnostics!.width))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.x - (inspector!.x + inspector!.width) - 5)).toBeLessThanOrEqual(1);
+      expect(Math.abs(chartWorkspace!.x - (diagnostics!.x + diagnostics!.width) - 5)).toBeLessThanOrEqual(1);
     } else if (direction === "right") {
       expect(Math.abs(inspector!.x + inspector!.width - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
-      expect(Math.abs(diagnostics!.x + diagnostics!.width - inspector!.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(chartWorkspace!.x + chartWorkspace!.width - diagnostics!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector!.x - (diagnostics!.x + diagnostics!.width) - 5)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.x - (chartWorkspace!.x + chartWorkspace!.width) - 5)).toBeLessThanOrEqual(1);
     } else if (direction === "top") {
       expect(Math.abs(inspector!.y - workbench!.y)).toBeLessThanOrEqual(1);
-      expect(Math.abs(diagnostics!.y - (inspector!.y + inspector!.height))).toBeLessThanOrEqual(1);
-      expect(Math.abs(chartWorkspace!.y - (diagnostics!.y + diagnostics!.height))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.y - (inspector!.y + inspector!.height) - 5)).toBeLessThanOrEqual(1);
+      expect(Math.abs(chartWorkspace!.y - (diagnostics!.y + diagnostics!.height) - 5)).toBeLessThanOrEqual(1);
     } else {
       expect(Math.abs(inspector!.y + inspector!.height - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
-      expect(Math.abs(diagnostics!.y + diagnostics!.height - inspector!.y)).toBeLessThanOrEqual(1);
-      expect(Math.abs(chartWorkspace!.y + chartWorkspace!.height - diagnostics!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector!.y - (diagnostics!.y + diagnostics!.height) - 5)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.y - (chartWorkspace!.y + chartWorkspace!.height) - 5)).toBeLessThanOrEqual(1);
     }
   });
 }
@@ -706,7 +703,7 @@ for (const direction of dockDirections) {
     await page.getByTestId("diagnostics-collapse-toggle").click();
     await expect(dock).toBeVisible();
     if (direction === "left" || direction === "right") {
-      await expect(page.getByTestId("diagnostics-collapse-toggle")).toBeHidden();
+      await expect(page.getByTestId("diagnostics-collapse-toggle")).toBeVisible();
     } else {
       await expect(page.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Expand Diagnostics");
     }
