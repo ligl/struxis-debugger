@@ -18,14 +18,13 @@ defineProps<{
       <span class="workspace-title" data-testid="workspace-toolbar-title">REPLAY</span>
       <span class="toolbar-context">LIVE + SNAPSHOT REFERENCE</span>
       <span class="spacer"></span>
-      <slot name="actions" />
     </template>
     <template v-else>
       <span class="workspace-title" data-testid="workspace-toolbar-title">COMPARE</span>
       <span class="toolbar-context">STRICT · ORDERED · BAR-BY-BAR</span>
       <span class="spacer"></span>
       <span class="tag amber">STRICT MODE</span>
-      <slot name="actions" />
     </template>
+    <slot name="actions" />
   </div>
 </template>
