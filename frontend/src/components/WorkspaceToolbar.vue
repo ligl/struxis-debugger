@@ -3,6 +3,7 @@ type WorkspaceMode = "dataset" | "replay" | "compare";
 
 defineProps<{
   workspaceMode: WorkspaceMode;
+  replayContext?: string;
 }>();
 </script>
 
@@ -16,7 +17,8 @@ defineProps<{
     </template>
     <template v-else-if="workspaceMode === 'replay'">
       <span class="workspace-title" data-testid="workspace-toolbar-title">REPLAY</span>
-      <span class="toolbar-context">LIVE + SNAPSHOT REFERENCE</span>
+      <span class="tag green">TEST DATASET</span>
+      <span class="toolbar-context" data-testid="replay-toolbar-context">{{ replayContext ?? "NO TEST DATASET · CREATE AN INCLUSIVE INTERVAL" }}</span>
       <span class="spacer"></span>
     </template>
     <template v-else>
