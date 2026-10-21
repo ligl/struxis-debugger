@@ -204,6 +204,34 @@ function handleOriginSbarClick(sbarId: string): void {
     `Selected ${result.count.toLocaleString()} SBars: ${result.startSbarId} → ${result.endSbarId} (inclusive).`;
 }
 
+function handleOriginBoundaryChange(edge: "start" | "end", sbarId: string): void {
+  if (!origin.value || !canMutateTest.value || testLoading.value || !rangeSelectionReady.value) return;
+  const bars = origin.value.bars;
+  const nextIndex = bars.findIndex((bar) => bar.sbarId === sbarId);
+  const currentStartIndex = bars.findIndex((bar) => bar.sbarId === startSbarId.value);
+  const currentEndIndex = bars.findIndex((bar) => bar.sbarId === endSbarId.value);
+  if (nextIndex < 0 || currentStartIndex < 0 || currentEndIndex < 0) {
+    rangeSelectionStatus.value = "The dragged boundary is not part of the current Origin. The interval was not changed.";
+    return;
+  }
+
+  if (edge === "start") {
+    if (nextIndex > currentEndIndex) return;
+    startSbarId.value = sbarId;
+  } else {
+    if (nextIndex < currentStartIndex) return;
+    endSbarId.value = sbarId;
+  }
+
+  const startIndex = edge === "start" ? nextIndex : currentStartIndex;
+  const endIndex = edge === "end" ? nextIndex : currentEndIndex;
+  selectedRangeCount.value = endIndex - startIndex + 1;
+  rangeSelectionPendingStart.value = null;
+  rangeSelectionReady.value = true;
+  rangeSelectionStatus.value =
+    `Adjusted inclusive interval: ${startSbarId.value} → ${endSbarId.value} (${selectedRangeCount.value.toLocaleString()} SBars).`;
+}
+
 function handleOriginSelectionError(message: string): void {
   rangeSelectionStatus.value = message;
 }
@@ -686,6 +714,7 @@ onUnmounted(() => {
                 :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
                 :selection-pending="rangeSelectionPendingStart !== null"
                 @sbar-click="handleOriginSbarClick"
+                @range-boundary-change="handleOriginBoundaryChange"
                 @selection-error="handleOriginSelectionError"
               />
             </template>
