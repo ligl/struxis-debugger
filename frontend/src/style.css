@@ -2068,11 +2068,11 @@ th, td { padding: 6px 8px; }
 .dock-menu > summary::-webkit-details-marker { display: none; }
 .dock-menu > summary::marker { content: ""; }
 
-/* The frozen prototype uses transparent, borderless icon controls in both dock headers. */
+/* Dock-header icon controls are borderless at rest; hovering reveals a frame. */
 .inspector-rail .rail-heading > .dock-menu > summary,
 .inspector-rail .rail-heading > .rail-toggle,
 .diagnostics-dock .dock-actions > .dock-menu > summary,
-.diagnostics-dock .dock-actions > .rail-toggle {
+.diagnostics-dock .dock-actions > [data-testid="diagnostics-collapse-toggle"] {
   width: 25px;
   min-width: 25px;
   height: 25px;
@@ -2087,14 +2087,13 @@ th, td { padding: 6px 8px; }
 .inspector-rail .rail-heading > .dock-menu > summary:hover,
 .inspector-rail .rail-heading > .rail-toggle:hover,
 .diagnostics-dock .dock-actions > .dock-menu > summary:hover,
-.diagnostics-dock .dock-actions > .rail-toggle:hover {
-  border-color: transparent;
+.diagnostics-dock .dock-actions > [data-testid="diagnostics-collapse-toggle"]:hover {
+  border-color: var(--dbg-border, #30383e);
   background: transparent;
   color: var(--dbg-text-primary, #e3e8eb);
 }
 
 .dock-menu[open] > summary {
-  border-color: transparent;
   color: var(--dbg-text-primary);
   background: transparent;
   box-shadow: none;
