@@ -200,6 +200,25 @@ test("diagnostics dock can collapse and restore", async ({ page }) => {
   await expect(diagnostics).not.toHaveClass(/collapsed/);
 });
 
+for (const direction of ["left", "right"] as const) {
+  test(`collapsed Diagnostics rail shows the full vertical title when docked ${direction}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+
+    const dock = page.getByTestId("diagnostics-dock");
+    await dock.getByTestId("diagnostics-collapse-toggle").click();
+    await expect(dock).toHaveClass(/collapsed/);
+
+    const title = dock.getByTestId("diagnostics-dock-drag-handle");
+    await expect(title).toBeVisible();
+    await expect(title).toHaveText("Diagnostics");
+    await expect(title).toHaveCSS("writing-mode", "vertical-rl");
+    await expect(dock.locator(".diagnostics-heading")).not.toHaveCSS("content", '"DIAG"');
+    await expect(dock.getByTestId("diagnostics-category-tabs")).toBeHidden();
+  });
+}
+
 for (const direction of ["left", "right", "top", "bottom"] as const) {
   test(`Diagnostics title visibility follows ${direction} docking`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
