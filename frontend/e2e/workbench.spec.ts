@@ -324,6 +324,7 @@ async function inspectPanel(page: Page, testId: string, splitterTestId: string) 
     const s = splitter.getBoundingClientRect();
     return {
       left: p.left, right: p.right, top: p.top, bottom: p.bottom,
+      width: p.width, height: p.height,
       splitterLeft: s.left, splitterRight: s.right, splitterTop: s.top, splitterBottom: s.bottom,
       splitterWidth: s.width, splitterHeight: s.height,
     };
