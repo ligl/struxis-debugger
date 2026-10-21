@@ -274,7 +274,7 @@ watch(workspaceMode, (mode) => {
   if (mode === "replay") void refreshReplayInspector();
 });
 const inspectorCollapsed = ref(false);
-const diagnosticsCollapsed = ref(false);
+const diagnosticsCollapsed = ref(true);
 const diagnosticsCategory = ref("all");
 
 function handleDiagnosticsHeadingClick(): void {
