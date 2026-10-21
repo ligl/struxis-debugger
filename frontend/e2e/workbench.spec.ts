@@ -201,6 +201,12 @@ test("both auxiliary panels support four-way docking with edge-aligned splitters
   await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 
   const directions = ["left", "right", "top", "bottom"] as const;
+  const openDockMenu = async (testId: string) => {
+    const menu = page.getByTestId(testId);
+    if (!(await menu.evaluate((element) => (element as HTMLDetailsElement).open))) {
+      await menu.locator("summary").click();
+    }
+  };
   const inspectPanel = (testId: string, splitterTestId: string) => page.evaluate(({ testId, splitterTestId }) => {
     const panel = document.querySelector<HTMLElement>(`[data-testid='${testId}']`)!;
     const splitter = document.querySelector<HTMLElement>(`[data-testid='${splitterTestId}']`)!;
@@ -212,7 +218,7 @@ test("both auxiliary panels support four-way docking with edge-aligned splitters
   }, { testId, splitterTestId });
 
   for (const direction of directions) {
-    await page.getByTestId("inspector-dock-menu").locator("summary").click();
+    await openDockMenu("inspector-dock-menu");
     await page.getByTestId(`inspector-dock-${direction}`).click();
     const inspector = await inspectPanel("inspector-rail", "inspector-resize-edge");
     if (direction === "left") expect(Math.abs(inspector.splitterRight - inspector.right)).toBeLessThanOrEqual(4);
@@ -224,7 +230,7 @@ test("both auxiliary panels support four-way docking with edge-aligned splitters
   }
 
   for (const direction of directions) {
-    await page.getByTestId("diagnostics-dock-menu").locator("summary").click();
+    await openDockMenu("diagnostics-dock-menu");
     await page.getByTestId(`diagnostics-dock-${direction}`).click();
     const diagnostics = await inspectPanel("diagnostics-dock", "diagnostics-resize-edge");
     const main = await page.getByTestId("workbench-main").boundingBox();
