@@ -218,6 +218,12 @@ const catalogCollapsed = ref(false);
 const inspectorCollapsed = ref(false);
 const diagnosticsCollapsed = ref(false);
 const diagnosticsCategory = ref("all");
+
+function handleDiagnosticsHeadingClick(): void {
+  if (diagnosticsCollapsed.value && (diagnosticsDock.value === "left" || diagnosticsDock.value === "right")) {
+    diagnosticsCollapsed.value = false;
+  }
+}
 type DockDirection = "left" | "right" | "top" | "bottom";
 const inspectorDock = ref<DockDirection>("right");
 const diagnosticsDock = ref<DockDirection>("bottom");
@@ -704,7 +710,7 @@ onUnmounted(() => {
           class="diagnostics-heading"
           data-testid="diagnostics-heading"
           :class="{ 'collapsed-side-heading': diagnosticsCollapsed && (diagnosticsDock === 'left' || diagnosticsDock === 'right') }"
-          @click="if (diagnosticsCollapsed && (diagnosticsDock === 'left' || diagnosticsDock === 'right')) diagnosticsCollapsed = false"
+          @click="handleDiagnosticsHeadingClick"
           draggable="true"
           @dragstart="startDockDrag('diagnostics', $event)"
         >
