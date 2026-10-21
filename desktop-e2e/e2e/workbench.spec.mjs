@@ -435,7 +435,7 @@ describe("Struxis Debugger native desktop", () => {
     );
 
     await domClick('[data-testid="run-start"]');
-    const runStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
+    const runStatus = $("[data-testid='run-toolbar-status'] b");
     await browser.waitUntil(
       async () => (await runStatus.getText()).trim() === "READY",
       {
@@ -485,7 +485,7 @@ describe("Struxis Debugger native desktop", () => {
       );
     }
 
-    const progress = await $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//div[contains(@class,'detail-list')]//div[span[normalize-space()='PROGRESS']]/strong").getText();
+    const progress = await $("[data-testid='run-toolbar-status'] span").getText();
     assert.equal(progress.replace(/\s/g, ""), "2/2",
       "Completed Run must confirm both selected SBars.");
 
@@ -509,7 +509,7 @@ describe("Struxis Debugger native desktop", () => {
     // SQLite Snapshots with an identical complete SBar sequence fingerprint.
     await domClick('[data-testid="workspace-replay"]');
     await domClick('[data-testid="run-restart"]');
-    const secondRunStatus = $("//button[@data-testid='run-start']/ancestor::section[contains(@class,'operations-panel')]//span[contains(@class,'status-label')]");
+    const secondRunStatus = $("[data-testid='run-toolbar-status'] b");
     await browser.waitUntil(
       async () => (await secondRunStatus.getText()).trim() === "READY",
       {
