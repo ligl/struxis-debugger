@@ -19,7 +19,7 @@ function mountApp() {
       stubs: {
         OriginPanel: {
           template: '<section data-testid="origin-panel-test-stub"><h3>Current Origin</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
-          props: ["origin", "loadStatus", "loadError", "formatTimestamp"],
+          props: ["origin", "loadStatus", "loadError", "formatDomainTimestamp"],
         },
         OriginChart: {
           template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button></section>',
@@ -158,6 +158,7 @@ describe("Origin Load workbench", () => {
     await wrapper.get('[data-testid="origin-sbar-click-200"]').trigger("click");
 
     expect(wrapper.get('[data-testid="inspector-sbar-id"]').text()).toBe("200");
+    expect(wrapper.get(".inspector-fields").text()).toContain("1970-01-01 00:00");
     expect(wrapper.get('[data-testid="inspector-sbar-open"]').text()).toBe("11.00");
     expect(wrapper.get('[data-testid="inspector-sbar-high"]').text()).toBe("13.00");
     expect(wrapper.get('[data-testid="inspector-sbar-low"]').text()).toBe("10.00");
