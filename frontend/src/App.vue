@@ -225,8 +225,8 @@ const diagnosticsDock = ref<DockDirection>("bottom");
 
 // Dock dimensions are presentation state only; they never affect Struxis state.
 const inspectorWidth = ref(282);
-const inspectorHeight = ref(145);
-const diagnosticsWidth = ref(330);
+const inspectorHeight = ref(164);
+const diagnosticsWidth = ref(282);
 const diagnosticsHeight = ref(164);
 let runPollInterval: number | null = null;
 type PanelResizeTarget = "inspector" | "diagnostics" | null;
@@ -268,7 +268,7 @@ function peerDockReservation(target: Exclude<PanelResizeTarget, null>, axis: Doc
   }
 
   // A collapsed Inspector still reserves its narrow reopen rail.
-  if (inspectorCollapsed.value) return axis === "horizontal" ? 42 : 36;
+  if (inspectorCollapsed.value) return 36;
   return axis === "horizontal" ? inspectorWidth.value : inspectorHeight.value;
 }
 
@@ -524,10 +524,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px', '--inspector-reserve-left': !inspectorCollapsed && inspectorDock === 'left' ? inspectorWidth + 'px' : (inspectorDock === 'left' ? '42px' : '0px'), '--inspector-reserve-right': !inspectorCollapsed && inspectorDock === 'right' ? inspectorWidth + 'px' : (inspectorDock === 'right' ? '42px' : '0px'), '--inspector-reserve-top': !inspectorCollapsed && inspectorDock === 'top' ? inspectorHeight + 'px' : (inspectorDock === 'top' ? '36px' : '0px'), '--inspector-reserve-bottom': !inspectorCollapsed && inspectorDock === 'bottom' ? inspectorHeight + 'px' : (inspectorDock === 'bottom' ? '36px' : '0px') }">
+  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px', '--inspector-reserve-left': !inspectorCollapsed && inspectorDock === 'left' ? inspectorWidth + 'px' : (inspectorDock === 'left' ? '36px' : '0px'), '--inspector-reserve-right': !inspectorCollapsed && inspectorDock === 'right' ? inspectorWidth + 'px' : (inspectorDock === 'right' ? '36px' : '0px'), '--inspector-reserve-top': !inspectorCollapsed && inspectorDock === 'top' ? inspectorHeight + 'px' : (inspectorDock === 'top' ? '36px' : '0px'), '--inspector-reserve-bottom': !inspectorCollapsed && inspectorDock === 'bottom' ? inspectorHeight + 'px' : (inspectorDock === 'bottom' ? '36px' : '0px') }">
     <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
 
-    <div data-testid="workbench" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': !diagnosticsCollapsed && diagnosticsDock === 'left' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-right': !diagnosticsCollapsed && diagnosticsDock === 'right' ? diagnosticsWidth + 'px' : '0px', '--diagnostics-reserve-top': !diagnosticsCollapsed && diagnosticsDock === 'top' ? diagnosticsHeight + 'px' : '0px', '--diagnostics-reserve-bottom': !diagnosticsCollapsed && diagnosticsDock === 'bottom' ? diagnosticsHeight + 'px' : '0px', '--inspector-offset-left': !diagnosticsCollapsed && diagnosticsDock === 'left' ? diagnosticsWidth + 'px' : '0px', '--inspector-offset-right': !diagnosticsCollapsed && diagnosticsDock === 'right' ? diagnosticsWidth + 'px' : '0px', '--inspector-offset-top': !diagnosticsCollapsed && diagnosticsDock === 'top' ? diagnosticsHeight + 'px' : '0px', '--inspector-offset-bottom': !diagnosticsCollapsed && diagnosticsDock === 'bottom' ? diagnosticsHeight + 'px' : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
+    <div data-testid="workbench" class="workbench-body" :class="{ 'catalog-is-collapsed': catalogCollapsed, 'catalog-is-hidden': workspaceMode !== 'dataset', 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--diagnostics-reserve-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
 
 
       <section data-testid="chart-workspace" class="workbench-main">
@@ -632,7 +632,7 @@ onUnmounted(() => {
           :compare-candidate-snapshot-id="compareResult?.candidate.snapshotId ?? null"
         />
       </aside>
-      <section v-show="!diagnosticsCollapsed" data-testid="diagnostics-dock" class="diagnostics-dock" :class="'dock-' + diagnosticsDock">
+      <section data-testid="diagnostics-dock" class="diagnostics-dock" :class="['dock-' + diagnosticsDock, { collapsed: diagnosticsCollapsed }]">
         <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
         <div
           class="diagnostics-heading"
@@ -666,7 +666,7 @@ onUnmounted(() => {
                 <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'">BOTTOM</button>
               </div>
             </details>
-            <button class="subtle-button" data-testid="diagnostics-collapse-toggle" aria-label="Collapse Diagnostics" title="Collapse Diagnostics" @click="diagnosticsCollapsed = true">−</button>
+            <button class="subtle-button" data-testid="diagnostics-collapse-toggle"  :aria-label="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" :title="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" @click="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? '+' : '−' }}</button>
           </div>
         </div>
         <div class="diagnostics-content">
