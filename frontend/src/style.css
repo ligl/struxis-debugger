@@ -945,6 +945,7 @@ body,
 }
 
 .workbench-topbar {
+  justify-content: flex-start;
   flex: 0 0 44px;
   height: 44px;
   min-height: 44px;
