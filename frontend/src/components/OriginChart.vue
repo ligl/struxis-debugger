@@ -5,7 +5,6 @@ import {
   ColorType,
   HistogramSeries,
   LineSeries,
-  LineStyle,
   createChart,
   type IChartApi,
   type ISeriesApi,
@@ -32,8 +31,6 @@ const chartError = ref("");
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
-let cbarHighSeries: ISeriesApi<"Line"> | null = null;
-let cbarLowSeries: ISeriesApi<"Line"> | null = null;
 let swingSeries: ISeriesApi<"Line"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedOriginDatasetId: string | null = null;
@@ -41,6 +38,8 @@ let sbarIdByLogicalIndex: readonly string[] = [];
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
+type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
+const cbarRectangles = ref<CBarRectangle[]>([]);
 const firstSbarX = ref<number | null>(null);
 const secondSbarX = ref<number | null>(null);
 const selectionStartX = ref<number | null>(null);
@@ -51,6 +50,31 @@ function coordinateForSbarId(sbarId: string | null | undefined): number | null {
   if (!chart || !sbarId) return null;
   const time = timeBySbarId.get(sbarId);
   return time === undefined ? null : chart.timeScale().timeToCoordinate(time);
+}
+
+function updateCBarRectangles(): void {
+  if (!chart || !candleSeries) {
+    cbarRectangles.value = [];
+    return;
+  }
+  const timeScale = chart.timeScale();
+  cbarRectangles.value = (props.structure?.cbars ?? []).flatMap((cbar) => {
+    const startTime = timeBySbarId.get(cbar.sbarStartId);
+    const endTime = timeBySbarId.get(cbar.sbarEndId);
+    const high = Number(cbar.high);
+    const low = Number(cbar.low);
+    if (startTime === undefined || endTime === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
+    const startX = timeScale.timeToCoordinate(startTime);
+    const endX = timeScale.timeToCoordinate(endTime);
+    const highY = candleSeries.priceToCoordinate(high);
+    const lowY = candleSeries.priceToCoordinate(low);
+    if ([startX, endX, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return [];
+    const left = Math.min(startX as number, endX as number);
+    const right = Math.max(startX as number, endX as number);
+    const top = Math.min(highY as number, lowY as number);
+    const bottom = Math.max(highY as number, lowY as number);
+    return [{ id: cbar.cbarId, x: left, y: top, width: right - left, height: bottom - top }];
+  });
 }
 
 function updateSbarCoordinates(): void {
@@ -66,6 +90,7 @@ function updateSbarCoordinates(): void {
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
   selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
   selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
+  updateCBarRectangles();
 }
 
 function selectSbarById(sbarId: string): void {
@@ -138,7 +163,7 @@ function fitContent(): void {
 }
 
 function updateChart(): void {
-  if (!chart || !candleSeries || !volumeSeries || !cbarHighSeries || !cbarLowSeries || !swingSeries) return;
+  if (!chart || !candleSeries || !volumeSeries || !swingSeries) return;
   try {
     const projection = mapOriginBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
@@ -148,16 +173,6 @@ function updateChart(): void {
         .filter((entry): entry is readonly [string, Time] => entry[1] !== undefined),
     );
     const structure = props.structure;
-    const cbarHigh = (structure?.cbars ?? []).flatMap((cbar) => {
-      const time = timeById.get(cbar.sbarEndId);
-      const value = Number(cbar.high);
-      return time !== undefined && Number.isFinite(value) ? [{ time, value }] : [];
-    });
-    const cbarLow = (structure?.cbars ?? []).flatMap((cbar) => {
-      const time = timeById.get(cbar.sbarEndId);
-      const value = Number(cbar.low);
-      return time !== undefined && Number.isFinite(value) ? [{ time, value }] : [];
-    });
     const rawSwingPoints = (structure?.swings ?? []).flatMap((swing) => {
       const startTime = timeById.get(swing.sbarStartId);
       const endTime = timeById.get(swing.sbarEndId);
@@ -177,8 +192,6 @@ function updateChart(): void {
     const swingPoints = rawSwingPoints.filter((point, index) =>
       index === 0 || point.time !== rawSwingPoints[index - 1]?.time
     );
-    cbarHighSeries.setData(cbarHigh);
-    cbarLowSeries.setData(cbarLow);
     swingSeries.setData(swingPoints);
     sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
     timeBySbarId = new Map(
@@ -210,8 +223,7 @@ function updateChart(): void {
     updateSbarCoordinates();
     candleSeries.setData([]);
     volumeSeries.setData([]);
-    cbarHighSeries.setData([]);
-    cbarLowSeries.setData([]);
+    cbarRectangles.value = [];
     swingSeries.setData([]);
     chartError.value = error instanceof Error ? error.message : String(error);
   }
@@ -255,23 +267,6 @@ onMounted(() => {
     wickDownColor: "#e17e79",
     priceLineVisible: false,
     lastValueVisible: true,
-  });
-  cbarHighSeries = chart.addSeries(LineSeries, {
-    color: "#83add4",
-    lineWidth: 1,
-    priceLineVisible: false,
-    lastValueVisible: false,
-    crosshairMarkerVisible: false,
-    title: "CBar High",
-  });
-  cbarLowSeries = chart.addSeries(LineSeries, {
-    color: "#83add4",
-    lineWidth: 1,
-    lineStyle: LineStyle.Dashed,
-    priceLineVisible: false,
-    lastValueVisible: false,
-    crosshairMarkerVisible: false,
-    title: "CBar Low",
   });
   swingSeries = chart.addSeries(LineSeries, {
     color: "#b8a0df",
@@ -384,6 +379,21 @@ onBeforeUnmount(() => {
         :data-selection-preview-x="previewX ?? ''"
         :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
       ></div>
+      <svg class="origin-structure-overlay" data-testid="origin-structure-overlay" aria-hidden="true">
+        <rect
+          v-for="rectangle in cbarRectangles"
+          :key="rectangle.id"
+          :x="rectangle.x"
+          :y="rectangle.y"
+          :width="rectangle.width"
+          :height="rectangle.height"
+          fill="none"
+          stroke="#A0A7B0"
+          stroke-width="1"
+          data-testid="cbar-range-rectangle"
+          :data-cbar-id="rectangle.id"
+        />
+      </svg>
       <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
         <div
           v-if="selectionPending && selectionStartX !== null && previewX !== null"
@@ -542,6 +552,20 @@ onBeforeUnmount(() => {
   height: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.origin-structure-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.origin-structure-overlay rect {
+  vector-effect: non-scaling-stroke;
 }
 
 .origin-chart-host {
