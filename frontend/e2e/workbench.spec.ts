@@ -214,7 +214,9 @@ for (const direction of ["left", "right"] as const) {
     const inspectorBox = await inspector.boundingBox();
     const diagnosticsBox = await diagnostics.boundingBox();
     await expect(inspector.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
-    await expect(diagnostics.getByTestId("diagnostics-collapse-toggle")).toBeHidden();
+    await expect(diagnostics.getByTestId("diagnostics-dock-menu")).toBeHidden();
+    await expect(diagnostics.getByTestId("diagnostics-collapse-toggle")).toBeVisible();
+    await expect(diagnostics.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Expand Diagnostics");
     expect(Math.abs(inspectorBox!.width - 36)).toBeLessThanOrEqual(1);
     expect(Math.abs(diagnosticsBox!.width - 36)).toBeLessThanOrEqual(1);
   });
@@ -237,6 +239,9 @@ for (const direction of ["left", "right"] as const) {
     await expect(title).toBeVisible();
     await expect(title).toHaveText("Diagnostics");
     await expect(title).toHaveCSS("writing-mode", "vertical-rl");
+    await expect(dock.getByTestId("diagnostics-dock-menu")).toBeHidden();
+    await expect(collapseToggle).toBeVisible();
+    await expect(collapseToggle).toHaveAttribute("aria-label", "Expand Diagnostics");
     const railBox = await dock.boundingBox();
     const titleBox = await title.boundingBox();
     expect(railBox).not.toBeNull();
@@ -246,7 +251,8 @@ for (const direction of ["left", "right"] as const) {
     )).toBeLessThanOrEqual(1);
     await expect(dock.locator(".diagnostics-heading")).not.toHaveCSS("content", '"DIAG"');
     await expect(dock.getByTestId("diagnostics-category-tabs")).toBeHidden();
-    await expect(dock.getByTestId("diagnostics-collapse-toggle")).toBeHidden();
+    await expect(dock.getByTestId("diagnostics-dock-menu")).toBeHidden();
+    await expect(dock.getByTestId("diagnostics-collapse-toggle")).toBeVisible();
     await title.click();
     await expect(dock).not.toHaveClass(/collapsed/);
   });
