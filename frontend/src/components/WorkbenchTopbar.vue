@@ -17,6 +17,7 @@ const emit = defineEmits<{
       <span class="brandmark" aria-hidden="true">Sx</span>
       <span class="brand-name">STRUXIS DEBUGGER</span>
     </div>
+    <span class="top-divider" aria-hidden="true"></span>
     <nav class="workspace-tabs" aria-label="Debugger workspace">
       <button class="workspace-tab" data-testid="workspace-dataset" :class="{ active: workspaceMode === 'dataset' }" :aria-current="workspaceMode === 'dataset' ? 'page' : undefined" @click="emit('update:workspaceMode', 'dataset')">01&nbsp; Dataset</button>
       <button class="workspace-tab" data-testid="workspace-replay" :class="{ active: workspaceMode === 'replay' }" :aria-current="workspaceMode === 'replay' ? 'page' : undefined" @click="emit('update:workspaceMode', 'replay')">02&nbsp; Replay</button>
