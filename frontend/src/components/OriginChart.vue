@@ -4,16 +4,18 @@ import {
   CandlestickSeries,
   ColorType,
   HistogramSeries,
+  LineSeries,
   createChart,
   type IChartApi,
   type ISeriesApi,
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { SBarDto } from "../origin-types";
+import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
   bars: SBarDto[];
+  structure: ReplayInspectorStructureDto | null;
   originDatasetId: string;
   selectionStartSbarId?: string | null;
   selectionEndSbarId?: string | null;
@@ -29,6 +31,9 @@ const chartError = ref("");
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
+let cbarHighSeries: ISeriesApi<"Line"> | null = null;
+let cbarLowSeries: ISeriesApi<"Line"> | null = null;
+let swingSeries: ISeriesApi<"Line"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedOriginDatasetId: string | null = null;
 let sbarIdByLogicalIndex: readonly string[] = [];
@@ -132,11 +137,43 @@ function fitContent(): void {
 }
 
 function updateChart(): void {
-  if (!chart || !candleSeries || !volumeSeries) return;
+  if (!chart || !candleSeries || !volumeSeries || !cbarHighSeries || !cbarLowSeries || !swingSeries) return;
   try {
     const projection = mapOriginBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
+    const timeById = new Map(
+      props.bars.map((bar, index) => [bar.sbarId, projection.candles[index]?.time] as const)
+        .filter((entry): entry is readonly [string, Time] => entry[1] !== undefined),
+    );
+    const structure = props.structure;
+    const cbarHigh = (structure?.cbars ?? []).flatMap((cbar) => {
+      const time = timeById.get(cbar.sbarEndId);
+      const value = Number(cbar.high);
+      return time !== undefined && Number.isFinite(value) ? [{ time, value }] : [];
+    });
+    const cbarLow = (structure?.cbars ?? []).flatMap((cbar) => {
+      const time = timeById.get(cbar.sbarEndId);
+      const value = Number(cbar.low);
+      return time !== undefined && Number.isFinite(value) ? [{ time, value }] : [];
+    });
+    const swingPoints = (structure?.swings ?? []).flatMap((swing) => {
+      const startTime = timeById.get(swing.sbarStartId);
+      const endTime = timeById.get(swing.sbarEndId);
+      const high = Number(swing.high);
+      const low = Number(swing.low);
+      if (startTime === undefined || endTime === undefined || !Number.isFinite(high) || !Number.isFinite(low)) {
+        return [];
+      }
+      const startsAtLow = swing.direction.toLowerCase() === "up";
+      return [
+        { time: startTime, value: startsAtLow ? low : high },
+        { time: endTime, value: startsAtLow ? high : low },
+      ];
+    });
+    cbarHighSeries.setData(cbarHigh);
+    cbarLowSeries.setData(cbarLow);
+    swingSeries.setData(swingPoints);
     sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
     timeBySbarId = new Map(
       props.bars.flatMap((bar, index) => {
@@ -167,6 +204,9 @@ function updateChart(): void {
     updateSbarCoordinates();
     candleSeries.setData([]);
     volumeSeries.setData([]);
+    cbarHighSeries.setData([]);
+    cbarLowSeries.setData([]);
+    swingSeries.setData([]);
     chartError.value = error instanceof Error ? error.message : String(error);
   }
 }
@@ -210,6 +250,31 @@ onMounted(() => {
     priceLineVisible: false,
     lastValueVisible: true,
   });
+  cbarHighSeries = chart.addSeries(LineSeries, {
+    color: "#83add4",
+    lineWidth: 1,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+    title: "CBar High",
+  });
+  cbarLowSeries = chart.addSeries(LineSeries, {
+    color: "#83add4",
+    lineWidth: 1,
+    lineStyle: 2,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+    title: "CBar Low",
+  });
+  swingSeries = chart.addSeries(LineSeries, {
+    color: "#b8a0df",
+    lineWidth: 2,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+    title: "Swing",
+  });
   volumeSeries = chart.addSeries(HistogramSeries, {
     priceScaleId: "",
     priceFormat: { type: "volume" },
@@ -235,7 +300,7 @@ onMounted(() => {
   updateChart();
 });
 
-watch(() => [props.bars, props.originDatasetId] as const, updateChart);
+watch(() => [props.bars, props.structure, props.originDatasetId] as const, updateChart);
 watch(
   () => [props.selectionStartSbarId, props.selectionEndSbarId, props.selectionPending] as const,
   () => {
@@ -280,7 +345,7 @@ onBeforeUnmount(() => {
       <div class="chart-title-block">
         <h3>ORIGIN · {{ latestBar?.barType ?? originDatasetId }}</h3>
         <span class="tag green">CATALOG SOURCE</span>
-        <span class="chart-desc">K-line + volume</span>
+        <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
         <div v-if="latestBar" class="chart-meta" aria-label="Latest SBar OHLC">
@@ -347,6 +412,8 @@ onBeforeUnmount(() => {
       </div>
       <div class="origin-chart-legend" aria-hidden="true">
         <span><i class="legend-dot sbar-dot"></i>SBar</span>
+        <span v-if="structure"><i class="legend-dot cbar-dot"></i>CBar</span>
+        <span v-if="structure && structure.swingCount > 0"><i class="legend-dot swing-dot"></i>Swing</span>
         <span><i class="legend-dot volume-dot"></i>Volume</span>
       </div>
     </div>
@@ -505,6 +572,14 @@ onBeforeUnmount(() => {
 
 .sbar-dot {
   background: #75c6a1;
+}
+
+.cbar-dot {
+  background: #83add4;
+}
+
+.swing-dot {
+  background: #b8a0df;
 }
 
 .volume-dot {
