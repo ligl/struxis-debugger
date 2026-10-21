@@ -3802,3 +3802,8 @@ th, td { padding: 6px 8px; }
   .compare-workspace > .compare-summary { gap: 8px; }
   .compare-summary .metric { gap: 4px; }
 }
+
+@media (max-width: 1050px) {
+  .compare-toolbar-select > span { display: none; }
+  .compare-toolbar-select select { width: 100px; max-width: 100px; }
+}
