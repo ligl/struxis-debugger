@@ -459,12 +459,6 @@ onBeforeUnmount(() => {
         <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
-        <div class="chart-layer-controls" role="group" aria-label="Chart layer visibility">
-          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')">SBAR</button>
-          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')">VOL</button>
-          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')">CBAR</button>
-          <button type="button" class="chart-layer-toggle" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')">SWING</button>
-        </div>
         <div v-if="latestBar" class="chart-meta" aria-label="Latest SBar OHLC">
           <span>O <b>{{ latestBar.open }}</b></span>
           <span>H <b>{{ latestBar.high }}</b></span>
@@ -559,11 +553,11 @@ onBeforeUnmount(() => {
           ></div>
         </template>
       </div>
-      <div class="origin-chart-legend" aria-hidden="true">
-        <span><i class="legend-dot sbar-dot"></i>SBar</span>
-        <span v-if="layerVisibility.cbar && structure"><i class="legend-dot cbar-dot"></i>CBar</span>
-        <span v-if="layerVisibility.swing && structure && structure.swingCount > 0"><i class="legend-dot swing-dot"></i>Swing</span>
-        <span v-if="layerVisibility.volume"><i class="legend-dot volume-dot"></i>Volume</span>
+      <div class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>
     </div>
     <div class="origin-chart-foot">
@@ -708,37 +702,9 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.chart-layer-controls {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.chart-layer-toggle {
-  min-height: 21px;
-  padding: 0 5px;
-  border: 1px solid #39434b;
-  border-radius: 2px;
-  background: #1a2025;
-  color: #77838c;
-  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
-  cursor: pointer;
-}
-
-.chart-layer-toggle.active {
-  border-color: #637b70;
-  background: #26342e;
-  color: #c7d8ce;
-}
-
-.chart-layer-toggle:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
 .origin-chart-legend {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   top: 7px;
   left: 10px;
   display: flex;
@@ -746,13 +712,33 @@ onBeforeUnmount(() => {
   gap: 10px;
   color: #9aa5ac;
   font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  pointer-events: none;
 }
 
-.origin-chart-legend > span {
+.origin-chart-legend-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 1px 2px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: #69757d;
+  font: inherit;
+  cursor: pointer;
+}
+
+.origin-chart-legend-item.active {
+  color: #c4cdd2;
+}
+
+.origin-chart-legend-item:hover:not(:disabled) {
+  border-color: #39434b;
+  background: #1a2025;
+}
+
+.origin-chart-legend-item:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .legend-dot {
