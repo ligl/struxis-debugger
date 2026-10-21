@@ -424,6 +424,68 @@ for (const direction of dockDirections) {
   });
 }
 
+for (const direction of dockDirections) {
+  test(`Inspector collapse and restore preserves dock geometry (${direction})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
+    const workspace = page.getByTestId("chart-workspace");
+    const before = await workspace.boundingBox();
+    expect(before).toBeTruthy();
+
+    await page.getByRole("button", { name: "Collapse Inspector" }).click();
+    await expect(page.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
+    const collapsed = await workspace.boundingBox();
+    expect(collapsed).toBeTruthy();
+    if (direction === "left" || direction === "right") {
+      expect(collapsed!.width).toBeGreaterThan(before!.width + 100);
+    } else {
+      expect(collapsed!.height).toBeGreaterThan(before!.height + 50);
+    }
+
+    await page.getByRole("button", { name: "Expand Inspector" }).click();
+    await expect(page.getByRole("button", { name: "Collapse Inspector" })).toBeVisible();
+    const restored = await workspace.boundingBox();
+    expect(restored).toBeTruthy();
+    if (direction === "left" || direction === "right") {
+      expect(Math.abs(restored!.width - before!.width)).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(restored!.height - before!.height)).toBeLessThanOrEqual(1);
+    }
+  });
+}
+
+for (const direction of dockDirections) {
+  test(`Diagnostics collapse and restore preserves dock geometry (${direction})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+    const workspace = page.getByTestId("chart-workspace");
+    const before = await workspace.boundingBox();
+    expect(before).toBeTruthy();
+
+    await page.getByTestId("diagnostics-collapse-toggle").click();
+    await expect(page.getByTestId("diagnostics-dock")).toBeHidden();
+    const collapsed = await workspace.boundingBox();
+    expect(collapsed).toBeTruthy();
+    if (direction === "left" || direction === "right") {
+      expect(collapsed!.width).toBeGreaterThan(before!.width + 100);
+    } else {
+      expect(collapsed!.height).toBeGreaterThan(before!.height + 50);
+    }
+
+    await page.getByRole("button", { name: "Show Diagnostics" }).click();
+    await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
+    const restored = await workspace.boundingBox();
+    expect(restored).toBeTruthy();
+    if (direction === "left" || direction === "right") {
+      expect(Math.abs(restored!.width - before!.width)).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(restored!.height - before!.height)).toBeLessThanOrEqual(1);
+    }
+  });
+}
+
 test("opposite horizontal docks preserve a usable Chart Workspace at maximum panel sizes", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
