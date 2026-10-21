@@ -80,7 +80,7 @@ function differenceKey(difference: ObjectDifferenceDto): string {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="snapshot in snapshots" :key="snapshot.fileName">
+          <tr v-for="snapshot in snapshots" :key="snapshot.fileName" data-testid="snapshot-row" :data-snapshot-kind="snapshot.kind">
             <td><strong>{{ snapshot.snapshotId ?? snapshot.fileName }}</strong><small>{{ snapshot.fileName }}</small></td>
             <td>{{ snapshot.runId ?? "—" }}</td>
             <td>{{ snapshot.stateKey ?? "—" }}</td>
