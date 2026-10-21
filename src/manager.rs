@@ -207,6 +207,7 @@ mod tests {
             sbar_sequence_fingerprint: fingerprint,
             bar_type: bar_type.to_string(),
             bars,
+            structure: None,
         };
         let test = TestDataset::create(
             &origin,
