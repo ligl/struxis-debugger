@@ -16,7 +16,7 @@ use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 use serde::Serialize;
 
 use crate::{
-    checkpoint::ReplayInspectorProjection,
+    checkpoint::{ReplayInspectorProjection, StructureCheckpoint},
     catalog::{OriginLoad, load_origin as load_origin_candidate},
     compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     dataset::TestDataset,
@@ -436,6 +436,7 @@ pub(crate) struct OriginDatasetDto {
     pub(crate) first_ts_event: String,
     pub(crate) last_ts_event: String,
     pub(crate) bars: Vec<SBarDto>,
+    pub(crate) structure: Option<StructureCheckpoint>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -503,6 +504,7 @@ impl OriginRecord {
             first_ts_event: first.map_or_else(String::new, |bar| bar.ts_event.clone()),
             last_ts_event: last.map_or_else(String::new, |bar| bar.ts_event.clone()),
             bars,
+            structure: dataset.structure.clone(),
         }
     }
 }
