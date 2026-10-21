@@ -395,8 +395,11 @@ for (const direction of dockDirections) {
       expect(chartWorkspace!.x).toBeGreaterThanOrEqual(diagnostics.right - 1);
     }
     if (direction === "right") {
+      const inspector = await page.getByTestId("inspector-panel").boundingBox();
+      expect(inspector).toBeTruthy();
       expect(Math.abs(diagnostics.splitterLeft - diagnostics.left)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.right - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
+      // Inspector is first in prototype panel order; Diagnostics stacks immediately inside it.
+      expect(Math.abs(diagnostics.right - inspector!.x)).toBeLessThanOrEqual(1);
       expect(chartWorkspace!.x + chartWorkspace!.width).toBeLessThanOrEqual(diagnostics.left + 1);
     }
     if (direction === "top") {
@@ -411,6 +414,42 @@ for (const direction of dockDirections) {
     }
     if (direction === "left" || direction === "right") expect(diagnostics.splitterWidth).toBeGreaterThan(0);
     else expect(diagnostics.splitterHeight).toBeGreaterThan(0);
+  });
+}
+
+for (const direction of dockDirections) {
+  test(`Inspector and Diagnostics stack in prototype order when both dock ${direction}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
+    await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+
+    const workbench = await page.getByTestId("workbench").boundingBox();
+    const inspector = await page.getByTestId("inspector-panel").boundingBox();
+    const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
+    const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
+    expect(workbench).toBeTruthy();
+    expect(inspector).toBeTruthy();
+    expect(diagnostics).toBeTruthy();
+    expect(chartWorkspace).toBeTruthy();
+
+    if (direction === "left") {
+      expect(Math.abs(inspector!.x - workbench!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.x - (inspector!.x + inspector!.width))).toBeLessThanOrEqual(1);
+      expect(Math.abs(chartWorkspace!.x - (diagnostics!.x + diagnostics!.width))).toBeLessThanOrEqual(1);
+    } else if (direction === "right") {
+      expect(Math.abs(inspector!.x + inspector!.width - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.x + diagnostics!.width - inspector!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(chartWorkspace!.x + chartWorkspace!.width - diagnostics!.x)).toBeLessThanOrEqual(1);
+    } else if (direction === "top") {
+      expect(Math.abs(inspector!.y - workbench!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.y - (inspector!.y + inspector!.height))).toBeLessThanOrEqual(1);
+      expect(Math.abs(chartWorkspace!.y - (diagnostics!.y + diagnostics!.height))).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(inspector!.y + inspector!.height - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics!.y + diagnostics!.height - inspector!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(chartWorkspace!.y + chartWorkspace!.height - diagnostics!.y)).toBeLessThanOrEqual(1);
+    }
   });
 }
 
