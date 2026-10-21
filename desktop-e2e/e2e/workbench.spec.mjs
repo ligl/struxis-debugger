@@ -65,7 +65,7 @@ describe("Struxis Debugger native desktop", () => {
 
     await domClick('[data-testid="workspace-replay"]');
     await browser.waitUntil(
-      async () => (await $(".workflow-toolbar h2").getText()) === "Run Replay",
+      async () => (await $('[data-testid="workspace-toolbar-title"]').getText()) === "REPLAY",
       {
         timeout: 10_000,
         timeoutMsg: "The Replay workspace did not become visible.",
@@ -78,7 +78,7 @@ describe("Struxis Debugger native desktop", () => {
 
     await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
-      async () => (await $(".workflow-toolbar h2").getText()) === "Snapshot Comparison",
+      async () => (await $('[data-testid="workspace-toolbar-title"]').getText()) === "COMPARE",
       {
         timeout: 10_000,
         timeoutMsg: "The Compare workspace did not become visible.",
@@ -495,7 +495,7 @@ describe("Struxis Debugger native desktop", () => {
       async () => {
         const rows = await $$(".snapshot-table tbody tr");
         for (const row of rows) {
-          if ((await row.getText()).includes("COMPLETE / VERIFIED")) return true;
+          if ((await row.getAttribute("data-snapshot-kind")) === "complete") return true;
         }
         return false;
       },
@@ -555,7 +555,7 @@ describe("Struxis Debugger native desktop", () => {
         const rows = await $$(".snapshot-table tbody tr");
         let completeCount = 0;
         for (const row of rows) {
-          if ((await row.getText()).includes("COMPLETE / VERIFIED")) completeCount += 1;
+          if ((await row.getAttribute("data-snapshot-kind")) === "complete") completeCount += 1;
         }
         return completeCount >= 2;
       },
