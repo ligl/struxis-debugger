@@ -13,18 +13,21 @@ const emit = defineEmits<{
 
 <template>
   <header class="topbar workbench-topbar" data-testid="topbar">
-    <div class="brand-block">
-      <p class="eyebrow">CAPITUS / STRUXIS DEBUGGER</p>
-      <h1>Struxis Debugger</h1>
+    <div class="brand">
+      <span class="brandmark" aria-hidden="true">Sx</span>
+      <span class="brand-name">STRUXIS DEBUGGER</span>
     </div>
-    <nav class="workspace-switcher" aria-label="Debugger workspace">
-      <button class="workspace-tab" data-testid="workspace-dataset" :class="{ active: workspaceMode === 'dataset' }" @click="emit('update:workspaceMode', 'dataset')">01 / Dataset</button>
-      <button class="workspace-tab" data-testid="workspace-replay" :class="{ active: workspaceMode === 'replay' }" @click="emit('update:workspaceMode', 'replay')">02 / Replay</button>
-      <button class="workspace-tab" data-testid="workspace-compare" :class="{ active: workspaceMode === 'compare' }" @click="emit('update:workspaceMode', 'compare')">03 / Compare</button>
+    <nav class="workspace-tabs" aria-label="Debugger workspace">
+      <button class="workspace-tab" data-testid="workspace-dataset" :class="{ active: workspaceMode === 'dataset' }" :aria-current="workspaceMode === 'dataset' ? 'page' : undefined" @click="emit('update:workspaceMode', 'dataset')">01&nbsp; Dataset</button>
+      <button class="workspace-tab" data-testid="workspace-replay" :class="{ active: workspaceMode === 'replay' }" :aria-current="workspaceMode === 'replay' ? 'page' : undefined" @click="emit('update:workspaceMode', 'replay')">02&nbsp; Replay</button>
+      <button class="workspace-tab" data-testid="workspace-compare" :class="{ active: workspaceMode === 'compare' }" :aria-current="workspaceMode === 'compare' ? 'page' : undefined" @click="emit('update:workspaceMode', 'compare')">03&nbsp; Compare</button>
     </nav>
-    <div class="runtime-mark">
-      <span class="runtime-dot" :class="{ active: originAvailable }"></span>
-      <span>{{ originAvailable ? "ORIGIN AVAILABLE" : "NO ORIGIN LOADED" }}</span>
+    <div class="top-right">
+      <span class="runtime-mark">
+        <span class="status-dot" :class="{ active: originAvailable }"></span>
+        {{ originAvailable ? "ORIGIN AVAILABLE" : "NO ORIGIN LOADED" }}
+      </span>
+      <span class="keycap">CAPITUS</span>
     </div>
   </header>
 </template>
