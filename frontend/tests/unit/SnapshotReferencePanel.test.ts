@@ -25,7 +25,7 @@ describe("SnapshotReferencePanel", () => {
 
     expect(wrapper.get('[data-testid="snapshot-reference-selected"]').text()).toContain("snapshot-complete-01");
     expect(wrapper.text()).toContain("run-01");
-    expect(wrapper.text()).toContain("historical SBar OHLCV sequence");
+    expect(wrapper.text()).toContain("authoritative SBar OHLCV sequence");
     expect(wrapper.find('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(false);
   });
 
@@ -50,7 +50,7 @@ describe("SnapshotReferencePanel", () => {
     const select = wrapper.get('[data-testid="replay-reference-select"]');
     expect((select.element as HTMLSelectElement).disabled).toBe(true);
     expect(select.findAll("option")).toHaveLength(1);
-    expect(wrapper.get('[data-testid="snapshot-reference-empty"]').text()).toContain("No completed Snapshot available");
+    expect(wrapper.get('[data-testid="snapshot-reference-empty"]').text().toLowerCase()).toContain("no completed snapshot available");
     expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(false);
   });
 
