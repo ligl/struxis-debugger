@@ -641,7 +641,7 @@ onUnmounted(() => {
           @dragstart="startDockDrag('diagnostics', $event)"
         >
           <div class="diagnostics-title-block">
-            <p class="section-index">DIAGNOSTICS</p>
+            <p class="section-index" data-testid="diagnostics-dock-drag-handle">DIAGNOSTICS</p>
             <h2>Workflow events &amp; errors</h2>
           </div>
           <nav class="diagnostics-tabs" data-testid="diagnostics-category-tabs" aria-label="Diagnostic categories">
