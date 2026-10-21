@@ -10,7 +10,6 @@ import DualChartStack from "./components/DualChartStack.vue";
 import SnapshotReferencePanel from "./components/SnapshotReferencePanel.vue";
 import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
-import RunControlPanel from "./components/RunControlPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
 import type { ObjectDifferenceDto, SnapshotArtifactDto } from "./origin-types";
@@ -56,7 +55,6 @@ const {
   runState,
   runBusy,
   runError,
-  runStatusMessage,
   refreshRunState,
   executeRunCommand,
 } = useRunControl(refreshSnapshots);
@@ -553,9 +551,7 @@ onUnmounted(() => {
               <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
             </div>
           </template>
-          <template #actions v-else-if="workspaceMode === 'compare'">
-            <span class="tag amber">STRICT MODE</span>
-          </template>
+          <template #actions v-else-if="workspaceMode === 'compare'"></template>
         </WorkspaceToolbar>
 
         <div data-testid="chart-panels" class="chart-panels" :class="{ 'catalog-is-collapsed': catalogCollapsed }">
