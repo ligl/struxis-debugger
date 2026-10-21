@@ -35,9 +35,11 @@ function mountApp() {
 }
 
 async function enterReplayWorkspace(wrapper: ReturnType<typeof mountApp>): Promise<void> {
-  // Replay controls intentionally exist only in the Replay workspace toolbar.
-  if (!wrapper.find('[data-testid="run-start"]').exists()) {
-    await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
+  // Toolbar controls stay mounted with v-show so their state survives workspace changes.
+  // Determine the active workspace from a stable DOM attribute, not button existence or text.
+  const replayTab = wrapper.get('[data-testid="workspace-replay"]');
+  if (replayTab.attributes("aria-current") !== "page") {
+    await replayTab.trigger("click");
   }
 }
 
