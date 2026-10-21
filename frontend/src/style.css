@@ -696,40 +696,6 @@ td {
 }
 
 
-.document-context-menu {
-  position: fixed;
-  z-index: 10000;
-  min-width: 176px;
-  padding: 4px;
-  border: 1px solid var(--dbg-border-strong);
-  background: var(--dbg-surface-2);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 42%);
-}
-
-.document-context-menu[hidden] {
-  display: none;
-}
-
-.document-context-menu__item {
-  display: block;
-  width: 100%;
-  padding: 9px 11px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--dbg-text-primary);
-  text-align: left;
-  font: 11px ui-monospace, SFMono-Regular, Consolas, monospace;
-  cursor: pointer;
-}
-
-.document-context-menu__item:hover,
-.document-context-menu__item:focus-visible {
-  border-color: var(--dbg-selection-border);
-  background: var(--dbg-selection-surface);
-  color: var(--dbg-text-primary);
-}
-
-
 .operations-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
