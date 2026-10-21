@@ -12,7 +12,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <header class="topbar workbench-topbar">
+  <header class="topbar workbench-topbar" data-testid="topbar">
     <div class="brand-block">
       <p class="eyebrow">CAPITUS / STRUXIS DEBUGGER</p>
       <h1>Struxis Debugger</h1>
