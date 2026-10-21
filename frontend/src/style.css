@@ -2707,3 +2707,7 @@ th, td { padding: 6px 8px; }
 }
 .primary-workspace.inspector-dock-top .inspector-rail.collapsed .rail-heading,
 .primary-workspace.inspector-dock-bottom .inspector-rail.collapsed .rail-heading { height: 36px; min-height: 36px; }
+
+.primary-workspace.inspector-dock-left.inspector-is-collapsed {
+  grid-template-columns: 42px minmax(0, 1fr);
+}
