@@ -1962,6 +1962,7 @@ th, td { padding: 6px 8px; }
 /* Dock locations are explicit UI state; domain state remains independent. */
 .debugger-shell.diagnostics-dock-top .diagnostics-dock { order: 1; }
 .debugger-shell.diagnostics-dock-top .workbench-body { order: 2; }
+.debugger-shell.diagnostics-dock-top .footer-bar { order: 3; }
 .debugger-shell.diagnostics-dock-top .diagnostics-dock {
   border-top: 0;
   border-bottom: 1px solid #3a444b;
