@@ -1991,21 +1991,7 @@ th, td { padding: 6px 8px; }
 .error-message { padding: 8px; font-size: 10px; }
 .empty-state { padding: 9px; font-size: 10px; }
 @media (max-width: 1100px) {
-  .workspace-switcher { left: 40%; }
-  .optional { display: none; }
-  .primary-workspace { grid-template-columns: minmax(0, 1fr) 250px; }
   .dataset-preparation-panel { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 920px) {
-  html, body, #app { min-width: 0; }
-  .workbench-topbar { gap: 8px; padding: 0 9px; }
-  .brand-block { min-width: 120px; }
-  .workspace-switcher { position: static; transform: none; margin-left: auto; }
-  .workspace-tab { padding: 0 7px; }
-  .primary-workspace { grid-template-columns: minmax(0, 1fr); overflow: auto; }
-  .inspector-rail { display: none; }
-  .catalog-rail { width: min(282px, 80vw); }
-  .diagnostics-dock { flex-basis: 120px; height: 120px; min-height: 120px; }
 }
 
 
@@ -2050,10 +2036,7 @@ th, td { padding: 6px 8px; }
 .inspector-rail { position: relative; }
 .diagnostics-dock { position: relative; }
 .inspector-rail.collapsed .inspector-resize-edge { display: none; }
-@media (max-width: 920px) {
-  .primary-workspace { grid-template-columns: minmax(0, 1fr); }
-  .inspector-resize-edge { display: none; }
-}
+
 
 
 /* Inspector side docking uses the primary workspace's column tracks. */
@@ -2143,9 +2126,7 @@ th, td { padding: 6px 8px; }
   outline-offset: 1px;
 }
 .dock-actions .subtle-button { flex: 0 0 auto; }
-@media (max-width: 920px) {
-  .primary-workspace.inspector-dock-left { grid-template-columns: minmax(0, 1fr); }
-}
+
 
 
 /* Object Inspector — exact fields from the currently selected authoritative SBar. */
