@@ -5,6 +5,7 @@ import {
   ColorType,
   HistogramSeries,
   LineSeries,
+  LineStyle,
   createChart,
   type IChartApi,
   type ISeriesApi,
@@ -266,7 +267,7 @@ onMounted(() => {
   cbarLowSeries = chart.addSeries(LineSeries, {
     color: "#83add4",
     lineWidth: 1,
-    lineStyle: 2,
+    lineStyle: LineStyle.Dashed,
     priceLineVisible: false,
     lastValueVisible: false,
     crosshairMarkerVisible: false,
