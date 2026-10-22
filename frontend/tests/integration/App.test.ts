@@ -951,16 +951,16 @@ describe("Test, Run and Snapshot workbench", () => {
     )).toHaveLength(0);
   });
 
-  it("maps Space to Pause and Play using the backend-confirmed Run status", async () => {
-    let status: "running" | "paused" = "running";
+  it("maps Space to frontend Play/Pause without backend playback IPC", async () => {
+    let processedCount = 0;
     const runState = () => ({
       runId: "run-space",
       testDatasetId: "test-1",
       inputFingerprint: "test-fingerprint",
       inputCount: 2,
-      status,
-      processedCount: 1,
-      cursorSbarId: "100",
+      status: processedCount === 2 ? "completed" : "ready",
+      processedCount,
+      cursorSbarId: processedCount ? String(99 + processedCount) : null,
       failureDiagnostic: null,
     });
     invokeMock.mockImplementation((command) => {
@@ -969,14 +969,11 @@ describe("Test, Run and Snapshot workbench", () => {
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "get_run_state") return Promise.resolve(runState());
-      if (command === "pause_run") {
-        status = "paused";
+      if (command === "step_run") {
+        processedCount += 1;
         return Promise.resolve(runState());
       }
-      if (command === "play_run") {
-        status = "running";
-        return Promise.resolve(runState());
-      }
+      if (command === "get_replay_inspector") return Promise.resolve(null);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
@@ -984,19 +981,9 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
 
-    const pauseEvent = new KeyboardEvent("keydown", {
-      key: " ",
-      code: "Space",
-      bubbles: true,
-      cancelable: true,
-    });
-    document.dispatchEvent(pauseEvent);
-    expect(pauseEvent.defaultPrevented).toBe(true);
-    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("pause_run"));
-    await vi.waitFor(() => expect(wrapper.text()).toContain("PAUSED"));
-
+    document.body.focus();
     const playEvent = new KeyboardEvent("keydown", {
       key: " ",
       code: "Space",
@@ -1005,11 +992,24 @@ describe("Test, Run and Snapshot workbench", () => {
     });
     document.dispatchEvent(playEvent);
     expect(playEvent.defaultPrevented).toBe(true);
-    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("play_run"));
-    await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
+    await vi.waitFor(() => expect(invokeMock.mock.calls.filter(([command]) => command === "step_run")).toHaveLength(1));
+
+    document.body.focus();
+    const pauseEvent = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(pauseEvent);
+    expect(pauseEvent.defaultPrevented).toBe(true);
+    await flushPromises();
+
     expect(invokeMock.mock.calls.filter(([command]) =>
-      command === "pause_run" || command === "play_run",
-    )).toHaveLength(2);
+      command === "play_run" || command === "pause_run",
+    )).toHaveLength(0);
+    expect(invokeMock.mock.calls.filter(([command]) => command === "step_run")).toHaveLength(1);
+    wrapper.unmount();
   });
 
   it("ignores Space without an eligible Run, for repeat events, and from interactive controls", async () => {
