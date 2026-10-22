@@ -643,6 +643,7 @@ onBeforeUnmount(() => {
     :data-sbar-count="bars.length"
     :data-first-sbar-id="bars[0]?.sbarId ?? ''"
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
+    :data-last-sbar-id="bars[bars.length - 1]?.sbarId ?? ''"
   >
     <div class="origin-chart-heading">
       <div class="chart-title-block">
@@ -675,7 +676,12 @@ onBeforeUnmount(() => {
         :data-selection-preview-x="previewX ?? ''"
         :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
       ></div>
-      <svg class="origin-structure-overlay" data-testid="origin-structure-overlay" aria-hidden="true">
+      <svg
+        class="origin-structure-overlay"
+        data-testid="origin-structure-overlay"
+        :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
+        aria-hidden="true"
+      >
         <rect
           v-if="hoveredSbarMarker"
           class="origin-object-hover-sbar"
