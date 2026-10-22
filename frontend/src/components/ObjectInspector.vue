@@ -78,7 +78,7 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
 </script>
 
 <template>
-  <section class="inspector-object" data-testid="inspector-object" @contextmenu="handleInspectorContextMenu">
+  <section class="inspector-object" data-testid="inspector-object" @contextmenu.prevent="handleInspectorContextMenu">
     <div
       v-if="workspaceMode === 'dataset' && (selectedSbar || selectedCbar || selectedSwing)"
       class="inspector-runtime-context"
