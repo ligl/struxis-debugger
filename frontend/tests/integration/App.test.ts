@@ -878,7 +878,7 @@ describe("Test, Run and Snapshot workbench", () => {
     )).toHaveLength(0);
   });
 
-  it("rejects Run commands that are invalid for the confirmed Run status", async () => {
+  it("uses frontend playback controls for a confirmed ready Run", async () => {
     const readyRun = {
       runId: "run-1",
       testDatasetId: "test-1",
@@ -895,6 +895,8 @@ describe("Test, Run and Snapshot workbench", () => {
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "get_run_state") return Promise.resolve(readyRun);
+      if (command === "step_run") return Promise.resolve(readyRun);
+      if (command === "get_replay_inspector") return Promise.resolve(null);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
@@ -910,12 +912,13 @@ describe("Test, Run and Snapshot workbench", () => {
       cancelable: true,
     });
     document.dispatchEvent(readySpaceEvent);
-    expect(readySpaceEvent.defaultPrevented).toBe(false);
+    expect(readySpaceEvent.defaultPrevented).toBe(true);
     await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
     await flushPromises();
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "pause_run" || command === "play_run",
     )).toHaveLength(0);
+    expect(invokeMock.mock.calls.some(([command]) => command === "step_run")).toBe(true);
   });
 
   it("rejects Step, Play and Dispose while the confirmed Run is running", async () => {
