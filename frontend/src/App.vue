@@ -206,15 +206,6 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
     candidateSnapshotId: compareResult.value?.candidate.snapshotId ?? null,
   };
 });
-const replayReferenceSnapshots = computed(() =>
-  snapshots.value.filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null),
-);
-const selectedReplayReferenceSnapshotId = ref<string | null>(null);
-watch(replayReferenceSnapshots, (available) => {
-  if (!available.some((snapshot) => snapshot.snapshotId === selectedReplayReferenceSnapshotId.value)) {
-    selectedReplayReferenceSnapshotId.value = null;
-  }
-});
 watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
   if (mode === "replay") void refreshReplayInspector();
@@ -392,11 +383,7 @@ onMounted(async () => {
                   <RunChart v-if="workspaceMode === 'replay'" :origin="origin" :test-dataset="testDataset" :run-state="runState" />
                 </template>
                 <template #lower>
-                  <SnapshotReferencePanel
-                    :snapshots="replayReferenceSnapshots"
-                    :selected-snapshot-id="selectedReplayReferenceSnapshotId"
-                    @update:selected-snapshot-id="selectedReplayReferenceSnapshotId = $event"
-                  />
+                  <SnapshotReferencePanel :snapshots="snapshots" />
                 </template>
               </DualChartStack>
             </div>
