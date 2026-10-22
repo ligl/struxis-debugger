@@ -28,6 +28,42 @@ pub(crate) struct ReplayCheckpointProjection {
 /// Small live Inspector payload derived from one backend-confirmed checkpoint.
 /// It excludes the complete SBar history to avoid resending the entire sequence
 /// whenever the UI polls during Replay.
+/// Minimal immutable trajectory record retained for an explicit Snapshot save.
+/// It intentionally excludes the full SBar history carried by the live chart projection.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct OwnedCheckpoint {
+    pub(crate) checkpoint_index: usize,
+    pub(crate) sbar_id: String,
+    pub(crate) ts_event: String,
+    pub(crate) state_key: String,
+    pub(crate) structure: Option<StructureCheckpoint>,
+    pub(crate) diagnostics: Vec<Diagnostic>,
+}
+
+impl OwnedCheckpoint {
+    pub(crate) fn from_projection(
+        checkpoint_index: usize,
+        sbar_id: &str,
+        projection: &ReplayCheckpointProjection,
+    ) -> Result<Self, String> {
+        if projection.last_ts_event.as_deref() != Some(sbar_id) {
+            return Err(format!("Owned Checkpoint SBar mismatch at index {checkpoint_index}"));
+        }
+        let current_sbar = projection.sbars.iter()
+            .find(|bar| bar.sbar_id == sbar_id)
+            .ok_or_else(|| format!("Owned Checkpoint SBar {sbar_id} is absent from projection"))?;
+        Ok(Self {
+            checkpoint_index,
+            sbar_id: sbar_id.to_owned(),
+            ts_event: current_sbar.ts_event.clone(),
+            state_key: projection.state_key.clone(),
+            structure: projection.structure.clone(),
+            diagnostics: projection.diagnostics.clone(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ReplayInspectorProjection {
