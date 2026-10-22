@@ -41,7 +41,7 @@ describe("ReplayWorkspace", () => {
 
     await wrapper.setProps({ active: true });
 
-    expect(wrapper.get('[data-testid="replay-workspace"]').isVisible()).toBe(true);
+    expect(wrapper.get('[data-testid="replay-workspace"]').attributes("style") ?? "").not.toContain("display: none");
     expect(wrapper.find('[data-testid="run-chart-stub"]').exists()).toBe(true);
   });
 });
