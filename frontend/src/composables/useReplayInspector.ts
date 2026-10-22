@@ -6,9 +6,14 @@ export function useReplayInspector() {
   const replayInspector = ref<ReplayInspectorDto | null>(null);
   const replayInspectorError = ref("");
   let loading = false;
+  let requestGeneration = 0;
 
   async function refresh(hasRun: boolean): Promise<void> {
     if (!hasRun) {
+      // Invalidate any outstanding read before clearing the visible state. A
+      // late response from a disposed Run must not repopulate the Inspector.
+      requestGeneration += 1;
+      loading = false;
       replayInspector.value = null;
       replayInspectorError.value = "";
       return;
@@ -16,13 +21,20 @@ export function useReplayInspector() {
     if (loading) return;
 
     loading = true;
+    const generation = ++requestGeneration;
     replayInspectorError.value = "";
     try {
-      replayInspector.value = await getReplayInspector();
+      const checkpoint = await getReplayInspector();
+      if (generation === requestGeneration) {
+        replayInspector.value = checkpoint;
+      }
     } catch (error) {
-      replayInspectorError.value = error instanceof Error ? error.message : String(error);
+      if (generation === requestGeneration) {
+        replayInspectorError.value = error instanceof Error ? error.message : String(error);
+      }
     } finally {
-      loading = false;
+      // An obsolete request must not release the guard for a newer request.
+      if (generation === requestGeneration) loading = false;
     }
   }
 
