@@ -600,7 +600,7 @@ describe("OriginChart", () => {
     });
     await nextTick();
 
-    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledWith({ from: 1.5, to: 2.5 });
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 1.5, to: 2.5 });
     wrapper.unmount();
   });
 
