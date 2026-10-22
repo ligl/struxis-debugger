@@ -25,8 +25,8 @@ import { useCatalogGroups } from "./composables/useCatalogGroups";
 import { useOriginRangeSelection } from "./composables/useOriginRangeSelection";
 import { useDockLayout } from "./composables/useDockLayout";
 import { useInspectorSelection } from "./composables/useInspectorSelection";
-import { getReplayInspector } from "./origin-bridge";
-import type { ReplayInspectorDto } from "./origin-types";
+import { useReplayInspector } from "./composables/useReplayInspector";
+
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
 
 const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
@@ -118,27 +118,15 @@ const {
   resetForOrigin, initializeFromTestDataset,
 } = useOriginRangeSelection(origin, canMutateTest, testLoading);
 
-const replayInspector = ref<ReplayInspectorDto | null>(null);
-const replayInspectorError = ref("");
-let replayInspectorLoading = false;
+const {
+  replayInspector,
+  replayInspectorError,
+  refresh: refreshReplayInspectorState,
+} = useReplayInspector();
 const selectedCompareDifferenceKey = ref<string | null>(null);
 
 async function refreshReplayInspector(): Promise<void> {
-  if (!runState.value) {
-    replayInspector.value = null;
-    replayInspectorError.value = "";
-    return;
-  }
-  if (replayInspectorLoading) return;
-  replayInspectorLoading = true;
-  replayInspectorError.value = "";
-  try {
-    replayInspector.value = await getReplayInspector();
-  } catch (error) {
-    replayInspectorError.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    replayInspectorLoading = false;
-  }
+  await refreshReplayInspectorState(Boolean(runState.value));
 }
 
 function compareDifferenceKey(difference: ObjectDifferenceDto): string {
