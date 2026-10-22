@@ -4,9 +4,9 @@
 //! used inside the worker thread. Only owned input, instrument metadata,
 //! checkpoint projections, and RunState cross the thread boundary.
 //!
-//! Interactive production Runs use a volatile sink and retain immutable owned
-//! checkpoints in memory. SnapshotWriter is invoked only by an explicit save
-//! operation after completion; it never participates in Start or Step.
+//! Interactive production Runs install no CheckpointSink and retain immutable
+//! owned checkpoints in memory. SnapshotWriter is invoked only by an explicit
+//! save operation after completion; it never participates in Start or Step.
 
 use std::{
     sync::mpsc::{self, Receiver, SyncSender},
