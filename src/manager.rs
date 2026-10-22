@@ -44,9 +44,8 @@ impl ReplayManager {
 
     /// Starts a new worker only when no previous worker remains owned.
     ///
-    /// This is an internal orchestration API, not a production Tauri command.
-    /// Its caller must provide the real persistent SnapshotWriter before it can
-    /// be connected to the production application workflow.
+    /// Compatibility orchestration API used by recording-contract tests.
+    /// Production application workflows use `start_interactive` and explicit save.
     pub(crate) fn start(
         &mut self,
         config: ReplayWorkerConfig,
