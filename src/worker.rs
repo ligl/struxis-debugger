@@ -431,16 +431,10 @@ impl WorkerSession {
     /// precedence over Stop: release runtime resources but preserve the
     /// completed processing result in the returned state.
     fn stop(&mut self) -> Result<RunState, String> {
-        if self.state.status == RunStatus::Running {
-            self.state.pause()?;
-        }
         self.release_runtime_and_finalize_status()
     }
 
     fn dispose(&mut self) -> Result<RunState, String> {
-        if self.state.status == RunStatus::Running {
-            self.state.pause()?;
-        }
         self.release_runtime_and_finalize_status()
     }
 
