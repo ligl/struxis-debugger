@@ -187,6 +187,7 @@ describe("Origin Load workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-inspector-copy"));
+    await wrapper.get('[data-testid="origin-sbar-click-200"]').trigger("click");
 
     const writeText = vi.fn()
       .mockResolvedValueOnce(undefined)
