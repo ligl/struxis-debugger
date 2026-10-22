@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ReplayInspectorCBarDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
+import InspectorPropertyField from "./InspectorPropertyField.vue";
 
 const props = defineProps<{
   selectedSbar: SBarDto | null;
@@ -81,10 +82,14 @@ function formatReplayField(field: string, value: unknown): string {
         <span class="inspector-object-kind">STRUCTURE</span>
       </div>
       <dl class="inspector-fields">
-        <div v-for="(value, field) in selectedCbar" :key="field" class="inspector-field">
-          <dt>{{ field }}</dt>
-          <dd><code :data-testid="'inspector-cbar-' + String(field)" :data-copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
-        </div>
+        <InspectorPropertyField
+          v-for="(value, field) in selectedCbar"
+          :key="field"
+          :label="String(field)"
+          :value="formatReplayField(String(field), value)"
+          :test-id="'inspector-cbar-' + String(field)"
+          :copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)"
+        />
       </dl>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
@@ -97,10 +102,14 @@ function formatReplayField(field: string, value: unknown): string {
         <span class="inspector-object-kind">{{ selectedSwing.state.toUpperCase() }}</span>
       </div>
       <dl class="inspector-fields">
-        <div v-for="(value, field) in selectedSwing" :key="field" class="inspector-field">
-          <dt>{{ field }}</dt>
-          <dd><code :data-testid="'inspector-swing-' + String(field)" :data-copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
-        </div>
+        <InspectorPropertyField
+          v-for="(value, field) in selectedSwing"
+          :key="field"
+          :label="String(field)"
+          :value="formatReplayField(String(field), value)"
+          :test-id="'inspector-swing-' + String(field)"
+          :copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)"
+        />
       </dl>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
