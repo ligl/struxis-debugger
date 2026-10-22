@@ -761,29 +761,44 @@ mod tests {
     }
 
     #[test]
-    fn step_play_and_pause_transport_failures_reap_the_worker() {
-        for command in ["step", "play", "pause"] {
-            let (commands, receiver) = mpsc::sync_channel(0);
-            drop(receiver);
-            let join = std::thread::spawn(|| {});
-            let mut worker = ReplayWorker {
-                commands,
-                command_gate: ReplayCommandGate::new(),
-                join: Some(join),
-                terminal_state: None,
-            };
+    fn step_transport_failure_reaps_the_worker() {
+        let (commands, receiver) = mpsc::sync_channel(0);
+        drop(receiver);
+        let join = std::thread::spawn(|| {});
+        let mut worker = ReplayWorker {
+            commands,
+            command_gate: ReplayCommandGate::new(),
+            join: Some(join),
+            terminal_state: None,
+        };
 
-            let error = match command {
-                "step" => worker.step().expect_err("Step transport must fail"),
-                "play" => worker.play().expect_err("Play transport must fail"),
-                "pause" => worker.pause().expect_err("Pause transport must fail"),
-                _ => unreachable!(),
-            };
+        let error = worker.step().expect_err("Step transport must fail");
 
-            assert!(error.contains("resource release is unconfirmed"), "{command}: {error}");
-            assert!(worker.join.is_none(), "{command} should reap the worker");
-            assert!(worker.terminal_state.is_none(), "{command} must not cache a terminal state");
-        }
+        assert!(error.contains("resource release is unconfirmed"), "{error}");
+        assert!(worker.join.is_none(), "failed Step should reap the worker");
+        assert!(worker.terminal_state.is_none(), "failed Step must not cache a terminal state");
+    }
+
+    #[test]
+    fn play_and_pause_are_rejected_without_touching_worker_transport() {
+        let (commands, _receiver) = mpsc::sync_channel(0);
+        let join = std::thread::spawn(|| {});
+        let mut worker = ReplayWorker {
+            commands,
+            command_gate: ReplayCommandGate::new(),
+            join: Some(join),
+            terminal_state: None,
+        };
+
+        let play_error = worker.play().expect_err("Play is frontend-owned");
+        assert!(play_error.contains("Play is frontend-owned"));
+        assert!(worker.join.is_some(), "rejected Play must not reap the worker");
+
+        let pause_error = worker.pause().expect_err("Pause is frontend-owned");
+        assert!(pause_error.contains("Pause is frontend-owned"));
+        assert!(worker.join.is_some(), "rejected Pause must not reap the worker");
+
+        // Drop performs the ordinary best-effort cleanup of the still-owned worker.
     }
 
     #[test]
