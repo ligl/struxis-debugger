@@ -309,7 +309,7 @@ impl AppState {
         Ok(())
     }
 
-    fn prepare_run(&self) -> Result<(ReplayWorkerConfig, Box<dyn crate::worker::CheckpointSink>), IpcError> {
+    fn prepare_run(&self) -> Result<ReplayWorkerConfig, IpcError> {
         let test = {
             let datasets = self.inner.datasets.lock().map_err(|_| {
                 IpcError::new(IpcErrorCode::Internal, "Application dataset state lock is poisoned")
@@ -330,21 +330,19 @@ impl AppState {
             .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
                 format!("Catalog has no instrument metadata for {}", input.state_key.instrument_id)))?;
         let run_id = uuid::Uuid::new_v4().to_string();
-        let writer = SnapshotWriter::new(&self.inner.snapshot_root, &input, &instrument.id().to_string())
-            .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Prepare Snapshot Writer: {error}")))?;
-        Ok((ReplayWorkerConfig { run_id, input, instrument }, Box::new(writer)))
+        Ok(ReplayWorkerConfig { run_id, input, instrument })
     }
 
     pub(crate) fn start_run(&self) -> Result<RunState, IpcError> {
         let _permit = self.acquire_mutation_permit()?;
-        let (config, sink) = self.prepare_run()?;
-        self.with_replay_manager(|manager| manager.start(config, sink))
+        let config = self.prepare_run()?;
+        self.with_replay_manager(|manager| manager.start_interactive(config))
     }
 
     pub(crate) fn restart_run(&self) -> Result<RunState, IpcError> {
         let _permit = self.acquire_mutation_permit()?;
-        let (config, sink) = self.prepare_run()?;
-        self.with_replay_manager(|manager| manager.restart(config, sink))
+        let config = self.prepare_run()?;
+        self.with_replay_manager(|manager| manager.restart_interactive(config))
     }
 
     pub(crate) fn replay_state(&self) -> Result<RunState, IpcError> {
@@ -373,6 +371,25 @@ impl AppState {
 
     pub(crate) fn replay_dispose(&self) -> Result<RunState, IpcError> {
         self.with_replay_manager(ReplayManager::dispose)
+    }
+
+    /// Explicitly persists a completed Run's owned trajectory as a new Snapshot.
+    /// The manager lock is released after exporting the immutable data, before
+    /// SQLite I/O and publication begin.
+    pub(crate) fn save_run_snapshot(&self) -> Result<String, IpcError> {
+        let data = self.with_replay_manager(ReplayManager::snapshot_data)?;
+        SnapshotWriter::save_completed(
+            &self.inner.snapshot_root,
+            &data.input,
+            &data.instrument_id,
+            &data.state,
+            &data.effective_config,
+            &data.checkpoints,
+        )
+        .map_err(|error| IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Save Run Snapshot failed: {error}"),
+        ))
     }
 
     fn with_replay_manager<T>(
