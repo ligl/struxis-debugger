@@ -2424,6 +2424,13 @@ th, td { padding: 6px 8px; }
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: baseline;
 }
+.inspector-copy-status {
+  margin: 8px 10px 0;
+  color: var(--dbg-status-good, #75c6a1);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+}
+
 .inspector-provenance {
   margin: 12px 0 0;
   color: var(--dbg-text-muted);
