@@ -2344,6 +2344,29 @@ th, td { padding: 6px 8px; }
   min-width: 0;
   padding: 10px;
 }
+.inspector-runtime-context {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin: 8px 0 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--dbg-border);
+  color: var(--dbg-text-muted);
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .035em;
+}
+
+.inspector-runtime-context span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.inspector-runtime-context code {
+  color: var(--dbg-text-secondary);
+  font: inherit;
+}
+
 .inspector-object-heading {
   display: flex;
   min-width: 0;
