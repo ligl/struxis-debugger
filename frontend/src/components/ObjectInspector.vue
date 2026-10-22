@@ -3,15 +3,12 @@ import { computed, ref } from "vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
-import type { InspectorWorkspaceContext, ReplayInspectorStructureDto, SBarDto, OriginObjectSelection } from "../origin-types";
+import type { InspectorWorkspaceContext, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
   context: InspectorWorkspaceContext;
   originBars: SBarDto[];
   originStructure: ReplayInspectorStructureDto | null;
-}>();
-const emit = defineEmits<{
-  selectRelatedObject: [selection: OriginObjectSelection];
 }>();
 
 // These projections keep the existing view templates readable while ensuring
@@ -100,7 +97,6 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
         :timeframe="timeframe"
         :bars="originBars"
         :structure="originStructure"
-        @select-object="emit('selectRelatedObject', $event)"
       />
     </template>
     <template v-else-if="workspaceMode === 'compare' && selectedDifference">
