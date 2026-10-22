@@ -22,8 +22,8 @@ function mountApp() {
           props: ["origin", "loadStatus", "loadError", "formatDomainTimestamp"],
         },
         OriginChart: {
-          template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button></section>',
-          props: ["bars", "originDatasetId"],
+          template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button><button v-for="cbar in structure?.cbars ?? []" :key="cbar.cbarId" :data-testid="\'origin-cbar-click-\' + cbar.cbarId" @click="$emit(\'object-click\', { kind: \'cbar\', id: cbar.cbarId })">Select CBar</button><button v-for="swing in structure?.swings ?? []" :key="swing.swingId" :data-testid="\'origin-swing-click-\' + swing.swingId" @click="$emit(\'object-click\', { kind: \'swing\', id: swing.swingId })">Select Swing</button></section>',
+          props: ["bars", "originDatasetId", "structure"],
         },
         RunChart: {
           template: '<section data-testid="run-chart-test-stub"><h3>Test Dataset SBar chart</h3></section>',
@@ -174,6 +174,61 @@ describe("Origin Load workbench", () => {
     expect(wrapper.find('[data-testid="inspector-sbar-id"]').exists()).toBe(false);
   });
 
+
+  it("shows the exact Origin CBar and Swing selected through chart events", async () => {
+    const origin = makeOrigin("origin-structure-inspector");
+    origin.structure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-100",
+        high: "13.00",
+        low: "9.00",
+        sbarStartId: "100",
+        sbarEndId: "200",
+        spanSbars: 2,
+        fractalType: "Top",
+        createdAt: "100",
+      }],
+      swingCount: 1,
+      swings: [{
+        swingId: "swing-100",
+        direction: "Up",
+        high: "13.00",
+        low: "9.00",
+        cbarStartId: "cbar-100",
+        cbarEndId: "cbar-100",
+        sbarStartId: "100",
+        sbarEndId: "200",
+        startOi: null,
+        endOi: null,
+        volume: "220",
+        spanSbars: 2,
+        state: "Confirmed",
+        createdAt: "100",
+        updatedAt: "200",
+      }],
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-structure-inspector"));
+
+    await wrapper.get('[data-testid="origin-cbar-click-cbar-100"]').trigger("click");
+    expect(wrapper.get('[data-testid="inspector-cbar-cbarId"]').text()).toBe("cbar-100");
+    expect(wrapper.get('[data-testid="inspector-cbar-high"]').text()).toBe("13.00");
+    expect(wrapper.get('[data-testid="inspector-cbar-fractalType"]').text()).toBe("Top");
+
+    await wrapper.get('[data-testid="origin-swing-click-swing-100"]').trigger("click");
+    expect(wrapper.get('[data-testid="inspector-swing-swingId"]').text()).toBe("swing-100");
+    expect(wrapper.get('[data-testid="inspector-swing-state"]').text()).toBe("Confirmed");
+    expect(wrapper.get('[data-testid="inspector-swing-volume"]').text()).toBe("220");
+  });
 
   it("loads the backend-confirmed Replay checkpoint and selects authoritative CBar and Swing objects", async () => {
     const readyRun = {
