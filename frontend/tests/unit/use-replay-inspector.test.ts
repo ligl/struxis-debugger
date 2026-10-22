@@ -74,7 +74,8 @@ describe("useReplayInspector", () => {
 
     const first = state.refresh(true);
     await state.refresh(true);
-    expect(getReplayInspector).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledWith("get_replay_inspector");
 
     resolveRead(checkpoint);
     await first;
