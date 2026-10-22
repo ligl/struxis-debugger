@@ -78,7 +78,7 @@ function setDock(direction: DockDirection): void {
       <div class="diagnostics-title-block">
         <span class="panel-title diagnostics-panel-title" data-testid="diagnostics-dock-drag-handle">Diagnostics</span>
       </div>
-      <nav class="diagnostics-tabs" data-testid="diagnostics-category-tabs" aria-label="Diagnostic categories">
+      <nav class="diagnostics-tabs" data-testid="diagnostics-category-tabs" aria-label="Diagnostic categories" @click.stop>
         <button
           v-for="category in categories"
           :key="category.id"
@@ -87,7 +87,7 @@ function setDock(direction: DockDirection): void {
           @click="selectedCategory = category.id"
         >{{ category.label }}</button>
       </nav>
-      <div class="dock-actions">
+      <div class="dock-actions" @click.stop>
         <details class="dock-menu" data-testid="diagnostics-dock-menu">
           <summary class="subtle-button" aria-label="Move Diagnostics" title="Move or dock panel">⋯</summary>
           <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
