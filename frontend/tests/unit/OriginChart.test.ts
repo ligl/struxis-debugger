@@ -391,7 +391,7 @@ describe("OriginChart", () => {
     moveHandler?.({});
     await nextTick();
     expect(wrapper.find('[data-testid="origin-object-hover-label"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="origin-selected-sbar"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-selected-sbar"]').exists()).toBe(true);
     wrapper.unmount();
   });
 
