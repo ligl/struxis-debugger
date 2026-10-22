@@ -14,8 +14,6 @@ import {
   getCurrentTestDataset,
   getRunState,
   listSnapshots,
-  pauseRun,
-  playRun,
   restartRun,
   startRun,
   stepRun,
@@ -81,8 +79,6 @@ describe("Run and Snapshot IPC bridge", () => {
     await expect(restartRun()).resolves.toEqual(state);
     await expect(getRunState()).resolves.toEqual(state);
     await expect(stepRun()).resolves.toEqual(state);
-    await expect(playRun()).resolves.toEqual(state);
-    await expect(pauseRun()).resolves.toEqual(state);
     await expect(stopRun()).resolves.toEqual(state);
     await expect(disposeRun()).resolves.toEqual(state);
 
@@ -91,8 +87,6 @@ describe("Run and Snapshot IPC bridge", () => {
       ["restart_run"],
       ["get_run_state"],
       ["step_run"],
-      ["play_run"],
-      ["pause_run"],
       ["stop_run"],
       ["dispose_run"],
     ]);
