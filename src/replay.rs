@@ -73,6 +73,7 @@ impl Drop for ReplayCommandPermit {
 /// This validates the complete ordered Bar sequence before a worker creates any
 /// Nautilus resources. It deliberately does not read the Origin or Catalog.
 #[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct LoadedInput {
     pub(crate) test_dataset_id: String,
     pub(crate) state_key: capitus_struxis::StruxisStateKey,
