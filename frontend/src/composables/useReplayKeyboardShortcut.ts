@@ -35,11 +35,12 @@ function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
  */
 export function useReplayKeyboardShortcut(
   playbackStatus: Readonly<Ref<PlaybackStatus>>,
+  canControlPlayback: Readonly<Ref<boolean>>,
   runBusy: Readonly<Ref<boolean>>,
   executeCommand: (command: RunCommand) => Promise<void>,
 ): void {
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.code !== "Space" || event.repeat) return;
+    if (event.code !== "Space" || event.repeat || !canControlPlayback.value) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (
       isInteractiveKeyboardTarget(event.target) ||
