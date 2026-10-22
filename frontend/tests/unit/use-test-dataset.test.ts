@@ -46,7 +46,7 @@ describe("useTestDataset refresh ordering", () => {
       .mockResolvedValueOnce(testDataset("test-new"));
 
     const originRef = ref<OriginDatasetDto | null>(null);
-    const { testDataset: current, startSbarId, endSbarId, refreshCurrentTestDataset, prepareForOrigin } =
+    const { testDataset: current, refreshCurrentTestDataset, prepareForOrigin } =
       useTestDataset(originRef, computed(() => true));
 
     const staleRefresh = refreshCurrentTestDataset();
@@ -59,21 +59,16 @@ describe("useTestDataset refresh ordering", () => {
     await staleRefresh;
 
     expect(current.value?.testDatasetId).toBe("test-new");
-    expect(startSbarId.value).toBe("120");
-    expect(endSbarId.value).toBe("180");
     expect(invokeMock).toHaveBeenCalledTimes(2);
   });
 
-  it("requires an explicit chart selection after an Origin handoff", () => {
+  it("invalidates only Test Dataset data on an Origin handoff", () => {
     const originRef = ref<OriginDatasetDto | null>(origin("origin-new"));
     const state = useTestDataset(originRef, computed(() => true));
-    state.startSbarId.value = "120";
-    state.endSbarId.value = "180";
+    state.testDataset.value = testDataset("previous-test");
 
     state.prepareForOrigin(origin("origin-new"));
 
-    expect(state.startSbarId.value).toBe("");
-    expect(state.endSbarId.value).toBe("");
     expect(state.testDataset.value).toBeNull();
   });
 
@@ -111,11 +106,9 @@ describe("useTestDataset refresh ordering", () => {
     const originRef = ref<OriginDatasetDto | null>(origin("origin-new"));
     const state = useTestDataset(originRef, computed(() => true));
     state.testDataset.value = testDataset("previous-test");
-    state.startSbarId.value = "120";
-    state.endSbarId.value = "180";
 
     const staleRefresh = state.refreshCurrentTestDataset();
-    const creating = state.createTestDataset();
+    const creating = state.createTestDataset("120", "180");
     resolveRefresh(null);
     await staleRefresh;
 
