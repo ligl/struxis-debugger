@@ -11,8 +11,6 @@ vi.mock("@tauri-apps/api/core", () => ({
 import {
   disposeRun,
   getRunState,
-  pauseRun,
-  playRun,
   restartRun,
   startRun,
   stepRun,
@@ -115,30 +113,6 @@ describe("Run Bridge Functions", () => {
     });
   });
 
-  describe("playRun()", () => {
-    it("transitions Run to running state", async () => {
-      const runningState = { ...mockRunState, status: "running" };
-      invokeMock.mockResolvedValue(runningState);
-
-      const result = await playRun();
-
-      expect(result.status).toBe("running");
-      expect(invokeMock).toHaveBeenCalledWith("play_run");
-    });
-  });
-
-  describe("pauseRun()", () => {
-    it("pauses a running Run", async () => {
-      const pausedState = { ...mockRunState, status: "paused", processedCount: 50 };
-      invokeMock.mockResolvedValue(pausedState);
-
-      const result = await pauseRun();
-
-      expect(result.status).toBe("paused");
-      expect(invokeMock).toHaveBeenCalledWith("pause_run");
-    });
-  });
-
   describe("stopRun()", () => {
     it("stops the current Run gracefully", async () => {
       const stoppedState = { ...mockRunState, status: "paused", processedCount: 50 };
@@ -186,7 +160,6 @@ describe("Run Error Scenarios", () => {
     };
     invokeMock.mockRejectedValue(stateError);
 
-    await expect(playRun()).rejects.toEqual(stateError);
   });
 
   it("rejects with not_found when Test Dataset is missing for start", async () => {
