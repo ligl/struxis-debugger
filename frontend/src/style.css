@@ -1692,6 +1692,16 @@ body,
   white-space: nowrap;
 }
 
+.origin-structure-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
 .origin-chart-host {
   width: 100%;
   min-width: 0;
