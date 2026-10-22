@@ -2882,7 +2882,7 @@ th, td { padding: 6px 8px; }
 .workbench-main {
   position: absolute;
   inset:
-    calc(var(--diagnostics-reserve-top, 0px) + var(--inspector-reserve-top, 0px))
+    calc(44px + var(--diagnostics-reserve-top, 0px) + var(--inspector-reserve-top, 0px))
     calc(var(--diagnostics-reserve-right, 0px) + var(--inspector-reserve-right, 0px))
     calc(var(--diagnostics-reserve-bottom, 0px) + var(--inspector-reserve-bottom, 0px))
     calc(var(--diagnostics-reserve-left, 0px) + var(--inspector-reserve-left, 0px));
@@ -2960,7 +2960,7 @@ th, td { padding: 6px 8px; }
 .inspector-rail.dock-right {
   /* The prototype overlays the toolbar's right/left edge, with a 5px optical
      gap from the workbench top and from the opposing horizontal dock. */
-  top: calc(var(--inspector-offset-top, 0px) + 5px);
+  top: calc(44px + var(--inspector-offset-top, 0px) + 5px);
   bottom: calc(var(--inspector-offset-bottom, 0px) + 5px);
   width: var(--inspector-width, 282px);
 }
@@ -2987,8 +2987,8 @@ th, td { padding: 6px 8px; }
   flex-direction: column;
 }
 
-.inspector-rail.dock-top {
-  top: 0;
+ .inspector-rail.dock-top {
+  top: 44px;
   bottom: auto;
   border-bottom: 1px solid #3a444b;
 }
@@ -3102,7 +3102,7 @@ th, td { padding: 6px 8px; }
 
 .diagnostics-dock.dock-left,
 .diagnostics-dock.dock-right {
-  top: calc(var(--inspector-reserve-top, 0px) + 5px);
+  top: calc(44px + var(--inspector-reserve-top, 0px) + 5px);
   bottom: calc(var(--inspector-reserve-bottom, 0px) + 5px);
   width: var(--diagnostics-width, 330px);
   height: auto;
@@ -3121,7 +3121,7 @@ th, td { padding: 6px 8px; }
   flex-direction: column;
 }
 
-.diagnostics-dock.dock-top { top: var(--inspector-reserve-top, 0px); bottom: auto; border-bottom: 1px solid #3a444b; }
+.diagnostics-dock.dock-top { top: calc(44px + var(--inspector-reserve-top, 0px)); bottom: auto; border-bottom: 1px solid #3a444b; }
 .diagnostics-dock.dock-bottom { bottom: var(--inspector-reserve-bottom, 0px); top: auto; border-top: 1px solid #3a444b; }
 
 .diagnostics-dock .diagnostics-heading {
