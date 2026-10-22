@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted, type Ref } from "vue";
-import type { RunStateDto } from "../origin-types";
 import type { RunCommand } from "../run-command-eligibility";
+import type { PlaybackStatus } from "./usePlaybackController";
 
 function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -34,7 +34,7 @@ function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
  * Run state and command execution remain owned by the application workflow.
  */
 export function useReplayKeyboardShortcut(
-  runState: Readonly<Ref<RunStateDto | null>>,
+  playbackStatus: Readonly<Ref<PlaybackStatus>>,
   runBusy: Readonly<Ref<boolean>>,
   executeCommand: (command: RunCommand) => Promise<void>,
 ): void {
@@ -47,9 +47,9 @@ export function useReplayKeyboardShortcut(
       runBusy.value
     ) return;
 
-    const command = runState.value?.status === "running"
+    const command = playbackStatus.value === "playing"
       ? "pause"
-      : runState.value?.status === "paused"
+      : playbackStatus.value === "paused" || playbackStatus.value === "idle"
         ? "play"
         : null;
     if (!command) return;
