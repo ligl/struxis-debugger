@@ -222,7 +222,7 @@ for (const direction of ["left", "right"] as const) {
     const inspectorBox = await inspector.boundingBox();
     const diagnosticsBox = await diagnostics.boundingBox();
     await expect(inspector.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
-    await expect(diagnostics.getByTestId("diagnostics-dock-menu")).toBeHidden();
+    await expect(diagnostics.getByTestId("diagnostics-dock-menu")).not.toHaveAttribute("open");
     await expect(diagnostics.getByTestId("diagnostics-collapse-toggle")).toBeVisible();
     await expect(diagnostics.getByTestId("diagnostics-collapse-toggle")).toHaveAttribute("aria-label", "Expand Diagnostics");
     expect(Math.abs(inspectorBox!.width - 36)).toBeLessThanOrEqual(1);
@@ -238,7 +238,6 @@ for (const direction of ["left", "right"] as const) {
 
     const dock = page.getByTestId("diagnostics-dock");
     const collapseToggle = dock.getByTestId("diagnostics-collapse-toggle");
-    await collapseToggle.click();
     await expect(dock).toHaveClass(/collapsed/);
     await expect(collapseToggle).toBeVisible();
     await expect(dock).toHaveClass(/collapsed/);
@@ -247,7 +246,7 @@ for (const direction of ["left", "right"] as const) {
     await expect(title).toBeVisible();
     await expect(title).toHaveText("Diagnostics");
     await expect(title).toHaveCSS("writing-mode", "vertical-rl");
-    await expect(dock.getByTestId("diagnostics-dock-menu")).toBeHidden();
+    await expect(dock.getByTestId("diagnostics-dock-menu")).not.toHaveAttribute("open");
     await expect(collapseToggle).toBeVisible();
     await expect(collapseToggle).toHaveAttribute("aria-label", "Expand Diagnostics");
     const railBox = await dock.boundingBox();
@@ -271,6 +270,7 @@ for (const direction of ["left", "right", "top", "bottom"] as const) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+    await page.getByTestId("diagnostics-collapse-toggle").click();
 
     const dock = page.getByTestId("diagnostics-dock");
     const titleBlock = dock.locator(".diagnostics-title-block");
@@ -520,6 +520,7 @@ for (const direction of dockDirections) {
     await expect(page.getByTestId("diagnostics-dock")).toBeVisible();
 
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+    await page.getByTestId("diagnostics-collapse-toggle").click();
     const diagnostics = await inspectPanel(page, "diagnostics-dock", "diagnostics-resize-edge");
     if (direction === "left" || direction === "right") {
       expect(Math.abs(diagnostics.width - 330)).toBeLessThanOrEqual(1);
@@ -637,6 +638,7 @@ for (const direction of dockDirections) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+    await page.getByTestId("diagnostics-collapse-toggle").click();
 
     const splitter = page.getByTestId("diagnostics-resize-edge");
     const before = Number(await splitter.getAttribute("aria-valuenow"));
@@ -705,6 +707,7 @@ for (const direction of dockDirections) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+    await page.getByTestId("diagnostics-collapse-toggle").click();
     const workspace = page.getByTestId("chart-workspace");
     const before = await workspace.boundingBox();
     expect(before).toBeTruthy();
