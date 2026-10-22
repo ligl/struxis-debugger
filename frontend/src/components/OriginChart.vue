@@ -227,14 +227,19 @@ function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
 }
 
 function updateHoveredObject(point: { x: number; y: number } | undefined): void {
-  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || chartError.value) {
-    hoveredObject.value = null;
-    updateSbarMarkers();
-    return;
-  }
-  // Use the same structure hit-test as click selection, so hover and click agree
-  // on overlapping CBar/Swing geometry. SBar hit-testing is the final fallback.
-  hoveredObject.value = hitTestStructureObject(point.x, point.y) ?? hitTestSbar(point.x, point.y);
+  const nextObject = !point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || chartError.value
+    ? null
+    : hitTestStructureObject(point.x, point.y) ?? hitTestSbar(point.x, point.y);
+  const currentObject = hoveredObject.value;
+  if (
+    currentObject?.kind === nextObject?.kind &&
+    currentObject?.id === nextObject?.id &&
+    currentObject?.originDatasetId === nextObject?.originDatasetId
+  ) return;
+
+  // Only update reactive overlays when the pointer crosses an object boundary.
+  // This avoids re-rendering the SVG layer on every crosshair movement.
+  hoveredObject.value = nextObject;
   updateSbarMarkers();
 }
 
