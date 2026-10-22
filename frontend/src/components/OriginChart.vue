@@ -305,19 +305,21 @@ function distanceToRectangleBorder(
 
 function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" }> | null {
   const tolerance = 6;
-  let best: { kind: "cbar" | "swing"; id: string; distance: number; priority: number } | null = null;
-  const consider = (candidate: { kind: "cbar" | "swing"; id: string; distance: number; priority: number }) => {
-    if (candidate.distance > tolerance) return;
+  type Candidate = { kind: "cbar" | "swing"; id: string; distance: number; priority: number };
+  const chooseCloser = (best: Candidate | null, candidate: Candidate): Candidate | null => {
+    if (candidate.distance > tolerance) return best;
     if (
       !best ||
       candidate.distance < best.distance ||
       (candidate.distance === best.distance && candidate.priority < best.priority) ||
       (candidate.distance === best.distance && candidate.priority === best.priority && candidate.id.localeCompare(best.id) < 0)
-    ) best = candidate;
+    ) return candidate;
+    return best;
   };
 
+  let best: Candidate | null = null;
   for (const segment of swingSegments.value) {
-    consider({
+    best = chooseCloser(best, {
       kind: "swing",
       id: segment.id,
       distance: distanceToSegment(x, y, segment),
@@ -325,7 +327,7 @@ function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelec
     });
   }
   for (const rectangle of cbarRectangles.value) {
-    consider({
+    best = chooseCloser(best, {
       kind: "cbar",
       id: rectangle.id,
       distance: distanceToRectangleBorder(x, y, rectangle),
@@ -335,7 +337,6 @@ function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelec
 
   return best ? { kind: best.kind, id: best.id, originDatasetId: props.originDatasetId } : null;
 }
-
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   if (chartError.value || props.bars.length === 0) return;
   const pointX = param.point?.x;
