@@ -27,36 +27,54 @@ describe("Struxis Debugger native desktop", () => {
     await shell.waitForDisplayed({ timeout: 30_000 });
 
     assert.equal(await $('[data-testid="product-wordmark"]').getText(), "STRUXIS DEBUGGER");
-
-    const catalog = await $(".catalog-panel");
-    await catalog.waitForDisplayed();
+    await $('[data-testid="catalog-controls"]').waitForDisplayed();
 
     await browser.waitUntil(
       async () => {
-        const hasError = await $(".catalog-panel .error-message").isExisting();
-        const hasRows = (await $$('[data-testid="catalog-dataset-row"]')).length > 0;
-        const isEmpty = await $(".catalog-panel .empty-state").isExisting();
-        return hasError || hasRows || isEmpty;
+        const state = await browser.execute(() => {
+          const refresh = document.querySelector('[data-testid="catalog-refresh"]');
+          const select = document.querySelector('[data-testid="catalog-dataset-select"]');
+          const error = document.querySelector('[data-testid="catalog-controls"] .error-message');
+          return {
+            refreshing: refresh instanceof HTMLButtonElement && refresh.disabled,
+            hasSelect: select instanceof HTMLSelectElement,
+            optionCount: select instanceof HTMLSelectElement ? select.options.length : 0,
+            hasError: Boolean(error),
+          };
+        });
+        return state.hasSelect && !state.refreshing && (state.optionCount > 1 || state.hasError);
       },
       {
         timeout: 30_000,
         interval: 250,
-        timeoutMsg: "Catalog discovery did not publish a result or diagnostic.",
+        timeoutMsg: "Catalog discovery did not publish selectable streams or a diagnostic.",
       },
     );
 
     assert.equal(
-      await $(".catalog-panel .error-message").isExisting(),
+      await $('[data-testid="catalog-controls"] .error-message').isExisting(),
       false,
       "The real list_catalog_datasets IPC command returned an error.",
     );
 
-    const hasRows = (await $$('[data-testid="catalog-dataset-row"]')).length > 0;
-    const isEmpty = await $(".catalog-panel .empty-state").isExisting();
+    const catalogState = await browser.execute(() => {
+      const select = document.querySelector('[data-testid="catalog-dataset-select"]');
+      if (!(select instanceof HTMLSelectElement)) throw new Error("Catalog dataset selector is missing.");
+      return {
+        options: Array.from(select.options).map((option) => option.textContent?.trim() ?? ""),
+        enabledCount: Array.from(select.options).filter(
+          (option) => option.value && !/UNAVAILABLE/i.test(option.textContent ?? ""),
+        ).length,
+      };
+    });
     assert.ok(
-      hasRows || isEmpty,
-      "Catalog IPC completed without rendering either discovered datasets or the empty state.",
+      catalogState.options.length > 1 || catalogState.options[0] === "NO STREAMS",
+      `Catalog IPC completed without options or the explicit empty state: ${JSON.stringify(catalogState)}`,
     );
+    if (catalogState.options[0] !== "NO STREAMS") {
+      assert.ok(catalogState.enabledCount > 0,
+        `Catalog discovered entries but none are available: ${JSON.stringify(catalogState)}`);
+    }
   });
 
   it("switches workflows in the real desktop window", async () => {
@@ -320,13 +338,59 @@ describe("Struxis Debugger native desktop", () => {
   });
 
 
-  it("runs Origin → two-SBar Test Dataset → real Run → verified Snapshot through the native UI and IPC", async () => {
+  it("loads the complete BTCUSDT Origin with structure enabled, then runs a two-SBar Test Dataset through Snapshot Compare", async () => {
     await domClick('[data-testid="workspace-dataset"]');
 
-    const datasetRows = await $$('[data-testid="catalog-dataset-row"]:not(.unavailable)');
-    assert.ok(datasetRows.length > 0, "The configured test Catalog must contain an available Bar stream.");
+    await $('[data-testid="catalog-dataset-select"]').waitForDisplayed();
+    await browser.waitUntil(
+      async () => {
+        const state = await browser.execute(() => {
+          const refresh = document.querySelector('[data-testid="catalog-refresh"]');
+          const select = document.querySelector('[data-testid="catalog-dataset-select"]');
+          return {
+            refreshing: refresh instanceof HTMLButtonElement && refresh.disabled,
+            optionCount: select instanceof HTMLSelectElement ? select.options.length : 0,
+          };
+        });
+        return !state.refreshing && state.optionCount > 1;
+      },
+      {
+        timeout: 30_000,
+        interval: 250,
+        timeoutMsg: "Catalog has no discovered streams for the real Origin Load scenario.",
+      },
+    );
 
-    await domClick('[data-testid="catalog-dataset-row"]:not(.unavailable)');
+    const selectedDataset = await browser.execute(() => {
+      const select = document.querySelector('[data-testid="catalog-dataset-select"]');
+      if (!(select instanceof HTMLSelectElement)) throw new Error("Catalog dataset selector is missing.");
+      const option = Array.from(select.options).find((candidate) =>
+        /BTCUSDT/i.test(candidate.textContent ?? "") &&
+        !/UNAVAILABLE/i.test(candidate.textContent ?? "") &&
+        candidate.value.length > 0
+      );
+      if (!option) {
+        throw new Error(`No available BTCUSDT Catalog stream was discovered. Options: ${JSON.stringify(
+          Array.from(select.options).map((candidate) => ({
+            value: candidate.value,
+            label: candidate.textContent?.trim() ?? "",
+          })),
+        )}`);
+      }
+      select.value = option.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      return { value: option.value, label: option.textContent?.trim() ?? "" };
+    });
+    assert.match(selectedDataset.label, /BTCUSDT/i);
+
+    const structureEnabled = await browser.execute(() => {
+      const checkbox = document.querySelector('[data-testid="catalog-enable-structure"]');
+      if (!(checkbox instanceof HTMLInputElement)) throw new Error("STRUCTURE toggle is missing.");
+      if (!checkbox.checked) checkbox.click();
+      return checkbox.checked;
+    });
+    assert.equal(structureEnabled, true, "Origin Load acceptance must enable derived Structure calculation.");
+
     await domClick('[data-testid="catalog-load"]');
     await domClick('[data-testid="catalog-origin-details-toggle"]');
 
@@ -347,10 +411,30 @@ describe("Struxis Debugger native desktop", () => {
     await originChart.waitForDisplayed();
     const sbarCount = Number(await originChart.getAttribute("data-sbar-count"));
     assert.ok(sbarCount >= 2, "Origin chart must contain at least two validated SBars for a bounded Run.");
+    assert.equal(
+      Number(await $('[data-testid="origin-sbar-count"]').getText().then((value) => value.replace(/,/g, ""))),
+      sbarCount,
+      "Origin summary count must match the complete Struxis-derived chart sequence.",
+    );
+    assert.equal(
+      await $('[data-testid="origin-structure-status"]').getText(),
+      "ENABLED",
+      "The successful Origin must record STRUCTURE enabled as Load provenance.",
+    );
     const firstSbarId = await originChart.getAttribute("data-first-sbar-id");
     const secondSbarId = await originChart.getAttribute("data-second-sbar-id");
+    const lastSbarId = await originChart.getAttribute("data-last-sbar-id");
     assert.ok(firstSbarId && secondSbarId && firstSbarId !== secondSbarId,
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
+    assert.equal(await $('[data-testid="origin-first-sbar-id"]').getText(), firstSbarId);
+    assert.equal(await $('[data-testid="origin-last-sbar-id"]').getText(), lastSbarId);
+    const structureCounts = await originChart.getAttribute("data-structure-counts");
+    assert.ok(structureCounts, "Origin chart must expose the counts from its authoritative Structure projection.");
+    const parsedStructureCounts = JSON.parse(structureCounts);
+    assert.ok(
+      parsedStructureCounts.cbars + parsedStructureCounts.swings > 0,
+      `BTCUSDT full-stream Structure projection should contain CBar or Swing objects: ${structureCounts}`,
+    );
 
     // Drive the component's ID-based selection command. This enters the
     // same OriginChart selection method and emits the same sbarClick event as
