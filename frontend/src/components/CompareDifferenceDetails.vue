@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ObjectDifferenceDto } from "../origin-types";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
+import { formatInspectorValue } from "../inspector-format";
 
 defineProps<{
   selectedDifference: ObjectDifferenceDto;
@@ -8,12 +9,6 @@ defineProps<{
   compareCandidateSnapshotId: string | null;
 }>();
 
-function formatValue(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "—";
-  if (typeof value === "string") return value;
-  return JSON.stringify(value) ?? String(value);
-}
 </script>
 
 <template>
@@ -40,8 +35,8 @@ function formatValue(value: unknown): string {
           <div v-for="property in selectedDifference.properties" :key="property.field" class="inspector-difference-property">
             <strong>{{ property.field }}</strong>
             <div class="inspector-difference-values">
-              <div><span>BASELINE</span><code>{{ formatValue(property.baselineValue) }}</code></div>
-              <div><span>CANDIDATE</span><code>{{ formatValue(property.candidateValue) }}</code></div>
+              <div><span>BASELINE</span><code>{{ formatInspectorValue(property.baselineValue) }}</code></div>
+              <div><span>CANDIDATE</span><code>{{ formatInspectorValue(property.candidateValue) }}</code></div>
             </div>
           </div>
         </div>
