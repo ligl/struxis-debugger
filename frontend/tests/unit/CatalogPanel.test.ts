@@ -40,4 +40,45 @@ describe("CatalogPanel", () => {
     expect(onParentPointerDown).not.toHaveBeenCalled();
     wrapper.unmount();
   });
+
+  it("closes the status popover when pointering outside it", async () => {
+    const wrapper = mount(CatalogPanel, {
+      props: {
+        datasets: [],
+        selectedId: "",
+        selectedDataset: null,
+        instrumentGroups: [],
+        refreshing: false,
+        loading: false,
+        mutationBusy: false,
+        discoveryError: "",
+        enableStructure: true,
+        origin: null,
+        loadStatus: "idle",
+        loadError: "",
+        formatDomainTimestamp: (value: string | null) => value ?? "—",
+      },
+      global: {
+        stubs: { OriginPanel: true },
+      },
+      attachTo: document.body,
+    });
+
+    const details = wrapper.get(".catalog-source-details").element as HTMLDetailsElement;
+    details.open = true;
+    await wrapper.vm.$nextTick();
+    expect(details.open).toBe(true);
+
+    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    expect(details.open).toBe(false);
+
+    details.open = true;
+    await wrapper.vm.$nextTick();
+    wrapper.get(".catalog-source-popover").element.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true }),
+    );
+    expect(details.open).toBe(true);
+
+    wrapper.unmount();
+  });
 });
