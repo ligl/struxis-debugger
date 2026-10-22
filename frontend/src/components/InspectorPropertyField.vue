@@ -4,6 +4,7 @@ defineProps<{
   value: string;
   testId?: string;
   copyValue?: string;
+  title?: string;
   wide?: boolean;
 }>();
 </script>
@@ -14,7 +15,8 @@ defineProps<{
     <dd>
       <code
         :data-testid="testId"
-        :data-copy-value="copyValue ?? value"
+         :data-copy-value="copyValue ?? value"
+        :title="title"
       >{{ value }}</code>
     </dd>
   </div>
