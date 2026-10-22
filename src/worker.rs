@@ -582,12 +582,34 @@ impl WorkerSession {
         }
 
         let sbar_id = bar.ts_event.to_string();
-        let owned_checkpoint = OwnedCheckpoint::from_projection(
+        let owned_checkpoint = match OwnedCheckpoint::from_projection(
             self.next_index,
             &sbar_id,
             &projection,
-        )?;
-        let inspector = projection.inspector_projection(self.next_index, &sbar_id)?;
+        ) {
+            Ok(checkpoint) => checkpoint,
+            Err(error) => {
+                let diagnostic = format!(
+                    "Owned Checkpoint extraction failed at input_index={} sbar_id={}: {error}",
+                    self.next_index, sbar_id
+                );
+                let _ = self.state.fail(diagnostic.clone());
+                notify_sink_failure(&mut sink, &diagnostic);
+                return Err(diagnostic);
+            }
+        };
+        let inspector = match projection.inspector_projection(self.next_index, &sbar_id) {
+            Ok(inspector) => inspector,
+            Err(error) => {
+                let diagnostic = format!(
+                    "Replay Inspector projection failed at input_index={} sbar_id={}: {error}",
+                    self.next_index, sbar_id
+                );
+                let _ = self.state.fail(diagnostic.clone());
+                notify_sink_failure(&mut sink, &diagnostic);
+                return Err(diagnostic);
+            }
+        };
 
         self.state.confirm_checkpoint(sbar_id)?;
         self.owned_checkpoints.push(owned_checkpoint);
