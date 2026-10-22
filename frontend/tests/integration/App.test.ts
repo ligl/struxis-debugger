@@ -287,13 +287,13 @@ describe("Origin Load workbench", () => {
       "State", "Created At", "Updated At",
     ]);
 
-    const initialRangeStatus = wrapper.get('[data-testid="test-range-status"]').text();
+    const initialRangeStatus = wrapper.get('[data-testid="origin-range-selection-status"]').text();
     await wrapper.get('[data-testid="inspector-related-start-cbar"]').trigger("click");
     expect(wrapper.get('[data-testid="inspector-cbar-cbarId"]').text()).toBe("cbar-100");
 
     await wrapper.get('[data-testid="inspector-related-start-sbar"]').trigger("click");
     expect(wrapper.get('[data-testid="inspector-sbar-id"]').text()).toBe("100");
-    expect(wrapper.get('[data-testid="test-range-status"]').text()).toBe(initialRangeStatus);
+    expect(wrapper.get('[data-testid="origin-range-selection-status"]').text()).toBe(initialRangeStatus);
   });
 
   it("shows backend-confirmed Replay object counts without Inspector-owned object selection", async () => {
