@@ -12,8 +12,8 @@ describe("isRunCommandEligible", () => {
       start: [],
       restart: [],
       step: ["ready", "paused"],
-      play: ["paused"],
-      pause: ["running"],
+      play: [],
+      pause: [],
       stop: ["ready", "running", "paused"],
       dispose: ["ready", "paused", "completed", "failed", "disposed"],
     };
