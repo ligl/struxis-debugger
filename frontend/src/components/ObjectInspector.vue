@@ -1,24 +1,56 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
-import type { ObjectDifferenceDto, ReplayInspectorCBarDto, ReplayInspectorDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
+import type { InspectorWorkspaceContext } from "../origin-types";
 
-defineProps<{
-  selectedSbar: SBarDto | null;
-  selectedCbar: ReplayInspectorCBarDto | null;
-  selectedSwing: ReplayInspectorSwingDto | null;
-  originDatasetId: string | null;
-  timeframe: string | null;
-  structureEnabled: boolean;
-  workspaceMode: "dataset" | "replay" | "compare";
-  selectedDifference: ObjectDifferenceDto | null;
-  compareBaselineSnapshotId: string | null;
-  compareCandidateSnapshotId: string | null;
-  replayInspector: ReplayInspectorDto | null;
-  replayInspectorError: string;
-}>();
+const props = defineProps<{ context: InspectorWorkspaceContext }>();
+
+// These projections keep the existing view templates readable while ensuring
+// that only one valid workspace-specific input shape can reach this component.
+const workspaceMode = computed(() => props.context.workspace);
+const selectedSbar = computed(() =>
+  props.context.workspace === "dataset" && props.context.selectedObject?.kind === "sbar"
+    ? props.context.selectedObject.object
+    : null,
+);
+const selectedCbar = computed(() =>
+  props.context.workspace === "dataset" && props.context.selectedObject?.kind === "cbar"
+    ? props.context.selectedObject.object
+    : null,
+);
+const selectedSwing = computed(() =>
+  props.context.workspace === "dataset" && props.context.selectedObject?.kind === "swing"
+    ? props.context.selectedObject.object
+    : null,
+);
+const originDatasetId = computed(() =>
+  props.context.workspace === "dataset" ? props.context.originDatasetId : null,
+);
+const timeframe = computed(() =>
+  props.context.workspace === "dataset" || props.context.workspace === "replay"
+    ? props.context.timeframe
+    : null,
+);
+const structureEnabled = computed(() =>
+  props.context.workspace === "dataset" ? props.context.structureEnabled : false,
+);
+const selectedDifference = computed(() =>
+  props.context.workspace === "compare" ? props.context.difference : null,
+);
+const compareBaselineSnapshotId = computed(() =>
+  props.context.workspace === "compare" ? props.context.baselineSnapshotId : null,
+);
+const compareCandidateSnapshotId = computed(() =>
+  props.context.workspace === "compare" ? props.context.candidateSnapshotId : null,
+);
+const replayInspector = computed(() =>
+  props.context.workspace === "replay" ? props.context.checkpoint : null,
+);
+const replayInspectorError = computed(() =>
+  props.context.workspace === "replay" ? props.context.error : "",
+);
 
 const copyStatus = ref("");
 
