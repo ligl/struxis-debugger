@@ -3,9 +3,16 @@ import { computed, ref } from "vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
-import type { InspectorWorkspaceContext } from "../origin-types";
+import type { InspectorWorkspaceContext, ReplayInspectorStructureDto, SBarDto, OriginObjectSelection } from "../origin-types";
 
-const props = defineProps<{ context: InspectorWorkspaceContext }>();
+const props = defineProps<{
+  context: InspectorWorkspaceContext;
+  originBars: SBarDto[];
+  originStructure: ReplayInspectorStructureDto | null;
+}>();
+const emit = defineEmits<{
+  selectRelatedObject: [selection: OriginObjectSelection];
+}>();
 
 // These projections keep the existing view templates readable while ensuring
 // that only one valid workspace-specific input shape can reach this component.
@@ -91,6 +98,9 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
         :selected-swing="selectedSwing"
         :origin-dataset-id="originDatasetId"
         :timeframe="timeframe"
+        :bars="originBars"
+        :structure="originStructure"
+        @select-object="emit('selectRelatedObject', $event)"
       />
     </template>
     <template v-else-if="workspaceMode === 'compare' && selectedDifference">
