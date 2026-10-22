@@ -63,6 +63,10 @@ export function usePlaybackController(
         if (playbackStatus.value !== "playing") break;
         await waitBetweenSteps();
       }
+    } catch {
+      // A failed projection refresh must stop scheduling; the owning workflow
+      // is responsible for exposing its diagnostic.
+      playbackStatus.value = "idle";
     } finally {
       if (playbackStatus.value === "playing") {
         playbackStatus.value = "idle";
