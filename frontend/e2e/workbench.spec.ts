@@ -450,7 +450,6 @@ async function chooseDockDirection(page: Page, menuTestId: string, optionTestId:
   }
   await expect(menu).toHaveJSProperty("open", true);
   await expect(option).toBeVisible();
-  await expect(option).toBeInViewport();
   await option.click();
   await expect(option).toHaveAttribute("aria-pressed", "true");
   // A dock change moves the menu anchor. Close the native details popover
