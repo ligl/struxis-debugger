@@ -5,12 +5,10 @@ import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
-import RunChart from "./components/RunChart.vue";
-import DualChartStack from "./components/DualChartStack.vue";
-import SnapshotReferencePanel from "./components/SnapshotReferencePanel.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
 import Diagnostics from "./components/Diagnostics.vue";
+import ReplayWorkspace from "./components/ReplayWorkspace.vue";
 import CompareWorkspace from "./components/CompareWorkspace.vue";
 import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
@@ -366,16 +364,13 @@ onMounted(async () => {
                 @cancel-range-selection="cancelOriginRangeSelection"
               />
             </template>
-            <div v-show="workspaceMode === 'replay'" class="workspace-mode replay-controls">
-              <DualChartStack workspace="replay">
-                <template #upper>
-                  <RunChart v-if="workspaceMode === 'replay'" :origin="origin" :test-dataset="testDataset" :run-state="runState" />
-                </template>
-                <template #lower>
-                  <SnapshotReferencePanel :snapshots="snapshots" />
-                </template>
-              </DualChartStack>
-            </div>
+            <ReplayWorkspace
+              :active="workspaceMode === 'replay'"
+              :origin="origin"
+              :test-dataset="testDataset"
+              :run-state="runState"
+              :snapshots="snapshots"
+            />
 <CompareWorkspace
               :active="workspaceMode === 'compare'"
               :snapshots="snapshots"
