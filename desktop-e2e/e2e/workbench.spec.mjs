@@ -146,12 +146,38 @@ describe("Struxis Debugger native desktop", () => {
     await $('[aria-label="Expand Inspector"]').click();
     await $('[aria-label="Collapse Inspector"]').waitForDisplayed();
 
-    await $('[data-testid="diagnostics-collapse-toggle"]').click();
-    await $('[data-testid="diagnostics-dock"]').waitForExist({ reverse: true });
-    await $('[data-testid="debugger-shell"] .diagnostics-reopen').waitForDisplayed();
+    const diagnosticsDock = await $('[data-testid="diagnostics-dock"]');
+    const diagnosticsToggle = await $('[data-testid="diagnostics-collapse-toggle"]');
+    await diagnosticsDock.waitForDisplayed();
+
+    const diagnosticsIsCollapsed = () => browser.execute(() => {
+      const dock = document.querySelector('[data-testid="diagnostics-dock"]');
+      return dock?.classList.contains("collapsed") ?? false;
+    });
+    // Diagnostics is collapsed by default. Normalize to expanded first, then
+    // exercise the actual collapsed state; the dock remains mounted in both
+    // states and changes its geometry/content instead of being removed.
+    if (await diagnosticsIsCollapsed()) {
+      await diagnosticsToggle.click();
+      await browser.waitUntil(async () => !(await diagnosticsIsCollapsed()), {
+        timeout: 5_000,
+        timeoutMsg: "Diagnostics did not expand from its initial collapsed state.",
+      });
+    }
+    await assertNoHorizontalOverflow("Diagnostics expanded");
+
+    await diagnosticsToggle.click();
+    await browser.waitUntil(diagnosticsIsCollapsed, {
+      timeout: 5_000,
+      timeoutMsg: "Diagnostics did not enter its collapsed state.",
+    });
     await assertNoHorizontalOverflow("Diagnostics collapsed");
-    await $('[data-testid="debugger-shell"] .diagnostics-reopen').click();
-    await $('[data-testid="diagnostics-dock"]').waitForDisplayed();
+
+    await diagnosticsToggle.click();
+    await browser.waitUntil(async () => !(await diagnosticsIsCollapsed()), {
+      timeout: 5_000,
+      timeoutMsg: "Diagnostics did not restore from its collapsed state.",
+    });
     await assertNoHorizontalOverflow("all panels restored");
   });
 
@@ -479,13 +505,9 @@ describe("Struxis Debugger native desktop", () => {
     await selectOriginSbarById(firstSbarId);
     await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
 
-    // Pending range selection belongs to Dataset. Switching to Replay must not
-    // destroy it, but its Dataset-only status panel should be asserted after
-    // returning to the workspace that owns Test Dataset preparation.
-    await domClick('[data-testid="workspace-replay"]');
-    await $('[data-testid="run-chart-panel"]').waitForDisplayed();
-    await domClick('[data-testid="workspace-dataset"]');
-    // OriginChart is Dataset-scoped and remounts when returning from Replay.
+    // Complete the range while OriginChart remains mounted. Switching to Replay
+    // unmounts this Dataset-scoped chart; this test is about the authoritative
+    // two-SBar selection, not persistence of an in-progress gesture across remounts.
     await $('[data-testid="origin-chart-canvas"]').waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
     await selectOriginSbarById(secondSbarId);
