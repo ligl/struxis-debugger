@@ -1,6 +1,24 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import type { CatalogDatasetEntry, OriginDatasetDto } from "../origin-types";
 import OriginPanel from "./OriginPanel.vue";
+
+const sourceDetails = ref<HTMLDetailsElement | null>(null);
+
+function closeOnOutsidePointerDown(event: PointerEvent): void {
+  const details = sourceDetails.value;
+  if (details?.open && event.target instanceof Node && !details.contains(event.target)) {
+    details.open = false;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+});
 
 interface InstrumentGroup {
   key: string;
@@ -91,6 +109,7 @@ const emit = defineEmits<{
     </button>
 
     <details
+      ref="sourceDetails"
       class="catalog-source-details"
       :open="Boolean(discoveryError || loadError)"
       @pointerdown.stop
