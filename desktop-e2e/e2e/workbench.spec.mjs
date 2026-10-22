@@ -649,6 +649,16 @@ describe("Struxis Debugger native desktop", () => {
     assert.equal(progress.replace(/\s/g, ""), "2/2",
       "Completed Run must confirm both selected SBars.");
 
+    await domClick('[data-testid="run-save-snapshot"]');
+    await browser.waitUntil(
+      async () => await browser.execute(() => document.querySelectorAll('[data-testid="snapshot-row"][data-snapshot-kind="complete"]').length) >= 1,
+      {
+        timeout: 30_000,
+        interval: 250,
+        timeoutMsg: "Explicit Snapshot save did not publish a verified Complete Snapshot.",
+      },
+    );
+
     await domClick('[data-testid="workspace-compare"]');
     await domClick('[data-testid="snapshot-store-toggle"]');
     await browser.waitUntil(
@@ -702,6 +712,16 @@ describe("Struxis Debugger native desktop", () => {
         },
       );
     }
+
+    await domClick('[data-testid="run-save-snapshot"]');
+    await browser.waitUntil(
+      async () => await browser.execute(() => document.querySelectorAll('[data-testid="snapshot-row"][data-snapshot-kind="complete"]').length) >= 2,
+      {
+        timeout: 30_000,
+        interval: 250,
+        timeoutMsg: "Second explicit Snapshot save did not publish another verified Snapshot.",
+      },
+    );
 
     await domClick('[data-testid="workspace-compare"]');
     await browser.waitUntil(
