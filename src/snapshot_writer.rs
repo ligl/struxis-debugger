@@ -143,11 +143,7 @@ impl SnapshotWriter {
                         checkpoint.sbar_id, checkpoint.ts_event
                     ));
                 }
-                writer.commit_checkpoint(
-                    checkpoint.checkpoint_index,
-                    &checkpoint.sbar_id,
-                    &checkpoint.persistence_projection(),
-                )?;
+                writer.commit_owned_checkpoint(checkpoint)?;
             }
             writer.finalize(completed_state)?;
             writer.manifest.as_ref()
@@ -159,6 +155,83 @@ impl SnapshotWriter {
             let _ = <Self as CheckpointSink>::fail(&mut writer, error);
         }
         result
+    }
+
+    fn commit_owned_checkpoint(&mut self, checkpoint: &OwnedCheckpoint) -> Result<(), String> {
+        self.commit_checkpoint_payload(
+            checkpoint.checkpoint_index,
+            &checkpoint.sbar_id,
+            &checkpoint.state_key,
+            Some(&checkpoint.sbar_id),
+            checkpoint.structure.as_ref(),
+            &checkpoint.diagnostics,
+        )
+    }
+
+    fn commit_checkpoint_payload(
+        &mut self,
+        index: usize,
+        sbar_id: &str,
+        state_key: &str,
+        last_ts_event: Option<&str>,
+        structure: Option<&crate::checkpoint::StructureCheckpoint>,
+        diagnostics: &[crate::diagnostics::Diagnostic],
+    ) -> Result<(), String> {
+        let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
+        if manifest.status != STATUS_RECORDING {
+            return Err(format!("Cannot append checkpoint to Snapshot in {}", manifest.status));
+        }
+        if index != self.checkpoints.len() {
+            return Err(format!("Expected checkpoint index {}, got {index}", self.checkpoints.len()));
+        }
+        let expected_sbar_id = self.input.bar_ids.get(index)
+            .ok_or_else(|| format!("Checkpoint index {index} exceeds the fixed input sequence"))?;
+        if sbar_id != expected_sbar_id {
+            return Err(format!(
+                "Checkpoint SBar ID does not match fixed input at index {index}: expected={expected_sbar_id}, actual={sbar_id}"
+            ));
+        }
+        if state_key != self.input.state_key {
+            return Err(format!(
+                "Checkpoint StruxisStateKey mismatch: expected={}, actual={}",
+                self.input.state_key, state_key
+            ));
+        }
+        if last_ts_event != Some(sbar_id) {
+            return Err("Checkpoint projection SBar ID mismatch".into());
+        }
+        for diagnostic in diagnostics {
+            if diagnostic.checkpoint_index != Some(index) {
+                return Err(format!(
+                    "Checkpoint diagnostic index mismatch at checkpoint {index}: expected Some({index}), actual={:?}",
+                    diagnostic.checkpoint_index
+                ));
+            }
+        }
+        let record = SnapshotCheckpointRecord {
+            checkpoint_index: index,
+            sbar_id: sbar_id.to_owned(),
+            ts_event: sbar_id.to_owned(),
+            record_kind: "Full".into(),
+            state_data: canonical_structure_state(structure)?,
+            diagnostics: canonical_diagnostics_json(diagnostics)?,
+        };
+        let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
+        let tx = connection.transaction().map_err(|e| format!("Begin checkpoint transaction: {e}"))?;
+        tx.execute("INSERT INTO snapshot_checkpoints(checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics)
+                    VALUES(?1,?2,?3,?4,?5,?6)",
+            params![
+                i64::try_from(index).map_err(|_| "Checkpoint index exceeds SQLite INTEGER range")?,
+                record.sbar_id, record.ts_event, record.record_kind, record.state_data, record.diagnostics
+            ]).map_err(|e| format!("Insert checkpoint: {e}"))?;
+        manifest.checkpoint_count = index + 1;
+        tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
+            .map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
+        tx.commit().map_err(|e| format!("Commit checkpoint transaction: {e}"))?;
+        self.checkpoints.push(record);
+        self.manifest = Some(manifest);
+        Ok(())
     }
 
     #[cfg(test)]
@@ -312,63 +385,20 @@ impl CheckpointSink for SnapshotWriter {
         Ok(())
     }
 
-    fn commit_checkpoint(&mut self, index: usize, sbar_id: &str,
-        projection: &ReplayCheckpointProjection) -> Result<(), String> {
-        let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
-        if manifest.status != STATUS_RECORDING {
-            return Err(format!("Cannot append checkpoint to Snapshot in {}", manifest.status));
-        }
-        if index != self.checkpoints.len() {
-            return Err(format!("Expected checkpoint index {}, got {index}", self.checkpoints.len()));
-        }
-        let expected_sbar_id = self.input.bar_ids.get(index)
-            .ok_or_else(|| format!("Checkpoint index {index} exceeds the fixed input sequence"))?;
-        if sbar_id != expected_sbar_id {
-            return Err(format!(
-                "Checkpoint SBar ID does not match fixed input at index {index}: expected={expected_sbar_id}, actual={sbar_id}"
-            ));
-        }
-        if projection.state_key != self.input.state_key {
-            return Err(format!(
-                "Checkpoint StruxisStateKey mismatch: expected={}, actual={}",
-                self.input.state_key, projection.state_key
-            ));
-        }
-        if projection.last_ts_event.as_deref() != Some(sbar_id) {
-            return Err("Checkpoint projection SBar ID mismatch".into());
-        }
-        for diagnostic in &projection.diagnostics {
-            if diagnostic.checkpoint_index != Some(index) {
-                return Err(format!(
-                    "Checkpoint diagnostic index mismatch at checkpoint {index}: expected Some({index}), actual={:?}",
-                    diagnostic.checkpoint_index
-                ));
-            }
-        }
-        let record = SnapshotCheckpointRecord {
-            checkpoint_index: index,
-            sbar_id: sbar_id.to_owned(),
-            ts_event: sbar_id.to_owned(),
-            record_kind: "Full".into(),
-            state_data: canonical_structure_state(projection.structure.as_ref())?,
-            diagnostics: canonical_diagnostics_json(&projection.diagnostics)?,
-        };
-        let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
-        let tx = connection.transaction().map_err(|e| format!("Begin checkpoint transaction: {e}"))?;
-        tx.execute("INSERT INTO snapshot_checkpoints(checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics)
-                    VALUES(?1,?2,?3,?4,?5,?6)",
-            params![
-                i64::try_from(index).map_err(|_| "Checkpoint index exceeds SQLite INTEGER range")?,
-                record.sbar_id, record.ts_event, record.record_kind, record.state_data, record.diagnostics
-            ]).map_err(|e| format!("Insert checkpoint: {e}"))?;
-        manifest.checkpoint_count = index + 1;
-        tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
-            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
-            .map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
-        tx.commit().map_err(|e| format!("Commit checkpoint transaction: {e}"))?;
-        self.checkpoints.push(record);
-        self.manifest = Some(manifest);
-        Ok(())
+    fn commit_checkpoint(
+        &mut self,
+        index: usize,
+        sbar_id: &str,
+        projection: &ReplayCheckpointProjection,
+    ) -> Result<(), String> {
+        self.commit_checkpoint_payload(
+            index,
+            sbar_id,
+            &projection.state_key,
+            projection.last_ts_event.as_deref(),
+            projection.structure.as_ref(),
+            &projection.diagnostics,
+        )
     }
 
     fn finalize(&mut self, state: &RunState) -> Result<(), String> {
