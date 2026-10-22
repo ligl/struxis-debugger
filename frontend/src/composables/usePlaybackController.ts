@@ -16,6 +16,7 @@ export function usePlaybackController(
   runError: Readonly<Ref<string>>,
   executeRunCommand: (command: RunCommand) => Promise<void>,
   refreshReplayInspector: () => Promise<void>,
+  onRunCompleted: () => void = () => undefined,
 ) {
   const playbackStatus = ref<PlaybackStatus>("idle");
   const playbackDelayMs = ref(100);
@@ -57,6 +58,7 @@ export function usePlaybackController(
         if (runError.value) break;
 
         const after = runState.value;
+        if (after?.status === "completed") onRunCompleted();
         if (!after || TERMINAL_RUN_STATES.has(after.status)) break;
         if (playbackStatus.value !== "playing") break;
         await waitBetweenSteps();
