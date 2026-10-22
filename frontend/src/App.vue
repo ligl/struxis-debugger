@@ -240,6 +240,11 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   if (command === "step" || command === "start" || command === "restart") {
     await refreshReplayInspector();
   }
+  if (runState.value?.status === "completed") {
+    // Snapshot publication is a separate lifecycle event; never await catalog
+    // discovery as part of the Step / Playback completion path.
+    void refreshSnapshots();
+  }
 }
 
 const {
@@ -249,7 +254,14 @@ const {
   pauseAndWait: pausePlayback,
   stopAndWait: stopPlayback,
   setPlaybackDelay,
-} = usePlaybackController(runState, runBusy, runError, executeRunCommand, refreshReplayInspector);
+} = usePlaybackController(
+  runState,
+  runBusy,
+  runError,
+  executeRunCommand,
+  refreshReplayInspector,
+  () => { void refreshSnapshots(); },
+);
 
 const canControlPlaybackShortcut = computed(() =>
   workspaceMode.value === "replay" &&
