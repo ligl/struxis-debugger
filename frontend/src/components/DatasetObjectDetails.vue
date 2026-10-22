@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ReplayInspectorCBarDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
+import type { OriginObjectSelection, ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
 import { formatInspectorValue } from "../inspector-format";
@@ -10,7 +10,21 @@ const props = defineProps<{
   selectedSwing: ReplayInspectorSwingDto | null;
   originDatasetId: string | null;
   timeframe: string | null;
+  bars: SBarDto[];
+  structure: ReplayInspectorStructureDto | null;
 }>();
+
+const emit = defineEmits<{
+  selectObject: [selection: OriginObjectSelection];
+}>();
+
+function selectRelatedObject(kind: OriginObjectSelection["kind"], id: string): void {
+  if (!props.originDatasetId) return;
+  if (kind === "sbar" && !props.bars.some((bar) => bar.sbarId === id)) return;
+  if (kind === "cbar" && !props.structure?.cbars.some((cbar) => cbar.cbarId === id)) return;
+  if (kind === "swing" && !props.structure?.swings.some((swing) => swing.swingId === id)) return;
+  emit("selectObject", { kind, id, originDatasetId: props.originDatasetId } as OriginObjectSelection);
+}
 
 function formatReplayField(field: string, value: unknown): string {
   if (field === "tsEvent" || field === "tsInit") {
@@ -70,6 +84,20 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue(selectedCbar.fractalType)" :copy-value="formatInspectorValue(selectedCbar.fractalType)" :test-id="'inspector-cbar-fractalType'" />
         <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', selectedCbar.createdAt)" :copy-value="selectedCbar.createdAt" :test-id="'inspector-cbar-createdAt'" />
       </dl>
+      <section class="inspector-related" data-testid="inspector-related-objects">
+        <p class="section-index">RELATED OBJECTS</p>
+        <button
+          v-for="endpoint in [
+            { label: "Start SBar", id: selectedCbar.sbarStartId },
+            { label: "End SBar", id: selectedCbar.sbarEndId },
+          ].filter((item) => bars.some((bar) => bar.sbarId === item.id))"
+          :key="endpoint.label"
+          type="button"
+          class="inspector-related-link"
+          :data-testid="'inspector-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
+          @click="selectRelatedObject('sbar', endpoint.id)"
+        >{{ endpoint.label }} <code>{{ endpoint.id }}</code></button>
+      </section>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
     <template v-else-if="selectedSwing">
@@ -97,6 +125,24 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', selectedSwing.createdAt)" :copy-value="selectedSwing.createdAt" :test-id="'inspector-swing-createdAt'" />
         <InspectorPropertyField label="Updated At" :value="formatReplayField('updatedAt', selectedSwing.updatedAt)" :copy-value="selectedSwing.updatedAt" :test-id="'inspector-swing-updatedAt'" />
       </dl>
+      <section class="inspector-related" data-testid="inspector-related-objects">
+        <p class="section-index">RELATED OBJECTS</p>
+        <button
+          v-for="endpoint in [
+            { kind: "cbar" as const, label: "Start CBar", id: selectedSwing.cbarStartId },
+            { kind: "cbar" as const, label: "End CBar", id: selectedSwing.cbarEndId },
+            { kind: "sbar" as const, label: "Start SBar", id: selectedSwing.sbarStartId },
+            { kind: "sbar" as const, label: "End SBar", id: selectedSwing.sbarEndId },
+          ].filter((item) => item.kind === "cbar"
+            ? structure?.cbars.some((cbar) => cbar.cbarId === item.id)
+            : bars.some((bar) => bar.sbarId === item.id))"
+          :key="endpoint.label"
+          type="button"
+          class="inspector-related-link"
+          :data-testid="'inspector-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
+          @click="selectRelatedObject(endpoint.kind, endpoint.id)"
+        >{{ endpoint.label }} <code>{{ endpoint.id }}</code></button>
+      </section>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
     <div v-else class="inspector-empty" data-testid="inspector-empty">
@@ -106,3 +152,48 @@ function formatReplayField(field: string, value: unknown): string {
       <small>Authoritative Origin data only</small>
     </div>
 </template>
+
+
+<style scoped>
+.inspector-related {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #252c32;
+}
+
+.inspector-related .section-index {
+  margin: 0 0 3px;
+}
+
+.inspector-related-link {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 6px;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  background: #171c20;
+  color: #aeb8bf;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inspector-related-link:hover {
+  border-color: #596873;
+  background: #20272d;
+  color: #e3e8eb;
+}
+
+.inspector-related-link code {
+  min-width: 0;
+  overflow: hidden;
+  color: #c5cdd2;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>
