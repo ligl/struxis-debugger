@@ -16,6 +16,7 @@ import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelect
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
+import { useCompareWorkspace } from "./composables/useCompareWorkspace";
 import { useOriginLoad } from "./composables/useOriginLoad";
 import { useTestDataset } from "./composables/useTestDataset";
 import { useRunControl } from "./composables/useRunControl";
@@ -49,12 +50,15 @@ const {
   snapshots,
   snapshotsLoading,
   snapshotsError,
+  refreshSnapshots,
+} = useSnapshots();
+
+const {
   compareResult,
   compareLoading,
   compareError,
   runCompare,
-  refreshSnapshots,
-} = useSnapshots();
+} = useCompareWorkspace();
 
 const {
   runState,
