@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ReplayInspectorDto } from "../origin-types";
 import { formatDomainTimestamp } from "../timestamp-format";
+import InspectorPropertyField from "./InspectorPropertyField.vue";
 
 defineProps<{
   replayInspector: ReplayInspectorDto;
@@ -18,18 +19,9 @@ defineProps<{
         <span class="inspector-object-kind">BACKEND</span>
       </div>
       <dl class="inspector-fields">
-        <div class="inspector-field inspector-field-wide">
-          <dt>State Key</dt>
-          <dd><code>{{ replayInspector.stateKey }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Checkpoint</dt>
-          <dd><code data-testid="inspector-replay-checkpoint">{{ replayInspector.checkpointIndex }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Confirmed SBar ID</dt>
-          <dd><code data-testid="inspector-replay-sbar-id">{{ replayInspector.sbarId }}</code></dd>
-        </div>
+        <InspectorPropertyField label="State Key" :value="replayInspector.stateKey" wide />
+        <InspectorPropertyField label="Checkpoint" :value="String(replayInspector.checkpointIndex)" test-id="inspector-replay-checkpoint" />
+        <InspectorPropertyField label="Confirmed SBar ID" :value="replayInspector.sbarId" test-id="inspector-replay-sbar-id" wide />
       </dl>
       <div class="inspector-subsection">
         <p class="section-index">CONFIRMED SBAR</p>
@@ -44,27 +36,15 @@ defineProps<{
       <div class="inspector-subsection" data-testid="inspector-replay-sbar-times">
         <p class="section-index">CONFIRMED SBAR TIMES · UTC</p>
         <dl class="inspector-fields">
-          <div class="inspector-field inspector-field-wide">
-            <dt>Event Time · UTC</dt>
-            <dd><code data-testid="inspector-replay-ts-event" :data-copy-value="replayInspector.sbar.tsEvent">{{ formatDomainTimestamp(replayInspector.sbar.tsEvent, timeframe) }}</code></dd>
-          </div>
-          <div class="inspector-field inspector-field-wide">
-            <dt>Init Time · UTC</dt>
-            <dd><code data-testid="inspector-replay-ts-init" :data-copy-value="replayInspector.sbar.tsInit">{{ formatDomainTimestamp(replayInspector.sbar.tsInit, timeframe) }}</code></dd>
-          </div>
+          <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp(replayInspector.sbar.tsEvent, timeframe)" :copy-value="replayInspector.sbar.tsEvent" test-id="inspector-replay-ts-event" wide />
+          <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp(replayInspector.sbar.tsInit, timeframe)" :copy-value="replayInspector.sbar.tsInit" test-id="inspector-replay-ts-init" wide />
         </dl>
       </div>
       <div v-if="replayInspector.structure" class="inspector-subsection" data-testid="inspector-replay-related-objects">
         <p class="section-index">RELATED OBJECTS</p>
         <dl class="inspector-fields">
-          <div class="inspector-field">
-            <dt>CBar Series</dt>
-            <dd><code data-testid="inspector-replay-cbar-count">{{ replayInspector.structure.cbarCount }}</code></dd>
-          </div>
-          <div class="inspector-field">
-            <dt>Swing Series</dt>
-            <dd><code data-testid="inspector-replay-swing-count">{{ replayInspector.structure.swingCount }}</code></dd>
-          </div>
+          <InspectorPropertyField label="CBar Series" :value="String(replayInspector.structure.cbarCount)" test-id="inspector-replay-cbar-count" />
+          <InspectorPropertyField label="Swing Series" :value="String(replayInspector.structure.swingCount)" test-id="inspector-replay-swing-count" />
         </dl>
         <p class="inspector-provenance">Structure counts are from the backend-confirmed checkpoint. Select a structure object on a chart when that chart exposes its authoritative geometry.</p>
       </div>
