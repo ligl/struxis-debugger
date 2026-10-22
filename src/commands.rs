@@ -104,6 +104,19 @@ pub(crate) async fn list_snapshots(state: State<'_, AppState>) -> Result<Vec<Sna
 }
 
 #[tauri::command]
+pub(crate) async fn save_run_snapshot(
+    state: State<'_, AppState>,
+) -> Result<String, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.save_run_snapshot())
+        .await
+        .map_err(|error| IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Run Snapshot save worker failed: {error}"),
+        ))?
+}
+
+#[tauri::command]
 pub(crate) async fn compare_snapshots(
     baseline_snapshot_id: String,
     candidate_snapshot_id: String,
