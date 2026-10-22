@@ -447,16 +447,6 @@ impl WorkerSession {
         })
     }
 
-    fn play(&mut self) -> Result<RunState, String> {
-        self.state.play()?;
-        Ok(self.state.clone())
-    }
-
-    fn pause(&mut self) -> Result<RunState, String> {
-        self.state.pause()?;
-        Ok(self.state.clone())
-    }
-
     /// Stops at the current safe boundary and releases the runtime.
     ///
     /// If the final checkpoint has already committed, Completed takes
@@ -488,10 +478,8 @@ impl WorkerSession {
     fn step(
         &mut self,
         sink: &mut dyn CheckpointSink,
-        continuous_play: bool,
     ) -> Result<RunState, String> {
-        let allowed = step_allowed(self.state.status, continuous_play);
-        if !allowed {
+        if !matches!(self.state.status, RunStatus::Ready | RunStatus::Paused) {
             return Err(format!(
                 "Step is invalid while Run {} is {:?}",
                 self.state.run_id, self.state.status
@@ -594,50 +582,20 @@ impl WorkerSession {
     }
 }
 
-/// The caller chooses the execution mode; the mode does not weaken the
-/// state machine's permissions.
-fn step_allowed(status: RunStatus, continuous_play: bool) -> bool {
-    if continuous_play {
-        status == RunStatus::Running
-    } else {
-        matches!(status, RunStatus::Ready | RunStatus::Paused)
-    }
-}
-
+/// The worker is command-driven only. It never advances SBar state unless a
+/// single Step command has been received; continuous Play is frontend-owned.
 fn worker_loop(
     mut session: WorkerSession,
     mut sink: Box<dyn CheckpointSink>,
     commands: Receiver<WorkerCommand>,
 ) {
     loop {
-        let command = if session.state.status == RunStatus::Running {
-            match commands.try_recv() {
-                Ok(command) => Some(command),
-                Err(mpsc::TryRecvError::Empty) => {
-                    if let Err(error) = session.step(sink.as_mut(), true) {
-                        if session.state.status != RunStatus::Failed {
-                            let _ = session.state.fail(error);
-                        }
-                    }
-                    None
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    let _ = session.dispose();
-                    return;
-                }
+        let command = match commands.recv() {
+            Ok(command) => command,
+            Err(_) => {
+                let _ = session.dispose();
+                return;
             }
-        } else {
-            match commands.recv() {
-                Ok(command) => Some(command),
-                Err(_) => {
-                    let _ = session.dispose();
-                    return;
-                }
-            }
-        };
-
-        let Some(command) = command else {
-            continue;
         };
         match command {
             WorkerCommand::GetState(reply) => {
@@ -647,13 +605,17 @@ fn worker_loop(
                 let _ = reply.send(session.latest_inspector.clone());
             }
             WorkerCommand::Step(reply) => {
-                let _ = reply.send(session.step(sink.as_mut(), false));
+                let _ = reply.send(session.step(sink.as_mut()));
             }
             WorkerCommand::Play(reply) => {
-                let _ = reply.send(session.play());
+                let _ = reply.send(Err(
+                    "Play is frontend-owned; use serialized Step commands".to_owned(),
+                ));
             }
             WorkerCommand::Pause(reply) => {
-                let _ = reply.send(session.pause());
+                let _ = reply.send(Err(
+                    "Pause is frontend-owned; stop scheduling further Step commands".to_owned(),
+                ));
             }
             WorkerCommand::Stop(reply) => {
                 let result = session.stop();
