@@ -781,7 +781,7 @@ mod tests {
 
     #[test]
     fn play_and_pause_are_rejected_without_touching_worker_transport() {
-        let (commands, _receiver) = mpsc::sync_channel(0);
+        let (commands, receiver) = mpsc::sync_channel(0);
         let join = std::thread::spawn(|| {});
         let mut worker = ReplayWorker {
             commands,
@@ -798,7 +798,9 @@ mod tests {
         assert!(pause_error.contains("Pause is frontend-owned"));
         assert!(worker.join.is_some(), "rejected Pause must not reap the worker");
 
-        // Drop performs the ordinary best-effort cleanup of the still-owned worker.
+        // Ensure Drop's best-effort Dispose send cannot block on this test's
+        // deliberately non-consuming rendezvous receiver.
+        drop(receiver);
     }
 
     #[test]
