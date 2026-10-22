@@ -2117,6 +2117,11 @@ body { background: var(--dbg-bg); }
   border-radius: 0;
   background: #15191d;
 }
+
+/* Let an open Diagnostics dock menu escape the panel's normal clipping. */
+.diagnostics-dock:has(.dock-menu[open]) {
+  overflow: visible;
+}
 .diagnostics-heading {
   min-height: 36px;
   height: 36px;
