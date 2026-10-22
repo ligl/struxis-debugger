@@ -6,7 +6,6 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub(crate) enum RunStatus {
     Ready,
-    Running,
     Paused,
     Completed,
     Failed,
@@ -48,31 +47,11 @@ impl RunState {
         })
     }
 
-    pub(crate) fn play(&mut self) -> Result<(), String> {
-        match self.status {
-            RunStatus::Ready | RunStatus::Paused => {
-                self.status = RunStatus::Running;
-                Ok(())
-            }
-            status => Err(self.invalid_transition("Play", status)),
-        }
-    }
-
-    pub(crate) fn pause(&mut self) -> Result<(), String> {
-        match self.status {
-            RunStatus::Running => {
-                self.status = RunStatus::Paused;
-                Ok(())
-            }
-            status => Err(self.invalid_transition("Pause", status)),
-        }
-    }
-
     /// Call only after Strategy/Struxis processing and checkpoint commit succeed.
     pub(crate) fn confirm_checkpoint(&mut self, sbar_id: String) -> Result<(), String> {
         if !matches!(
             self.status,
-            RunStatus::Ready | RunStatus::Running | RunStatus::Paused
+            RunStatus::Ready | RunStatus::Paused
         ) {
             return Err(self.invalid_transition("ConfirmCheckpoint", self.status));
         }
@@ -84,7 +63,7 @@ impl RunState {
         self.cursor_sbar_id = Some(sbar_id);
         if self.processed_count == self.input_count {
             self.status = RunStatus::Completed;
-        } else if self.status != RunStatus::Running {
+        } else {
             self.status = RunStatus::Paused;
         }
         Ok(())
@@ -142,17 +121,6 @@ mod tests {
     }
 
     #[test]
-    fn play_remains_running_until_last_checkpoint() {
-        let mut run = ready(2);
-        run.play().unwrap();
-        run.confirm_checkpoint("100".into()).unwrap();
-        assert_eq!(run.status, RunStatus::Running);
-        run.confirm_checkpoint("200".into()).unwrap();
-        assert_eq!(run.status, RunStatus::Completed);
-        assert_eq!(run.processed_count, 2);
-    }
-
-    #[test]
     fn rejected_checkpoint_does_not_advance_progress() {
         let mut run = ready(1);
         assert!(run.confirm_checkpoint(String::new()).is_err());
@@ -160,16 +128,6 @@ mod tests {
         assert!(run.confirm_checkpoint("100".into()).is_ok());
         assert!(run.confirm_checkpoint("200".into()).is_err());
         assert_eq!(run.processed_count, 1);
-    }
-
-    #[test]
-    fn running_run_cannot_be_disposed() {
-        let mut run = ready(2);
-        run.play().unwrap();
-        assert!(run.dispose().is_err());
-        run.pause().unwrap();
-        run.dispose().unwrap();
-        assert_eq!(run.status, RunStatus::Disposed);
     }
 
     #[test]
@@ -204,6 +162,5 @@ mod tests {
         assert_eq!(run.status, RunStatus::Failed);
         assert_eq!(run.processed_count, 1);
         assert_eq!(run.cursor_sbar_id.as_deref(), Some("100"));
-        assert!(run.play().is_err());
     }
 }
