@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
+import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
+import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
 import type { ObjectDifferenceDto, ReplayInspectorCBarDto, ReplayInspectorDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
-import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
+
 
 const props = defineProps<{
   selectedSbar: SBarDto | null;
@@ -38,22 +40,6 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
   }
 }
 
-function formatValue(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "—";
-  if (typeof value === "string") return value;
-  return JSON.stringify(value) ?? String(value);
-}
-
-function formatReplayField(field: string, value: unknown): string {
-  if (field === "tsEvent" || field === "tsInit") {
-    return formatDomainTimestamp(value == null ? null : String(value), props.timeframe);
-  }
-  if (field === "createdAt" || field === "updatedAt") {
-    return formatLifecycleTimestamp(value == null ? null : String(value));
-  }
-  return formatValue(value);
-}
 </script>
 
 <template>
@@ -77,119 +63,18 @@ function formatReplayField(field: string, value: unknown): string {
       />
     </template>
     <template v-else-if="workspaceMode === 'compare' && selectedDifference">
-      <div class="inspector-object-heading">
-        <div>
-          <p class="section-index">SELECTED COMPARE DIFFERENCE</p>
-          <h3>{{ selectedDifference.objectType }}</h3>
-        </div>
-        <span class="inspector-object-kind" :class="'difference-kind-' + selectedDifference.kind">{{ selectedDifference.kind.toUpperCase() }}</span>
-      </div>
-      <dl class="inspector-fields">
-        <div class="inspector-field inspector-field-wide">
-          <dt>Domain Object ID</dt>
-          <dd><code data-testid="inspector-difference-object-id" :title="selectedDifference.objectId">{{ selectedDifference.objectId }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Baseline Snapshot</dt>
-          <dd><code data-testid="inspector-baseline-snapshot">{{ compareBaselineSnapshotId ?? "—" }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Candidate Snapshot</dt>
-          <dd><code data-testid="inspector-candidate-snapshot">{{ compareCandidateSnapshotId ?? "—" }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Object Type</dt>
-          <dd><code>{{ selectedDifference.objectType }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Change</dt>
-          <dd><code>{{ selectedDifference.kind.toUpperCase() }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Checkpoint</dt>
-          <dd><code data-testid="inspector-difference-checkpoint">{{ selectedDifference.checkpointIndex }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Anchor SBar ID</dt>
-          <dd><code data-testid="inspector-difference-sbar-id">{{ selectedDifference.sbarId }}</code></dd>
-        </div>
-      </dl>
-      <div class="inspector-subsection">
-        <p class="section-index">PROPERTY DELTAS</p>
-        <div v-if="selectedDifference.properties.length" class="inspector-difference-properties" data-testid="inspector-difference-properties">
-          <div v-for="property in selectedDifference.properties" :key="property.field" class="inspector-difference-property">
-            <strong>{{ property.field }}</strong>
-            <div class="inspector-difference-values">
-              <div><span>BASELINE</span><code>{{ formatValue(property.baselineValue) }}</code></div>
-              <div><span>CANDIDATE</span><code>{{ formatValue(property.candidateValue) }}</code></div>
-            </div>
-          </div>
-        </div>
-        <p v-else class="empty-state">No property deltas were supplied for this difference.</p>
-      </div>
-      <p class="inspector-provenance">Checkpoint and property values are read from the validated Snapshot Compare result. The Inspector does not reconstruct either Snapshot's domain state.</p>
+      <CompareDifferenceDetails
+        :selected-difference="selectedDifference"
+        :compare-baseline-snapshot-id="compareBaselineSnapshotId"
+        :compare-candidate-snapshot-id="compareCandidateSnapshotId"
+      />
     </template>
 
     <template v-else-if="workspaceMode === 'replay' && replayInspector">
-      <div class="inspector-object-heading">
-        <div>
-          <p class="section-index">CONFIRMED REPLAY CHECKPOINT</p>
-          <h3>Struxis State</h3>
-        </div>
-        <span class="inspector-object-kind">BACKEND</span>
-      </div>
-      <dl class="inspector-fields">
-        <div class="inspector-field inspector-field-wide">
-          <dt>State Key</dt>
-          <dd><code>{{ replayInspector.stateKey }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Checkpoint</dt>
-          <dd><code data-testid="inspector-replay-checkpoint">{{ replayInspector.checkpointIndex }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Confirmed SBar ID</dt>
-          <dd><code data-testid="inspector-replay-sbar-id">{{ replayInspector.sbarId }}</code></dd>
-        </div>
-      </dl>
-      <div class="inspector-subsection">
-        <p class="section-index">CONFIRMED SBAR</p>
-        <dl class="inspector-market-grid">
-          <div><dt>OPEN</dt><dd>{{ replayInspector.sbar.open }}</dd></div>
-          <div><dt>HIGH</dt><dd>{{ replayInspector.sbar.high }}</dd></div>
-          <div><dt>LOW</dt><dd>{{ replayInspector.sbar.low }}</dd></div>
-          <div><dt>CLOSE</dt><dd>{{ replayInspector.sbar.close }}</dd></div>
-          <div class="inspector-volume"><dt>VOLUME</dt><dd>{{ replayInspector.sbar.volume }}</dd></div>
-        </dl>
-      </div>
-      <div class="inspector-subsection" data-testid="inspector-replay-sbar-times">
-        <p class="section-index">CONFIRMED SBAR TIMES · UTC</p>
-        <dl class="inspector-fields">
-          <div class="inspector-field inspector-field-wide">
-            <dt>Event Time · UTC</dt>
-            <dd><code data-testid="inspector-replay-ts-event" :data-copy-value="replayInspector.sbar.tsEvent">{{ formatDomainTimestamp(replayInspector.sbar.tsEvent, timeframe) }}</code></dd>
-          </div>
-          <div class="inspector-field inspector-field-wide">
-            <dt>Init Time · UTC</dt>
-            <dd><code data-testid="inspector-replay-ts-init" :data-copy-value="replayInspector.sbar.tsInit">{{ formatDomainTimestamp(replayInspector.sbar.tsInit, timeframe) }}</code></dd>
-          </div>
-        </dl>
-      </div>
-      <div v-if="replayInspector.structure" class="inspector-subsection" data-testid="inspector-replay-related-objects">
-        <p class="section-index">RELATED OBJECTS</p>
-        <dl class="inspector-fields">
-          <div class="inspector-field">
-            <dt>CBar Series</dt>
-            <dd><code data-testid="inspector-replay-cbar-count">{{ replayInspector.structure.cbarCount }}</code></dd>
-          </div>
-          <div class="inspector-field">
-            <dt>Swing Series</dt>
-            <dd><code data-testid="inspector-replay-swing-count">{{ replayInspector.structure.swingCount }}</code></dd>
-          </div>
-        </dl>
-        <p class="inspector-provenance">Structure counts are from the backend-confirmed checkpoint. Select a structure object on a chart when that chart exposes its authoritative geometry.</p>
-      </div>
-      <p class="inspector-provenance">SBar and structure values are read from the latest backend-confirmed Struxis checkpoint. The UI does not infer or mutate structure state.</p>
+      <ReplayCheckpointSummary
+        :replay-inspector="replayInspector"
+        :timeframe="timeframe"
+      />
     </template>
     <div v-else-if="workspaceMode === 'replay' && replayInspectorError" class="inspector-empty" data-testid="inspector-replay-error">
       <h3>Replay Inspector unavailable</h3>
