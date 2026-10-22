@@ -61,14 +61,14 @@ function formatReplayField(field: string, value: unknown): string {
         <span class="inspector-object-kind">STRUCTURE</span>
       </div>
       <dl class="inspector-fields">
-        <InspectorPropertyField
-          v-for="(value, field) in selectedCbar"
-          :key="field"
-          :label="String(field)"
-          :value="formatReplayField(String(field), value)"
-          :test-id="'inspector-cbar-' + String(field)"
-          :copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)"
-        />
+        <InspectorPropertyField label="CBar ID" :value="selectedCbar.cbarId" :test-id="'inspector-cbar-cbarId'" />
+        <InspectorPropertyField label="High" :value="selectedCbar.high" :test-id="'inspector-cbar-high'" />
+        <InspectorPropertyField label="Low" :value="selectedCbar.low" :test-id="'inspector-cbar-low'" />
+        <InspectorPropertyField label="SBar Start ID" :value="selectedCbar.sbarStartId" :test-id="'inspector-cbar-sbarStartId'" />
+        <InspectorPropertyField label="SBar End ID" :value="selectedCbar.sbarEndId" :test-id="'inspector-cbar-sbarEndId'" />
+        <InspectorPropertyField label="Span SBars" :value="String(selectedCbar.spanSbars)" :test-id="'inspector-cbar-spanSbars'" />
+        <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue(selectedCbar.fractalType)" :copy-value="formatInspectorValue(selectedCbar.fractalType)" :test-id="'inspector-cbar-fractalType'" />
+        <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', selectedCbar.createdAt)" :copy-value="selectedCbar.createdAt" :test-id="'inspector-cbar-createdAt'" />
       </dl>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
@@ -81,14 +81,21 @@ function formatReplayField(field: string, value: unknown): string {
         <span class="inspector-object-kind">{{ selectedSwing.state.toUpperCase() }}</span>
       </div>
       <dl class="inspector-fields">
-        <InspectorPropertyField
-          v-for="(value, field) in selectedSwing"
-          :key="field"
-          :label="String(field)"
-          :value="formatReplayField(String(field), value)"
-          :test-id="'inspector-swing-' + String(field)"
-          :copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)"
-        />
+        <InspectorPropertyField label="Swing ID" :value="selectedSwing.swingId" :test-id="'inspector-swing-swingId'" />
+        <InspectorPropertyField label="Direction" :value="selectedSwing.direction" :test-id="'inspector-swing-direction'" />
+        <InspectorPropertyField label="High" :value="selectedSwing.high" :test-id="'inspector-swing-high'" />
+        <InspectorPropertyField label="Low" :value="selectedSwing.low" :test-id="'inspector-swing-low'" />
+        <InspectorPropertyField label="CBar Start ID" :value="selectedSwing.cbarStartId" :test-id="'inspector-swing-cbarStartId'" />
+        <InspectorPropertyField label="CBar End ID" :value="selectedSwing.cbarEndId" :test-id="'inspector-swing-cbarEndId'" />
+        <InspectorPropertyField label="SBar Start ID" :value="selectedSwing.sbarStartId" :test-id="'inspector-swing-sbarStartId'" />
+        <InspectorPropertyField label="SBar End ID" :value="selectedSwing.sbarEndId" :test-id="'inspector-swing-sbarEndId'" />
+        <InspectorPropertyField label="Start OI" :value="formatInspectorValue(selectedSwing.startOi)" :test-id="'inspector-swing-startOi'" />
+        <InspectorPropertyField label="End OI" :value="formatInspectorValue(selectedSwing.endOi)" :test-id="'inspector-swing-endOi'" />
+        <InspectorPropertyField label="Volume" :value="selectedSwing.volume" :test-id="'inspector-swing-volume'" />
+        <InspectorPropertyField label="Span SBars" :value="String(selectedSwing.spanSbars)" :test-id="'inspector-swing-spanSbars'" />
+        <InspectorPropertyField label="State" :value="selectedSwing.state" :test-id="'inspector-swing-state'" />
+        <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', selectedSwing.createdAt)" :copy-value="selectedSwing.createdAt" :test-id="'inspector-swing-createdAt'" />
+        <InspectorPropertyField label="Updated At" :value="formatReplayField('updatedAt', selectedSwing.updatedAt)" :copy-value="selectedSwing.updatedAt" :test-id="'inspector-swing-updatedAt'" />
       </dl>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
