@@ -250,7 +250,7 @@ function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelec
     a.id.localeCompare(b.id),
   );
   const candidate = candidates[0];
-  return candidate ? { kind: candidate.kind, id: candidate.id } : null;
+  return candidate ? { kind: candidate.kind, id: candidate.id, originDatasetId: props.originDatasetId } : null;
 }
 
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
