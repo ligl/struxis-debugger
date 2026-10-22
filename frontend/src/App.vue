@@ -3,11 +3,9 @@ import { computed, onMounted, ref, watch } from "vue";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
-import CatalogPanel from "./components/CatalogPanel.vue";
-import OriginChart from "./components/OriginChart.vue";
-import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
 import Diagnostics from "./components/Diagnostics.vue";
+import DatasetWorkspace from "./components/DatasetWorkspace.vue";
 import ReplayWorkspace from "./components/ReplayWorkspace.vue";
 import CompareWorkspace from "./components/CompareWorkspace.vue";
 import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection } from "./origin-types";
@@ -308,62 +306,48 @@ onMounted(async () => {
             :class="{ 'dataset-workspace-content': workspaceMode === 'dataset' }"
             
           >
-            <div v-if="workspaceMode === 'dataset'" class="dataset-controls-host">
-              <TestDatasetPanel
-                :origin="origin"
-                :test-dataset="testDataset"
-                :start-sbar-id="startSbarId"
-                :end-sbar-id="endSbarId"
-                :range-selection-ready="rangeSelectionReady"
-                :range-selection-pending="rangeSelectionPendingStart !== null"
-                :selected-range-count="selectedRangeCount"
-                :range-selection-status="rangeSelectionStatus"
-                :test-loading="testLoading"
-                :can-mutate-test="canMutateTest"
-                :test-error="testError"
-                :test-status="testStatus"
-                @create="createSelectedTestDataset"
-              >
-                <template #source>
-                  <CatalogPanel
-                    :datasets="datasets"
-                    :selected-id="selectedId"
-                    :selected-dataset="selectedDataset"
-                    :instrument-groups="instrumentGroups"
-                    :refreshing="refreshing"
-                    :loading="loading"
-                    :mutation-busy="!canLoadOrigin"
-                    :discovery-error="discoveryError"
-                    :enable-structure="enableStructure"
-                    :origin="origin"
-                    :load-status="loadStatus"
-                    :load-error="loadError"
-                    :format-domain-timestamp="formatDomainTimestamp"
-                    @refresh="refreshDatasets"
-                    @select-dataset="selectedId = $event"
-                    @update:enable-structure="enableStructure = $event"
-                    @load="startLoad"
-                  />
-                </template>
-              </TestDatasetPanel>
-            </div>
-            <template v-if="origin && workspaceMode === 'dataset'">
-              <OriginChart
-                :bars="origin.bars"
-                :structure="origin.structure"
-                :origin-dataset-id="origin.originDatasetId"
-                :selected-object="selectedInspectorObject"
-                :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
-                :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
-                :selection-pending="rangeSelectionPendingStart !== null"
-                :selection-editable="canMutateTest && !testLoading"
-                @sbar-click="handleOriginSbarClick"
-                @object-click="handleOriginObjectClick"
-                @range-boundary-change="handleRangeBoundaryChange"
-                @selection-error="handleRangeSelectionError"
-                @cancel-range-selection="cancelOriginRangeSelection"
-              />
-            </template>
+            <DatasetWorkspace
+              :active="workspaceMode === 'dataset'"
+              :datasets="datasets"
+              :selected-id="selectedId"
+              :selected-dataset="selectedDataset"
+              :instrument-groups="instrumentGroups"
+              :refreshing="refreshing"
+              :loading="loading"
+              :mutation-busy="!canLoadOrigin"
+              :discovery-error="discoveryError"
+              :enable-structure="enableStructure"
+              :origin="origin"
+              :load-status="loadStatus"
+              :load-error="loadError"
+              :format-domain-timestamp="formatDomainTimestamp"
+              :test-dataset="testDataset"
+              :start-sbar-id="startSbarId"
+              :end-sbar-id="endSbarId"
+              :range-selection-ready="rangeSelectionReady"
+              :range-selection-pending="rangeSelectionPendingStart !== null"
+              :selected-range-count="selectedRangeCount"
+              :range-selection-status="rangeSelectionStatus"
+              :test-loading="testLoading"
+              :can-mutate-test="canMutateTest"
+              :test-error="testError"
+              :test-status="testStatus"
+              :selected-object="selectedInspectorObject"
+              :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
+              :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
+              :selection-pending="rangeSelectionPendingStart !== null"
+              :selection-editable="canMutateTest && !testLoading"
+              @refresh-catalog="refreshDatasets"
+              @select-dataset="selectedId = $event"
+              @update-enable-structure="enableStructure = $event"
+              @load-origin="startLoad"
+              @create-test-dataset="createSelectedTestDataset"
+              @sbar-click="handleOriginSbarClick"
+              @object-click="handleOriginObjectClick"
+              @range-boundary-change="handleRangeBoundaryChange"
+              @selection-error="handleRangeSelectionError"
+              @cancel-range-selection="cancelOriginRangeSelection"
+            />
             <ReplayWorkspace
               :active="workspaceMode === 'replay'"
               :origin="origin"
