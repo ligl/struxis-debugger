@@ -82,7 +82,7 @@ describe("useDockLayout", () => {
     const option = document.querySelector<HTMLButtonElement>('[data-testid="dock-menu-option"]')!;
     const outside = document.querySelector<HTMLButtonElement>('[data-testid="outside-target"]')!;
 
-    option.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    option.dispatchEvent(new Event("pointerdown", { bubbles: true }) as PointerEvent);
     expect(menu.open).toBe(true);
 
     outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
