@@ -27,6 +27,7 @@ import { useDockLayout } from "./composables/useDockLayout";
 import { useInspectorSelection } from "./composables/useInspectorSelection";
 import { useReplayInspector } from "./composables/useReplayInspector";
 import { useReplayKeyboardShortcut } from "./composables/useReplayKeyboardShortcut";
+import { useRunPolling } from "./composables/useRunPolling";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
 
 const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
@@ -246,8 +247,6 @@ const {
   startPanelResize, handlePanelResizeKey, inspectorWidthLimit, inspectorHeightLimit,
   diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
 } = useDockLayout();
-let runPollInterval: number | null = null;
-
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
 let originHandoffDuringStartup = false;
@@ -266,6 +265,7 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
 }
 
 useReplayKeyboardShortcut(runState, runBusy, handleRunCommand);
+useRunPolling(runState, runBusy, refreshRunState, refreshReplayInspector);
 
 async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
@@ -295,16 +295,6 @@ function handleDockMenuPointerDown(event: PointerEvent): void {
 
 onMounted(async () => {
   document.addEventListener("pointerdown", handleDockMenuPointerDown);
-  // RunState is the only progress authority exposed by the backend. Poll while
-  // the worker is running so the replay chart follows committed checkpoints.
-  runPollInterval = window.setInterval(() => {
-    if (runState.value?.status === "running" && !runBusy.value) {
-      void (async () => {
-        await refreshRunState(true);
-        await refreshReplayInspector();
-      })();
-    }
-  }, 250);
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
@@ -327,8 +317,6 @@ onUnmounted(() => {
   window.removeEventListener("click", dismissDevtoolsContextMenu);
   window.removeEventListener("keydown", dismissDevtoolsContextMenu);
   document.removeEventListener("pointerdown", handleDockMenuPointerDown);
-  if (runPollInterval !== null) window.clearInterval(runPollInterval);
-  runPollInterval = null;
 });
 </script>
 
