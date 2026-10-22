@@ -39,10 +39,12 @@ describe("Struxis Debugger native desktop", () => {
             refreshing: refresh instanceof HTMLButtonElement && refresh.disabled,
             hasSelect: select instanceof HTMLSelectElement,
             optionCount: select instanceof HTMLSelectElement ? select.options.length : 0,
+            firstOption: select instanceof HTMLSelectElement ? select.options[0]?.textContent?.trim() ?? "" : "",
             hasError: Boolean(error),
           };
         });
-        return state.hasSelect && !state.refreshing && (state.optionCount > 1 || state.hasError);
+        return state.hasSelect && !state.refreshing &&
+          (state.optionCount > 1 || state.hasError || state.firstOption === "NO STREAMS");
       },
       {
         timeout: 30_000,
