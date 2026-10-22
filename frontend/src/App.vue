@@ -14,7 +14,7 @@ import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
-import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayInspectorCBarDto, ReplayInspectorSwingDto, SnapshotArtifactDto } from "./origin-types";
+import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, SnapshotArtifactDto } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -24,6 +24,7 @@ import { useRunControl } from "./composables/useRunControl";
 import { useCatalogGroups } from "./composables/useCatalogGroups";
 import { useOriginRangeSelection } from "./composables/useOriginRangeSelection";
 import { useDockLayout } from "./composables/useDockLayout";
+import { useInspectorSelection } from "./composables/useInspectorSelection";
 import { getReplayInspector } from "./origin-bridge";
 import type { ReplayInspectorDto } from "./origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
@@ -117,7 +118,6 @@ const {
   resetForOrigin, initializeFromTestDataset,
 } = useOriginRangeSelection(origin, canMutateTest, testLoading);
 
-const selectedInspectorObject = ref<OriginObjectSelection | null>(null);
 const replayInspector = ref<ReplayInspectorDto | null>(null);
 const replayInspectorError = ref("");
 let replayInspectorLoading = false;
@@ -159,40 +159,14 @@ watch(compareResult, () => {
   selectedCompareDifferenceKey.value = null;
 });
 
-const selectedInspectorSbar = computed(() => {
-  const selection = selectedInspectorObject.value;
-  if (selection?.kind !== "sbar") return null;
-  return origin.value?.bars.find((bar) => bar.sbarId === selection.id) ?? null;
-});
-
-const selectedInspectorCbar = computed<ReplayInspectorCBarDto | null>(() => {
-  const selection = selectedInspectorObject.value;
-  if (selection?.kind !== "cbar") return null;
-  return origin.value?.structure?.cbars.find((cbar) => cbar.cbarId === selection.id) ?? null;
-});
-
-const selectedInspectorSwing = computed<ReplayInspectorSwingDto | null>(() => {
-  const selection = selectedInspectorObject.value;
-  if (selection?.kind !== "swing") return null;
-  return origin.value?.structure?.swings.find((swing) => swing.swingId === selection.id) ?? null;
-});
-
 function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>): void {
-  if (!origin.value || selection.originDatasetId !== origin.value.originDatasetId) return;
-  const exists = selection.kind === "cbar"
-    ? origin.value.structure?.cbars.some((cbar) => cbar.cbarId === selection.id)
-    : origin.value.structure?.swings.some((swing) => swing.swingId === selection.id);
-  if (!exists) return;
-  selectedInspectorObject.value = selection;
+  selectInspectorStructureObject(selection);
 }
 
 function handleOriginSbarClick(sbarId: string): void {
-  if (!origin.value) return;
-  if (origin.value.bars.some((bar) => bar.sbarId === sbarId)) {
-    selectedInspectorObject.value = { kind: "sbar", id: sbarId, originDatasetId: origin.value.originDatasetId };
-  }
   // Inspection remains available when mutation is blocked; the range module
   // independently enforces the Origin/Test Dataset/Run lifecycle guard.
+  selectInspectorSbar(sbarId);
   handleRangeSbarClick(sbarId);
 }
 
@@ -220,6 +194,16 @@ const { instrumentGroups } = useCatalogGroups(datasets);
 // Layout-only state: changing workspace or panel visibility never mutates domain state.
 type WorkspaceMode = "dataset" | "replay" | "compare";
 const workspaceMode = ref<WorkspaceMode>("dataset");
+
+const {
+  selectedInspectorObject,
+  selectedInspectorSbar,
+  selectedInspectorCbar,
+  selectedInspectorSwing,
+  selectSbar: selectInspectorSbar,
+  selectStructureObject: selectInspectorStructureObject,
+  clearSelection: clearInspectorSelection,
+} = useInspectorSelection(origin, workspaceMode);
 const inspectorContext = computed<InspectorWorkspaceContext>(() => {
   if (workspaceMode.value === "dataset") {
     const selectedObject = selectedInspectorSbar.value
@@ -262,11 +246,11 @@ watch(replayReferenceSnapshots, (available) => {
   }
 });
 watch(() => origin.value?.originDatasetId, () => {
-  selectedInspectorObject.value = null;
+  clearInspectorSelection();
 });
 
 watch(workspaceMode, (mode) => {
-  selectedInspectorObject.value = null;
+  clearInspectorSelection();
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
   if (mode === "replay") void refreshReplayInspector();
 });
@@ -302,7 +286,7 @@ async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
-    selectedInspectorObject.value = null;
+  clearInspectorSelection();
     resetForOrigin();
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
