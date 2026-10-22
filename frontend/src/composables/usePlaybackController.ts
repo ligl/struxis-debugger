@@ -52,7 +52,7 @@ export function usePlaybackController(
         if (!before || !["ready", "paused"].includes(before.status)) break;
 
         await executeRunCommand("step");
-        if (runError.value) break;
+        if (disposed || runError.value) break;
         await refreshReplayInspector();
         if (runError.value) break;
 
