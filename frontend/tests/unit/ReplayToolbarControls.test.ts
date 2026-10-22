@@ -18,6 +18,8 @@ function mountControls(overrides: Partial<{
   runState: RunStateDto | null;
   runBusy: boolean;
   runError: string;
+  playbackStatus: "idle" | "playing" | "paused";
+  playbackDelayMs: number;
   canStartRun: boolean;
   canRestartRun: boolean;
 }> = {}) {
@@ -26,6 +28,8 @@ function mountControls(overrides: Partial<{
       runState: readyRun,
       runBusy: false,
       runError: "",
+      playbackStatus: "idle",
+      playbackDelayMs: 100,
       canStartRun: false,
       canRestartRun: true,
       ...overrides,
@@ -46,16 +50,26 @@ describe("ReplayToolbarControls", () => {
     expect(wrapper.emitted("refresh")).toHaveLength(1);
   });
 
-  it("maps the Play/Pause control to the current Run status", async () => {
-    const paused = mountControls({ runState: { ...readyRun, status: "paused" } });
-    await paused.get('[data-testid="run-play-pause"]').trigger("click");
-    expect(paused.emitted("command")).toEqual([["play"]]);
-    expect(paused.get('[data-testid="run-play-pause"]').text()).toContain("PLAY");
+  it("maps Play/Pause to frontend playback state, independent of RunState", async () => {
+    const ready = mountControls();
+    await ready.get('[data-testid="run-play-pause"]').trigger("click");
+    expect(ready.emitted("command")).toEqual([["play"]]);
 
-    const running = mountControls({ runState: { ...readyRun, status: "running" } });
-    await running.get('[data-testid="run-play-pause"]').trigger("click");
-    expect(running.emitted("command")).toEqual([["pause"]]);
-    expect(running.get('[data-testid="run-play-pause"]').text()).toContain("PAUSE");
+    const playing = mountControls({
+      runBusy: true,
+      playbackStatus: "playing",
+    });
+    expect(playing.get('[data-testid="run-play-pause"]').attributes("disabled")).toBeUndefined();
+    await playing.get('[data-testid="run-play-pause"]').trigger("click");
+    expect(playing.emitted("command")).toEqual([["pause"]]);
+    expect(playing.get('[data-testid="run-play-pause"]').text()).toContain("PAUSE");
+  });
+
+  it("emits playback speed changes without issuing Run commands", async () => {
+    const wrapper = mountControls();
+    await wrapper.get('[data-testid="replay-speed"]').setValue("25");
+    expect(wrapper.emitted("setPlaybackDelay")).toEqual([[25]]);
+    expect(wrapper.emitted("command")).toBeUndefined();
   });
 
   it("preserves command gating, progress, status and error presentation", () => {
