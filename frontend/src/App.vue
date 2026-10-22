@@ -248,7 +248,21 @@ const {
   setPlaybackDelay,
 } = usePlaybackController(runState, runBusy, runError, executeRunCommand, refreshReplayInspector);
 
-useReplayKeyboardShortcut(playbackStatus, runBusy, handleRunCommand);
+const canControlPlaybackShortcut = computed(() =>
+  workspaceMode.value === "replay" &&
+  (playbackStatus.value === "playing" ||
+    Boolean(runState.value && ["ready", "paused"].includes(runState.value.status))),
+);
+watch(workspaceMode, (mode) => {
+  if (mode !== "replay") void pausePlayback();
+});
+
+useReplayKeyboardShortcut(
+  playbackStatus,
+  canControlPlaybackShortcut,
+  runBusy,
+  handleRunCommand,
+);
 
 async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
