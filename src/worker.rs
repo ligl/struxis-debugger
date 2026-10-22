@@ -31,7 +31,7 @@ use nautilus_model::{
 };
 
 use crate::{
-    checkpoint::{ReplayCheckpointProjection, ReplayInspectorProjection},
+    checkpoint::{OwnedCheckpoint, ReplayCheckpointProjection, ReplayInspectorProjection},
     effective_config::EffectiveStruxisConfig,
     replay::{LoadedInput, ReplayCommandGate, ReplayCommandKind},
     run::{RunState, RunStatus},
@@ -324,6 +324,7 @@ struct WorkerSession {
     state: RunState,
     next_index: usize,
     latest_inspector: Option<ReplayInspectorProjection>,
+    owned_checkpoints: Vec<OwnedCheckpoint>,
 }
 
 impl WorkerSession {
@@ -422,6 +423,7 @@ impl WorkerSession {
             state,
             next_index: 0,
             latest_inspector: None,
+            owned_checkpoints: Vec::with_capacity(config.input.bars.len()),
         })
     }
 
@@ -521,10 +523,17 @@ impl WorkerSession {
             return Err(diagnostic);
         }
 
-        self.state.confirm_checkpoint(bar.ts_event.to_string())?;
-        self.latest_inspector = Some(
-            projection.inspector_projection(self.next_index, &bar.ts_event.to_string())?,
-        );
+        let sbar_id = bar.ts_event.to_string();
+        let owned_checkpoint = OwnedCheckpoint::from_projection(
+            self.next_index,
+            &sbar_id,
+            &projection,
+        )?;
+        let inspector = projection.inspector_projection(self.next_index, &sbar_id)?;
+
+        self.state.confirm_checkpoint(sbar_id)?;
+        self.owned_checkpoints.push(owned_checkpoint);
+        self.latest_inspector = Some(inspector);
         self.next_index += 1;
 
         if self.state.status == RunStatus::Completed {
