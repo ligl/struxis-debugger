@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useReplayInspector } from "../../src/composables/useReplayInspector";
 import type { ReplayInspectorDto } from "../../src/origin-types";
 
-const { getReplayInspector } = vi.hoisted(() => ({
-  getReplayInspector: vi.fn(),
+const { invoke } = vi.hoisted(() => ({
+  invoke: vi.fn(),
 }));
 
-vi.mock("../../src/origin-bridge", () => ({ getReplayInspector }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
 const checkpoint: ReplayInspectorDto = {
   stateKey: "state-1",
@@ -29,11 +29,12 @@ describe("useReplayInspector", () => {
 
   it("loads the backend checkpoint and clears the previous error", async () => {
     const state = useReplayInspector();
-    getReplayInspector.mockResolvedValue(checkpoint);
+    invoke.mockResolvedValue(checkpoint);
 
     await state.refresh(true);
 
-    expect(getReplayInspector).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledWith("get_replay_inspector");
     expect(state.replayInspector.value).toEqual(checkpoint);
     expect(state.replayInspectorError.value).toBe("");
   });
@@ -45,14 +46,14 @@ describe("useReplayInspector", () => {
 
     await state.refresh(false);
 
-    expect(getReplayInspector).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
     expect(state.replayInspector.value).toBeNull();
     expect(state.replayInspectorError.value).toBe("");
   });
 
   it("surfaces backend errors as readable state and allows a later retry", async () => {
     const state = useReplayInspector();
-    getReplayInspector.mockRejectedValueOnce(new Error("backend unavailable"))
+    invoke.mockRejectedValueOnce(new Error("backend unavailable"))
       .mockResolvedValueOnce(checkpoint);
 
     await state.refresh(true);
@@ -67,7 +68,7 @@ describe("useReplayInspector", () => {
   it("does not issue overlapping reads while a read is in flight", async () => {
     const state = useReplayInspector();
     let resolveRead!: (value: ReplayInspectorDto) => void;
-    getReplayInspector.mockReturnValueOnce(new Promise<ReplayInspectorDto>((resolve) => {
+    invoke.mockReturnValueOnce(new Promise<ReplayInspectorDto>((resolve) => {
       resolveRead = resolve;
     }));
 
