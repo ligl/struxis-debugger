@@ -38,10 +38,9 @@ use crate::{
     run::{RunState, RunStatus},
 };
 
-/// The persistence boundary required before a checkpoint can advance progress.
-///
-/// Implementations must make `commit_checkpoint` atomic: an error means the
-/// checkpoint is not confirmed and Run progress must not advance.
+/// Legacy recording contract retained for isolated writer tests and internal
+/// compatibility paths. Production interactive Replay uses `spawn_interactive`
+/// with a volatile sink; SnapshotWriter is invoked only by explicit save.
 pub(crate) trait CheckpointSink: Send + 'static {
     fn initialize(
         &mut self,
