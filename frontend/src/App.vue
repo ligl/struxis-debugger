@@ -14,7 +14,7 @@ import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
-import type { ObjectDifferenceDto, OriginObjectSelection, ReplayInspectorCBarDto, ReplayInspectorSwingDto, SnapshotArtifactDto } from "./origin-types";
+import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayInspectorCBarDto, ReplayInspectorSwingDto, SnapshotArtifactDto } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -292,6 +292,38 @@ const { instrumentGroups } = useCatalogGroups(datasets);
 // Layout-only state: changing workspace or panel visibility never mutates domain state.
 type WorkspaceMode = "dataset" | "replay" | "compare";
 const workspaceMode = ref<WorkspaceMode>("dataset");
+const inspectorContext = computed<InspectorWorkspaceContext>(() => {
+  if (workspaceMode.value === "dataset") {
+    const selectedObject = selectedInspectorSbar.value
+      ? { kind: "sbar" as const, object: selectedInspectorSbar.value }
+      : selectedInspectorCbar.value
+        ? { kind: "cbar" as const, object: selectedInspectorCbar.value }
+        : selectedInspectorSwing.value
+          ? { kind: "swing" as const, object: selectedInspectorSwing.value }
+          : null;
+    return {
+      workspace: "dataset",
+      originDatasetId: origin.value?.originDatasetId ?? null,
+      timeframe: origin.value?.timeframe ?? null,
+      structureEnabled: origin.value?.enableStructure ?? false,
+      selectedObject,
+    };
+  }
+  if (workspaceMode.value === "replay") {
+    return {
+      workspace: "replay",
+      timeframe: testDataset.value?.timeframe ?? origin.value?.timeframe ?? null,
+      checkpoint: replayInspector.value,
+      error: replayInspectorError.value,
+    };
+  }
+  return {
+    workspace: "compare",
+    difference: selectedCompareDifference.value,
+    baselineSnapshotId: compareResult.value?.baseline.snapshotId ?? null,
+    candidateSnapshotId: compareResult.value?.candidate.snapshotId ?? null,
+  };
+});
 const replayReferenceSnapshots = computed(() =>
   snapshots.value.filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null),
 );
@@ -833,18 +865,7 @@ onUnmounted(() => {
         </div>
         <ObjectInspector
           v-if="!inspectorCollapsed"
-          :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
-          :selected-cbar="workspaceMode === 'dataset' ? selectedInspectorCbar : null"
-          :selected-swing="workspaceMode === 'dataset' ? selectedInspectorSwing : null"
-          :origin-dataset-id="origin?.originDatasetId ?? null"
-          :structure-enabled="origin?.enableStructure ?? false"
-          :timeframe="workspaceMode === 'replay' ? (testDataset?.timeframe ?? origin?.timeframe ?? null) : (origin?.timeframe ?? null)"
-          :workspace-mode="workspaceMode"
-          :replay-inspector="workspaceMode === 'replay' ? replayInspector : null"
-          :replay-inspector-error="replayInspectorError"
-          :selected-difference="workspaceMode === 'compare' ? selectedCompareDifference : null"
-          :compare-baseline-snapshot-id="compareResult?.baseline.snapshotId ?? null"
-          :compare-candidate-snapshot-id="compareResult?.candidate.snapshotId ?? null"
+          :context="inspectorContext"
         />
       </aside>
       <section data-testid="diagnostics-dock" class="diagnostics-dock" :class="['dock-' + diagnosticsDock, { collapsed: diagnosticsCollapsed }]">
