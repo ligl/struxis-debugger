@@ -591,12 +591,18 @@ describe("OriginChart", () => {
       },
     });
 
-    await wrapper.setProps({
-      selectedObject: {
-        kind: "sbar",
-        id: bars[2]!.sbarId,
-        originDatasetId: "origin-related-navigation",
-      },
+    // Vue Test Utils infers setProps from the mount overload and omits
+    // this script-setup prop from the wrapper's accepted type.
+    const setSelectedObject = (selectedObject: {
+      kind: "sbar";
+      id: string;
+      originDatasetId: string;
+    }) => wrapper.setProps({ selectedObject } as never);
+
+    await setSelectedObject({
+      kind: "sbar",
+      id: bars[2]!.sbarId,
+      originDatasetId: "origin-related-navigation",
     });
     await nextTick();
 
