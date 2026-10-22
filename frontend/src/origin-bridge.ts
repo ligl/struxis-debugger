@@ -76,14 +76,6 @@ export function stepRun(): Promise<RunStateDto> {
   return invoke<RunStateDto>("step_run");
 }
 
-export function playRun(): Promise<RunStateDto> {
-  return invoke<RunStateDto>("play_run");
-}
-
-export function pauseRun(): Promise<RunStateDto> {
-  return invoke<RunStateDto>("pause_run");
-}
-
 export function stopRun(): Promise<RunStateDto> {
   return invoke<RunStateDto>("stop_run");
 }
