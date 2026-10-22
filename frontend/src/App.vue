@@ -26,7 +26,6 @@ import { useOriginRangeSelection } from "./composables/useOriginRangeSelection";
 import { useDockLayout } from "./composables/useDockLayout";
 import { useInspectorSelection } from "./composables/useInspectorSelection";
 import { useReplayInspector } from "./composables/useReplayInspector";
-
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
 
 const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
@@ -269,7 +268,7 @@ async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
-  clearInspectorSelection();
+    clearInspectorSelection();
     resetForOrigin();
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
