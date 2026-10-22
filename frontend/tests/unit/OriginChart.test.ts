@@ -31,6 +31,7 @@ const chartMocks = vi.hoisted(() => ({
 vi.mock("lightweight-charts", () => ({
   CandlestickSeries: { kind: "candlestick" },
   ColorType: { Solid: "solid" },
+  CrosshairMode: { Normal: 0, Magnet: 1, Hidden: 2 },
   HistogramSeries: { kind: "histogram" },
   LineStyle: { Solid: 0, Dotted: 1, Dashed: 2, LargeDashed: 3, SparseDotted: 4 },
   createChart: chartMocks.createChart,
@@ -150,12 +151,14 @@ describe("OriginChart", () => {
         horzLines?: { visible?: boolean };
       };
       layout?: { attributionLogo?: boolean };
+      crosshair?: { mode?: number };
     };
     expect(chartOptions.grid).toEqual({
       vertLines: { visible: false },
       horzLines: { visible: false },
     });
     expect(chartOptions.layout?.attributionLogo).toBe(false);
+    expect(chartOptions.crosshair?.mode).toBe(0);
     expect(wrapper.find(".chart-attribution").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("TradingView");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([
