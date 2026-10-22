@@ -307,7 +307,7 @@ function startPanelResize(target: Exclude<PanelResizeTarget, null>, event: Point
 type DockAxis = "horizontal" | "vertical";
 
 function workbenchExtent(axis: DockAxis): number {
-  const workbench = document.querySelector<HTMLElement>('[data-testid="workbench"]');
+  const workbench = document.querySelector<HTMLElement>('[data-testid="debugger-shell"]');
   const measured = axis === "horizontal" ? workbench?.clientWidth : workbench?.clientHeight;
   return measured && measured > 0
     ? measured
@@ -610,10 +610,15 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="debugger-shell" data-testid="debugger-shell" :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px', '--inspector-reserve-left': !inspectorCollapsed && inspectorDock === 'left' ? inspectorWidth + 'px' : (inspectorDock === 'left' ? '36px' : '0px'), '--inspector-reserve-right': !inspectorCollapsed && inspectorDock === 'right' ? inspectorWidth + 'px' : (inspectorDock === 'right' ? '36px' : '0px'), '--inspector-reserve-top': !inspectorCollapsed && inspectorDock === 'top' ? inspectorHeight + 'px' : (inspectorDock === 'top' ? '36px' : '0px'), '--inspector-reserve-bottom': !inspectorCollapsed && inspectorDock === 'bottom' ? inspectorHeight + 'px' : (inspectorDock === 'bottom' ? '36px' : '0px') }">
+  <main
+    class="debugger-shell"
+    data-testid="debugger-shell"
+    :class="{ 'catalog-is-hidden': workspaceMode !== 'dataset', ['inspector-dock-' + inspectorDock]: true, 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }"
+    :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px', '--inspector-reserve-left': !inspectorCollapsed && inspectorDock === 'left' ? inspectorWidth + 'px' : (inspectorDock === 'left' ? '36px' : '0px'), '--inspector-reserve-right': !inspectorCollapsed && inspectorDock === 'right' ? inspectorWidth + 'px' : (inspectorDock === 'right' ? '36px' : '0px'), '--inspector-reserve-top': !inspectorCollapsed && inspectorDock === 'top' ? inspectorHeight + 'px' : (inspectorDock === 'top' ? '36px' : '0px'), '--inspector-reserve-bottom': !inspectorCollapsed && inspectorDock === 'bottom' ? inspectorHeight + 'px' : (inspectorDock === 'bottom' ? '36px' : '0px'), '--diagnostics-reserve-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--diagnostics-reserve-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px' }"
+    @dragover="allowDockDrop"
+    @drop="dropDockPanel"
+  >
     <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
-
-    <div data-testid="workbench" class="workbench-body" :class="{ 'catalog-is-hidden': workspaceMode !== 'dataset', ['inspector-dock-' + inspectorDock]: true, 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }" :style="{ '--diagnostics-reserve-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--diagnostics-reserve-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px' }" @dragover="allowDockDrop" @drop="dropDockPanel">
 
 
       <section data-testid="chart-workspace" class="workbench-main">
@@ -847,7 +852,6 @@ onUnmounted(() => {
           <p v-else class="empty-state">No active errors. Structured event history and domain diagnostics are not yet connected.</p>
         </div>
       </section>
-    </div>
 
     <div
       v-if="devtoolsAvailable && devtoolsContextMenu.visible"
