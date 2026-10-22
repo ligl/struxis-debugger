@@ -120,6 +120,11 @@ export interface ReplayInspectorSwingDto {
   updatedAt: string;
 }
 
+export type OriginObjectSelection =
+  | { kind: "sbar"; id: string }
+  | { kind: "cbar"; id: string }
+  | { kind: "swing"; id: string };
+
 export interface ReplayInspectorStructureDto {
   cbarCount: number;
   cbars: ReplayInspectorCBarDto[];
