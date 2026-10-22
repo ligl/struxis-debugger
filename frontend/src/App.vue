@@ -836,6 +836,7 @@ onUnmounted(() => {
           :selected-cbar="workspaceMode === 'dataset' ? selectedInspectorCbar : null"
           :selected-swing="workspaceMode === 'dataset' ? selectedInspectorSwing : null"
           :origin-dataset-id="origin?.originDatasetId ?? null"
+          :structure-enabled="origin?.enableStructure ?? false"
           :timeframe="workspaceMode === 'replay' ? (testDataset?.timeframe ?? origin?.timeframe ?? null) : (origin?.timeframe ?? null)"
           :workspace-mode="workspaceMode"
           :replay-inspector="workspaceMode === 'replay' ? replayInspector : null"
