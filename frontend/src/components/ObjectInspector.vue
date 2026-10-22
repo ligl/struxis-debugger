@@ -5,8 +5,7 @@ import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
 import type { ObjectDifferenceDto, ReplayInspectorCBarDto, ReplayInspectorDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 
-
-const props = defineProps<{
+defineProps<{
   selectedSbar: SBarDto | null;
   selectedCbar: ReplayInspectorCBarDto | null;
   selectedSwing: ReplayInspectorSwingDto | null;
