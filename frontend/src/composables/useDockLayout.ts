@@ -62,6 +62,10 @@ export function useDockLayout() {
     else diagnosticsCollapsed.value = !diagnosticsCollapsed.value;
   }
 
+  function handleInspectorHeadingClick(): void {
+    if (inspectorCollapsed.value) inspectorCollapsed.value = false;
+  }
+
   function handleDiagnosticsHeadingClick(): void {
     if (diagnosticsCollapsed.value && (diagnosticsDock.value === "left" || diagnosticsDock.value === "right")) {
       diagnosticsCollapsed.value = false;
@@ -236,7 +240,7 @@ export function useDockLayout() {
   return {
     inspectorCollapsed, diagnosticsCollapsed, inspectorDock, diagnosticsDock,
     inspectorWidth, inspectorHeight, diagnosticsWidth, diagnosticsHeight,
-    shellStyle, setDock, toggleCollapsed, handleDiagnosticsHeadingClick, closeDockMenus,
+    shellStyle, setDock, toggleCollapsed, handleInspectorHeadingClick, handleDiagnosticsHeadingClick, closeDockMenus,
     startPanelResize, handlePanelResizeKey, inspectorWidthLimit, inspectorHeightLimit,
     diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
   };
