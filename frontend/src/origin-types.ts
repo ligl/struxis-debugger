@@ -125,6 +125,36 @@ export type OriginObjectSelection =
   | { kind: "cbar"; id: string; originDatasetId: string }
   | { kind: "swing"; id: string; originDatasetId: string };
 
+/**
+ * Inspector input is workspace-scoped: a selected domain object, a confirmed
+ * Replay checkpoint summary, or a Compare difference are distinct contexts.
+ * Compare differences intentionally do not masquerade as domain selections.
+ */
+export type InspectorWorkspaceContext =
+  | {
+      workspace: "dataset";
+      originDatasetId: string | null;
+      timeframe: string | null;
+      structureEnabled: boolean;
+      selectedObject:
+        | { kind: "sbar"; object: SBarDto }
+        | { kind: "cbar"; object: ReplayInspectorCBarDto }
+        | { kind: "swing"; object: ReplayInspectorSwingDto }
+        | null;
+    }
+  | {
+      workspace: "replay";
+      timeframe: string | null;
+      checkpoint: ReplayInspectorDto | null;
+      error: string;
+    }
+  | {
+      workspace: "compare";
+      difference: ObjectDifferenceDto | null;
+      baselineSnapshotId: string | null;
+      candidateSnapshotId: string | null;
+    };
+
 export interface ReplayInspectorStructureDto {
   cbarCount: number;
   cbars: ReplayInspectorCBarDto[];
