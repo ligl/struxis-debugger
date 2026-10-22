@@ -103,11 +103,11 @@ function formatReplayField(field: string, value: unknown): string {
         </div>
         <div class="inspector-field inspector-field-wide">
           <dt>Event Time · UTC</dt>
-          <dd><code data-testid="inspector-sbar-ts-event">{{ formatDomainTimestamp(selectedSbar.tsEvent, timeframe) }}</code></dd>
+          <dd><code data-testid="inspector-sbar-ts-event" :data-copy-value="selectedSbar.tsEvent">{{ formatDomainTimestamp(selectedSbar.tsEvent, timeframe) }}</code></dd>
         </div>
         <div class="inspector-field inspector-field-wide">
           <dt>Init Time · UTC</dt>
-          <dd><code data-testid="inspector-sbar-ts-init">{{ formatDomainTimestamp(selectedSbar.tsInit, timeframe) }}</code></dd>
+          <dd><code data-testid="inspector-sbar-ts-init" :data-copy-value="selectedSbar.tsInit">{{ formatDomainTimestamp(selectedSbar.tsInit, timeframe) }}</code></dd>
         </div>
       </dl>
       <div class="inspector-subsection">
@@ -252,11 +252,11 @@ function formatReplayField(field: string, value: unknown): string {
         <dl class="inspector-fields">
           <div class="inspector-field inspector-field-wide">
             <dt>Event Time · UTC</dt>
-            <dd><code data-testid="inspector-replay-ts-event">{{ formatDomainTimestamp(replayInspector.sbar.tsEvent, timeframe) }}</code></dd>
+            <dd><code data-testid="inspector-replay-ts-event" :data-copy-value="replayInspector.sbar.tsEvent">{{ formatDomainTimestamp(replayInspector.sbar.tsEvent, timeframe) }}</code></dd>
           </div>
           <div class="inspector-field inspector-field-wide">
             <dt>Init Time · UTC</dt>
-            <dd><code data-testid="inspector-replay-ts-init">{{ formatDomainTimestamp(replayInspector.sbar.tsInit, timeframe) }}</code></dd>
+            <dd><code data-testid="inspector-replay-ts-init" :data-copy-value="replayInspector.sbar.tsInit">{{ formatDomainTimestamp(replayInspector.sbar.tsInit, timeframe) }}</code></dd>
           </div>
         </dl>
       </div>
@@ -296,7 +296,7 @@ function formatReplayField(field: string, value: unknown): string {
         <p class="section-index">SELECTED CBAR PROPERTIES</p>
         <dl class="inspector-fields">
           <div v-for="(value, field) in selectedReplayCbar" :key="field" class="inspector-field">
-            <dt>{{ field }}</dt><dd><code>{{ formatReplayField(String(field), value) }}</code></dd>
+            <dt>{{ field }}</dt><dd><code :data-copy-value="value == null ? (value === null ? 'null' : '—') : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
           </div>
         </dl>
       </div>
