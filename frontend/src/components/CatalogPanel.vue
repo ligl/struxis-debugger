@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { CatalogDatasetEntry, OriginDatasetDto } from "../origin-types";
 import OriginPanel from "./OriginPanel.vue";
 
@@ -13,6 +13,9 @@ function closeOnOutsidePointerDown(event: PointerEvent): void {
 }
 
 onMounted(() => {
+  if (props.discoveryError || props.loadError) {
+    sourceDetails.value!.open = true;
+  }
   document.addEventListener("pointerdown", closeOnOutsidePointerDown);
 });
 
@@ -28,7 +31,7 @@ interface InstrumentGroup {
   readyCount: number;
 }
 
-defineProps<{
+const props = defineProps<{
   datasets: CatalogDatasetEntry[];
   selectedId: string;
   selectedDataset: CatalogDatasetEntry | null;
@@ -43,6 +46,15 @@ defineProps<{
   loadError: string;
   formatDomainTimestamp: (value: string | null, timeframe: string | null) => string;
 }>();
+
+watch(
+  () => [props.discoveryError, props.loadError],
+  ([discoveryError, loadError]) => {
+    if (discoveryError || loadError) {
+      if (sourceDetails.value) sourceDetails.value.open = true;
+    }
+  },
+);
 
 const emit = defineEmits<{
   refresh: [];
@@ -111,7 +123,6 @@ const emit = defineEmits<{
     <details
       ref="sourceDetails"
       class="catalog-source-details"
-      :open="Boolean(discoveryError || loadError)"
       @pointerdown.stop
       @mousedown.stop
       @click.stop
