@@ -120,7 +120,7 @@ function formatReplayField(field: string, value: unknown): string {
       <dl class="inspector-fields">
         <div v-for="(value, field) in selectedCbar" :key="field" class="inspector-field">
           <dt>{{ field }}</dt>
-          <dd><code :data-testid="'inspector-cbar-' + String(field)" :data-copy-value="value == null ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
+          <dd><code :data-testid="'inspector-cbar-' + String(field)" :data-copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
         </div>
       </dl>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
@@ -136,7 +136,7 @@ function formatReplayField(field: string, value: unknown): string {
       <dl class="inspector-fields">
         <div v-for="(value, field) in selectedSwing" :key="field" class="inspector-field">
           <dt>{{ field }}</dt>
-          <dd><code :data-testid="'inspector-swing-' + String(field)" :data-copy-value="value == null ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
+          <dd><code :data-testid="'inspector-swing-' + String(field)" :data-copy-value="value === null ? 'null' : value === undefined ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
         </div>
       </dl>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
