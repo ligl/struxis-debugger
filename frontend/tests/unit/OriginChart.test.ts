@@ -317,8 +317,8 @@ describe("OriginChart", () => {
     clickHandler?.({ point: { x: 150, y: 50 } });
 
     expect(wrapper.emitted("objectClick")).toEqual([
-      [{ kind: "cbar", id: "cbar-exact" }],
-      [{ kind: "swing", id: "swing-exact" }],
+      [{ kind: "cbar", id: "cbar-exact", originDatasetId: "origin-object-hit-test" }],
+      [{ kind: "swing", id: "swing-exact", originDatasetId: "origin-object-hit-test" }],
     ]);
     expect(wrapper.emitted("sbarClick")).toBeUndefined();
     wrapper.unmount();
