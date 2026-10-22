@@ -454,6 +454,36 @@ describe("Struxis Debugger native desktop", () => {
 
     await selectOriginSbarById(firstSbarId);
     await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
+
+    const contextMenuResult = await browser.execute(() => {
+      const panel = document.querySelector('[data-testid="origin-chart-panel"]');
+      if (!panel) throw new Error("Origin chart is not mounted for the context-menu test.");
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 120,
+        clientY: 120,
+      });
+      panel.dispatchEvent(event);
+      return {
+        defaultPrevented: event.defaultPrevented,
+        devtoolsMenuVisible: Boolean(document.querySelector('[data-testid="devtools-context-menu"]')),
+      };
+    });
+    assert.equal(contextMenuResult.defaultPrevented, true,
+      "Right-click on Origin must prevent the browser context menu.");
+    assert.equal(contextMenuResult.devtoolsMenuVisible, false,
+      "Right-click on Origin must not bubble to the window-level development context menu.");
+    await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({
+      reverse: true,
+      timeout: 5_000,
+      timeoutMsg: "Right-click on Origin did not cancel the pending range selection.",
+    });
+    // Recreate the start boundary after verifying cancellation, then continue
+    // the inclusive two-SBar Test Dataset workflow.
+    await selectOriginSbarById(firstSbarId);
+    await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
+
     // Pending range selection belongs to Dataset. Switching to Replay must not
     // destroy it, but its Dataset-only status panel should be asserted after
     // returning to the workspace that owns Test Dataset preparation.
