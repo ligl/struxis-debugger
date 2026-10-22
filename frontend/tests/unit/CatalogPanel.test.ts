@@ -5,8 +5,9 @@ import CatalogPanel from "../../src/components/CatalogPanel.vue";
 describe("CatalogPanel", () => {
   it("keeps popover interactions inside the Catalog and Origin status control", async () => {
     const onParentClick = vi.fn();
+    const onParentPointerDown = vi.fn();
     const wrapper = mount(CatalogPanel, {
-      attrs: { onClick: onParentClick },
+      attrs: { onClick: onParentClick, onPointerdown: onParentPointerDown },
       props: {
         datasets: [],
         selectedId: "",
@@ -36,6 +37,7 @@ describe("CatalogPanel", () => {
 
     await popover.trigger("pointerdown");
     expect(onParentClick).not.toHaveBeenCalled();
+    expect(onParentPointerDown).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 });
