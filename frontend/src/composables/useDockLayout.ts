@@ -40,6 +40,18 @@ export function useDockLayout() {
     "--inspector-offset-bottom": diagnosticsDock.value === "bottom" ? (diagnosticsCollapsed.value ? "36px" : diagnosticsHeight.value + "px") : "0px",
   }));
 
+  function closeDockMenus(event?: Event): void {
+    const target = event?.target;
+    document.querySelectorAll<HTMLDetailsElement>(".dock-menu[open]").forEach((menu) => {
+      if (target instanceof Element && menu.contains(target)) return;
+      menu.open = false;
+    });
+  }
+
+  function handleDockMenuPointerDown(event: PointerEvent): void {
+    closeDockMenus(event);
+  }
+
   function setDock(target: DockPanel, direction: DockDirection): void {
     if (target === "inspector") inspectorDock.value = direction;
     else diagnosticsDock.value = direction;
@@ -209,11 +221,13 @@ export function useDockLayout() {
   }
 
   onMounted(() => {
+    document.addEventListener("pointerdown", handleDockMenuPointerDown);
     window.addEventListener("pointermove", handlePanelResize);
     window.addEventListener("pointerup", stopPanelResize);
     window.addEventListener("pointercancel", stopPanelResize);
   });
   onUnmounted(() => {
+    document.removeEventListener("pointerdown", handleDockMenuPointerDown);
     window.removeEventListener("pointermove", handlePanelResize);
     window.removeEventListener("pointerup", stopPanelResize);
     window.removeEventListener("pointercancel", stopPanelResize);
@@ -222,7 +236,7 @@ export function useDockLayout() {
   return {
     inspectorCollapsed, diagnosticsCollapsed, inspectorDock, diagnosticsDock,
     inspectorWidth, inspectorHeight, diagnosticsWidth, diagnosticsHeight,
-    shellStyle, setDock, toggleCollapsed, handleDiagnosticsHeadingClick,
+    shellStyle, setDock, toggleCollapsed, handleDiagnosticsHeadingClick, closeDockMenus,
     startPanelResize, handlePanelResizeKey, inspectorWidthLimit, inspectorHeightLimit,
     diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
   };
