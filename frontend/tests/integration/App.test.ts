@@ -175,6 +175,49 @@ describe("Origin Load workbench", () => {
   });
 
 
+  it("copies raw Inspector field values on context menu and reports clipboard failures", async () => {
+    const origin = makeOrigin("origin-inspector-copy");
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-inspector-copy"));
+
+    const writeText = vi.fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("clipboard unavailable"));
+    const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    try {
+      const eventTime = wrapper.get('[data-testid="inspector-sbar-ts-event"]');
+      expect(eventTime.text()).toBe("1970-01-01 00:00");
+      await eventTime.trigger("contextmenu");
+      await flushPromises();
+      expect(writeText).toHaveBeenNthCalledWith(1, "200");
+      expect(wrapper.get('[role="status"]').text()).toBe("COPIED");
+
+      await wrapper.get('[data-testid="inspector-sbar-id"]').trigger("contextmenu");
+      await flushPromises();
+      expect(writeText).toHaveBeenNthCalledWith(2, "200");
+      expect(wrapper.get('[role="status"]').text()).toBe("COPY FAILED · CLIPBOARD UNAVAILABLE");
+    } finally {
+      if (originalClipboardDescriptor) {
+        Object.defineProperty(navigator, "clipboard", originalClipboardDescriptor);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
+  });
+
   it("shows the exact Origin CBar and Swing selected through chart events", async () => {
     const origin = makeOrigin("origin-structure-inspector");
     origin.structure = {
