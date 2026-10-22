@@ -302,6 +302,7 @@ watch(replayReferenceSnapshots, (available) => {
   }
 });
 watch(workspaceMode, (mode) => {
+  selectedInspectorObject.value = null;
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
   if (mode === "replay") void refreshReplayInspector();
 });
