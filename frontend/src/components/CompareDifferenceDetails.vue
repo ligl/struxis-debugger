@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ObjectDifferenceDto } from "../origin-types";
+import InspectorPropertyField from "./InspectorPropertyField.vue";
 
 defineProps<{
   selectedDifference: ObjectDifferenceDto;
@@ -25,34 +26,13 @@ function formatValue(value: unknown): string {
         <span class="inspector-object-kind" :class="'difference-kind-' + selectedDifference.kind">{{ selectedDifference.kind.toUpperCase() }}</span>
       </div>
       <dl class="inspector-fields">
-        <div class="inspector-field inspector-field-wide">
-          <dt>Domain Object ID</dt>
-          <dd><code data-testid="inspector-difference-object-id" :title="selectedDifference.objectId">{{ selectedDifference.objectId }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Baseline Snapshot</dt>
-          <dd><code data-testid="inspector-baseline-snapshot">{{ compareBaselineSnapshotId ?? "—" }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Candidate Snapshot</dt>
-          <dd><code data-testid="inspector-candidate-snapshot">{{ compareCandidateSnapshotId ?? "—" }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Object Type</dt>
-          <dd><code>{{ selectedDifference.objectType }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Change</dt>
-          <dd><code>{{ selectedDifference.kind.toUpperCase() }}</code></dd>
-        </div>
-        <div class="inspector-field">
-          <dt>Checkpoint</dt>
-          <dd><code data-testid="inspector-difference-checkpoint">{{ selectedDifference.checkpointIndex }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Anchor SBar ID</dt>
-          <dd><code data-testid="inspector-difference-sbar-id">{{ selectedDifference.sbarId }}</code></dd>
-        </div>
+        <InspectorPropertyField label="Domain Object ID" :value="selectedDifference.objectId" :test-id="'inspector-difference-object-id'" wide />
+        <InspectorPropertyField label="Baseline Snapshot" :value="compareBaselineSnapshotId ?? '—'" test-id="inspector-baseline-snapshot" wide />
+        <InspectorPropertyField label="Candidate Snapshot" :value="compareCandidateSnapshotId ?? '—'" test-id="inspector-candidate-snapshot" wide />
+        <InspectorPropertyField label="Object Type" :value="selectedDifference.objectType" />
+        <InspectorPropertyField label="Change" :value="selectedDifference.kind.toUpperCase()" />
+        <InspectorPropertyField label="Checkpoint" :value="String(selectedDifference.checkpointIndex)" test-id="inspector-difference-checkpoint" />
+        <InspectorPropertyField label="Anchor SBar ID" :value="selectedDifference.sbarId" test-id="inspector-difference-sbar-id" wide />
       </dl>
       <div class="inspector-subsection">
         <p class="section-index">PROPERTY DELTAS</p>
