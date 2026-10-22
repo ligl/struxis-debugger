@@ -154,9 +154,8 @@ impl ReplayManager {
         Ok(initial_state)
     }
 
-    /// Disposes the previous Run before creating a replacement from the caller's
-    /// fixed Test input. A release failure leaves the old worker owned and blocks
-    /// the replacement; it is never silently overwritten.
+    /// Compatibility restart path for recording-contract tests. Production uses
+    /// `restart_interactive`; both paths require confirmed release of the old Run.
     pub(crate) fn restart(
         &mut self,
         config: ReplayWorkerConfig,
