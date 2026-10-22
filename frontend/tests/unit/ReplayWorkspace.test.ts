@@ -48,7 +48,8 @@ describe("ReplayWorkspace", () => {
     expect(wrapper.find('[data-testid="run-chart-stub"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
 
-    active.value = true;\n    await nextTick();
+    active.value = true;
+    await nextTick();
 
     expect(wrapper.get('[data-testid="replay-workspace"]').attributes("style") ?? "").not.toContain("display: none");
     expect(wrapper.find('[data-testid="run-chart-stub"]').exists()).toBe(true);
