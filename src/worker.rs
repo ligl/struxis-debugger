@@ -229,8 +229,8 @@ impl ReplayWorker {
         })
     }
 
-    /// Processes exactly one next Test SBar and returns after its checkpoint
-    /// sink commit and Run progress confirmation.
+    /// Processes exactly one next Test SBar and returns after owned checkpoint
+    /// extraction and Run progress confirmation. Production Replay installs no sink.
     pub(crate) fn step(&mut self) -> Result<RunState, String> {
         let _permit = self.command_gate
             .try_enter(ReplayCommandKind::Step)?;
