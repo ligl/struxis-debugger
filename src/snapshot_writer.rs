@@ -11,7 +11,7 @@ use std::{
 
 use rusqlite::{Connection, OpenFlags, params};
 use crate::{
-    checkpoint::ReplayCheckpointProjection,
+    checkpoint::{OwnedCheckpoint, ReplayCheckpointProjection},
     diagnostics::canonical_diagnostics_json,
     effective_config::EffectiveStruxisConfig,
     replay::LoadedInput,
@@ -85,6 +85,79 @@ impl SnapshotWriter {
             #[cfg(test)]
             fail_temporary_cleanup: false,
         })
+    }
+
+    /// Persists a completed Run's immutable in-memory trajectory as a new Snapshot.
+    ///
+    /// This path is intentionally separate from Worker Start / Step. It creates
+    /// a fresh writer, validates the full ordered trajectory, and publishes only
+    /// after the existing checksum and read-only reopen checks succeed.
+    pub(crate) fn save_completed(
+        root: impl AsRef<Path>,
+        input: &LoadedInput,
+        instrument_id: &str,
+        completed_state: &RunState,
+        effective_config: &EffectiveStruxisConfig,
+        checkpoints: &[OwnedCheckpoint],
+    ) -> Result<String, String> {
+        if completed_state.status != RunStatus::Completed {
+            return Err(format!(
+                "Snapshot save requires Completed Run, got {:?}",
+                completed_state.status
+            ));
+        }
+        if checkpoints.len() != input.bars.len()
+            || completed_state.processed_count != input.bars.len()
+            || completed_state.input_count != input.bars.len()
+            || completed_state.input_fingerprint != input.sbar_sequence_fingerprint
+        {
+            return Err(format!(
+                "Completed Run trajectory does not match fixed input: input={}, processed={}, checkpoints={}",
+                input.bars.len(), completed_state.processed_count, checkpoints.len()
+            ));
+        }
+
+        let mut writer = Self::new(root, input, instrument_id)?;
+        let initial_state = RunState::ready(
+            completed_state.run_id.clone(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            input.bars.len(),
+        )?;
+        let result = (|| {
+            writer.initialize(&initial_state, effective_config)?;
+            for (expected_index, checkpoint) in checkpoints.iter().enumerate() {
+                if checkpoint.checkpoint_index != expected_index {
+                    return Err(format!(
+                        "Owned Checkpoint trajectory is not contiguous: expected index {expected_index}, got {}",
+                        checkpoint.checkpoint_index
+                    ));
+                }
+                let expected_sbar_id = input.bars[expected_index].ts_event.to_string();
+                if checkpoint.sbar_id != expected_sbar_id
+                    || checkpoint.ts_event != expected_sbar_id
+                {
+                    return Err(format!(
+                        "Owned Checkpoint SBar mismatch at index {expected_index}: expected {expected_sbar_id}, got {} / {}",
+                        checkpoint.sbar_id, checkpoint.ts_event
+                    ));
+                }
+                writer.commit_checkpoint(
+                    checkpoint.checkpoint_index,
+                    &checkpoint.sbar_id,
+                    &checkpoint.persistence_projection(),
+                )?;
+            }
+            writer.finalize(completed_state)?;
+            writer.manifest.as_ref()
+                .map(|manifest| manifest.snapshot_id.clone())
+                .ok_or_else(|| "Snapshot finalization did not produce a Manifest".to_owned())
+        })();
+
+        if let Err(error) = &result {
+            let _ = <Self as CheckpointSink>::fail(&mut writer, error);
+        }
+        result
     }
 
     #[cfg(test)]
