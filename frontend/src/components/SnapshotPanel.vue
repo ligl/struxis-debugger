@@ -39,7 +39,11 @@ function differenceKey(difference: ObjectDifferenceDto): string {
 </script>
 
 <template>
-  <section class="panel snapshot-panel" data-testid="snapshot-panel">
+  <section
+    class="panel snapshot-panel"
+    data-testid="snapshot-panel"
+    :data-selected-difference-key="selectedDifferenceKey ?? ''"
+  >
     <div class="panel-heading">
       <div>
         <p class="section-index">ARTIFACTS / DIAGNOSTICS</p>
