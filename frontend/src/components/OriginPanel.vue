@@ -36,7 +36,7 @@ defineProps<{
       <div class="metric-grid">
         <div class="metric">
           <span>SBAR COUNT</span>
-          <strong>{{ origin.sbarCount.toLocaleString() }}</strong>
+          <strong data-testid="origin-sbar-count">{{ origin.sbarCount.toLocaleString() }}</strong>
         </div>
         <div class="metric">
           <span>INSTRUMENT</span>
@@ -48,19 +48,19 @@ defineProps<{
         </div>
         <div class="metric">
           <span>STRUCTURE</span>
-          <strong>{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</strong>
+          <strong data-testid="origin-structure-status">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</strong>
         </div>
       </div>
 
       <div class="range-summary">
         <div>
           <span class="field-label">FIRST SBAR · EVENT TIME · UTC</span>
-          <strong>{{ origin.firstSbarId }}</strong>
+          <strong data-testid="origin-first-sbar-id">{{ origin.firstSbarId }}</strong>
           <small>{{ formatDomainTimestamp(origin.firstTsEvent, origin.timeframe) }}</small>
         </div>
         <div>
           <span class="field-label">LAST SBAR · EVENT TIME · UTC</span>
-          <strong>{{ origin.lastSbarId }}</strong>
+          <strong data-testid="origin-last-sbar-id">{{ origin.lastSbarId }}</strong>
           <small>{{ formatDomainTimestamp(origin.lastTsEvent, origin.timeframe) }}</small>
         </div>
       </div>
