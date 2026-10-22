@@ -111,14 +111,15 @@ describe("Struxis Debugger native desktop", () => {
     await $('[data-testid="compare-baseline-chart"]').waitForDisplayed();
     await $('[data-testid="compare-chart-splitter"]').waitForDisplayed();
   });
-  it("collapses and restores Catalog, Inspector, and Diagnostics without breaking the workbench layout", async () => {
+  it("collapses and restores Inspector and Diagnostics without breaking the workbench layout", async () => {
     const shell = await $('[data-testid="debugger-shell"]');
     await shell.waitForDisplayed();
 
     // Each native E2E test shares the same app instance. The preceding workflow
-    // test leaves the app in Compare, where the Dataset-only Catalog is absent.
+    // test leaves the app in Compare; return to Dataset and verify its current
+    // compact Catalog controls instead of assuming Catalog has a collapsible dock.
     await $('[data-testid="workspace-dataset"]').click();
-    await $('[aria-label="Collapse Catalog"]').waitForDisplayed();
+    await $('[data-testid="catalog-controls"]').waitForDisplayed();
 
     const assertNoHorizontalOverflow = async (stage) => {
       const layout = await browser.execute(() => ({
@@ -138,12 +139,6 @@ describe("Struxis Debugger native desktop", () => {
         `${stage}: workbench shell escaped the viewport: ${JSON.stringify(layout)}`,
       );
     };
-
-    await $('[aria-label="Collapse Catalog"]').click();
-    await $('[aria-label="Expand Catalog"]').waitForDisplayed();
-    await assertNoHorizontalOverflow("Catalog collapsed");
-    await $('[aria-label="Expand Catalog"]').click();
-    await $('[aria-label="Collapse Catalog"]').waitForDisplayed();
 
     await $('[aria-label="Collapse Inspector"]').click();
     await $('[aria-label="Expand Inspector"]').waitForDisplayed();
@@ -497,29 +492,14 @@ describe("Struxis Debugger native desktop", () => {
     await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
     await $('[data-testid="origin-selection-completed"]').waitForDisplayed();
 
-    // Confirm the component selection command reached the application state
-    // machine before creating the Test Dataset.
-    const rangeStatus = await $('[data-testid="origin-range-selection-status"]');
-    try {
-      await browser.waitUntil(
-        async () => (await rangeStatus.getText()).includes(
-          `Selected 2 SBars: ${firstSbarId} → ${secondSbarId}`,
-        ),
-        {
-          timeout: 5_000,
-          interval: 100,
-          timeoutMsg: "The second component selection command did not complete the expected two-SBar range.",
-        },
-      );
-    } catch (error) {
-      const observedStatus = await rangeStatus.getText();
-      throw new Error(
-        `Origin range selection failed after the second component selection command. Expected first=${firstSbarId}, second=${secondSbarId}; observed status=${JSON.stringify(observedStatus)}. ${String(error)}`,
-      );
-    }
-
+    // The completed marker confirms the chart accepted the second selection.
+    // Verify the resulting range through its authoritative summary and values;
+    // status text is presentation-only and may be empty in native WebKit.
     const selectedRange = await $('[data-testid="selected-test-range"]');
-    await selectedRange.waitForDisplayed();
+    await selectedRange.waitForDisplayed({
+      timeout: 5_000,
+      timeoutMsg: "The second SBar selection did not publish a completed inclusive range.",
+    });
     const selectedStart = await selectedRange.$('[data-testid="selected-test-range-start"]');
     const selectedEnd = await selectedRange.$('[data-testid="selected-test-range-end"]');
     const actualStart = await selectedStart.getText();
