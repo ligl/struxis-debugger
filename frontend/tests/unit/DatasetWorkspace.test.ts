@@ -4,11 +4,22 @@ import { describe, expect, it } from "vitest";
 import DatasetWorkspace from "../../src/components/DatasetWorkspace.vue";
 import type { OriginDatasetDto } from "../../src/origin-types";
 
-const origin = {
+const origin: OriginDatasetDto = {
   originDatasetId: "origin-1",
+  sourceCatalog: "catalog-1",
+  enableStructure: true,
+  instrumentId: "BTCUSDT",
+  barType: "BTCUSDT-1-MINUTE-LAST-EXTERNAL",
+  timeframe: "m",
+  sbarSequenceFingerprint: "fingerprint-1",
+  sbarCount: 0,
+  firstSbarId: "",
+  lastSbarId: "",
+  firstTsEvent: "",
+  lastTsEvent: "",
   bars: [],
   structure: null,
-} as OriginDatasetDto;
+};
 
 const CatalogPanelStub = defineComponent({
   name: "CatalogPanel",
