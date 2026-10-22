@@ -3,17 +3,15 @@ import { computed, onMounted, ref, watch } from "vue";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
-import CompareSummary from "./components/CompareSummary.vue";
 import CatalogPanel from "./components/CatalogPanel.vue";
 import OriginChart from "./components/OriginChart.vue";
 import RunChart from "./components/RunChart.vue";
 import DualChartStack from "./components/DualChartStack.vue";
 import SnapshotReferencePanel from "./components/SnapshotReferencePanel.vue";
-import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.vue";
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
-import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
 import Diagnostics from "./components/Diagnostics.vue";
+import CompareWorkspace from "./components/CompareWorkspace.vue";
 import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
@@ -96,29 +94,16 @@ const {
   replayInspectorError,
   refresh: refreshReplayInspectorState,
 } = useReplayInspector();
-const selectedCompareDifferenceKey = ref<string | null>(null);
+const selectedCompareDifference = ref<ObjectDifferenceDto | null>(null);
 
 async function refreshReplayInspector(): Promise<void> {
   await refreshReplayInspectorState(Boolean(runState.value));
 }
 
-function compareDifferenceKey(difference: ObjectDifferenceDto): string {
-  return [difference.checkpointIndex, difference.sbarId, difference.objectType, difference.objectId, difference.kind].join("|");
+function handleCompareDifferenceSelection(difference: ObjectDifferenceDto | null): void {
+  selectedCompareDifference.value = difference;
 }
 
-const selectedCompareDifference = computed(() => {
-  const key = selectedCompareDifferenceKey.value;
-  if (!key || !compareResult.value) return null;
-  return compareResult.value.differences.find((difference) => compareDifferenceKey(difference) === key) ?? null;
-});
-
-function selectCompareDifference(difference: ObjectDifferenceDto): void {
-  selectedCompareDifferenceKey.value = compareDifferenceKey(difference);
-}
-
-watch(compareResult, () => {
-  selectedCompareDifferenceKey.value = null;
-});
 
 function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>): void {
   selectInspectorStructureObject(selection);
@@ -207,7 +192,7 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
   };
 });
 watch(workspaceMode, (mode) => {
-  if (mode !== "compare") selectedCompareDifferenceKey.value = null;
+  if (mode !== "compare") selectedCompareDifference.value = null;
   if (mode === "replay") void refreshReplayInspector();
 });
 
@@ -387,44 +372,18 @@ onMounted(async () => {
                 </template>
               </DualChartStack>
             </div>
-            <div v-show="workspaceMode === 'compare'" class="workspace-mode compare-workspace">
-              <CompareSummary
-                :compare-result="compareResult"
-                :compare-loading="compareLoading"
-                :compare-error="compareError"
-              />
-              <DualChartStack workspace="compare">
-                <template #upper>
-                  <ComparisonChartPlaceholder
-                    side="candidate"
-                    :has-comparison="Boolean(compareResult)"
-                    :checkpoint-count="compareResult?.checkpointCount ?? null"
-                  />
-                </template>
-                <template #lower>
-                  <ComparisonChartPlaceholder
-                    side="baseline"
-                    :has-comparison="Boolean(compareResult)"
-                    :checkpoint-count="compareResult?.checkpointCount ?? null"
-                  />
-                </template>
-              </DualChartStack>
-              <details class="snapshot-store-disclosure" data-testid="snapshot-store-disclosure">
-                <summary data-testid="snapshot-store-toggle">SNAPSHOT STORE / DIFFERENCES</summary>
-                <SnapshotPanel
-                  :snapshots="snapshots"
-                  :snapshots-loading="snapshotsLoading"
-                  :snapshots-error="snapshotsError"
-                  :format-lifecycle-timestamp="formatLifecycleTimestamp"
-                  :compare-result="compareResult"
-                  :compare-loading="compareLoading"
-                  :compare-error="compareError"
-                  :selected-difference-key="selectedCompareDifferenceKey"
-                  @refresh="refreshSnapshots"
-                  @select-difference="selectCompareDifference"
-                />
-              </details>
-            </div>
+<CompareWorkspace
+              :active="workspaceMode === 'compare'"
+              :snapshots="snapshots"
+              :snapshots-loading="snapshotsLoading"
+              :snapshots-error="snapshotsError"
+              :compare-result="compareResult"
+              :compare-loading="compareLoading"
+              :compare-error="compareError"
+              :format-lifecycle-timestamp="formatLifecycleTimestamp"
+              @refresh-snapshots="refreshSnapshots"
+              @select-difference="handleCompareDifferenceSelection"
+/>
           </div>
 
 
