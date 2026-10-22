@@ -49,6 +49,25 @@ describe("useDockLayout", () => {
     expect(layout.shellStyle.value["--inspector-reserve-left"]).toBe("36px");
   });
 
+  it("expands a collapsed Inspector panel when its heading is clicked", () => {
+    const layout = createLayout();
+    layout.toggleCollapsed("inspector");
+
+    expect(layout.inspectorCollapsed.value).toBe(true);
+    layout.handleInspectorHeadingClick();
+    expect(layout.inspectorCollapsed.value).toBe(false);
+    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("282px");
+  });
+
+  it("does not collapse an already expanded Inspector when its heading is clicked", () => {
+    const layout = createLayout();
+
+    layout.handleInspectorHeadingClick();
+
+    expect(layout.inspectorCollapsed.value).toBe(false);
+    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("282px");
+  });
+
   it("expands a collapsed side-docked Diagnostics panel when its heading is clicked", () => {
     const layout = createLayout();
     layout.setDock("diagnostics", "left");
