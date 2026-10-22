@@ -462,7 +462,7 @@ describe("Struxis Debugger native desktop", () => {
     // Drive the component's ID-based selection command. This enters the
     // same OriginChart selection method and emits the same sbarClick event as
     // pointer input, while keeping this end-to-end test independent of pixels.
-    const selectOriginSbarById = async (sbarId) => {
+    const selectOriginSbarById = async (sbarId, expectedParentState) => {
       await browser.execute((id) => {
         const panel = document.querySelector('[data-testid="origin-chart-panel"]');
         if (!panel) throw new Error("Origin chart component is not mounted.");
@@ -471,9 +471,38 @@ describe("Struxis Debugger native desktop", () => {
           detail: { sbarId: id },
         }));
       }, sbarId);
+
+      // The child can draw a local marker before App accepts the emitted click.
+      // Assert the parent's range state too, and capture the lifecycle guard when
+      // it rejects the selection instead of mistaking that marker for success.
+      await browser.waitUntil(async () => {
+        const state = await browser.execute(() => ({
+          pending: Boolean(document.querySelector('[data-testid="test-range-awaiting-end"]')),
+          selected: Boolean(document.querySelector('[data-testid="selected-test-range"]')),
+          feedback: document.querySelector('[data-testid="test-dataset-controls"] .dataset-controls-feedback')?.textContent?.trim() ?? "",
+          runStatus: document.querySelector('[data-testid="run-toolbar-status"]')?.textContent?.trim() ?? "",
+          rangeStatus: document.querySelector('[data-testid="origin-range-selection-status"]')?.textContent?.trim() ?? "",
+        }));
+        const accepted = expectedParentState === "pending" ? state.pending : state.selected;
+        if (!accepted) {
+          const marker = document.querySelector('[data-testid="origin-selection-start-line"]');
+          if (marker) {
+            console.debug("Origin child marker exists before parent range state is accepted.", {
+              requestedSbarId: sbarId,
+              expectedParentState,
+              ...state,
+            });
+          }
+        }
+        return accepted;
+      }, {
+        timeout: 5_000,
+        interval: 100,
+        timeoutMsg: `Origin parent did not accept SBar ${sbarId} as ${expectedParentState}. Inspect dataset-controls-feedback, runStatus and rangeStatus in the desktop log.`,
+      });
     };
 
-    await selectOriginSbarById(firstSbarId);
+    await selectOriginSbarById(firstSbarId, "pending");
     await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
 
     const contextMenuResult = await browser.execute(() => {
@@ -502,7 +531,7 @@ describe("Struxis Debugger native desktop", () => {
     });
     // Recreate the start boundary after verifying cancellation, then continue
     // the inclusive two-SBar Test Dataset workflow.
-    await selectOriginSbarById(firstSbarId);
+    await selectOriginSbarById(firstSbarId, "pending");
     await $('[data-testid="origin-selection-start-line"]').waitForDisplayed({ timeout: 5_000 });
 
     // Complete the range while OriginChart remains mounted. Switching to Replay
@@ -510,7 +539,7 @@ describe("Struxis Debugger native desktop", () => {
     // two-SBar selection, not persistence of an in-progress gesture across remounts.
     await $('[data-testid="origin-chart-canvas"]').waitForDisplayed();
     await $('[data-testid="test-range-awaiting-end"]').waitForDisplayed();
-    await selectOriginSbarById(secondSbarId);
+    await selectOriginSbarById(secondSbarId, "selected");
     await $('[data-testid="origin-selection-end-line"]').waitForDisplayed();
     await $('[data-testid="origin-selection-completed"]').waitForDisplayed();
 
