@@ -217,9 +217,16 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     assert_eq!(completed.processed_count, 2);
     assert_eq!(completed.status, RunStatus::Completed);
 
+    assert!(
+        state.discover_snapshots().expect("Snapshot discovery should work before save").is_empty(),
+        "Completing a Run must not implicitly persist a Snapshot"
+    );
+    let snapshot_id = state.save_run_snapshot().expect("explicit Snapshot save should succeed");
+    assert!(!snapshot_id.is_empty());
+
     let artifacts = state
         .discover_snapshots()
-        .expect("Snapshot discovery should succeed after completion");
+        .expect("Snapshot discovery should succeed after explicit save");
     assert_eq!(
         artifacts.len(),
         1,
