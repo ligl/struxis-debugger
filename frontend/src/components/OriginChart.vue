@@ -16,6 +16,7 @@ const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   originDatasetId: string;
+  selectedObject?: OriginObjectSelection | null;
   selectionStartSbarId?: string | null;
   selectionEndSbarId?: string | null;
   selectionPending?: boolean;
@@ -43,6 +44,7 @@ let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
+type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = {
   id: string;
   x1: number;
@@ -55,6 +57,9 @@ type SwingSegment = {
 };
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
+const hoveredObject = ref<OriginObjectSelection | null>(null);
+const hoveredSbarMarker = ref<SBarMarker | null>(null);
+const selectedSbarMarker = ref<SBarMarker | null>(null);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -126,6 +131,7 @@ function updateSbarCoordinates(): void {
   selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
   updateCBarRectangles();
   updateSwingSegments();
+  updateSbarMarkers();
 }
 
 function updateSwingSegments(): void {
@@ -165,6 +171,71 @@ function updateSwingSegments(): void {
       dasharray: resolvedStyle.dasharray,
     }];
   }) : [];
+}
+
+
+function markerForSbar(sbarId: string | null | undefined): SBarMarker | null {
+  if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
+  const index = sbarIdByLogicalIndex.indexOf(sbarId);
+  const bar = props.bars[index];
+  const time = timeBySbarId.get(sbarId);
+  if (!bar || time === undefined) return null;
+  const x = chart.timeScale().timeToCoordinate(time);
+  const highY = candleSeries.priceToCoordinate(Number(bar.high));
+  const lowY = candleSeries.priceToCoordinate(Number(bar.low));
+  if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
+
+  const adjacentXs = [
+    index > 0 ? chart.timeScale().timeToCoordinate(timeBySbarId.get(props.bars[index - 1]!.sbarId)!) : null,
+    index + 1 < props.bars.length ? chart.timeScale().timeToCoordinate(timeBySbarId.get(props.bars[index + 1]!.sbarId)!) : null,
+  ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
+  const spacing = adjacentXs.length > 0
+    ? Math.min(...adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0))
+    : 8;
+  const width = Math.max(4, Math.min(12, Number.isFinite(spacing) && spacing > 0 ? spacing * 0.42 : 6));
+  const top = Math.min(highY as number, lowY as number);
+  const bottom = Math.max(highY as number, lowY as number);
+  return { id: sbarId, x: (x as number) - width / 2, y: top, width, height: Math.max(2, bottom - top) };
+}
+
+function updateSbarMarkers(): void {
+  const selected = props.selectedObject;
+  selectedSbarMarker.value = selected?.kind === "sbar" && selected.originDatasetId === props.originDatasetId
+    ? markerForSbar(selected.id)
+    : null;
+  hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar" &&
+    hoveredObject.value.originDatasetId === props.originDatasetId
+    ? markerForSbar(hoveredObject.value.id)
+    : null;
+}
+
+function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
+  if (!chart || !candleSeries || !layerVisibility.value.sbar || sbarIdByLogicalIndex.length === 0) return null;
+  const logical = chart.timeScale().coordinateToLogical(x);
+  if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
+  const index = Math.round(logical);
+  const bar = props.bars[index];
+  if (!bar) return null;
+  const marker = markerForSbar(bar.sbarId);
+  if (!marker) return null;
+  const centerX = marker.x + marker.width / 2;
+  const left = Math.max(3, marker.width / 2 + 1);
+  const top = marker.y - 5;
+  const bottom = marker.y + marker.height + 5;
+  if (Math.abs(x - centerX) > left || y < top || y > bottom) return null;
+  return { kind: "sbar", id: bar.sbarId, originDatasetId: props.originDatasetId };
+}
+
+function updateHoveredObject(point: { x: number; y: number } | undefined): void {
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || chartError.value) {
+    hoveredObject.value = null;
+    updateSbarMarkers();
+    return;
+  }
+  // Use the same structure hit-test as click selection, so hover and click agree
+  // on overlapping CBar/Swing geometry. SBar hit-testing is the final fallback.
+  hoveredObject.value = hitTestStructureObject(point.x, point.y) ?? hitTestSbar(point.x, point.y);
+  updateSbarMarkers();
 }
 
 function selectSbarById(sbarId: string): void {
@@ -355,6 +426,7 @@ function stopBoundaryDrag(): void {
 }
 
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
+  updateHoveredObject(param.point);
   if (!props.selectionPending || selectionStartX.value === null) {
     previewX.value = null;
     return;
@@ -492,7 +564,15 @@ onMounted(() => {
   updateChart();
 });
 
-watch(() => [props.bars, props.structure, props.originDatasetId] as const, updateChart);
+watch(() => [props.bars, props.structure, props.originDatasetId] as const, () => {
+  updateChart();
+  updateHoveredObject(undefined);
+});
+watch(() => props.selectedObject, updateSbarMarkers, { deep: true });
+watch(() => layerVisibility.value.sbar, () => {
+  if (!layerVisibility.value.sbar && hoveredObject.value?.kind === "sbar") hoveredObject.value = null;
+  updateSbarMarkers();
+});
 watch(
   () => [props.selectionStartSbarId, props.selectionEndSbarId, props.selectionPending] as const,
   () => {
@@ -518,6 +598,9 @@ onBeforeUnmount(() => {
   volumeSeries = null;
   cbarRectangles.value = [];
   swingSegments.value = [];
+  hoveredObject.value = null;
+  hoveredSbarMarker.value = null;
+  selectedSbarMarker.value = null;
   sbarIdByLogicalIndex = [];
   timeBySbarId = new Map();
   firstSbarTime = null;
@@ -579,6 +662,26 @@ onBeforeUnmount(() => {
         :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
       ></div>
       <svg class="origin-structure-overlay" data-testid="origin-structure-overlay" aria-hidden="true">
+        <rect
+          v-if="hoveredSbarMarker"
+          class="origin-object-hover-sbar"
+          :x="hoveredSbarMarker.x"
+          :y="hoveredSbarMarker.y"
+          :width="hoveredSbarMarker.width"
+          :height="hoveredSbarMarker.height"
+          data-testid="origin-hover-sbar"
+          :data-sbar-id="hoveredSbarMarker.id"
+        />
+        <rect
+          v-if="selectedSbarMarker"
+          class="origin-object-selected-sbar"
+          :x="selectedSbarMarker.x"
+          :y="selectedSbarMarker.y"
+          :width="selectedSbarMarker.width"
+          :height="selectedSbarMarker.height"
+          data-testid="origin-selected-sbar"
+          :data-sbar-id="selectedSbarMarker.id"
+        />
         <line
           v-for="segment in swingSegments"
           :key="segment.id"
@@ -594,6 +697,32 @@ onBeforeUnmount(() => {
           :data-swing-id="segment.id"
           :data-swing-state="segment.state"
         />
+        <line
+          v-for="segment in swingSegments.filter((item) => hoveredObject?.kind === 'swing' && hoveredObject.id === item.id)"
+          :key="`hover-${segment.id}`"
+          :x1="segment.x1"
+          :y1="segment.y1"
+          :x2="segment.x2"
+          :y2="segment.y2"
+          stroke="#C3CBD1"
+          stroke-width="2"
+          stroke-linecap="round"
+          data-testid="origin-hover-swing"
+          :data-swing-id="segment.id"
+        />
+        <line
+          v-for="segment in swingSegments.filter((item) => props.selectedObject?.kind === 'swing' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
+          :key="`selected-${segment.id}`"
+          :x1="segment.x1"
+          :y1="segment.y1"
+          :x2="segment.x2"
+          :y2="segment.y2"
+          stroke="#D99A45"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          data-testid="origin-selected-swing"
+          :data-swing-id="segment.id"
+        />
         <rect
           v-for="rectangle in cbarRectangles"
           :key="rectangle.id"
@@ -607,7 +736,39 @@ onBeforeUnmount(() => {
           data-testid="cbar-range-rectangle"
           :data-cbar-id="rectangle.id"
         />
+        <rect
+          v-for="rectangle in cbarRectangles.filter((item) => hoveredObject?.kind === 'cbar' && hoveredObject.id === item.id)"
+          :key="`hover-${rectangle.id}`"
+          :x="rectangle.x"
+          :y="rectangle.y"
+          :width="rectangle.width"
+          :height="rectangle.height"
+          fill="none"
+          stroke="#C3CBD1"
+          stroke-width="1.75"
+          data-testid="origin-hover-cbar"
+          :data-cbar-id="rectangle.id"
+        />
+        <rect
+          v-for="rectangle in cbarRectangles.filter((item) => props.selectedObject?.kind === 'cbar' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
+          :key="`selected-${rectangle.id}`"
+          :x="rectangle.x"
+          :y="rectangle.y"
+          :width="rectangle.width"
+          :height="rectangle.height"
+          fill="none"
+          stroke="#D99A45"
+          stroke-width="2"
+          data-testid="origin-selected-cbar"
+          :data-cbar-id="rectangle.id"
+        />
       </svg>
+      <div
+        v-if="hoveredObject"
+        class="origin-object-hover-label"
+        data-testid="origin-object-hover-label"
+        aria-live="off"
+      >{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
       <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
         <div
           v-if="selectionPending && selectionStartX !== null && previewX !== null"
@@ -789,6 +950,36 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
+}
+
+.origin-object-hover-label {
+  position: absolute;
+  z-index: 3;
+  top: 7px;
+  right: 10px;
+  max-width: 42%;
+  overflow: hidden;
+  padding: 3px 5px;
+  border: 1px solid #394149;
+  border-radius: 2px;
+  background: rgb(18 22 25 / 92%);
+  color: #b9c2c8;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.origin-structure-overlay .origin-object-hover-sbar {
+  fill: rgb(195 203 209 / 8%);
+  stroke: rgb(195 203 209 / 48%);
+  stroke-width: 1;
+}
+
+.origin-structure-overlay .origin-object-selected-sbar {
+  fill: rgb(217 154 69 / 10%);
+  stroke: #D99A45;
+  stroke-width: 1.25;
 }
 
 .origin-chart-legend {
