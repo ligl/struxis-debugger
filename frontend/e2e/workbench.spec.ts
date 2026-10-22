@@ -13,7 +13,6 @@ async function layoutDiagnostics(page: Page) {
     const selectors = [
       "[data-testid='debugger-shell']",
       "[data-testid='topbar']",
-      "[data-testid='workbench']",
       "[data-testid='chart-workspace']",
       "[data-testid='chart-toolbar']",
       "[data-testid='chart-panels']",
@@ -65,21 +64,21 @@ test("default Inspector and Diagnostics preserve prototype optical gaps", async 
   // This geometry assertion covers the expanded layout; the default collapsed state is tested separately.
   await page.getByTestId("diagnostics-collapse-toggle").click();
 
-  const workbench = await page.getByTestId("workbench").boundingBox();
+  const shell = await page.getByTestId("debugger-shell").boundingBox();
   const inspector = await page.getByTestId("inspector-panel").boundingBox();
   const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
 
-  expect(workbench).toBeTruthy();
+  expect(shell).toBeTruthy();
   expect(inspector).toBeTruthy();
   expect(diagnostics).toBeTruthy();
 
   // The prototype overlays the toolbar edge, with 5px gaps at the workbench top and Diagnostics boundary.
   expect(Math.abs(inspector!.width - 282)).toBeLessThanOrEqual(1);
   expect(Math.abs(diagnostics!.height - 164)).toBeLessThanOrEqual(1);
-  expect(Math.abs(inspector!.y - (workbench!.y + 5))).toBeLessThanOrEqual(1);
+  expect(Math.abs(inspector!.y - (shell!.y + 44 + 5))).toBeLessThanOrEqual(1);
   expect(Math.abs(inspector!.y + inspector!.height + 5 - diagnostics!.y)).toBeLessThanOrEqual(1);
-  expect(Math.abs(inspector!.x + inspector!.width - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
-  expect(Math.abs(diagnostics!.y + diagnostics!.height - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
+  expect(Math.abs(inspector!.x + inspector!.width - (shell!.x + shell!.width))).toBeLessThanOrEqual(1);
+  expect(Math.abs(diagnostics!.y + diagnostics!.height - (shell!.y + shell!.height))).toBeLessThanOrEqual(1);
 });
 
 test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
@@ -90,12 +89,10 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
     const directTestIds = (element: Element | null) =>
       element ? Array.from(element.children, (child) => child.getAttribute("data-testid")) : [];
     const shell = document.querySelector("[data-testid='debugger-shell']");
-    const workbench = document.querySelector("[data-testid='workbench']");
     const chartWorkspace = document.querySelector("[data-testid='chart-workspace']");
     const chartPanels = document.querySelector("[data-testid='chart-panels']");
     return {
       shell: directTestIds(shell),
-      workbench: directTestIds(workbench),
       chartWorkspace: directTestIds(chartWorkspace),
       chartPanels: directTestIds(chartPanels),
       hasLegacyFooter: Boolean(document.querySelector(".footer-bar")),
@@ -111,8 +108,8 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
   await expect(topbar.locator(".keycap")).toHaveText("CAPITUS");
   await expect(topbar).toHaveCSS("height", "44px");
 
-  expect(hierarchy.shell).toEqual(["topbar", "workbench"]);
-  expect(hierarchy.workbench).toEqual(["chart-workspace", "inspector-panel", "diagnostics-dock"]);
+  expect(hierarchy.shell).toEqual(["topbar", "chart-workspace", "inspector-panel", "diagnostics-dock"]);
+  
   expect(hierarchy.chartWorkspace).toEqual(["chart-toolbar", "chart-panels"]);
   expect(hierarchy.chartPanels).toEqual(["workspace-content"]);
   expect(hierarchy.hasLegacyFooter).toBe(false);
@@ -518,14 +515,14 @@ for (const direction of dockDirections) {
     } else {
       expect(Math.abs(diagnostics.height - 164)).toBeLessThanOrEqual(1);
     }
-    const workbench = await page.getByTestId("workbench").boundingBox();
+    const shell = await page.getByTestId("debugger-shell").boundingBox();
     const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
-    expect(workbench).toBeTruthy();
+    expect(shell).toBeTruthy();
     expect(chartWorkspace).toBeTruthy();
 
     if (direction === "left") {
       expect(Math.abs(diagnostics.splitterRight - diagnostics.right)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.left - workbench!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.left - shell!.x)).toBeLessThanOrEqual(1);
       expect(chartWorkspace!.x).toBeGreaterThanOrEqual(diagnostics.right - 1);
     }
     if (direction === "right") {
@@ -538,12 +535,12 @@ for (const direction of dockDirections) {
     }
     if (direction === "top") {
       expect(Math.abs(diagnostics.splitterBottom - diagnostics.bottom)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.top - workbench!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.top - shell!.y)).toBeLessThanOrEqual(1);
       expect(chartWorkspace!.y).toBeGreaterThanOrEqual(diagnostics.bottom - 1);
     }
     if (direction === "bottom") {
       expect(Math.abs(diagnostics.splitterTop - diagnostics.top)).toBeLessThanOrEqual(4);
-      expect(Math.abs(diagnostics.bottom - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
+      expect(Math.abs(diagnostics.bottom - (shell!.y + shell!.height))).toBeLessThanOrEqual(1);
       expect(chartWorkspace!.y + chartWorkspace!.height).toBeLessThanOrEqual(diagnostics.top + 1);
     }
     if (direction === "left" || direction === "right") expect(diagnostics.splitterWidth).toBeGreaterThan(0);
@@ -558,29 +555,29 @@ for (const direction of dockDirections) {
     await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
     await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
 
-    const workbench = await page.getByTestId("workbench").boundingBox();
+    const shell = await page.getByTestId("debugger-shell").boundingBox();
     const inspector = await page.getByTestId("inspector-panel").boundingBox();
     const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
     const chartWorkspace = await page.getByTestId("chart-workspace").boundingBox();
-    expect(workbench).toBeTruthy();
+    expect(shell).toBeTruthy();
     expect(inspector).toBeTruthy();
     expect(diagnostics).toBeTruthy();
     expect(chartWorkspace).toBeTruthy();
 
     if (direction === "left") {
-      expect(Math.abs(inspector!.x - workbench!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector!.x - shell!.x)).toBeLessThanOrEqual(1);
       expect(Math.abs(diagnostics!.x - (inspector!.x + inspector!.width))).toBeLessThanOrEqual(1);
       expect(Math.abs(chartWorkspace!.x - (diagnostics!.x + diagnostics!.width) - 5)).toBeLessThanOrEqual(1);
     } else if (direction === "right") {
-      expect(Math.abs(inspector!.x + inspector!.width - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector!.x + inspector!.width - (shell!.x + shell!.width))).toBeLessThanOrEqual(1);
       expect(Math.abs(inspector!.x - (diagnostics!.x + diagnostics!.width))).toBeLessThanOrEqual(1);
       expect(Math.abs(diagnostics!.x - (chartWorkspace!.x + chartWorkspace!.width))).toBeLessThanOrEqual(1);
     } else if (direction === "top") {
-      expect(Math.abs(inspector!.y - workbench!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector!.y - shell!.y)).toBeLessThanOrEqual(1);
       expect(Math.abs(diagnostics!.y - (inspector!.y + inspector!.height))).toBeLessThanOrEqual(1);
       expect(Math.abs(chartWorkspace!.y - (diagnostics!.y + diagnostics!.height))).toBeLessThanOrEqual(1);
     } else {
-      expect(Math.abs(inspector!.y + inspector!.height - (workbench!.y + workbench!.height))).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector!.y + inspector!.height - (shell!.y + shell!.height))).toBeLessThanOrEqual(1);
       expect(Math.abs(inspector!.y - (diagnostics!.y + diagnostics!.height))).toBeLessThanOrEqual(1);
       expect(Math.abs(diagnostics!.y - (chartWorkspace!.y + chartWorkspace!.height) - 5)).toBeLessThanOrEqual(1);
     }
@@ -799,17 +796,17 @@ for (const inspectorDirection of ["top", "bottom"] as const) {
       await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${inspectorDirection}`);
       await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${diagnosticsDirection}`);
 
-      const workbench = await page.getByTestId("workbench").boundingBox();
+      const shell = await page.getByTestId("debugger-shell").boundingBox();
       const inspector = await page.getByTestId("inspector-panel").boundingBox();
       const diagnostics = await page.getByTestId("diagnostics-dock").boundingBox();
-      expect(workbench).toBeTruthy();
+      expect(shell).toBeTruthy();
       expect(inspector).toBeTruthy();
       expect(diagnostics).toBeTruthy();
 
       // Inspector's horizontal docks span the full workbench, not only the
       // region remaining beside a left/right Diagnostics dock.
-      expect(Math.abs(inspector!.x - workbench!.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs((inspector!.x + inspector!.width) - (workbench!.x + workbench!.width))).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector!.x - shell!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs((inspector!.x + inspector!.width) - (shell!.x + shell!.width))).toBeLessThanOrEqual(1);
 
       // The side Diagnostics dock remains below a top Inspector or above a
       // bottom Inspector, preserving the existing vertical reservation.
