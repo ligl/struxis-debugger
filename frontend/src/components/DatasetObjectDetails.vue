@@ -2,6 +2,7 @@
 import type { ReplayInspectorCBarDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
+import { formatInspectorValue } from "../inspector-format";
 
 const props = defineProps<{
   selectedSbar: SBarDto | null;
@@ -11,13 +12,6 @@ const props = defineProps<{
   timeframe: string | null;
 }>();
 
-function formatValue(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "—";
-  if (typeof value === "string") return value;
-  return JSON.stringify(value) ?? String(value);
-}
-
 function formatReplayField(field: string, value: unknown): string {
   if (field === "tsEvent" || field === "tsInit") {
     return formatDomainTimestamp(value == null ? null : String(value), props.timeframe);
@@ -25,7 +19,7 @@ function formatReplayField(field: string, value: unknown): string {
   if (field === "createdAt" || field === "updatedAt") {
     return formatLifecycleTimestamp(value == null ? null : String(value));
   }
-  return formatValue(value);
+  return formatInspectorValue(value);
 }
 </script>
 
