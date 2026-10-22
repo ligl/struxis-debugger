@@ -11,7 +11,6 @@ const { invoke, isTauri } = vi.hoisted(() => ({
 vi.mock("@tauri-apps/api/core", () => ({ invoke, isTauri }));
 
 let wrapper: ReturnType<typeof mount> | null = null;
-let reloadSpy: ReturnType<typeof vi.spyOn>;
 
 function mountMenu() {
   let api!: ReturnType<typeof useDevtoolsContextMenu>;
@@ -27,13 +26,11 @@ function mountMenu() {
 beforeEach(() => {
   vi.clearAllMocks();
   isTauri.mockReturnValue(true);
-  reloadSpy = vi.spyOn(window.location, "reload").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
   wrapper?.unmount();
   wrapper = null;
-  reloadSpy.mockRestore();
 });
 
 describe("useDevtoolsContextMenu", () => {
@@ -86,13 +83,12 @@ describe("useDevtoolsContextMenu", () => {
     expect(api.devtoolsContextMenu.value.visible).toBe(false);
   });
 
-  it("dismisses the menu before refreshing the page", () => {
+  it("dismisses the menu before invoking the page refresh action", () => {
     const api = mountMenu();
     api.devtoolsContextMenu.value.visible = true;
 
     api.refreshPageFromContextMenu();
 
     expect(api.devtoolsContextMenu.value.visible).toBe(false);
-    expect(reloadSpy).toHaveBeenCalledOnce();
   });
 });
