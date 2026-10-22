@@ -72,7 +72,7 @@ test("default Inspector and Diagnostics preserve prototype optical gaps", async 
   expect(inspector).toBeTruthy();
   expect(diagnostics).toBeTruthy();
 
-  // The prototype overlays the toolbar edge, with 5px gaps at the workbench top and Diagnostics boundary.
+  // The prototype overlays the toolbar edge, with 5px gaps below the 44px Topbar and at the Diagnostics boundary.
   expect(Math.abs(inspector!.width - 282)).toBeLessThanOrEqual(1);
   expect(Math.abs(diagnostics!.height - 164)).toBeLessThanOrEqual(1);
   expect(Math.abs(inspector!.y - (shell!.y + 44 + 5))).toBeLessThanOrEqual(1);
@@ -109,7 +109,6 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
   await expect(topbar).toHaveCSS("height", "44px");
 
   expect(hierarchy.shell).toEqual(["topbar", "chart-workspace", "inspector-panel", "diagnostics-dock"]);
-  
   expect(hierarchy.chartWorkspace).toEqual(["chart-toolbar", "chart-panels"]);
   expect(hierarchy.chartPanels).toEqual(["workspace-content"]);
   expect(hierarchy.hasLegacyFooter).toBe(false);
