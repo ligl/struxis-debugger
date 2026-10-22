@@ -9,7 +9,7 @@ use crate::{
     checkpoint::ReplayInspectorProjection,
     replay::{ReplayCommandGate, ReplayCommandKind},
     run::RunState,
-    worker::{CheckpointSink, ReplayWorker, ReplayWorkerConfig},
+    worker::{CheckpointSink, ReplaySnapshotData, ReplayWorker, ReplayWorkerConfig},
 };
 
 /// Owns the single active Run worker for one Debugger application session.
@@ -23,6 +23,23 @@ impl ReplayManager {
     #[must_use]
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    /// Starts an interactive Run without creating a SnapshotWriter.
+    pub(crate) fn start_interactive(
+        &mut self,
+        config: ReplayWorkerConfig,
+    ) -> Result<RunState, String> {
+        let _permit = self.gate.try_enter(ReplayCommandKind::Start)?;
+        if self.active.is_some() {
+            return Err(
+                "Start rejected: an active or unreleased Run is still owned by ReplayManager"
+                    .to_owned(),
+            );
+        }
+        let (worker, initial_state) = ReplayWorker::spawn_interactive(config)?;
+        self.active = Some(worker);
+        Ok(initial_state)
     }
 
     /// Starts a new worker only when no previous worker remains owned.
@@ -46,6 +63,14 @@ impl ReplayManager {
         let (worker, initial_state) = ReplayWorker::spawn(config, sink)?;
         self.active = Some(worker);
         Ok(initial_state)
+    }
+
+    pub(crate) fn snapshot_data(&mut self) -> Result<ReplaySnapshotData, String> {
+        let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
+        self.active
+            .as_mut()
+            .ok_or_else(|| "Snapshot save rejected: ReplayManager has no active Run".to_owned())?
+            .snapshot_data()
     }
 
     pub(crate) fn inspector(&mut self) -> Result<Option<ReplayInspectorProjection>, String> {
@@ -111,6 +136,23 @@ impl ReplayManager {
         let state = worker.dispose()?;
         self.active = None;
         Ok(state)
+    }
+
+    /// Restarts an interactive Run without coupling its lifetime to SnapshotWriter.
+    pub(crate) fn restart_interactive(
+        &mut self,
+        config: ReplayWorkerConfig,
+    ) -> Result<RunState, String> {
+        let _permit = self.gate.try_enter(ReplayCommandKind::Restart)?;
+        if let Some(worker) = self.active.as_mut() {
+            worker.dispose().map_err(|error| {
+                format!("Restart aborted: previous Run release is unconfirmed: {error}")
+            })?;
+        }
+        self.active = None;
+        let (worker, initial_state) = ReplayWorker::spawn_interactive(config)?;
+        self.active = Some(worker);
+        Ok(initial_state)
     }
 
     /// Disposes the previous Run before creating a replacement from the caller's
