@@ -90,7 +90,16 @@ const emit = defineEmits<{
       {{ loading ? "LOADING…" : mutationBusy ? "BUSY…" : "LOAD ORIGIN" }}
     </button>
 
-    <details class="catalog-source-details" :open="Boolean(discoveryError || loadError)">
+    <details
+      class="catalog-source-details"
+      :open="Boolean(discoveryError || loadError)"
+      @pointerdown.stop
+      @mousedown.stop
+      @click.stop
+      @dblclick.stop
+      @wheel.stop
+      @contextmenu.stop
+    >
       <summary data-testid="catalog-origin-details-toggle" aria-label="Catalog and Origin status" title="Catalog and Origin status">i</summary>
       <div class="catalog-source-popover">
         <p v-if="discoveryError" class="error-message" role="alert">{{ discoveryError }}</p>
@@ -183,6 +192,7 @@ const emit = defineEmits<{
 
 .catalog-source-details {
   position: relative;
+  z-index: 31;
   flex: 0 0 auto;
 }
 
@@ -205,6 +215,7 @@ const emit = defineEmits<{
 
 .catalog-source-popover {
   position: absolute;
+  pointer-events: auto;
   z-index: 20;
   top: calc(100% + 7px);
   right: 0;
