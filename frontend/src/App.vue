@@ -395,11 +395,15 @@ onMounted(async () => {
       </section>
       <aside data-testid="inspector-panel" class="inspector-rail" :class="['dock-' + inspectorDock, { collapsed: inspectorCollapsed }]">
         <div class="panel-resize-edge inspector-resize-edge" data-testid="inspector-resize-edge" role="separator" aria-label="Resize Inspector" :aria-orientation="inspectorDock === 'left' || inspectorDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidth : inspectorHeight" :aria-valuemin="inspectorDock === 'left' || inspectorDock === 'right' ? 180 : 100" :aria-valuemax="inspectorDock === 'left' || inspectorDock === 'right' ? inspectorWidthLimit() : inspectorHeightLimit()" tabindex="0" @pointerdown="startPanelResize('inspector', $event)" @keydown="handlePanelResizeKey('inspector', $event)"></div>
-        <div class="rail-heading">
+        <div
+          class="rail-heading"
+          data-testid="inspector-heading"
+          @click="inspectorCollapsed && toggleCollapsed('inspector')"
+        >
           <span class="panel-title panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">Inspector</span>
           <span class="tag inspector-object-tag">OBJECT</span>
           <span class="spacer"></span>
-          <details class="dock-menu" data-testid="inspector-dock-menu">
+          <details class="dock-menu" data-testid="inspector-dock-menu" @click.stop>
             <summary class="subtle-button rail-toggle" aria-label="Move Inspector" title="Move or dock panel">⋯</summary>
             <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
               <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="setDock('inspector', 'left'); closeDockMenus()">Dock Left</button>
@@ -408,7 +412,7 @@ onMounted(async () => {
               <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="setDock('inspector', 'bottom'); closeDockMenus()">Dock Bottom</button>
             </div>
           </details>
-          <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" :title="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="toggleCollapsed('inspector')">{{ inspectorCollapsed ? '+' : '−' }}</button>
+          <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" :title="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click.stop="toggleCollapsed('inspector')">{{ inspectorCollapsed ? '+' : '−' }}</button>
         </div>
         <ObjectInspector
           v-if="!inspectorCollapsed"
