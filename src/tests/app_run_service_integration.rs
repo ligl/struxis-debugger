@@ -208,6 +208,9 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     let initial = state.start_run().expect("Run should start");
     assert_eq!(initial.status, RunStatus::Ready);
     assert_eq!(initial.processed_count, 0);
+    let premature_save = state.save_run_snapshot()
+        .expect_err("Snapshot save must reject a non-completed Run");
+    assert!(premature_save.message.contains("Completed Run"));
 
     let first = state.replay_step().expect("first SBar should process");
     assert_eq!(first.processed_count, 1);
