@@ -104,5 +104,10 @@ function formatReplayField(field: string, value: unknown): string {
       </dl>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
-
+    <div v-else class="inspector-empty" data-testid="inspector-empty">
+      <span class="placeholder-mark">S/</span>
+      <h3>Object Inspector</h3>
+      <p>Click an SBar, CBar range, or Swing segment on the Origin chart to inspect its exact domain fields.</p>
+      <small>Authoritative Origin data only</small>
+    </div>
 </template>
