@@ -172,7 +172,7 @@ const selectedInspectorSwing = computed<ReplayInspectorSwingDto | null>(() => {
 });
 
 function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>): void {
-  if (!origin.value) return;
+  if (!origin.value || selection.originDatasetId !== origin.value.originDatasetId) return;
   const exists = selection.kind === "cbar"
     ? origin.value.structure?.cbars.some((cbar) => cbar.cbarId === selection.id)
     : origin.value.structure?.swings.some((swing) => swing.swingId === selection.id);
@@ -190,7 +190,7 @@ const rangeSelectionStatus = ref(
 function handleOriginSbarClick(sbarId: string): void {
   if (!origin.value) return;
   if (origin.value.bars.some((bar) => bar.sbarId === sbarId)) {
-    selectedInspectorObject.value = { kind: "sbar", id: sbarId };
+    selectedInspectorObject.value = { kind: "sbar", id: sbarId, originDatasetId: origin.value.originDatasetId };
   }
   // Inspection remains available when mutation is blocked; range selection
   // still obeys the existing Origin/Test Dataset/Run lifecycle guard.
