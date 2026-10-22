@@ -85,7 +85,7 @@ describe("useDockLayout", () => {
     option.dispatchEvent(new Event("pointerdown", { bubbles: true }) as PointerEvent);
     expect(menu.open).toBe(true);
 
-    outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    outside.dispatchEvent(new Event("pointerdown", { bubbles: true }) as PointerEvent);
     expect(menu.open).toBe(false);
   });
 
@@ -102,7 +102,7 @@ describe("useDockLayout", () => {
 
     const wrapper = cleanup.pop();
     wrapper?.();
-    outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    outside.dispatchEvent(new Event("pointerdown", { bubbles: true }) as PointerEvent);
 
     expect(menu.open).toBe(true);
     void layout;
