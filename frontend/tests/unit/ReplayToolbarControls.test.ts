@@ -18,6 +18,7 @@ function mountControls(overrides: Partial<{
   runState: RunStateDto | null;
   runBusy: boolean;
   runError: string;
+  snapshotSaveBusy: boolean;
   playbackStatus: "idle" | "playing" | "paused";
   playbackDelayMs: number;
   canStartRun: boolean;
@@ -28,6 +29,7 @@ function mountControls(overrides: Partial<{
       runState: readyRun,
       runBusy: false,
       runError: "",
+      snapshotSaveBusy: false,
       playbackStatus: "idle",
       playbackDelayMs: 100,
       canStartRun: false,
@@ -63,6 +65,25 @@ describe("ReplayToolbarControls", () => {
     await playing.get('[data-testid="run-play-pause"]').trigger("click");
     expect(playing.emitted("command")).toEqual([["pause"]]);
     expect(playing.get('[data-testid="run-play-pause"]').text()).toContain("PAUSE");
+  });
+
+  it("allows explicit Snapshot save only for a completed Run", async () => {
+    const ready = mountControls();
+    expect(ready.get('[data-testid="run-save-snapshot"]').attributes("disabled")).toBeDefined();
+
+    const completed = mountControls({
+      runState: { ...readyRun, status: "completed", processedCount: 10 },
+    });
+    expect(completed.get('[data-testid="run-save-snapshot"]').attributes("disabled")).toBeUndefined();
+    await completed.get('[data-testid="run-save-snapshot"]').trigger("click");
+    expect(completed.emitted("saveSnapshot")).toHaveLength(1);
+
+    const saving = mountControls({
+      runState: { ...readyRun, status: "completed", processedCount: 10 },
+      snapshotSaveBusy: true,
+    });
+    expect(saving.get('[data-testid="run-save-snapshot"]').attributes("disabled")).toBeDefined();
+    expect(saving.get('[data-testid="run-save-snapshot"]').text()).toContain("SAVING");
   });
 
   it("emits playback speed changes without issuing Run commands", async () => {
