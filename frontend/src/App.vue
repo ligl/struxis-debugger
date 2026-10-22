@@ -22,7 +22,7 @@ import { useOriginLoad } from "./composables/useOriginLoad";
 import { useTestDataset } from "./composables/useTestDataset";
 import { useRunControl } from "./composables/useRunControl";
 import { useCatalogGroups } from "./composables/useCatalogGroups";
-import { resolveOriginRangeClick } from "./origin-range-selection";
+import { useOriginRangeSelection } from "./composables/useOriginRangeSelection";
 import { getReplayInspector } from "./origin-bridge";
 import type { ReplayInspectorDto } from "./origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
@@ -98,8 +98,6 @@ const canMutateTest = computed(
 
 const {
   testDataset,
-  startSbarId,
-  endSbarId,
   testLoading,
   testError,
   testStatus,
@@ -110,6 +108,13 @@ const {
 const canLoadOrigin = computed(
   () => canMutateTest.value && !testLoading.value,
 );
+
+const {
+  startSbarId, endSbarId, rangeSelectionPendingStart, rangeSelectionReady,
+  selectedRangeCount, rangeSelectionStatus, handleRangeSbarClick,
+  handleRangeBoundaryChange, handleRangeSelectionError, cancelOriginRangeSelection,
+  resetForOrigin, initializeFromTestDataset,
+} = useOriginRangeSelection(origin, canMutateTest, testLoading);
 
 const selectedInspectorObject = ref<OriginObjectSelection | null>(null);
 const replayInspector = ref<ReplayInspectorDto | null>(null);
@@ -180,97 +185,19 @@ function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kin
   selectedInspectorObject.value = selection;
 }
 
-const rangeSelectionPendingStart = ref<string | null>(null);
-const rangeSelectionReady = ref(false);
-const selectedRangeCount = ref(0);
-const rangeSelectionStatus = ref(
-  "Click anywhere in the chart plot to select the start time of your Test interval.",
-);
-
 function handleOriginSbarClick(sbarId: string): void {
   if (!origin.value) return;
   if (origin.value.bars.some((bar) => bar.sbarId === sbarId)) {
     selectedInspectorObject.value = { kind: "sbar", id: sbarId, originDatasetId: origin.value.originDatasetId };
   }
-  // Inspection remains available when mutation is blocked; range selection
-  // still obeys the existing Origin/Test Dataset/Run lifecycle guard.
-  if (!canMutateTest.value || testLoading.value) return;
-  const result = resolveOriginRangeClick(
-    origin.value.bars,
-    rangeSelectionPendingStart.value,
-    sbarId,
-  );
-
-  if (result.kind === "invalid") {
-    rangeSelectionStatus.value = result.message;
-    return;
-  }
-
-  if (result.kind === "start") {
-    rangeSelectionPendingStart.value = result.sbarId;
-    startSbarId.value = result.sbarId;
-    endSbarId.value = "";
-    rangeSelectionReady.value = false;
-    selectedRangeCount.value = 0;
-    rangeSelectionStatus.value =
-      `Start SBar selected: ${result.sbarId}. Move the pointer to preview the range, then click to fix the inclusive end boundary.`;
-    return;
-  }
-
-  startSbarId.value = result.startSbarId;
-  endSbarId.value = result.endSbarId;
-  rangeSelectionPendingStart.value = null;
-  rangeSelectionReady.value = true;
-  selectedRangeCount.value = result.count;
-  rangeSelectionStatus.value =
-    `Selected ${result.count.toLocaleString()} SBars: ${result.startSbarId} → ${result.endSbarId} (inclusive).`;
-}
-
-function handleOriginBoundaryChange(edge: "start" | "end", sbarId: string): void {
-  if (!origin.value || !canMutateTest.value || testLoading.value || !rangeSelectionReady.value) return;
-  const bars = origin.value.bars;
-  const nextIndex = bars.findIndex((bar) => bar.sbarId === sbarId);
-  const currentStartIndex = bars.findIndex((bar) => bar.sbarId === startSbarId.value);
-  const currentEndIndex = bars.findIndex((bar) => bar.sbarId === endSbarId.value);
-  if (nextIndex < 0 || currentStartIndex < 0 || currentEndIndex < 0) {
-    rangeSelectionStatus.value = "The dragged boundary is not part of the current Origin. The interval was not changed.";
-    return;
-  }
-
-  if (edge === "start") {
-    if (nextIndex > currentEndIndex) return;
-    startSbarId.value = sbarId;
-  } else {
-    if (nextIndex < currentStartIndex) return;
-    endSbarId.value = sbarId;
-  }
-
-  const startIndex = edge === "start" ? nextIndex : currentStartIndex;
-  const endIndex = edge === "end" ? nextIndex : currentEndIndex;
-  selectedRangeCount.value = endIndex - startIndex + 1;
-  rangeSelectionPendingStart.value = null;
-  rangeSelectionReady.value = true;
-  rangeSelectionStatus.value =
-    `Adjusted inclusive interval: ${startSbarId.value} → ${endSbarId.value} (${selectedRangeCount.value.toLocaleString()} SBars).`;
-}
-
-function handleOriginSelectionError(message: string): void {
-  rangeSelectionStatus.value = message;
-}
-
-function cancelOriginRangeSelection(): void {
-  rangeSelectionPendingStart.value = null;
-  rangeSelectionReady.value = false;
-  startSbarId.value = "";
-  endSbarId.value = "";
-  selectedRangeCount.value = 0;
-  rangeSelectionStatus.value =
-    "Range selection cancelled. Click the chart to choose a new start SBar.";
+  // Inspection remains available when mutation is blocked; the range module
+  // independently enforces the Origin/Test Dataset/Run lifecycle guard.
+  handleRangeSbarClick(sbarId);
 }
 
 async function createSelectedTestDataset(): Promise<void> {
   if (!rangeSelectionReady.value) return;
-  await createTestDataset();
+  await createTestDataset(startSbarId.value, endSbarId.value);
 }
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
@@ -553,13 +480,11 @@ async function startLoad(): Promise<void> {
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
     selectedInspectorObject.value = null;
-    rangeSelectionPendingStart.value = null;
-    rangeSelectionReady.value = false;
-    selectedRangeCount.value = 0;
-    rangeSelectionStatus.value = "Click anywhere in the chart plot to select the start time of your Test interval.";
+    resetForOrigin();
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
-    await refreshCurrentTestDataset();
+    const currentTestDataset = await refreshCurrentTestDataset();
+    initializeFromTestDataset(currentTestDataset);
   });
 }
 
@@ -656,7 +581,10 @@ onMounted(async () => {
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
-  if (!originHandoffDuringStartup) await refreshCurrentTestDataset();
+  if (!originHandoffDuringStartup) {
+    const currentTestDataset = await refreshCurrentTestDataset();
+    if (!originHandoffDuringStartup) initializeFromTestDataset(currentTestDataset);
+  }
 });
 
 onMounted(() => {
@@ -783,8 +711,8 @@ onUnmounted(() => {
                 :selection-editable="canMutateTest && !testLoading"
                 @sbar-click="handleOriginSbarClick"
                 @object-click="handleOriginObjectClick"
-                @range-boundary-change="handleOriginBoundaryChange"
-                @selection-error="handleOriginSelectionError"
+                @range-boundary-change="handleRangeBoundaryChange"
+                @selection-error="handleRangeSelectionError"
                 @cancel-range-selection="cancelOriginRangeSelection"
               />
             </template>
