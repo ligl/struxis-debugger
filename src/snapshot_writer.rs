@@ -191,7 +191,7 @@ impl SnapshotWriter {
                 "Checkpoint SBar ID does not match fixed input at index {index}: expected={expected_sbar_id}, actual={sbar_id}"
             ));
         }
-        if state_key != self.input.state_key {
+        if state_key != self.input.state_key.as_str() {
             return Err(format!(
                 "Checkpoint StruxisStateKey mismatch: expected={}, actual={}",
                 self.input.state_key, state_key
