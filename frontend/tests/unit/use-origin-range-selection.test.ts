@@ -107,7 +107,7 @@ describe("useOriginRangeSelection", () => {
   it("does not mutate selection when Run lifecycle or Test Dataset loading blocks mutation", () => {
     const canMutate = ref(false);
     const loading = ref(false);
-    const state = useOriginRangeSelection(ref<OriginDatasetDto | null>(origin), canMutate, loading);
+    const state = useOriginRangeSelection(ref<OriginDatasetDto | null>(origin), computed(() => canMutate.value), loading);
     state.handleRangeSbarClick("100");
     expect(state.startSbarId.value).toBe("");
     canMutate.value = true;
