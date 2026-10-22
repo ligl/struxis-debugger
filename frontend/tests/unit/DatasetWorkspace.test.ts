@@ -62,7 +62,7 @@ describe("DatasetWorkspace", () => {
 
     wrapper.findComponent(CatalogPanel).vm.$emit("refresh");
     wrapper.findComponent(CatalogPanel).vm.$emit("select-dataset", "catalog-1");
-    wrapper.findComponent(CatalogPanel).vm.$emit("update:enable-structure", false);
+    wrapper.findComponent(CatalogPanel).vm.$emit("update:enableStructure", false);
     wrapper.findComponent(CatalogPanel).vm.$emit("load");
     wrapper.findComponent(TestDatasetPanel).vm.$emit("create");
 
@@ -76,7 +76,7 @@ describe("DatasetWorkspace", () => {
   it("preserves both arguments of the Origin range-boundary event", () => {
     const wrapper = mountDatasetWorkspace();
 
-    wrapper.findComponent(OriginChart).vm.$emit("range-boundary-change", "start", "sbar-1");
+    wrapper.findComponent(OriginChart).vm.$emit("rangeBoundaryChange", "start", "sbar-1");
 
     expect(wrapper.emitted("rangeBoundaryChange")).toEqual([["start", "sbar-1"]]);
   });
