@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { OriginObjectSelection, ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
+import type { ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
 import { formatInspectorValue } from "../inspector-format";
@@ -15,25 +15,16 @@ const props = defineProps<{
   structure: ReplayInspectorStructureDto | null;
 }>();
 
-const emit = defineEmits<{
-  selectObject: [selection: OriginObjectSelection];
-}>();
-
-function selectRelatedObject(kind: OriginObjectSelection["kind"], id: string): void {
-  if (!props.originDatasetId) return;
-  if (kind === "sbar" && !props.bars.some((bar) => bar.sbarId === id)) return;
-  if (kind === "cbar" && !props.structure?.cbars.some((cbar) => cbar.cbarId === id)) return;
-  if (kind === "swing" && !props.structure?.swings.some((swing) => swing.swingId === id)) return;
-  emit("selectObject", { kind, id, originDatasetId: props.originDatasetId } as OriginObjectSelection);
-}
-
 const cbarRelatedObjects = computed(() => {
   const cbar = props.selectedCbar;
   if (!cbar) return [];
   return [
     { label: "Start SBar", id: cbar.sbarStartId },
     { label: "End SBar", id: cbar.sbarEndId },
-  ].filter((item) => props.bars.some((bar) => bar.sbarId === item.id));
+  ].flatMap((item) => {
+    const object = props.bars.find((bar) => bar.sbarId === item.id);
+    return object ? [{ ...item, object }] : [];
+  });
 });
 
 const swingRelatedObjects = computed(() => {
@@ -44,9 +35,12 @@ const swingRelatedObjects = computed(() => {
     { kind: "cbar" as const, label: "End CBar", id: swing.cbarEndId },
     { kind: "sbar" as const, label: "Start SBar", id: swing.sbarStartId },
     { kind: "sbar" as const, label: "End SBar", id: swing.sbarEndId },
-  ].filter((item) => item.kind === "cbar"
-    ? props.structure?.cbars.some((cbar) => cbar.cbarId === item.id)
-    : props.bars.some((bar) => bar.sbarId === item.id));
+  ].flatMap((item) => {
+    const object = item.kind === "cbar"
+      ? props.structure?.cbars.find((cbar) => cbar.cbarId === item.id)
+      : props.bars.find((bar) => bar.sbarId === item.id);
+    return object ? [{ ...item, object }] : [];
+  });
 });
 
 function formatReplayField(field: string, value: unknown): string {
@@ -109,14 +103,25 @@ function formatReplayField(field: string, value: unknown): string {
       </dl>
       <section class="inspector-related" data-testid="inspector-related-objects">
         <p class="section-index">RELATED OBJECTS</p>
-        <button
+        <details
           v-for="endpoint in cbarRelatedObjects"
           :key="endpoint.label"
-          type="button"
-          class="inspector-related-link"
+          class="inspector-related-item"
           :data-testid="'inspector-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
-          @click="selectRelatedObject('sbar', endpoint.id)"
-        >{{ endpoint.label }} <code>{{ endpoint.id }}</code></button>
+        >
+          <summary>{{ endpoint.label }} <code>{{ endpoint.id }}</code></summary>
+          <dl class="inspector-fields inspector-related-fields">
+            <InspectorPropertyField label="SBar ID" :value="endpoint.object.sbarId" wide />
+            <InspectorPropertyField label="Bar Type" :value="endpoint.object.barType" wide />
+            <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsEvent, timeframe)" :copy-value="endpoint.object.tsEvent" wide />
+            <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsInit, timeframe)" :copy-value="endpoint.object.tsInit" wide />
+            <InspectorPropertyField label="Open" :value="endpoint.object.open" />
+            <InspectorPropertyField label="High" :value="endpoint.object.high" />
+            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
+            <InspectorPropertyField label="Close" :value="endpoint.object.close" />
+            <InspectorPropertyField label="Volume" :value="endpoint.object.volume" />
+          </dl>
+        </details>
       </section>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
@@ -147,14 +152,35 @@ function formatReplayField(field: string, value: unknown): string {
       </dl>
       <section class="inspector-related" data-testid="inspector-related-objects">
         <p class="section-index">RELATED OBJECTS</p>
-        <button
+        <details
           v-for="endpoint in swingRelatedObjects"
           :key="endpoint.label"
-          type="button"
-          class="inspector-related-link"
+          class="inspector-related-item"
           :data-testid="'inspector-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
-          @click="selectRelatedObject(endpoint.kind, endpoint.id)"
-        >{{ endpoint.label }} <code>{{ endpoint.id }}</code></button>
+        >
+          <summary>{{ endpoint.label }} <code>{{ endpoint.id }}</code></summary>
+          <dl v-if="endpoint.kind === 'cbar'" class="inspector-fields inspector-related-fields">
+            <InspectorPropertyField label="CBar ID" :value="endpoint.object.cbarId" wide />
+            <InspectorPropertyField label="High" :value="endpoint.object.high" />
+            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
+            <InspectorPropertyField label="SBar Start ID" :value="endpoint.object.sbarStartId" wide />
+            <InspectorPropertyField label="SBar End ID" :value="endpoint.object.sbarEndId" wide />
+            <InspectorPropertyField label="Span SBars" :value="String(endpoint.object.spanSbars)" />
+            <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue(endpoint.object.fractalType)" :copy-value="formatInspectorValue(endpoint.object.fractalType)" />
+            <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', endpoint.object.createdAt)" :copy-value="endpoint.object.createdAt" wide />
+          </dl>
+          <dl v-else class="inspector-fields inspector-related-fields">
+            <InspectorPropertyField label="SBar ID" :value="endpoint.object.sbarId" wide />
+            <InspectorPropertyField label="Bar Type" :value="endpoint.object.barType" wide />
+            <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsEvent, timeframe)" :copy-value="endpoint.object.tsEvent" wide />
+            <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsInit, timeframe)" :copy-value="endpoint.object.tsInit" wide />
+            <InspectorPropertyField label="Open" :value="endpoint.object.open" />
+            <InspectorPropertyField label="High" :value="endpoint.object.high" />
+            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
+            <InspectorPropertyField label="Close" :value="endpoint.object.close" />
+            <InspectorPropertyField label="Volume" :value="endpoint.object.volume" />
+          </dl>
+        </details>
       </section>
       <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
     </template>
@@ -180,33 +206,42 @@ function formatReplayField(field: string, value: unknown): string {
   margin: 0 0 3px;
 }
 
-.inspector-related-link {
+.inspector-related-item {
+  min-width: 0;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  background: #171c20;
+}
+
+.inspector-related-item > summary {
   display: flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 5px 6px;
-  border: 1px solid #30383f;
-  border-radius: 3px;
-  background: #171c20;
+  padding: 6px;
   color: #aeb8bf;
-  text-align: left;
   cursor: pointer;
+  list-style-position: inside;
 }
 
-.inspector-related-link:hover {
-  border-color: #596873;
+.inspector-related-item > summary:hover {
   background: #20272d;
   color: #e3e8eb;
 }
 
-.inspector-related-link code {
+.inspector-related-item > summary code {
   min-width: 0;
   overflow: hidden;
   color: #c5cdd2;
   font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.inspector-related-fields {
+  margin: 0 6px 6px;
+  padding-top: 6px;
+  border-top: 1px solid #30383f;
 }
 </style>
