@@ -44,7 +44,7 @@ export function useReplayKeyboardShortcut(
     if (
       isInteractiveKeyboardTarget(event.target) ||
       isInteractiveKeyboardTarget(document.activeElement) ||
-      runBusy.value
+      (runBusy.value && playbackStatus.value !== "playing")
     ) return;
 
     const command = playbackStatus.value === "playing"
