@@ -14,6 +14,7 @@ const chartMocks = vi.hoisted(() => ({
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
   setVisibleLogicalRange: vi.fn(),
+  getVisibleLogicalRange: vi.fn(),
   timeToCoordinate: vi.fn(),
   coordinateToLogical: vi.fn(),
   subscribeCrosshairMove: vi.fn(),
@@ -71,6 +72,7 @@ function installChartMock() {
     timeScale: vi.fn(() => ({
       fitContent: chartMocks.fitContent,
       setVisibleLogicalRange: chartMocks.setVisibleLogicalRange,
+      getVisibleLogicalRange: chartMocks.getVisibleLogicalRange,
       timeToCoordinate: chartMocks.timeToCoordinate,
       coordinateToLogical: chartMocks.coordinateToLogical,
       subscribeVisibleLogicalRangeChange: chartMocks.subscribeVisibleLogicalRangeChange,
@@ -90,6 +92,7 @@ function installChartMock() {
 describe("OriginChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    chartMocks.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 1 });
     chartMocks.timeToCoordinate.mockImplementation((time: number) => {
       if (time === 1700000000) return 100;
       if (time === 1700000060) return 200;
@@ -563,6 +566,42 @@ describe("OriginChart", () => {
     wrapper.unmount();
     expect(chartMocks.unsubscribeClick).toHaveBeenCalledOnce();
     expect(chartMocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
+  });
+
+  it("pans to a related off-screen selection while preserving the logical zoom span", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+      }),
+      bar({
+        sbarId: "1700000120000000000",
+        tsEvent: "1700000120000000000",
+        tsInit: "1700000120000000001",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-related-navigation",
+        structure: null,
+        selectedObject: null,
+      },
+    });
+
+    await wrapper.setProps({
+      selectedObject: {
+        kind: "sbar",
+        id: bars[2]!.sbarId,
+        originDatasetId: "origin-related-navigation",
+      },
+    });
+    await nextTick();
+
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledWith({ from: 1.5, to: 2.5 });
+    wrapper.unmount();
   });
 
   it("accepts an exact SBar ID through the component selection command and emits the normal selection event", async () => {
