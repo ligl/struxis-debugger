@@ -24,7 +24,7 @@ function mountWorkspace(active = true) {
       compareResult: null,
       compareLoading: false,
       compareError: "",
-      formatLifecycleTimestamp: (value) => value ?? "—",
+      formatLifecycleTimestamp: (value: string | null | undefined) => value ?? "—",
     },
   });
 }
