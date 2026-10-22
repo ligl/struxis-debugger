@@ -160,6 +160,7 @@ describe("Run Error Scenarios", () => {
     };
     invokeMock.mockRejectedValue(stateError);
 
+    await expect(stepRun()).rejects.toEqual(stateError);
   });
 
   it("rejects with not_found when Test Dataset is missing for start", async () => {
