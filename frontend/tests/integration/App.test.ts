@@ -729,7 +729,7 @@ describe("Test, Run and Snapshot workbench", () => {
     }
     for (const direction of ["left", "right", "top", "bottom"] as const) {
       await wrapper.get(`[data-testid="diagnostics-dock-${direction}"]`).trigger("click");
-      expect(wrapper.get('[data-testid="workbench"]').classes()).toContain(`diagnostics-dock-${direction}`);
+      expect(wrapper.get('[data-testid="debugger-shell"]').classes()).toContain(`diagnostics-dock-${direction}`);
     }
   });
 
@@ -753,14 +753,14 @@ describe("Test, Run and Snapshot workbench", () => {
     };
 
     await wrapper.get('[data-testid="inspector-dock-drag-handle"]').trigger("dragstart", { dataTransfer });
-    await wrapper.get('[data-testid="workbench"]').trigger("dragover", { dataTransfer });
-    await wrapper.get('[data-testid="workbench"]').trigger("drop", { dataTransfer, clientX: -1 });
+    await wrapper.get('[data-testid="debugger-shell"]').trigger("dragover", { dataTransfer });
+    await wrapper.get('[data-testid="debugger-shell"]').trigger("drop", { dataTransfer, clientX: -1 });
     expect(wrapper.get('[data-testid="inspector-panel"]').classes()).toContain("dock-left");
 
     await wrapper.get('[data-testid="diagnostics-dock-drag-handle"]').trigger("dragstart", { dataTransfer });
-    await wrapper.get('[data-testid="workbench"]').trigger("dragover", { dataTransfer });
-    await wrapper.get('[data-testid="workbench"]').trigger("drop", { dataTransfer, clientX: 0.5, clientY: -1 });
-    expect(wrapper.get('[data-testid="workbench"]').classes()).toContain("diagnostics-dock-top");
+    await wrapper.get('[data-testid="debugger-shell"]').trigger("dragover", { dataTransfer });
+    await wrapper.get('[data-testid="debugger-shell"]').trigger("drop", { dataTransfer, clientX: 0.5, clientY: -1 });
+    expect(wrapper.get('[data-testid="debugger-shell"]').classes()).toContain("diagnostics-dock-top");
   });
 
   it("creates a backend-validated Test Dataset and exposes Run controls", async () => {
