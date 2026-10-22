@@ -40,6 +40,7 @@ let resizeObserver: ResizeObserver | null = null;
 let overlayUpdateFrame: number | null = null;
 let fittedOriginDatasetId: string | null = null;
 let sbarIdByLogicalIndex: readonly string[] = [];
+let indexBySbarId: ReadonlyMap<string, number> = new Map();
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
@@ -176,8 +177,8 @@ function updateSwingSegments(): void {
 
 function markerForSbar(sbarId: string | null | undefined): SBarMarker | null {
   if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
-  const index = sbarIdByLogicalIndex.indexOf(sbarId);
-  const bar = props.bars[index];
+  const index = indexBySbarId.get(sbarId);
+  const bar = index === undefined ? undefined : props.bars[index];
   const time = timeBySbarId.get(sbarId);
   if (!bar || time === undefined) return null;
   const x = chart.timeScale().timeToCoordinate(time);
@@ -478,6 +479,7 @@ function updateChart(): void {
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
     sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
+    indexBySbarId = new Map(sbarIdByLogicalIndex.map((sbarId, index) => [sbarId, index] as const));
     timeBySbarId = new Map(
       props.bars.flatMap((bar, index) => {
         const time = projection.candles[index]?.time;
@@ -501,6 +503,7 @@ function updateChart(): void {
     updateSbarCoordinates();
   } catch (error) {
     sbarIdByLogicalIndex = [];
+    indexBySbarId = new Map();
     timeBySbarId = new Map();
     firstSbarTime = null;
     secondSbarTime = null;
@@ -615,6 +618,7 @@ onBeforeUnmount(() => {
   hoveredSbarMarker.value = null;
   selectedSbarMarker.value = null;
   sbarIdByLogicalIndex = [];
+  indexBySbarId = new Map();
   timeBySbarId = new Map();
   firstSbarTime = null;
   secondSbarTime = null;
