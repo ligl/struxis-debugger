@@ -29,10 +29,10 @@ export function isRunCommandEligible(
       return canRestartRun;
     case "step":
       return status === "ready" || status === "paused";
+    // Playback controls are frontend scheduler state, not Run lifecycle commands.
     case "play":
-      return status === "paused";
     case "pause":
-      return status === "running";
+      return false;
     case "stop":
       return status === "ready" || status === "running" || status === "paused";
     case "dispose":
