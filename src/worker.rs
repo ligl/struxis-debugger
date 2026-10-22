@@ -80,9 +80,19 @@ pub(crate) struct ReplayWorkerConfig {
 enum WorkerCommand {
     GetState(SyncSender<RunState>),
     GetInspector(SyncSender<Option<ReplayInspectorProjection>>),
+    SnapshotData(SyncSender<Result<ReplaySnapshotData, String>>),
     Step(SyncSender<Result<RunState, String>>),
     Stop(SyncSender<Result<RunState, String>>),
     Dispose(SyncSender<Result<RunState, String>>),
+}
+
+/// Stable, owned data exported only after a Run has completed.
+pub(crate) struct ReplaySnapshotData {
+    pub(crate) state: RunState,
+    pub(crate) input: LoadedInput,
+    pub(crate) instrument_id: String,
+    pub(crate) effective_config: EffectiveStruxisConfig,
+    pub(crate) checkpoints: Vec<OwnedCheckpoint>,
 }
 
 /// Handle to the worker. It never exposes Nautilus runtime objects.
@@ -94,6 +104,14 @@ pub(crate) struct ReplayWorker {
 }
 
 impl ReplayWorker {
+    /// Starts an interactive Run without creating or initializing a SnapshotWriter.
+    /// The compatibility sink is volatile and performs no I/O.
+    pub(crate) fn spawn_interactive(
+        config: ReplayWorkerConfig,
+    ) -> Result<(Self, RunState), String> {
+        Self::spawn(config, Box::new(VolatileCheckpointSink))
+    }
+
     /// Spawns the worker and returns only after engine setup and sink
     /// initialization succeed. No SBar is processed during initialization.
     pub(crate) fn spawn(
@@ -161,6 +179,27 @@ impl ReplayWorker {
             let detail = format!("Replay worker dropped GetInspector response: {error}");
             self.join_after_transport_failure(detail)
         })
+    }
+
+    /// Exports a stable copy of a Completed Run's trajectory for explicit saving.
+    /// No active Nautilus / Struxis runtime objects cross this boundary.
+    pub(crate) fn snapshot_data(&mut self) -> Result<ReplaySnapshotData, String> {
+        if self.terminal_state.is_some() {
+            return Err("Snapshot save rejected: Run runtime has already been released".into());
+        }
+        let _permit = self.command_gate.try_enter(ReplayCommandKind::GetState)?;
+        let (reply_tx, reply_rx) = mpsc::sync_channel(0);
+        if let Err(error) = self.commands.send(WorkerCommand::SnapshotData(reply_tx)) {
+            let detail = format!("Replay worker is unavailable during SnapshotData: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        match reply_rx.recv() {
+            Ok(result) => result,
+            Err(error) => {
+                let detail = format!("Replay worker dropped SnapshotData response: {error}");
+                Err(self.join_after_transport_failure(detail))
+            }
+        }
     }
 
     /// Returns the latest authoritative RunState observed at a worker boundary.
@@ -325,6 +364,8 @@ struct WorkerSession {
     next_index: usize,
     latest_inspector: Option<ReplayInspectorProjection>,
     owned_checkpoints: Vec<OwnedCheckpoint>,
+    instrument_id: String,
+    effective_config: EffectiveStruxisConfig,
 }
 
 impl WorkerSession {
@@ -405,6 +446,7 @@ impl WorkerSession {
             }
         };
 
+        let instrument_id = config.instrument.id().to_string();
         let state = RunState::ready(
             config.run_id,
             config.input.test_dataset_id.clone(),
@@ -425,6 +467,8 @@ impl WorkerSession {
             next_index: 0,
             latest_inspector: None,
             owned_checkpoints: Vec::with_capacity(checkpoint_capacity),
+            instrument_id,
+            effective_config,
         })
     }
 
@@ -595,6 +639,29 @@ fn worker_loop(
             WorkerCommand::GetInspector(reply) => {
                 let _ = reply.send(session.latest_inspector.clone());
             }
+            WorkerCommand::SnapshotData(reply) => {
+                let result = if session.state.status != RunStatus::Completed {
+                    Err(format!(
+                        "Snapshot save requires Completed Run, got {:?}",
+                        session.state.status
+                    ))
+                } else if session.owned_checkpoints.len() != session.input.bars.len() {
+                    Err(format!(
+                        "Completed Run trajectory is incomplete: input={}, checkpoints={}",
+                        session.input.bars.len(),
+                        session.owned_checkpoints.len()
+                    ))
+                } else {
+                    Ok(ReplaySnapshotData {
+                        state: session.state.clone(),
+                        input: session.input.clone(),
+                        instrument_id: session.instrument_id.clone(),
+                        effective_config: session.effective_config.clone(),
+                        checkpoints: session.owned_checkpoints.clone(),
+                    })
+                };
+                let _ = reply.send(result);
+            }
             WorkerCommand::Step(reply) => {
                 let _ = reply.send(session.step(sink.as_mut()));
             }
@@ -609,6 +676,28 @@ fn worker_loop(
                 return;
             }
         }
+    }
+}
+
+/// Volatile sink used by interactive Replay. It never opens files or writes SQLite.
+struct VolatileCheckpointSink;
+
+impl CheckpointSink for VolatileCheckpointSink {
+    fn initialize(
+        &mut self,
+        _initial_state: &RunState,
+        _effective_config: &EffectiveStruxisConfig,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn commit_checkpoint(
+        &mut self,
+        _checkpoint_index: usize,
+        _sbar_id: &str,
+        _projection: &ReplayCheckpointProjection,
+    ) -> Result<(), String> {
+        Ok(())
     }
 }
 
