@@ -23,6 +23,7 @@ import { useTestDataset } from "./composables/useTestDataset";
 import { useRunControl } from "./composables/useRunControl";
 import { useCatalogGroups } from "./composables/useCatalogGroups";
 import { useOriginRangeSelection } from "./composables/useOriginRangeSelection";
+import { useDockLayout } from "./composables/useDockLayout";
 import { getReplayInspector } from "./origin-bridge";
 import type { ReplayInspectorDto } from "./origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
@@ -269,197 +270,16 @@ watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
   if (mode === "replay") void refreshReplayInspector();
 });
-const inspectorCollapsed = ref(false);
-const diagnosticsCollapsed = ref(true);
 const diagnosticsCategory = ref("all");
 
-function handleDiagnosticsHeadingClick(): void {
-  if (diagnosticsCollapsed.value && (diagnosticsDock.value === "left" || diagnosticsDock.value === "right")) {
-    diagnosticsCollapsed.value = false;
-  }
-}
-type DockDirection = "left" | "right" | "top" | "bottom";
-const inspectorDock = ref<DockDirection>("right");
-const diagnosticsDock = ref<DockDirection>("bottom");
-
-// Dock dimensions are presentation state only; they never affect Struxis state.
-const inspectorWidth = ref(282);
-const inspectorHeight = ref(145);
-const diagnosticsWidth = ref(330);
-const diagnosticsHeight = ref(164);
+const {
+  inspectorCollapsed, diagnosticsCollapsed, inspectorDock, diagnosticsDock,
+  inspectorWidth, inspectorHeight, diagnosticsWidth, diagnosticsHeight,
+  shellStyle, setDock, toggleCollapsed, handleDiagnosticsHeadingClick,
+  startPanelResize, handlePanelResizeKey, inspectorWidthLimit, inspectorHeightLimit,
+  diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
+} = useDockLayout();
 let runPollInterval: number | null = null;
-type PanelResizeTarget = "inspector" | "diagnostics" | null;
-const panelResizeTarget = ref<PanelResizeTarget>(null);
-let panelResizeStart = 0;
-let panelResizeInitialSize = 0;
-
-function startPanelResize(target: Exclude<PanelResizeTarget, null>, event: PointerEvent): void {
-  if (event.button !== 0) return;
-  panelResizeTarget.value = target;
-  const dock = target === "inspector" ? inspectorDock.value : diagnosticsDock.value;
-  panelResizeStart = dock === "left" || dock === "right" ? event.clientX : event.clientY;
-  panelResizeInitialSize = target === "inspector"
-    ? (dock === "left" || dock === "right" ? inspectorWidth.value : inspectorHeight.value)
-    : (dock === "left" || dock === "right" ? diagnosticsWidth.value : diagnosticsHeight.value);
-  event.preventDefault();
-}
-
-type DockAxis = "horizontal" | "vertical";
-
-function workbenchExtent(axis: DockAxis): number {
-  const shell = document.querySelector<HTMLElement>('[data-testid="debugger-shell"]');
-  const topbarHeight = document.querySelector<HTMLElement>('[data-testid="topbar"]')?.clientHeight ?? 44;
-  const measured = axis === "horizontal"
-    ? shell?.clientWidth
-    : shell ? Math.max(0, shell.clientHeight - topbarHeight) : undefined;
-  return measured && measured > 0
-    ? measured
-    : axis === "horizontal" ? window.innerWidth : Math.max(0, window.innerHeight - topbarHeight);
-}
-
-function peerDockReservation(target: Exclude<PanelResizeTarget, null>, axis: DockAxis): number {
-  const peerDirection = target === "inspector" ? diagnosticsDock.value : inspectorDock.value;
-  const peerUsesAxis = axis === "horizontal"
-    ? peerDirection === "left" || peerDirection === "right"
-    : peerDirection === "top" || peerDirection === "bottom";
-  if (!peerUsesAxis) return 0;
-
-  if (target === "inspector") {
-    if (diagnosticsCollapsed.value) return 36;
-    return axis === "horizontal" ? diagnosticsWidth.value : diagnosticsHeight.value;
-  }
-
-  // A collapsed Inspector still reserves its narrow reopen rail.
-  if (inspectorCollapsed.value) return 36;
-  return axis === "horizontal" ? inspectorWidth.value : inspectorHeight.value;
-}
-
-function dockSizeLimit(target: Exclude<PanelResizeTarget, null>, axis: DockAxis): number {
-  const minimum = axis === "horizontal" ? 180 : 100;
-  const chartMinimum = axis === "horizontal" ? 320 : 180;
-  const configuredMaximum = axis === "horizontal"
-    ? Math.min(520, window.innerWidth * 0.5)
-    : Math.min(480, window.innerHeight * 0.55);
-  // The prototype keeps a 5px optical inset between the dock edge and Chart Workspace.
-  // Reserve that inset too, otherwise two maximum vertical docks leave only 175px
-  // of usable chart height despite the 180px minimum contract.
-  const layoutInset = 5;
-  const available = workbenchExtent(axis) - peerDockReservation(target, axis) - chartMinimum - layoutInset;
-  // Preserve a usable workspace when possible; on exceptionally small windows,
-  // the minimum panel size remains the hard floor and responsive layout takes over.
-  return Math.max(minimum, Math.min(configuredMaximum, available));
-}
-
-function inspectorWidthLimit(): number { return dockSizeLimit("inspector", "horizontal"); }
-function inspectorHeightLimit(): number { return dockSizeLimit("inspector", "vertical"); }
-function diagnosticsWidthLimit(): number { return dockSizeLimit("diagnostics", "horizontal"); }
-function diagnosticsHeightLimit(): number { return dockSizeLimit("diagnostics", "vertical"); }
-
-function dockFor(target: Exclude<PanelResizeTarget, null>): DockDirection {
-  return target === "inspector" ? inspectorDock.value : diagnosticsDock.value;
-}
-
-function resizeIsHorizontal(target: Exclude<PanelResizeTarget, null>): boolean {
-  const dock = dockFor(target);
-  return dock === "left" || dock === "right";
-}
-
-function resizeValue(target: Exclude<PanelResizeTarget, null>, value: number): void {
-  const dock = dockFor(target);
-  const horizontal = dock === "left" || dock === "right";
-  if (target === "inspector") {
-    if (horizontal) inspectorWidth.value = value;
-    else inspectorHeight.value = value;
-  } else {
-    if (horizontal) diagnosticsWidth.value = value;
-    else diagnosticsHeight.value = value;
-  }
-}
-
-function resizeLimit(target: Exclude<PanelResizeTarget, null>): number {
-  return target === "inspector"
-    ? (resizeIsHorizontal(target) ? inspectorWidthLimit() : inspectorHeightLimit())
-    : (resizeIsHorizontal(target) ? diagnosticsWidthLimit() : diagnosticsHeightLimit());
-}
-
-function resizeMinimum(target: Exclude<PanelResizeTarget, null>): number {
-  return resizeIsHorizontal(target) ? 180 : 100;
-}
-
-function handlePanelResize(event: PointerEvent): void {
-  const target = panelResizeTarget.value;
-  if (!target) return;
-  const dock = dockFor(target);
-  const horizontal = dock === "left" || dock === "right";
-  const coordinate = horizontal ? event.clientX : event.clientY;
-  const growsTowardPositive = dock === "left" || dock === "top";
-  const delta = growsTowardPositive ? coordinate - panelResizeStart : panelResizeStart - coordinate;
-  const value = Math.max(resizeMinimum(target), Math.min(resizeLimit(target), panelResizeInitialSize + delta));
-  resizeValue(target, value);
-}
-
-function handlePanelResizeKey(target: Exclude<PanelResizeTarget, null>, event: KeyboardEvent): void {
-  const dock = dockFor(target);
-  const horizontal = dock === "left" || dock === "right";
-  const positiveKey = horizontal ? "ArrowRight" : "ArrowDown";
-  const negativeKey = horizontal ? "ArrowLeft" : "ArrowUp";
-  const increase = dock === "left" || dock === "top"
-    ? event.key === positiveKey
-    : event.key === negativeKey;
-  const decrease = dock === "left" || dock === "top"
-    ? event.key === negativeKey
-    : event.key === positiveKey;
-  if (!increase && !decrease && event.key !== "Home" && event.key !== "End") return;
-  event.preventDefault();
-  const minimum = resizeMinimum(target);
-  const maximum = resizeLimit(target);
-  const current = target === "inspector"
-    ? (horizontal ? inspectorWidth.value : inspectorHeight.value)
-    : (horizontal ? diagnosticsWidth.value : diagnosticsHeight.value);
-  resizeValue(target, event.key === "Home"
-    ? minimum
-    : event.key === "End"
-      ? maximum
-      : Math.max(minimum, Math.min(maximum, current + (increase ? 12 : -12))));
-}
-
-function stopPanelResize(): void {
-  panelResizeTarget.value = null;
-}
-
-type DockDragTarget = "inspector" | "diagnostics";
-const dockDragMime = "application/x-struxis-debugger-panel";
-
-function startDockDrag(target: DockDragTarget, event: DragEvent): void {
-  if (!event.dataTransfer) return;
-  event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData(dockDragMime, target);
-}
-
-function allowDockDrop(event: DragEvent): void {
-  if (!event.dataTransfer) return;
-  event.preventDefault();
-  event.dataTransfer.dropEffect = "move";
-}
-
-function dropDockPanel(event: DragEvent): void {
-  const transfer = event.dataTransfer;
-  if (!transfer) return;
-  const target = transfer.getData(dockDragMime);
-  if (target !== "inspector" && target !== "diagnostics") return;
-  event.preventDefault();
-  const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
-  const x = (event.clientX - bounds.left) / Math.max(1, bounds.width);
-  const y = (event.clientY - bounds.top) / Math.max(1, bounds.height);
-  let dock: DockDirection | null = null;
-  if (x < 0.13) dock = "left";
-  else if (x > 0.87) dock = "right";
-  else if (y < 0.16) dock = "top";
-  else if (y > 0.84) dock = "bottom";
-  if (!dock) return;
-  if (target === "inspector") inspectorDock.value = dock;
-  else diagnosticsDock.value = dock;
-}
 
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
@@ -568,9 +388,6 @@ function handleDockMenuPointerDown(event: PointerEvent): void {
 onMounted(async () => {
   document.addEventListener("keydown", handleReplayShortcut);
   document.addEventListener("pointerdown", handleDockMenuPointerDown);
-  window.addEventListener("pointermove", handlePanelResize);
-  window.addEventListener("pointerup", stopPanelResize);
-  window.addEventListener("pointercancel", stopPanelResize);
   // RunState is the only progress authority exposed by the backend. Poll while
   // the worker is running so the replay chart follows committed checkpoints.
   runPollInterval = window.setInterval(() => {
@@ -606,9 +423,6 @@ onUnmounted(() => {
   document.removeEventListener("pointerdown", handleDockMenuPointerDown);
   if (runPollInterval !== null) window.clearInterval(runPollInterval);
   runPollInterval = null;
-  window.removeEventListener("pointermove", handlePanelResize);
-  window.removeEventListener("pointerup", stopPanelResize);
-  window.removeEventListener("pointercancel", stopPanelResize);
 });
 </script>
 
@@ -617,7 +431,7 @@ onUnmounted(() => {
     class="debugger-shell"
     data-testid="debugger-shell"
     :class="{ 'catalog-is-hidden': workspaceMode !== 'dataset', ['inspector-dock-' + inspectorDock]: true, 'inspector-is-collapsed': inspectorCollapsed, ['diagnostics-dock-' + diagnosticsDock]: true, 'diagnostics-is-collapsed': diagnosticsCollapsed }"
-    :style="{ '--inspector-width': inspectorWidth + 'px', '--inspector-height': inspectorHeight + 'px', '--diagnostics-width': diagnosticsWidth + 'px', '--diagnostics-height': diagnosticsHeight + 'px', '--inspector-reserve-left': !inspectorCollapsed && inspectorDock === 'left' ? inspectorWidth + 'px' : (inspectorDock === 'left' ? '36px' : '0px'), '--inspector-reserve-right': !inspectorCollapsed && inspectorDock === 'right' ? inspectorWidth + 'px' : (inspectorDock === 'right' ? '36px' : '0px'), '--inspector-reserve-top': !inspectorCollapsed && inspectorDock === 'top' ? inspectorHeight + 'px' : (inspectorDock === 'top' ? '36px' : '0px'), '--inspector-reserve-bottom': !inspectorCollapsed && inspectorDock === 'bottom' ? inspectorHeight + 'px' : (inspectorDock === 'bottom' ? '36px' : '0px'), '--diagnostics-reserve-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--diagnostics-reserve-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--diagnostics-reserve-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-left': diagnosticsDock === 'left' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-right': diagnosticsDock === 'right' ? (diagnosticsCollapsed ? '36px' : diagnosticsWidth + 'px') : '0px', '--inspector-offset-top': diagnosticsDock === 'top' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px', '--inspector-offset-bottom': diagnosticsDock === 'bottom' ? (diagnosticsCollapsed ? '36px' : diagnosticsHeight + 'px') : '0px' }"
+    :style="shellStyle"
     @dragover="allowDockDrop"
     @drop="dropDockPanel"
   >
@@ -791,13 +605,13 @@ onUnmounted(() => {
           <details class="dock-menu" data-testid="inspector-dock-menu">
             <summary class="subtle-button rail-toggle" aria-label="Move Inspector" title="Move or dock panel">⋯</summary>
             <div class="dock-menu-options" role="group" aria-label="Inspector docking position">
-              <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="inspectorDock = 'left'; closeDockMenus()">Dock Left</button>
-              <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="inspectorDock = 'right'; closeDockMenus()">Dock Right</button>
-              <button class="dock-menu-option" data-testid="inspector-dock-top" :aria-pressed="inspectorDock === 'top'" @click="inspectorDock = 'top'; closeDockMenus()">Dock Top</button>
-              <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="inspectorDock = 'bottom'; closeDockMenus()">Dock Bottom</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-left" :aria-pressed="inspectorDock === 'left'" @click="setDock('inspector', 'left'); closeDockMenus()">Dock Left</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-right" :aria-pressed="inspectorDock === 'right'" @click="setDock('inspector', 'right'); closeDockMenus()">Dock Right</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-top" :aria-pressed="inspectorDock === 'top'" @click="setDock('inspector', 'top'); closeDockMenus()">Dock Top</button>
+              <button class="dock-menu-option" data-testid="inspector-dock-bottom" :aria-pressed="inspectorDock === 'bottom'" @click="setDock('inspector', 'bottom'); closeDockMenus()">Dock Bottom</button>
             </div>
           </details>
-          <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" :title="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="inspectorCollapsed = !inspectorCollapsed">{{ inspectorCollapsed ? '+' : '−' }}</button>
+          <button class="subtle-button rail-toggle" :aria-label="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" :title="inspectorCollapsed ? 'Expand Inspector' : 'Collapse Inspector'" @click="toggleCollapsed('inspector')">{{ inspectorCollapsed ? '+' : '−' }}</button>
         </div>
         <ObjectInspector
           v-if="!inspectorCollapsed"
@@ -835,13 +649,13 @@ onUnmounted(() => {
             <details class="dock-menu" data-testid="diagnostics-dock-menu">
               <summary class="subtle-button" aria-label="Move Diagnostics" title="Move or dock panel">⋯</summary>
               <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
-                <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="diagnosticsDock = 'left'; closeDockMenus()">Dock Left</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="diagnosticsDock = 'right'; closeDockMenus()">Dock Right</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="diagnosticsDock = 'top'; closeDockMenus()">Dock Top</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="diagnosticsDock = 'bottom'; closeDockMenus()">Dock Bottom</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="setDock('diagnostics', 'left'); closeDockMenus()">Dock Left</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="setDock('diagnostics', 'right'); closeDockMenus()">Dock Right</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="setDock('diagnostics', 'top'); closeDockMenus()">Dock Top</button>
+                <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="setDock('diagnostics', 'bottom'); closeDockMenus()">Dock Bottom</button>
               </div>
             </details>
-            <button class="subtle-button" data-testid="diagnostics-collapse-toggle"  :aria-label="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" :title="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" @click.stop="diagnosticsCollapsed = !diagnosticsCollapsed">{{ diagnosticsCollapsed ? '+' : '−' }}</button>
+            <button class="subtle-button" data-testid="diagnostics-collapse-toggle"  :aria-label="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" :title="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" @click.stop="toggleCollapsed('diagnostics')">{{ diagnosticsCollapsed ? '+' : '−' }}</button>
           </div>
         </div>
         <div class="diagnostics-content">
