@@ -106,8 +106,9 @@ describe("OriginChart", () => {
     vi.unstubAllGlobals();
   });
 
-  it("emits range-selection cancellation on chart right-click", async () => {
+  it("cancels range selection and prevents chart right-click menus from propagating", async () => {
     const wrapper = mount(OriginChart, {
+      attachTo: document.body,
       props: {
         bars: [bar()],
         originDatasetId: "origin-context-menu",
@@ -117,10 +118,18 @@ describe("OriginChart", () => {
         selectionPending: false,
       },
     });
+    const parent = wrapper.element.parentElement;
+    const parentContextMenu = vi.fn();
+    parent?.addEventListener("contextmenu", parentContextMenu);
+    const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
 
-    await wrapper.get('[data-testid="origin-chart-panel"]').trigger("contextmenu");
+    wrapper.element.dispatchEvent(event);
 
     expect(wrapper.emitted("cancelRangeSelection")).toHaveLength(1);
+    expect(event.defaultPrevented).toBe(true);
+    expect(parentContextMenu).not.toHaveBeenCalled();
+
+    parent?.removeEventListener("contextmenu", parentContextMenu);
     wrapper.unmount();
   });
 
