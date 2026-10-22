@@ -428,7 +428,7 @@ describe("Struxis Debugger native desktop", () => {
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
     assert.equal(await $('[data-testid="origin-first-sbar-id"]').getText(), firstSbarId);
     assert.equal(await $('[data-testid="origin-last-sbar-id"]').getText(), lastSbarId);
-    const structureCounts = await originChart.getAttribute("data-structure-counts");
+    const structureCounts = await $('[data-testid="origin-structure-overlay"]').getAttribute("data-structure-counts");
     assert.ok(structureCounts, "Origin chart must expose the counts from its authoritative Structure projection.");
     const parsedStructureCounts = JSON.parse(structureCounts);
     assert.ok(
