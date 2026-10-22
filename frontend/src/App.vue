@@ -14,7 +14,7 @@ import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
-import type { ObjectDifferenceDto, SnapshotArtifactDto } from "./origin-types";
+import type { ObjectDifferenceDto, OriginObjectSelection, ReplayInspectorCBarDto, ReplayInspectorSwingDto, SnapshotArtifactDto } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -111,7 +111,7 @@ const canLoadOrigin = computed(
   () => canMutateTest.value && !testLoading.value,
 );
 
-const selectedInspectorSbarId = ref<string | null>(null);
+const selectedInspectorObject = ref<OriginObjectSelection | null>(null);
 const replayInspector = ref<ReplayInspectorDto | null>(null);
 const replayInspectorError = ref("");
 let replayInspectorLoading = false;
@@ -154,10 +154,31 @@ watch(compareResult, () => {
 });
 
 const selectedInspectorSbar = computed(() => {
-  const selectedId = selectedInspectorSbarId.value;
-  if (!selectedId) return null;
-  return origin.value?.bars.find((bar) => bar.sbarId === selectedId) ?? null;
+  const selection = selectedInspectorObject.value;
+  if (selection?.kind !== "sbar") return null;
+  return origin.value?.bars.find((bar) => bar.sbarId === selection.id) ?? null;
 });
+
+const selectedInspectorCbar = computed<ReplayInspectorCBarDto | null>(() => {
+  const selection = selectedInspectorObject.value;
+  if (selection?.kind !== "cbar") return null;
+  return origin.value?.structure?.cbars.find((cbar) => cbar.cbarId === selection.id) ?? null;
+});
+
+const selectedInspectorSwing = computed<ReplayInspectorSwingDto | null>(() => {
+  const selection = selectedInspectorObject.value;
+  if (selection?.kind !== "swing") return null;
+  return origin.value?.structure?.swings.find((swing) => swing.swingId === selection.id) ?? null;
+});
+
+function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>): void {
+  if (!origin.value) return;
+  const exists = selection.kind === "cbar"
+    ? origin.value.structure?.cbars.some((cbar) => cbar.cbarId === selection.id)
+    : origin.value.structure?.swings.some((swing) => swing.swingId === selection.id);
+  if (!exists) return;
+  selectedInspectorObject.value = selection;
+}
 
 const rangeSelectionPendingStart = ref<string | null>(null);
 const rangeSelectionReady = ref(false);
@@ -169,7 +190,7 @@ const rangeSelectionStatus = ref(
 function handleOriginSbarClick(sbarId: string): void {
   if (!origin.value) return;
   if (origin.value.bars.some((bar) => bar.sbarId === sbarId)) {
-    selectedInspectorSbarId.value = sbarId;
+    selectedInspectorObject.value = { kind: "sbar", id: sbarId };
   }
   // Inspection remains available when mutation is blocked; range selection
   // still obeys the existing Origin/Test Dataset/Run lifecycle guard.
@@ -494,7 +515,7 @@ async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
-    selectedInspectorSbarId.value = null;
+    selectedInspectorObject.value = null;
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = false;
     selectedRangeCount.value = 0;
@@ -723,6 +744,7 @@ onUnmounted(() => {
                 :selection-pending="rangeSelectionPendingStart !== null"
                 :selection-editable="canMutateTest && !testLoading"
                 @sbar-click="handleOriginSbarClick"
+                @object-click="handleOriginObjectClick"
                 @range-boundary-change="handleOriginBoundaryChange"
                 @selection-error="handleOriginSelectionError"
                 @cancel-range-selection="cancelOriginRangeSelection"
@@ -806,6 +828,8 @@ onUnmounted(() => {
         <ObjectInspector
           v-if="!inspectorCollapsed"
           :selected-sbar="workspaceMode === 'dataset' ? selectedInspectorSbar : null"
+          :selected-cbar="workspaceMode === 'dataset' ? selectedInspectorCbar : null"
+          :selected-swing="workspaceMode === 'dataset' ? selectedInspectorSwing : null"
           :origin-dataset-id="origin?.originDatasetId ?? null"
           :timeframe="workspaceMode === 'replay' ? (testDataset?.timeframe ?? origin?.timeframe ?? null) : (origin?.timeframe ?? null)"
           :workspace-mode="workspaceMode"
