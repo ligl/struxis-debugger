@@ -305,28 +305,35 @@ function distanceToRectangleBorder(
 
 function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" }> | null {
   const tolerance = 6;
-  const candidates = [
-    ...swingSegments.value.map((segment) => ({
-      kind: "swing" as const,
+  let best: { kind: "cbar" | "swing"; id: string; distance: number; priority: number } | null = null;
+  const consider = (candidate: { kind: "cbar" | "swing"; id: string; distance: number; priority: number }) => {
+    if (candidate.distance > tolerance) return;
+    if (
+      !best ||
+      candidate.distance < best.distance ||
+      (candidate.distance === best.distance && candidate.priority < best.priority) ||
+      (candidate.distance === best.distance && candidate.priority === best.priority && candidate.id.localeCompare(best.id) < 0)
+    ) best = candidate;
+  };
+
+  for (const segment of swingSegments.value) {
+    consider({
+      kind: "swing",
       id: segment.id,
       distance: distanceToSegment(x, y, segment),
       priority: 0,
-    })),
-    ...cbarRectangles.value.map((rectangle) => ({
-      kind: "cbar" as const,
+    });
+  }
+  for (const rectangle of cbarRectangles.value) {
+    consider({
+      kind: "cbar",
       id: rectangle.id,
       distance: distanceToRectangleBorder(x, y, rectangle),
       priority: 1,
-    })),
-  ].filter((candidate) => candidate.distance <= tolerance);
+    });
+  }
 
-  candidates.sort((a, b) =>
-    a.distance - b.distance ||
-    a.priority - b.priority ||
-    a.id.localeCompare(b.id),
-  );
-  const candidate = candidates[0];
-  return candidate ? { kind: candidate.kind, id: candidate.id, originDatasetId: props.originDatasetId } : null;
+  return best ? { kind: best.kind, id: best.id, originDatasetId: props.originDatasetId } : null;
 }
 
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
