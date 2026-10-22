@@ -23,6 +23,7 @@ describe("SnapshotReferencePanel", () => {
       props: { snapshots, selectedSnapshotId: "snapshot-complete-01" },
     });
 
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
     expect(wrapper.get('[data-testid="snapshot-reference-selected"]').text()).toContain("snapshot-complete-01");
     expect(wrapper.text()).toContain("run-01");
     expect(wrapper.text()).toContain("authoritative SBar OHLCV sequence");
@@ -43,7 +44,6 @@ describe("SnapshotReferencePanel", () => {
           checkpointCount: 1,
           diagnostic: "failed",
         }],
-        selectedSnapshotId: "snapshot-failed-01",
       },
     });
 
