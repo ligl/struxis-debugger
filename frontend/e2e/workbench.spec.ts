@@ -218,7 +218,6 @@ for (const direction of ["left", "right"] as const) {
     const inspector = page.getByTestId("inspector-panel");
     const diagnostics = page.getByTestId("diagnostics-dock");
     await inspector.getByRole("button", { name: "Collapse Inspector" }).click();
-    await diagnostics.getByTestId("diagnostics-collapse-toggle").click();
 
     const inspectorBox = await inspector.boundingBox();
     const diagnosticsBox = await diagnostics.boundingBox();
