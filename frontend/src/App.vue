@@ -203,7 +203,7 @@ watch(workspaceMode, (mode) => {
 const {
   inspectorCollapsed, diagnosticsCollapsed, inspectorDock, diagnosticsDock,
   inspectorWidth, inspectorHeight, diagnosticsWidth, diagnosticsHeight,
-  shellStyle, setDock, toggleCollapsed, handleDiagnosticsHeadingClick,
+  shellStyle, setDock, toggleCollapsed, handleInspectorHeadingClick, handleDiagnosticsHeadingClick,
   startPanelResize, handlePanelResizeKey, inspectorWidthLimit, inspectorHeightLimit,
   diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
   closeDockMenus,
@@ -398,7 +398,8 @@ onMounted(async () => {
         <div
           class="rail-heading"
           data-testid="inspector-heading"
-          @click="inspectorCollapsed && toggleCollapsed('inspector')"
+          :class="{ 'collapsed-heading-click-target': inspectorCollapsed }"
+          @click="handleInspectorHeadingClick"
         >
           <span class="panel-title panel-dock-drag-handle" data-testid="inspector-dock-drag-handle" draggable="true" title="Drag to any workbench edge to dock" @dragstart="startDockDrag('inspector', $event)">Inspector</span>
           <span class="tag inspector-object-tag">OBJECT</span>
