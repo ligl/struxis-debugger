@@ -258,6 +258,72 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("selects the exact visible CBar or Swing geometry before falling back to SBar range selection", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        high: "13",
+        low: "10",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-object-hit-test",
+        structure: {
+          cbarCount: 1,
+          cbars: [{
+            cbarId: "cbar-exact",
+            high: "13",
+            low: "9",
+            sbarStartId: bars[0]!.sbarId,
+            sbarEndId: bars[1]!.sbarId,
+            spanSbars: 2,
+            fractalType: null,
+            createdAt: "1700000000000000000",
+          }],
+          swingCount: 1,
+          swings: [{
+            swingId: "swing-exact",
+            direction: "Up",
+            high: "13",
+            low: "9",
+            cbarStartId: "cbar-exact",
+            cbarEndId: "cbar-exact",
+            sbarStartId: bars[0]!.sbarId,
+            sbarEndId: bars[1]!.sbarId,
+            startOi: null,
+            endOi: null,
+            volume: "200",
+            spanSbars: 2,
+            state: "Confirmed",
+            createdAt: "1700000000000000000",
+            updatedAt: "1700000000000000000",
+          }],
+        },
+      },
+    });
+
+    const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+    expect(clickHandler).toBeTypeOf("function");
+
+    // Near the CBar rectangle edge but away from the Swing diagonal.
+    clickHandler?.({ point: { x: 100, y: 50 } });
+    // Exactly on the Swing diagonal and away from the CBar rectangle border.
+    clickHandler?.({ point: { x: 150, y: 50 } });
+
+    expect(wrapper.emitted("objectClick")).toEqual([
+      [{ kind: "cbar", id: "cbar-exact" }],
+      [{ kind: "swing", id: "swing-exact" }],
+    ]);
+    expect(wrapper.emitted("sbarClick")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("encodes every authoritative SwingState with its documented color and line pattern", async () => {
     const bars = [
       bar(),
