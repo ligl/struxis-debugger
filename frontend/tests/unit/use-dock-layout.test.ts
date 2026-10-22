@@ -1,9 +1,30 @@
-import { describe, expect, it } from "vitest";
+import { mount } from "@vue/test-utils";
+import { afterEach, describe, expect, it } from "vitest";
+import { defineComponent } from "vue";
 import { useDockLayout } from "../../src/composables/useDockLayout";
+
+let cleanup: (() => void)[] = [];
+
+function createLayout() {
+  let layout!: ReturnType<typeof useDockLayout>;
+  const wrapper = mount(defineComponent({
+    setup() {
+      layout = useDockLayout();
+      return () => null;
+    },
+  }));
+  cleanup.push(() => wrapper.unmount());
+  return layout;
+}
+
+afterEach(() => {
+  cleanup.forEach((unmount) => unmount());
+  cleanup = [];
+});
 
 describe("useDockLayout", () => {
   it("owns the default dock directions, sizes, and shell reservation values", () => {
-    const layout = useDockLayout();
+    const layout = createLayout();
 
     expect(layout.inspectorDock.value).toBe("right");
     expect(layout.diagnosticsDock.value).toBe("bottom");
@@ -14,7 +35,7 @@ describe("useDockLayout", () => {
   });
 
   it("updates dock reservations from the authoritative panel state", () => {
-    const layout = useDockLayout();
+    const layout = createLayout();
 
     layout.setDock("inspector", "left");
     layout.setDock("diagnostics", "top");
@@ -29,7 +50,7 @@ describe("useDockLayout", () => {
   });
 
   it("expands a collapsed side-docked Diagnostics panel when its heading is clicked", () => {
-    const layout = useDockLayout();
+    const layout = createLayout();
     layout.setDock("diagnostics", "left");
 
     expect(layout.diagnosticsCollapsed.value).toBe(true);
@@ -39,7 +60,7 @@ describe("useDockLayout", () => {
   });
 
   it("does not expand collapsed Diagnostics from a heading click when docked vertically", () => {
-    const layout = useDockLayout();
+    const layout = createLayout();
 
     layout.handleDiagnosticsHeadingClick();
 
@@ -48,7 +69,7 @@ describe("useDockLayout", () => {
   });
 
   it("resizes the active dock axis through keyboard controls", () => {
-    const layout = useDockLayout();
+    const layout = createLayout();
     let defaultPrevented = false;
     const event = {
       key: "ArrowUp",
