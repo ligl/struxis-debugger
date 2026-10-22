@@ -744,6 +744,7 @@ onUnmounted(() => {
                 :bars="origin.bars"
                 :structure="origin.structure"
                 :origin-dataset-id="origin.originDatasetId"
+                :selected-object="selectedInspectorObject"
                 :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
                 :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
                 :selection-pending="rangeSelectionPendingStart !== null"
