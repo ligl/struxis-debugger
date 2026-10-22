@@ -107,7 +107,7 @@ describe("useReplayKeyboardShortcut", () => {
 
   it("removes the global listener when the owner unmounts", () => {
     const state = mountShortcut("running");
-    state.wrapper.unmount();
+    cleanup.pop()?.();
     const event = pressSpace();
 
     expect(event.defaultPrevented).toBe(false);
