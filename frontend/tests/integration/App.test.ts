@@ -288,11 +288,20 @@ describe("Origin Load workbench", () => {
     ]);
 
     const initialRangeStatus = wrapper.get('[data-testid="origin-range-selection-status"]').text();
-    await wrapper.get('[data-testid="inspector-related-start-cbar"]').trigger("click");
-    expect(wrapper.get('[data-testid="inspector-cbar-cbarId"]').text()).toBe("cbar-100");
+    const relatedCbar = wrapper.get('[data-testid="inspector-related-start-cbar"]');
+    expect(relatedCbar.element.tagName).toBe("DETAILS");
+    expect(relatedCbar.get("summary").text()).toContain("cbar-100");
+    await relatedCbar.get("summary").trigger("click");
+    expect(relatedCbar.text()).toContain("CBar ID");
+    expect(relatedCbar.text()).toContain("cbar-100");
 
-    await wrapper.get('[data-testid="inspector-related-start-sbar"]').trigger("click");
-    expect(wrapper.get('[data-testid="inspector-sbar-id"]').text()).toBe("100");
+    const relatedSbar = wrapper.get('[data-testid="inspector-related-start-sbar"]');
+    await relatedSbar.get("summary").trigger("click");
+    expect(relatedSbar.text()).toContain("SBar ID");
+    expect(relatedSbar.text()).toContain("100");
+
+    // Expanding related details must not replace the current primary selection.
+    expect(wrapper.get('[data-testid="inspector-swing-swingId"]').text()).toBe("swing-100");
     expect(wrapper.get('[data-testid="origin-range-selection-status"]').text()).toBe(initialRangeStatus);
   });
 
