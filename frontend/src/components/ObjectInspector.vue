@@ -9,6 +9,7 @@ const props = defineProps<{
   selectedSwing: ReplayInspectorSwingDto | null;
   originDatasetId: string | null;
   timeframe: string | null;
+  structureEnabled: boolean;
   workspaceMode: "dataset" | "replay" | "compare";
   selectedDifference: ObjectDifferenceDto | null;
   compareBaselineSnapshotId: string | null;
@@ -56,6 +57,15 @@ function formatReplayField(field: string, value: unknown): string {
 
 <template>
   <section class="inspector-object" data-testid="inspector-object" @contextmenu="handleInspectorContextMenu">
+    <div
+      v-if="workspaceMode === 'dataset' && (selectedSbar || selectedCbar || selectedSwing)"
+      class="inspector-runtime-context"
+      data-testid="inspector-runtime-context"
+    >
+      <span>ORIGIN <code>{{ originDatasetId ?? "—" }}</code></span>
+      <span>TIMEFRAME <code>{{ timeframe ?? "—" }}</code></span>
+      <span>STRUCTURE <code>{{ structureEnabled ? "ENABLED" : "DISABLED" }}</code></span>
+    </div>
     <template v-if="workspaceMode === 'dataset' && selectedSbar">
       <div class="inspector-object-heading">
         <div>
