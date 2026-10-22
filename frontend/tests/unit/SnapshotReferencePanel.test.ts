@@ -57,7 +57,9 @@ describe("SnapshotReferencePanel", () => {
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
     expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(true);
 
-    await wrapper.setProps({ snapshots: [] });
+    // Vue Test Utils' inferred public-instance type omits script-setup props here,
+    // although setProps updates the component's runtime props correctly.
+    await wrapper.setProps({ snapshots: [] } as never);
     expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(false);
     expect((wrapper.get('[data-testid="replay-reference-select"]').element as HTMLSelectElement).value).toBe("");
   });
