@@ -13,7 +13,7 @@ import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
-import DiagnosticsDock from "./components/DiagnosticsDock.vue";
+import Diagnostics from "./components/Diagnostics.vue";
 import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
@@ -467,7 +467,7 @@ onMounted(async () => {
           :origin-structure="origin?.structure ?? null"
         />
       </aside>
-      <DiagnosticsDock
+      <Diagnostics
         :dock="diagnosticsDock"
         :collapsed="diagnosticsCollapsed"
         :width="diagnosticsWidth"
