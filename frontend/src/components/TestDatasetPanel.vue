@@ -83,7 +83,8 @@ const emit = defineEmits<{ create: [] }>();
 <style scoped>
 .dataset-controls-wrap {
   position: relative;
-  z-index: 2;
+  /* Keep Catalog popovers above the chart canvas and its positioned overlays. */
+  z-index: 30;
   flex: 0 0 auto;
   min-width: 0;
   overflow: visible;
