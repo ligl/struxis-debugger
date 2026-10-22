@@ -14,7 +14,13 @@ const readyRun: RunStateDto = {
   failureDiagnostic: null,
 };
 
-function mountControls(overrides: Record<string, unknown> = {}) {
+function mountControls(overrides: Partial<{
+  runState: RunStateDto | null;
+  runBusy: boolean;
+  runError: string;
+  canStartRun: boolean;
+  canRestartRun: boolean;
+}> = {}) {
   return mount(ReplayToolbarControls, {
     props: {
       runState: readyRun,
