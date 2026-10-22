@@ -42,6 +42,20 @@ pub(crate) struct OwnedCheckpoint {
 }
 
 impl OwnedCheckpoint {
+    /// Reconstructs the persistence-only projection required by SnapshotWriter.
+    /// This deliberately has no SBar history; the owned trajectory stores only
+    /// the current checkpoint's stable structure and diagnostics.
+    pub(crate) fn persistence_projection(&self) -> ReplayCheckpointProjection {
+        ReplayCheckpointProjection {
+            state_key: self.state_key.clone(),
+            last_ts_event: Some(self.sbar_id.clone()),
+            sbar_count: self.checkpoint_index + 1,
+            sbars: Vec::new(),
+            structure: self.structure.clone(),
+            diagnostics: self.diagnostics.clone(),
+        }
+    }
+
     pub(crate) fn from_projection(
         checkpoint_index: usize,
         sbar_id: &str,
