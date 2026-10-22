@@ -1,9 +1,7 @@
 import { mount } from "@vue/test-utils";
+import { defineComponent } from "vue";
 import { describe, expect, it } from "vitest";
-import CatalogPanel from "../../src/components/CatalogPanel.vue";
 import DatasetWorkspace from "../../src/components/DatasetWorkspace.vue";
-import OriginChart from "../../src/components/OriginChart.vue";
-import TestDatasetPanel from "../../src/components/TestDatasetPanel.vue";
 import type { OriginDatasetDto } from "../../src/origin-types";
 
 const origin = {
@@ -11,6 +9,22 @@ const origin = {
   bars: [],
   structure: null,
 } as OriginDatasetDto;
+
+const CatalogPanelStub = defineComponent({
+  name: "CatalogPanel",
+  emits: ["refresh", "selectDataset", "update:enableStructure", "load"],
+  template: "<div data-testid=\"catalog-panel-stub\" />",
+});
+const TestDatasetPanelStub = defineComponent({
+  name: "TestDatasetPanel",
+  emits: ["create"],
+  template: "<div data-testid=\"test-dataset-panel-stub\"><slot name=\"source\" /></div>",
+});
+const OriginChartStub = defineComponent({
+  name: "OriginChart",
+  emits: ["rangeBoundaryChange"],
+  template: "<div data-testid=\"origin-chart-stub\" />",
+});
 
 function mountDatasetWorkspace() {
   return mount(DatasetWorkspace, {
@@ -48,9 +62,9 @@ function mountDatasetWorkspace() {
     },
     global: {
       stubs: {
-        CatalogPanel: true,
-        OriginChart: true,
-        TestDatasetPanel: true,
+        CatalogPanel: CatalogPanelStub,
+        OriginChart: OriginChartStub,
+        TestDatasetPanel: TestDatasetPanelStub,
       },
     },
   });
@@ -60,11 +74,11 @@ describe("DatasetWorkspace", () => {
   it("forwards catalog and Test Dataset actions to the composition root", () => {
     const wrapper = mountDatasetWorkspace();
 
-    wrapper.findComponent(CatalogPanel).vm.$emit("refresh");
-    wrapper.findComponent(CatalogPanel).vm.$emit("select-dataset", "catalog-1");
-    wrapper.findComponent(CatalogPanel).vm.$emit("update:enableStructure", false);
-    wrapper.findComponent(CatalogPanel).vm.$emit("load");
-    wrapper.findComponent(TestDatasetPanel).vm.$emit("create");
+    wrapper.getComponent(CatalogPanelStub).vm.$emit("refresh");
+    wrapper.getComponent(CatalogPanelStub).vm.$emit("selectDataset", "catalog-1");
+    wrapper.getComponent(CatalogPanelStub).vm.$emit("update:enableStructure", false);
+    wrapper.getComponent(CatalogPanelStub).vm.$emit("load");
+    wrapper.getComponent(TestDatasetPanelStub).vm.$emit("create");
 
     expect(wrapper.emitted("refreshCatalog")).toEqual([[]]);
     expect(wrapper.emitted("selectDataset")).toEqual([["catalog-1"]]);
@@ -76,7 +90,7 @@ describe("DatasetWorkspace", () => {
   it("preserves both arguments of the Origin range-boundary event", () => {
     const wrapper = mountDatasetWorkspace();
 
-    wrapper.findComponent(OriginChart).vm.$emit("rangeBoundaryChange", "start", "sbar-1");
+    wrapper.getComponent(OriginChartStub).vm.$emit("rangeBoundaryChange", "start", "sbar-1");
 
     expect(wrapper.emitted("rangeBoundaryChange")).toEqual([["start", "sbar-1"]]);
   });
