@@ -11,48 +11,33 @@ export function useTestDataset(
   canMutate: ComputedRef<boolean>,
 ) {
   const testDataset = ref<TestDatasetDto | null>(null);
-  const startSbarId = ref("");
-  const endSbarId = ref("");
   const testLoading = ref(false);
   const testError = ref("");
   const testStatus = ref("");
   let refreshGeneration = 0;
 
-  function prepareForOrigin(loadedOrigin: OriginDatasetDto): void {
+  function prepareForOrigin(_loadedOrigin: OriginDatasetDto): void {
     // Invalidate any startup/session refresh that began before this Origin handoff.
     refreshGeneration += 1;
     testDataset.value = null;
-    startSbarId.value = "";
-    endSbarId.value = "";
   }
 
-  async function refreshCurrentTestDataset(): Promise<void> {
+  async function refreshCurrentTestDataset(): Promise<TestDatasetDto | null> {
     const generation = ++refreshGeneration;
     testError.value = "";
     try {
       const current = await getCurrentTestDataset();
-      if (generation !== refreshGeneration) return;
-
+      if (generation !== refreshGeneration) return null;
       testDataset.value = current;
-      if (current) {
-        startSbarId.value = current.startSbarId;
-        endSbarId.value = current.endSbarId;
-      } else if (origin.value) {
-        startSbarId.value = origin.value.firstSbarId;
-        endSbarId.value = origin.value.lastSbarId;
-      } else {
-        startSbarId.value = "";
-        endSbarId.value = "";
-      }
+      return current;
     } catch (error) {
       // Stale failures must not replace the diagnostic for a newer request.
-      if (generation === refreshGeneration) {
-        testError.value = describeIpcError(error);
-      }
+      if (generation === refreshGeneration) testError.value = describeIpcError(error);
+      return null;
     }
   }
 
-  async function createTestDataset(): Promise<void> {
+  async function createTestDataset(startSbarId: string, endSbarId: string): Promise<void> {
     if (testLoading.value || !origin.value || !canMutate.value) return;
     testLoading.value = true;
     // Invalidate reads that began before this mutation takes ownership.
@@ -61,8 +46,8 @@ export function useTestDataset(
     testStatus.value = "";
     try {
       const created = await createTestDatasetIpc(
-        startSbarId.value.trim(),
-        endSbarId.value.trim(),
+        startSbarId.trim(),
+        endSbarId.trim(),
       );
       testDataset.value = created;
       testError.value = "";
@@ -76,8 +61,6 @@ export function useTestDataset(
 
   return {
     testDataset,
-    startSbarId,
-    endSbarId,
     testLoading,
     testError,
     testStatus,
