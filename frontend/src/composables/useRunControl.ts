@@ -20,15 +20,13 @@ export function useRunControl(
   const runState = ref<RunStateDto | null>(null);
   const runBusy = ref(false);
   const runError = ref("");
-  const runStatusMessage = ref("");
 
-  async function refreshRunState(silent = false): Promise<void> {
+  async function refreshRunState(_silent = false): Promise<void> {
     if (runBusy.value) return;
     runBusy.value = true;
     runError.value = "";
     try {
       runState.value = await getRunState();
-      if (!silent) runStatusMessage.value = "Run state refreshed from the backend.";
     } catch (error) {
       runError.value = describeIpcError(error);
     } finally {
@@ -40,7 +38,6 @@ export function useRunControl(
     if (runBusy.value) return;
     runBusy.value = true;
     runError.value = "";
-    runStatusMessage.value = "";
     try {
       let next: RunStateDto;
       switch (command) {
@@ -67,7 +64,6 @@ export function useRunControl(
           break;
       }
       runState.value = next;
-      runStatusMessage.value = `Backend confirmed Run status: ${next.status}.`;
       await refreshSnapshots();
     } catch (error) {
       runError.value = describeIpcError(error);
@@ -80,7 +76,6 @@ export function useRunControl(
     runState,
     runBusy,
     runError,
-    runStatusMessage,
     refreshRunState,
     executeRunCommand,
   };
