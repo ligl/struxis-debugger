@@ -24,7 +24,8 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const valueNode = target.closest("dd, code");
-  if (!valueNode || !event.currentTarget?.contains(valueNode)) return;
+  const root = event.currentTarget;
+  if (!(root instanceof Element) || !valueNode || !root.contains(valueNode)) return;
   const value = valueNode.getAttribute("data-copy-value") ?? valueNode.textContent ?? "";
   if (value.length === 0) return;
   event.preventDefault();
