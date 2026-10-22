@@ -69,13 +69,13 @@ describe("CatalogPanel", () => {
     await wrapper.vm.$nextTick();
     expect(details.open).toBe(true);
 
-    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     expect(details.open).toBe(false);
 
     details.open = true;
     await wrapper.vm.$nextTick();
     wrapper.get(".catalog-source-popover").element.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true }),
+      new Event("pointerdown", { bubbles: true }),
     );
     expect(details.open).toBe(true);
 
