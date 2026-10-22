@@ -105,18 +105,24 @@ pub(crate) struct ReplayWorker {
 
 impl ReplayWorker {
     /// Starts an interactive Run without creating or initializing a SnapshotWriter.
-    /// The compatibility sink is volatile and performs no I/O.
+    /// No persistence sink is installed on the production Start / Step path.
     pub(crate) fn spawn_interactive(
         config: ReplayWorkerConfig,
     ) -> Result<(Self, RunState), String> {
-        Self::spawn(config, Box::new(VolatileCheckpointSink))
+        Self::spawn_inner(config, None)
     }
 
-    /// Spawns the worker and returns only after engine setup and sink
-    /// initialization succeed. No SBar is processed during initialization.
+    /// Compatibility entry point for isolated recording-contract tests.
     pub(crate) fn spawn(
         config: ReplayWorkerConfig,
-        mut sink: Box<dyn CheckpointSink>,
+        sink: Box<dyn CheckpointSink>,
+    ) -> Result<(Self, RunState), String> {
+        Self::spawn_inner(config, Some(sink))
+    }
+
+    fn spawn_inner(
+        config: ReplayWorkerConfig,
+        mut sink: Option<Box<dyn CheckpointSink>>,
     ) -> Result<(Self, RunState), String> {
         let (command_tx, command_rx) = mpsc::sync_channel(0);
         let (ready_tx, ready_rx) = mpsc::sync_channel(0);
@@ -124,7 +130,7 @@ impl ReplayWorker {
         let join = thread::Builder::new()
             .name(format!("struxis-replay-{}", config.run_id))
             .spawn(move || {
-                let session = WorkerSession::initialize(config, sink.as_mut());
+                let session = WorkerSession::initialize(config, sink.as_deref_mut());
                 match session {
                     Ok(mut session) => {
                         if ready_tx.send(Ok(session.state.clone())).is_err() {
@@ -371,7 +377,7 @@ struct WorkerSession {
 impl WorkerSession {
     fn initialize(
         config: ReplayWorkerConfig,
-        sink: &mut dyn CheckpointSink,
+        mut sink: Option<&mut dyn CheckpointSink>,
     ) -> Result<Self, String> {
         use std::str::FromStr;
 
@@ -453,9 +459,11 @@ impl WorkerSession {
             config.input.sbar_sequence_fingerprint.clone(),
             config.input.bars.len(),
         )?;
-        if let Err(error) = sink.initialize(&state, &effective_config) {
-            engine.dispose();
-            return Err(format!("Snapshot Recording initialization failed: {error}"));
+        if let Some(sink) = sink.as_deref_mut() {
+            if let Err(error) = sink.initialize(&state, &effective_config) {
+                engine.dispose();
+                return Err(format!("Snapshot Recording initialization failed: {error}"));
+            }
         }
 
         let checkpoint_capacity = config.input.bars.len();
@@ -496,8 +504,9 @@ impl WorkerSession {
 
     fn step(
         &mut self,
-        sink: &mut dyn CheckpointSink,
+        sink: Option<&mut dyn CheckpointSink>,
     ) -> Result<RunState, String> {
+        let mut sink = sink;
         if !matches!(self.state.status, RunStatus::Ready | RunStatus::Paused) {
             return Err(format!(
                 "Step is invalid while Run {} is {:?}",
@@ -519,7 +528,7 @@ impl WorkerSession {
                 bar.ts_event
             );
             let _ = self.state.fail(diagnostic.clone());
-            let _ = sink.fail(&diagnostic);
+            notify_sink_failure(&mut sink, &diagnostic);
             return Err(diagnostic);
         }
 
@@ -530,7 +539,7 @@ impl WorkerSession {
                     self.input.state_key, bar.ts_event
                 );
                 let _ = self.state.fail(diagnostic.clone());
-                let _ = sink.fail(&diagnostic);
+                notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             };
             if state_view.last_ts_event() != Some(bar.ts_event) {
@@ -541,7 +550,7 @@ impl WorkerSession {
                     state_view.last_ts_event()
                 );
                 let _ = self.state.fail(diagnostic.clone());
-                let _ = sink.fail(&diagnostic);
+                notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             }
             ReplayCheckpointProjection::from_state_view(&state_view)
@@ -554,17 +563,21 @@ impl WorkerSession {
                 self.next_index, expected_count, projection.sbar_count
             );
             let _ = self.state.fail(diagnostic.clone());
-            let _ = sink.fail(&diagnostic);
+            notify_sink_failure(&mut sink, &diagnostic);
             return Err(diagnostic);
         }
 
-        if let Err(error) = sink.commit_checkpoint(self.next_index, &bar.ts_event.to_string(), &projection) {
+        let commit_result = match sink.as_deref_mut() {
+            Some(sink) => sink.commit_checkpoint(self.next_index, &bar.ts_event.to_string(), &projection),
+            None => Ok(()),
+        };
+        if let Err(error) = commit_result {
             let diagnostic = format!(
                 "Checkpoint sink commit failed at input_index={} sbar_id={}: {error}",
                 self.next_index, bar.ts_event
             );
             let _ = self.state.fail(diagnostic.clone());
-            let _ = sink.fail(&diagnostic);
+            notify_sink_failure(&mut sink, &diagnostic);
             return Err(diagnostic);
         }
 
@@ -594,13 +607,17 @@ impl WorkerSession {
             if let Err(error) = self.engine.end() {
                 let diagnostic = format!("BacktestEngine finalization failed after final checkpoint: {error}");
                 let _ = self.state.fail(diagnostic.clone());
-                let _ = sink.fail(&diagnostic);
+                notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             }
-            if let Err(error) = sink.finalize(&self.state) {
+            let finalize_result = match sink.as_deref_mut() {
+                Some(sink) => sink.finalize(&self.state),
+                None => Ok(()),
+            };
+            if let Err(error) = finalize_result {
                 let diagnostic = format!("Snapshot finalization failed: {error}");
                 let _ = self.state.fail(diagnostic.clone());
-                let _ = sink.fail(&diagnostic);
+                notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             }
         }
@@ -621,7 +638,7 @@ impl WorkerSession {
 /// single Step command has been received; continuous Play is frontend-owned.
 fn worker_loop(
     mut session: WorkerSession,
-    mut sink: Box<dyn CheckpointSink>,
+    mut sink: Option<Box<dyn CheckpointSink>>,
     commands: Receiver<WorkerCommand>,
 ) {
     loop {
@@ -663,7 +680,7 @@ fn worker_loop(
                 let _ = reply.send(result);
             }
             WorkerCommand::Step(reply) => {
-                let _ = reply.send(session.step(sink.as_mut()));
+                let _ = reply.send(session.step(sink.as_deref_mut()));
             }
             WorkerCommand::Stop(reply) => {
                 let result = session.stop();
@@ -679,25 +696,12 @@ fn worker_loop(
     }
 }
 
-/// Volatile sink used by interactive Replay. It never opens files or writes SQLite.
-struct VolatileCheckpointSink;
-
-impl CheckpointSink for VolatileCheckpointSink {
-    fn initialize(
-        &mut self,
-        _initial_state: &RunState,
-        _effective_config: &EffectiveStruxisConfig,
-    ) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn commit_checkpoint(
-        &mut self,
-        _checkpoint_index: usize,
-        _sbar_id: &str,
-        _projection: &ReplayCheckpointProjection,
-    ) -> Result<(), String> {
-        Ok(())
+fn notify_sink_failure(
+    sink: &mut Option<&mut dyn CheckpointSink>,
+    diagnostic: &str,
+) {
+    if let Some(sink) = sink.as_deref_mut() {
+        let _ = sink.fail(diagnostic);
     }
 }
 
