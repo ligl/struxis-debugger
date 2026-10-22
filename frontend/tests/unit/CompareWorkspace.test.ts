@@ -36,18 +36,18 @@ describe("CompareWorkspace", () => {
     await nextTick();
 
     expect(wrapper.emitted("selectDifference")).toEqual([[difference]]);
-    expect(wrapper.findComponent(SnapshotPanel).props("selectedDifferenceKey"))
+    expect(wrapper.findComponent(SnapshotPanel).vm.$props.selectedDifferenceKey)
       .toBe("2|sbar-2|Swing|swing-7|modified");
   });
 
   it("clears the selection when leaving Compare", async () => {
     const wrapper = mountWorkspace();
     wrapper.findComponent(SnapshotPanel).vm.$emit("select-difference", difference);
-    await wrapper.setProps({ active: false });
+    await wrapper.setProps({ active: false } as never);
     await nextTick();
 
     const selectionEvents = wrapper.emitted("selectDifference") ?? [];
     expect(selectionEvents[selectionEvents.length - 1]).toEqual([null]);
-    expect(wrapper.findComponent(SnapshotPanel).props("selectedDifferenceKey")).toBeNull();
+    expect(wrapper.findComponent(SnapshotPanel).vm.$props.selectedDifferenceKey).toBeNull();
   });
 });
