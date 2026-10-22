@@ -220,6 +220,8 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-structure-inspector"));
 
     await wrapper.get('[data-testid="origin-cbar-click-cbar-100"]').trigger("click");
+    expect(wrapper.get('[data-testid="inspector-runtime-context"]').text()).toContain("origin-structure-inspector");
+    expect(wrapper.get('[data-testid="inspector-runtime-context"]').text()).toContain("5m");
     expect(wrapper.get('[data-testid="inspector-cbar-cbarId"]').text()).toBe("cbar-100");
     expect(wrapper.get('[data-testid="inspector-cbar-high"]').text()).toBe("13.00");
     expect(wrapper.get('[data-testid="inspector-cbar-fractalType"]').text()).toBe("Top");
