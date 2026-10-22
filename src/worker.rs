@@ -81,8 +81,6 @@ enum WorkerCommand {
     GetState(SyncSender<RunState>),
     GetInspector(SyncSender<Option<ReplayInspectorProjection>>),
     Step(SyncSender<Result<RunState, String>>),
-    Play(SyncSender<Result<RunState, String>>),
-    Pause(SyncSender<Result<RunState, String>>),
     Stop(SyncSender<Result<RunState, String>>),
     Dispose(SyncSender<Result<RunState, String>>),
 }
@@ -205,41 +203,21 @@ impl ReplayWorker {
         }
     }
 
-    /// Starts or resumes continuous processing. The command returns after
-    /// the Run transitions to Running; each subsequent SBar is processed on
-    /// the worker thread at a checkpoint boundary.
+    /// Legacy IPC compatibility only. Playback is scheduled by the frontend
+    /// through serialized Step commands; the worker cannot enter a play loop.
     pub(crate) fn play(&mut self) -> Result<RunState, String> {
-        self.send_state_command(ReplayCommandKind::Play, WorkerCommand::Play)
+        Err("Play is frontend-owned; use serialized Step commands".to_owned())
     }
 
-    /// Pauses after the currently executing SBar checkpoint, if any, commits.
+    /// Legacy IPC compatibility only. Pause stops frontend scheduling and does
+    /// not represent a backend RunState transition.
     pub(crate) fn pause(&mut self) -> Result<RunState, String> {
-        self.send_state_command(ReplayCommandKind::Pause, WorkerCommand::Pause)
+        Err("Pause is frontend-owned; stop scheduling further Step commands".to_owned())
     }
 
     /// Stops the Run at a safe checkpoint boundary and releases its runtime.
     pub(crate) fn stop(&mut self) -> Result<RunState, String> {
         self.send_terminal_command(ReplayCommandKind::Stop, WorkerCommand::Stop)
-    }
-
-    fn send_state_command(
-        &mut self,
-        kind: ReplayCommandKind,
-        command: fn(SyncSender<Result<RunState, String>>) -> WorkerCommand,
-    ) -> Result<RunState, String> {
-        let _permit = self.command_gate.try_enter(kind)?;
-        let (reply_tx, reply_rx) = mpsc::sync_channel(0);
-        if let Err(error) = self.commands.send(command(reply_tx)) {
-            let detail = format!("Replay worker is unavailable during {kind:?}: {error}");
-            return Err(self.join_after_transport_failure(detail));
-        }
-        match reply_rx.recv() {
-            Ok(result) => result,
-            Err(error) => {
-                let detail = format!("Replay worker dropped {kind:?} response: {error}");
-                Err(self.join_after_transport_failure(detail))
-            }
-        }
     }
 
     fn send_terminal_command(
@@ -606,16 +584,6 @@ fn worker_loop(
             }
             WorkerCommand::Step(reply) => {
                 let _ = reply.send(session.step(sink.as_mut()));
-            }
-            WorkerCommand::Play(reply) => {
-                let _ = reply.send(Err(
-                    "Play is frontend-owned; use serialized Step commands".to_owned(),
-                ));
-            }
-            WorkerCommand::Pause(reply) => {
-                let _ = reply.send(Err(
-                    "Pause is frontend-owned; stop scheduling further Step commands".to_owned(),
-                ));
             }
             WorkerCommand::Stop(reply) => {
                 let result = session.stop();
