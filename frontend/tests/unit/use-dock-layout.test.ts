@@ -46,4 +46,18 @@ describe("useDockLayout", () => {
     expect(layout.diagnosticsCollapsed.value).toBe(true);
     expect(layout.shellStyle.value["--diagnostics-reserve-bottom"]).toBe("36px");
   });
+
+  it("resizes the active dock axis through keyboard controls", () => {
+    const layout = useDockLayout();
+    let defaultPrevented = false;
+    const event = {
+      key: "ArrowUp",
+      preventDefault: () => { defaultPrevented = true; },
+    } as KeyboardEvent;
+
+    layout.handlePanelResizeKey("diagnostics", event);
+
+    expect(defaultPrevented).toBe(true);
+    expect(layout.diagnosticsHeight.value).toBe(176);
+  });
 });
