@@ -109,6 +109,7 @@ impl SnapshotWriter {
         if checkpoints.len() != input.bars.len()
             || completed_state.processed_count != input.bars.len()
             || completed_state.input_count != input.bars.len()
+            || completed_state.test_dataset_id != input.test_dataset_id
             || completed_state.input_fingerprint != input.sbar_sequence_fingerprint
         {
             return Err(format!(
