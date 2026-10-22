@@ -1,8 +1,8 @@
 //! Application-level ownership of the active Replay Worker.
 //!
 //! This manager owns at most one worker. Production interactive Start / Restart
-//! use a volatile sink; a completed Run can export an owned trajectory for an
-//! explicit Snapshot save. Restart never creates a replacement unless the
+//! install no persistence sink; a completed Run can export an owned trajectory
+//! for explicit Snapshot save. Restart never creates a replacement unless the
 //! previous worker's terminal response and thread join both confirm release.
 
 use crate::{
