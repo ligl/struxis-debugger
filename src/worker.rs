@@ -113,6 +113,7 @@ impl ReplayWorker {
     }
 
     /// Compatibility entry point for isolated recording-contract tests.
+    #[cfg(test)]
     pub(crate) fn spawn(
         config: ReplayWorkerConfig,
         sink: Box<dyn CheckpointSink>,
