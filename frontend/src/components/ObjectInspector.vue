@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { ref } from "vue";
 import type { ObjectDifferenceDto, ReplayInspectorCBarDto, ReplayInspectorDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
@@ -17,7 +17,6 @@ const props = defineProps<{
   replayInspectorError: string;
 }>();
 
-const selectedReplayObjectKey = ref<string | null>(null);
 const copyStatus = ref("");
 
 async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
@@ -36,29 +35,6 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
     copyStatus.value = "COPY FAILED · CLIPBOARD UNAVAILABLE";
   }
 }
-const selectedReplayCbar = computed(() => {
-  if (!selectedReplayObjectKey.value?.startsWith("cbar:")) return null;
-  const id = selectedReplayObjectKey.value.slice("cbar:".length);
-  return props.replayInspector?.structure?.cbars.find((cbar) => cbar.cbarId === id) ?? null;
-});
-const selectedReplaySwing = computed(() => {
-  if (!selectedReplayObjectKey.value?.startsWith("swing:")) return null;
-  const id = selectedReplayObjectKey.value.slice("swing:".length);
-  return props.replayInspector?.structure?.swings.find((swing) => swing.swingId === id) ?? null;
-});
-
-watch(() => props.replayInspector, (projection) => {
-  if (!projection) {
-    selectedReplayObjectKey.value = null;
-    return;
-  }
-  const key = selectedReplayObjectKey.value;
-  if (!key) return;
-  const stillExists = key.startsWith("cbar:")
-    ? projection.structure?.cbars.some((cbar) => `cbar:${cbar.cbarId}` === key)
-    : projection.structure?.swings.some((swing) => `swing:${swing.swingId}` === key);
-  if (!stillExists) selectedReplayObjectKey.value = null;
-});
 
 function formatValue(value: unknown): string {
   if (value === null) return "null";
@@ -260,55 +236,21 @@ function formatReplayField(field: string, value: unknown): string {
           </div>
         </dl>
       </div>
-      <div v-if="replayInspector.structure" class="inspector-subsection">
-        <p class="section-index">CBARS · {{ replayInspector.structure.cbarCount }}</p>
-        <div class="inspector-object-list" data-testid="inspector-replay-cbars">
-          <button
-            v-for="cbar in replayInspector.structure.cbars"
-            :key="cbar.cbarId"
-            type="button"
-            class="inspector-object-row"
-            :class="{ selected: selectedReplayObjectKey === 'cbar:' + cbar.cbarId }"
-            :data-testid="'inspector-select-cbar-' + cbar.cbarId"
-            @click="selectedReplayObjectKey = 'cbar:' + cbar.cbarId"
-          >
-            <span><strong>CBar</strong><small>{{ cbar.sbarStartId }} → {{ cbar.sbarEndId }}</small></span>
-            <code>{{ cbar.cbarId }}</code>
-          </button>
-        </div>
-        <p class="section-index inspector-list-heading">SWINGS · {{ replayInspector.structure.swingCount }}</p>
-        <div class="inspector-object-list" data-testid="inspector-replay-swings">
-          <button
-            v-for="swing in replayInspector.structure.swings"
-            :key="swing.swingId"
-            type="button"
-            class="inspector-object-row"
-            :class="{ selected: selectedReplayObjectKey === 'swing:' + swing.swingId }"
-            :data-testid="'inspector-select-swing-' + swing.swingId"
-            @click="selectedReplayObjectKey = 'swing:' + swing.swingId"
-          >
-            <span><strong>{{ swing.direction }} Swing</strong><small>{{ swing.state }} · {{ swing.sbarStartId }} → {{ swing.sbarEndId }}</small></span>
-            <code>{{ swing.swingId }}</code>
-          </button>
-        </div>
-      </div>
-      <div v-if="selectedReplayCbar" class="inspector-subsection" data-testid="inspector-replay-selected-cbar">
-        <p class="section-index">SELECTED CBAR PROPERTIES</p>
+      <div v-if="replayInspector.structure" class="inspector-subsection" data-testid="inspector-replay-related-objects">
+        <p class="section-index">RELATED OBJECTS</p>
         <dl class="inspector-fields">
-          <div v-for="(value, field) in selectedReplayCbar" :key="field" class="inspector-field">
-            <dt>{{ field }}</dt><dd><code :data-copy-value="value == null ? (value === null ? 'null' : '—') : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
+          <div class="inspector-field">
+            <dt>CBar Series</dt>
+            <dd><code data-testid="inspector-replay-cbar-count">{{ replayInspector.structure.cbarCount }}</code></dd>
+          </div>
+          <div class="inspector-field">
+            <dt>Swing Series</dt>
+            <dd><code data-testid="inspector-replay-swing-count">{{ replayInspector.structure.swingCount }}</code></dd>
           </div>
         </dl>
+        <p class="inspector-provenance">Structure counts are from the backend-confirmed checkpoint. Select a structure object on a chart when that chart exposes its authoritative geometry.</p>
       </div>
-      <div v-else-if="selectedReplaySwing" class="inspector-subsection" data-testid="inspector-replay-selected-swing">
-        <p class="section-index">SELECTED SWING PROPERTIES</p>
-        <dl class="inspector-fields">
-          <div v-for="(value, field) in selectedReplaySwing" :key="field" class="inspector-field">
-            <dt>{{ field }}</dt><dd><code :data-copy-value="value == null ? (value === null ? 'null' : '—') : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
-          </div>
-        </dl>
-      </div>
-      <p class="inspector-provenance">SBar, CBar and Swing values are copied from the latest backend-confirmed Struxis checkpoint. The UI does not infer or mutate structure state.</p>
+      <p class="inspector-provenance">SBar and structure values are read from the latest backend-confirmed Struxis checkpoint. The UI does not infer or mutate structure state.</p>
     </template>
     <div v-else-if="workspaceMode === 'replay' && replayInspectorError" class="inspector-empty" data-testid="inspector-replay-error">
       <h3>Replay Inspector unavailable</h3>
