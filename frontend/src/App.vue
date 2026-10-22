@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { invoke, isTauri } from "@tauri-apps/api/core";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
@@ -28,36 +27,8 @@ import { useInspectorSelection } from "./composables/useInspectorSelection";
 import { useReplayInspector } from "./composables/useReplayInspector";
 import { useReplayKeyboardShortcut } from "./composables/useReplayKeyboardShortcut";
 import { useRunPolling } from "./composables/useRunPolling";
+import { useDevtoolsContextMenu } from "./composables/useDevtoolsContextMenu";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
-
-const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
-const devtoolsAvailable = import.meta.env.DEV;
-
-function handleContextMenu(event: MouseEvent) {
-  // Check Tauri at event time rather than module initialization. The native
-  // bridge may not be detectable yet when this module is first evaluated.
-  if (!devtoolsAvailable || !isTauri()) return;
-  event.preventDefault();
-  devtoolsContextMenu.value = {
-    visible: true,
-    x: Math.min(event.clientX, window.innerWidth - 190),
-    y: Math.min(event.clientY, window.innerHeight - 82),
-  };
-}
-
-function dismissDevtoolsContextMenu() {
-  devtoolsContextMenu.value.visible = false;
-}
-
-async function openDevtoolsFromContextMenu() {
-  dismissDevtoolsContextMenu();
-  await invoke("open_devtools");
-}
-
-function refreshPageFromContextMenu() {
-  dismissDevtoolsContextMenu();
-  window.location.reload();
-}
 
 const {
   datasets,
@@ -177,6 +148,15 @@ const replayToolbarContext = computed(() => {
   if (!test) return "NO TEST DATASET · CREATE AN INCLUSIVE INTERVAL";
   return `${test.instrumentId} · ${test.timeframe} · ${test.sbarCount.toLocaleString()} SBARS · ${test.startSbarId} → ${test.endSbarId}`;
 });
+
+const {
+  devtoolsContextMenu,
+  devtoolsAvailable,
+  handleContextMenu,
+  dismissDevtoolsContextMenu,
+  openDevtoolsFromContextMenu,
+  refreshPageFromContextMenu,
+} = useDevtoolsContextMenu();
 
 const { instrumentGroups } = useCatalogGroups(datasets);
 
@@ -304,18 +284,7 @@ onMounted(async () => {
   }
 });
 
-onMounted(() => {
-  if (devtoolsAvailable) {
-    window.addEventListener("contextmenu", handleContextMenu);
-    window.addEventListener("click", dismissDevtoolsContextMenu);
-    window.addEventListener("keydown", dismissDevtoolsContextMenu);
-  }
-});
-
 onUnmounted(() => {
-  window.removeEventListener("contextmenu", handleContextMenu);
-  window.removeEventListener("click", dismissDevtoolsContextMenu);
-  window.removeEventListener("keydown", dismissDevtoolsContextMenu);
   document.removeEventListener("pointerdown", handleDockMenuPointerDown);
 });
 </script>
