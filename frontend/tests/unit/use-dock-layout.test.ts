@@ -68,6 +68,46 @@ describe("useDockLayout", () => {
     expect(layout.shellStyle.value["--diagnostics-reserve-bottom"]).toBe("36px");
   });
 
+  it("keeps a dock menu open for internal pointer interactions and closes it outside", () => {
+    document.body.innerHTML = `
+      <details class="dock-menu" data-testid="dock-menu" open>
+        <summary>Move panel</summary>
+        <button data-testid="dock-menu-option">Dock Left</button>
+      </details>
+      <button data-testid="outside-target">Outside</button>
+    `;
+    createLayout();
+
+    const menu = document.querySelector<HTMLDetailsElement>('[data-testid="dock-menu"]')!;
+    const option = document.querySelector<HTMLButtonElement>('[data-testid="dock-menu-option"]')!;
+    const outside = document.querySelector<HTMLButtonElement>('[data-testid="outside-target"]')!;
+
+    option.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    expect(menu.open).toBe(true);
+
+    outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    expect(menu.open).toBe(false);
+  });
+
+  it("removes the dock menu dismissal listener on unmount", () => {
+    document.body.innerHTML = `
+      <details class="dock-menu" data-testid="dock-menu" open>
+        <summary>Move panel</summary>
+      </details>
+      <button data-testid="outside-target">Outside</button>
+    `;
+    const layout = createLayout();
+    const menu = document.querySelector<HTMLDetailsElement>('[data-testid="dock-menu"]')!;
+    const outside = document.querySelector<HTMLButtonElement>('[data-testid="outside-target"]')!;
+
+    const wrapper = cleanup.pop();
+    wrapper?.();
+    outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+
+    expect(menu.open).toBe(true);
+    void layout;
+  });
+
   it("resizes the active dock axis through keyboard controls", () => {
     const layout = createLayout();
     let defaultPrevented = false;
