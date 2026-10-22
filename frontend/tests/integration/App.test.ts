@@ -230,7 +230,7 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-swing-volume"]').text()).toBe("220");
   });
 
-  it("loads the backend-confirmed Replay checkpoint and selects authoritative CBar and Swing objects", async () => {
+  it("shows backend-confirmed Replay object counts without Inspector-owned object selection", async () => {
     const readyRun = {
       runId: "run-replay-inspector",
       testDatasetId: "test-1",
@@ -327,19 +327,12 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-replay-sbar-id"]').text()).toBe("100");
     expect(wrapper.get('[data-testid="inspector-replay-ts-event"]').text()).toBe("1970-01-01 00:00");
     expect(wrapper.get('[data-testid="inspector-replay-ts-init"]').text()).toBe("1970-01-01 00:00");
-    expect(wrapper.get('[data-testid="inspector-replay-cbars"]').text()).toContain("100");
-    expect(wrapper.get('[data-testid="inspector-replay-swings"]').text()).toContain("Extending");
+    expect(wrapper.get('[data-testid="inspector-replay-cbar-count"]').text()).toBe("1");
+    expect(wrapper.get('[data-testid="inspector-replay-swing-count"]').text()).toBe("1");
+    expect(wrapper.find('[data-testid="inspector-select-swing-100"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="inspector-select-cbar-100"]').exists()).toBe(false);
     expect(invokeMock).toHaveBeenCalledWith("get_replay_inspector");
-
-    await wrapper.get('[data-testid="inspector-select-swing-100"]').trigger("click");
-    expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("Extending");
-    expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("12.00");
-    expect(wrapper.get('[data-testid="inspector-replay-selected-swing"]').text()).toContain("1970-01-01 00:00:00");
-
-    await wrapper.get('[data-testid="inspector-select-cbar-100"]').trigger("click");
-    expect(wrapper.get('[data-testid="inspector-replay-selected-cbar"]').text()).toContain("fractalType");
-    expect(wrapper.get('[data-testid="inspector-replay-selected-cbar"]').text()).toContain("null");
-    expect(wrapper.text()).toContain("copied from the latest backend-confirmed Struxis checkpoint");
+    expect(wrapper.text()).toContain("backend-confirmed checkpoint");
   });
 
   it("links a selected Compare difference to the Inspector and clears it when leaving Compare", async () => {
