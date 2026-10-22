@@ -13,6 +13,7 @@ import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
+import DiagnosticsDock from "./components/DiagnosticsDock.vue";
 import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
@@ -218,7 +219,6 @@ watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
   if (mode === "replay") void refreshReplayInspector();
 });
-const diagnosticsCategory = ref("all");
 
 const {
   inspectorCollapsed, diagnosticsCollapsed, inspectorDock, diagnosticsDock,
@@ -467,55 +467,26 @@ onMounted(async () => {
           :origin-structure="origin?.structure ?? null"
         />
       </aside>
-      <section data-testid="diagnostics-dock" class="diagnostics-dock" :class="['dock-' + diagnosticsDock, { collapsed: diagnosticsCollapsed }]">
-        <div class="panel-resize-edge diagnostics-resize-edge" data-testid="diagnostics-resize-edge" role="separator" aria-label="Resize Diagnostics" :aria-orientation="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 'vertical' : 'horizontal'" :aria-valuenow="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidth : diagnosticsHeight" :aria-valuemin="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? 180 : 100" :aria-valuemax="diagnosticsDock === 'left' || diagnosticsDock === 'right' ? diagnosticsWidthLimit() : diagnosticsHeightLimit()" tabindex="0" @pointerdown="startPanelResize('diagnostics', $event)" @keydown="handlePanelResizeKey('diagnostics', $event)"></div>
-        <div
-          class="diagnostics-heading"
-          data-testid="diagnostics-heading"
-          :class="{ 'collapsed-side-heading': diagnosticsCollapsed && (diagnosticsDock === 'left' || diagnosticsDock === 'right') }"
-          @click="handleDiagnosticsHeadingClick"
-          draggable="true"
-          @dragstart="startDockDrag('diagnostics', $event)"
-        >
-          <div class="diagnostics-title-block">
-            <span class="panel-title diagnostics-panel-title" data-testid="diagnostics-dock-drag-handle">Diagnostics</span>
-          </div>
-          <nav class="diagnostics-tabs" data-testid="diagnostics-category-tabs" aria-label="Diagnostic categories">
-            <button v-for="category in [
-              { id: 'all', label: 'ALL' },
-              { id: 'errors', label: 'ERRORS' },
-              { id: 'warnings', label: 'WARNINGS' },
-              { id: 'replay', label: 'REPLAY' },
-              { id: 'structure', label: 'STRUCTURE' },
-              { id: 'snapshots', label: 'SNAPSHOTS' },
-              { id: 'validation', label: 'VALIDATION' },
-              { id: 'differences', label: 'DIFFERENCES' },
-            ]" :key="category.id" :class="{ active: diagnosticsCategory === category.id }" :aria-pressed="diagnosticsCategory === category.id" @click="diagnosticsCategory = category.id">{{ category.label }}</button>
-          </nav>
-          <div class="dock-actions">
-            <details class="dock-menu" data-testid="diagnostics-dock-menu">
-              <summary class="subtle-button" aria-label="Move Diagnostics" title="Move or dock panel">⋯</summary>
-              <div class="dock-menu-options" role="group" aria-label="Diagnostics docking position">
-                <button class="dock-menu-option" data-testid="diagnostics-dock-left" :aria-pressed="diagnosticsDock === 'left'" @click="setDock('diagnostics', 'left'); closeDockMenus()">Dock Left</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-right" :aria-pressed="diagnosticsDock === 'right'" @click="setDock('diagnostics', 'right'); closeDockMenus()">Dock Right</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-top" :aria-pressed="diagnosticsDock === 'top'" @click="setDock('diagnostics', 'top'); closeDockMenus()">Dock Top</button>
-                <button class="dock-menu-option" data-testid="diagnostics-dock-bottom" :aria-pressed="diagnosticsDock === 'bottom'" @click="setDock('diagnostics', 'bottom'); closeDockMenus()">Dock Bottom</button>
-              </div>
-            </details>
-            <button class="subtle-button" data-testid="diagnostics-collapse-toggle"  :aria-label="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" :title="diagnosticsCollapsed ? 'Expand Diagnostics' : 'Collapse Diagnostics'" @click.stop="toggleCollapsed('diagnostics')">{{ diagnosticsCollapsed ? '+' : '−' }}</button>
-          </div>
-        </div>
-        <div class="diagnostics-content">
-          <p v-if="loadError || discoveryError || testError || runError || snapshotsError" class="error-message">
-            <span v-if="discoveryError">Catalog: {{ discoveryError }}</span>
-            <span v-if="loadError">Origin Load: {{ loadError }}</span>
-            <span v-if="testError">Test Dataset: {{ testError }}</span>
-            <span v-if="runError">Run / Replay: {{ runError }}</span>
-            <span v-if="snapshotsError">Snapshots: {{ snapshotsError }}</span>
-          </p>
-          <p v-else class="empty-state">No active errors. Structured event history and domain diagnostics are not yet connected.</p>
-        </div>
-      </section>
+      <DiagnosticsDock
+        :dock="diagnosticsDock"
+        :collapsed="diagnosticsCollapsed"
+        :width="diagnosticsWidth"
+        :height="diagnosticsHeight"
+        :width-limit="diagnosticsWidthLimit"
+        :height-limit="diagnosticsHeightLimit"
+        :discovery-error="discoveryError"
+        :load-error="loadError"
+        :test-error="testError"
+        :run-error="runError"
+        :snapshots-error="snapshotsError"
+        @set-dock="setDock('diagnostics', $event)"
+        @toggle-collapsed="toggleCollapsed('diagnostics')"
+        @heading-click="handleDiagnosticsHeadingClick"
+        @start-resize="startPanelResize('diagnostics', $event)"
+        @resize-key="handlePanelResizeKey('diagnostics', $event)"
+        @start-dock-drag="startDockDrag('diagnostics', $event)"
+        @close-dock-menus="closeDockMenus"
+      />
 
     <div
       v-if="devtoolsAvailable && devtoolsContextMenu.visible"
