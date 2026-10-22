@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   CandlestickSeries,
   ColorType,
+  CrosshairMode,
   HistogramSeries,
   createChart,
   type IChartApi,
@@ -541,6 +542,8 @@ onMounted(() => {
       rightOffset: 4,
     },
     crosshair: {
+      // Keep the horizontal guide at the actual pointer Y, not magnetized to candle close.
+      mode: CrosshairMode.Normal,
       vertLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
       horzLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
     },
