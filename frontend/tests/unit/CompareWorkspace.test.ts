@@ -36,7 +36,7 @@ describe("CompareWorkspace", () => {
     await nextTick();
 
     expect(wrapper.emitted("selectDifference")).toEqual([[difference]]);
-    expect(wrapper.findComponent(SnapshotPanel).vm.$props.selectedDifferenceKey)
+    expect(wrapper.get('[data-testid="snapshot-panel"]').attributes("data-selected-difference-key"))
       .toBe("2|sbar-2|Swing|swing-7|modified");
   });
 
@@ -48,6 +48,6 @@ describe("CompareWorkspace", () => {
 
     const selectionEvents = wrapper.emitted("selectDifference") ?? [];
     expect(selectionEvents[selectionEvents.length - 1]).toEqual([null]);
-    expect(wrapper.findComponent(SnapshotPanel).vm.$props.selectedDifferenceKey).toBeNull();
+    expect(wrapper.get('[data-testid="snapshot-panel"]').attributes("data-selected-difference-key")).toBe("");
   });
 });
