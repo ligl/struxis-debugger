@@ -63,8 +63,8 @@ describe("useCompareWorkspace", () => {
   });
 
   it("ignores duplicate compare commands while a comparison is active", async () => {
-    let resolveCompare!: (value: never) => void;
-    invokeMock.mockReturnValueOnce(new Promise((resolve) => {
+    let resolveCompare!: (value: unknown) => void;
+    invokeMock.mockReturnValueOnce(new Promise<unknown>((resolve) => {
       resolveCompare = resolve;
     }));
 
@@ -73,7 +73,7 @@ describe("useCompareWorkspace", () => {
     await state.runCompare("baseline-2", "candidate-2");
 
     expect(invokeMock).toHaveBeenCalledTimes(1);
-    resolveCompare({} as never);
+    resolveCompare({});
     await first;
   });
 });
