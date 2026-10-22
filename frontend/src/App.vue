@@ -14,7 +14,7 @@ import ComparisonChartPlaceholder from "./components/ComparisonChartPlaceholder.
 import TestDatasetPanel from "./components/TestDatasetPanel.vue";
 import SnapshotPanel from "./components/SnapshotPanel.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
-import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, SnapshotArtifactDto } from "./origin-types";
+import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -280,19 +280,6 @@ async function startLoad(): Promise<void> {
   });
 }
 
-function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
-  const labels: Record<SnapshotArtifactDto["kind"], string> = {
-    complete: "COMPLETE / VERIFIED",
-    invalidPublished: "INVALID PUBLISHED",
-    recordingTemporary: "RECORDING TEMP",
-    finalizingTemporary: "FINALIZING TEMP",
-    failedTemporary: "FAILED TEMP",
-    completeButUnpublished: "COMPLETE / UNPUBLISHED",
-    unreadableTemporary: "UNREADABLE TEMP",
-  };
-  return labels[kind];
-}
-
 
 function closeDockMenus(event?: Event): void {
   const target = event?.target;
@@ -499,7 +486,6 @@ onUnmounted(() => {
                   :snapshots="snapshots"
                   :snapshots-loading="snapshotsLoading"
                   :snapshots-error="snapshotsError"
-                  :snapshot-kind-label="snapshotKindLabel"
                   :format-lifecycle-timestamp="formatLifecycleTimestamp"
                   :compare-result="compareResult"
                   :compare-loading="compareLoading"
