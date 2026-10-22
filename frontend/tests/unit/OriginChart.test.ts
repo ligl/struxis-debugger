@@ -324,6 +324,77 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("shows transient hover feedback without replacing the persistent selected object", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        high: "13",
+        low: "10",
+      }),
+    ];
+    const structure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-hover",
+        high: "13",
+        low: "9",
+        sbarStartId: bars[0]!.sbarId,
+        sbarEndId: bars[1]!.sbarId,
+        spanSbars: 2,
+        fractalType: null,
+        createdAt: "1700000000000000000",
+      }],
+      swingCount: 1,
+      swings: [{
+        swingId: "swing-hover",
+        direction: "Up",
+        high: "13",
+        low: "9",
+        cbarStartId: "cbar-hover",
+        cbarEndId: "cbar-hover",
+        sbarStartId: bars[0]!.sbarId,
+        sbarEndId: bars[1]!.sbarId,
+        startOi: null,
+        endOi: null,
+        volume: "200",
+        spanSbars: 2,
+        state: "Confirmed",
+        createdAt: "1700000000000000000",
+        updatedAt: "1700000000000000000",
+      }],
+    };
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-hover-state",
+        structure,
+        selectedObject: { kind: "sbar", id: bars[0]!.sbarId, originDatasetId: "origin-hover-state" },
+      },
+    });
+    await nextTick();
+
+    const moveHandler = chartMocks.subscribeCrosshairMove.mock.calls[0]?.[0] as
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+    expect(moveHandler).toBeTypeOf("function");
+    // Hover a Swing segment while an SBar remains selected in the Inspector.
+    moveHandler?.({ point: { x: 150, y: 50 } });
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="origin-object-hover-label"]').text()).toBe("SWING · swing-hover");
+    expect(wrapper.get('[data-testid="origin-selected-sbar"]').attributes("data-sbar-id")).toBe(bars[0]!.sbarId);
+    expect(wrapper.get('[data-testid="origin-hover-swing"]').attributes("data-swing-id")).toBe("swing-hover");
+    expect(wrapper.find('[data-testid="origin-selected-swing"]').exists()).toBe(false);
+
+    moveHandler?.({});
+    await nextTick();
+    expect(wrapper.find('[data-testid="origin-object-hover-label"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="origin-selected-sbar"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("encodes every authoritative SwingState with its documented color and line pattern", async () => {
     const bars = [
       bar(),
