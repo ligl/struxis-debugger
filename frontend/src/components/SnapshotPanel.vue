@@ -5,13 +5,25 @@ defineProps<{
   snapshots: SnapshotArtifactDto[];
   snapshotsLoading: boolean;
   snapshotsError: string;
-  snapshotKindLabel: (kind: SnapshotArtifactDto["kind"]) => string;
   formatLifecycleTimestamp: (value: string | null) => string;
   compareResult: SnapshotCompareResultDto | null;
   compareLoading: boolean;
   compareError: string;
   selectedDifferenceKey: string | null;
 }>();
+function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
+  const labels: Record<SnapshotArtifactDto["kind"], string> = {
+    complete: "COMPLETE / VERIFIED",
+    invalidPublished: "INVALID PUBLISHED",
+    recordingTemporary: "RECORDING TEMP",
+    finalizingTemporary: "FINALIZING TEMP",
+    failedTemporary: "FAILED TEMP",
+    completeButUnpublished: "COMPLETE / UNPUBLISHED",
+    unreadableTemporary: "UNREADABLE TEMP",
+  };
+  return labels[kind];
+}
+
 const emit = defineEmits<{
   refresh: [];
   selectDifference: [difference: ObjectDifferenceDto];
