@@ -551,17 +551,26 @@ describe("Struxis Debugger native desktop", () => {
       timeout: 5_000,
       timeoutMsg: "The second SBar selection did not publish a completed inclusive range.",
     });
-    const selectedStart = await selectedRange.$('[data-testid="selected-test-range-start"]');
-    const selectedEnd = await selectedRange.$('[data-testid="selected-test-range-end"]');
-    const actualStart = await selectedStart.getText();
-    const actualEnd = await selectedEnd.getText();
+    // Native WebKit's WebDriver getText() can return an empty string for
+    // rendered inline <code> elements even while the range summary is present.
+    // Read the actual DOM text contract directly; this is still the rendered
+    // component state, without depending on WebDriver's text normalization.
+    const rangeText = await browser.execute(() => ({
+      start: document.querySelector('[data-testid="selected-test-range-start"]')?.textContent?.trim() ?? "",
+      end: document.querySelector('[data-testid="selected-test-range-end"]')?.textContent?.trim() ?? "",
+      count: document.querySelector('[data-testid="selected-test-range-count"]')?.textContent?.trim() ?? "",
+      status: document.querySelector('[data-testid="origin-range-selection-status"]')?.textContent?.trim() ?? "",
+    }));
+    const actualStart = rangeText.start;
+    const actualEnd = rangeText.end;
     if (actualStart !== firstSbarId || actualEnd !== secondSbarId) {
       console.error("Origin range ID mismatch:", JSON.stringify({
         expectedStart: firstSbarId,
         expectedEnd: secondSbarId,
         actualStart,
         actualEnd,
-        rangeStatus: await $('[data-testid="origin-range-selection-status"]').getText(),
+        selectedRangeCount: rangeText.count,
+        rangeStatus: rangeText.status,
       }, null, 2));
     }
     assert.equal(actualStart, firstSbarId,
