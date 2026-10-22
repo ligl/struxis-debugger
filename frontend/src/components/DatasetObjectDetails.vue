@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { OriginObjectSelection, ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
@@ -25,6 +26,28 @@ function selectRelatedObject(kind: OriginObjectSelection["kind"], id: string): v
   if (kind === "swing" && !props.structure?.swings.some((swing) => swing.swingId === id)) return;
   emit("selectObject", { kind, id, originDatasetId: props.originDatasetId } as OriginObjectSelection);
 }
+
+const cbarRelatedObjects = computed(() => {
+  const cbar = props.selectedCbar;
+  if (!cbar) return [];
+  return [
+    { label: "Start SBar", id: cbar.sbarStartId },
+    { label: "End SBar", id: cbar.sbarEndId },
+  ].filter((item) => props.bars.some((bar) => bar.sbarId === item.id));
+});
+
+const swingRelatedObjects = computed(() => {
+  const swing = props.selectedSwing;
+  if (!swing) return [];
+  return [
+    { kind: "cbar" as const, label: "Start CBar", id: swing.cbarStartId },
+    { kind: "cbar" as const, label: "End CBar", id: swing.cbarEndId },
+    { kind: "sbar" as const, label: "Start SBar", id: swing.sbarStartId },
+    { kind: "sbar" as const, label: "End SBar", id: swing.sbarEndId },
+  ].filter((item) => item.kind === "cbar"
+    ? props.structure?.cbars.some((cbar) => cbar.cbarId === item.id)
+    : props.bars.some((bar) => bar.sbarId === item.id));
+});
 
 function formatReplayField(field: string, value: unknown): string {
   if (field === "tsEvent" || field === "tsInit") {
@@ -87,10 +110,7 @@ function formatReplayField(field: string, value: unknown): string {
       <section class="inspector-related" data-testid="inspector-related-objects">
         <p class="section-index">RELATED OBJECTS</p>
         <button
-          v-for="endpoint in [
-            { label: "Start SBar", id: selectedCbar.sbarStartId },
-            { label: "End SBar", id: selectedCbar.sbarEndId },
-          ].filter((item) => bars.some((bar) => bar.sbarId === item.id))"
+          v-for="endpoint in cbarRelatedObjects"
           :key="endpoint.label"
           type="button"
           class="inspector-related-link"
@@ -128,14 +148,7 @@ function formatReplayField(field: string, value: unknown): string {
       <section class="inspector-related" data-testid="inspector-related-objects">
         <p class="section-index">RELATED OBJECTS</p>
         <button
-          v-for="endpoint in [
-            { kind: "cbar" as const, label: "Start CBar", id: selectedSwing.cbarStartId },
-            { kind: "cbar" as const, label: "End CBar", id: selectedSwing.cbarEndId },
-            { kind: "sbar" as const, label: "Start SBar", id: selectedSwing.sbarStartId },
-            { kind: "sbar" as const, label: "End SBar", id: selectedSwing.sbarEndId },
-          ].filter((item) => item.kind === "cbar"
-            ? structure?.cbars.some((cbar) => cbar.cbarId === item.id)
-            : bars.some((bar) => bar.sbarId === item.id))"
+          v-for="endpoint in swingRelatedObjects"
           :key="endpoint.label"
           type="button"
           class="inspector-related-link"
