@@ -180,6 +180,22 @@ function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kin
   selectedInspectorObject.value = selection;
 }
 
+function handleInspectorRelatedObjectClick(selection: OriginObjectSelection): void {
+  if (!origin.value || selection.originDatasetId !== origin.value.originDatasetId) return;
+  const exists = selection.kind === "sbar"
+    ? origin.value.bars.some((bar) => bar.sbarId === selection.id)
+    : selection.kind === "cbar"
+      ? origin.value.structure?.cbars.some((cbar) => cbar.cbarId === selection.id)
+      : selection.kind === "swing"
+        ? origin.value.structure?.swings.some((swing) => swing.swingId === selection.id)
+        : false;
+  if (!exists) return;
+
+  // Inspector navigation changes inspection selection only. In particular, it
+  // must not pass through handleOriginSbarClick, which mutates Test range state.
+  selectedInspectorObject.value = selection;
+}
+
 const rangeSelectionPendingStart = ref<string | null>(null);
 const rangeSelectionReady = ref(false);
 const selectedRangeCount = ref(0);
@@ -866,6 +882,9 @@ onUnmounted(() => {
         <ObjectInspector
           v-if="!inspectorCollapsed"
           :context="inspectorContext"
+          :origin-bars="origin?.bars ?? []"
+          :origin-structure="origin?.structure ?? null"
+          @select-related-object="handleInspectorRelatedObjectClick"
         />
       </aside>
       <section data-testid="diagnostics-dock" class="diagnostics-dock" :class="['dock-' + diagnosticsDock, { collapsed: diagnosticsCollapsed }]">
