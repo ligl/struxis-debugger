@@ -416,6 +416,7 @@ impl WorkerSession {
             return Err(format!("Snapshot Recording initialization failed: {error}"));
         }
 
+        let checkpoint_capacity = config.input.bars.len();
         Ok(Self {
             engine,
             struxis,
@@ -423,7 +424,7 @@ impl WorkerSession {
             state,
             next_index: 0,
             latest_inspector: None,
-            owned_checkpoints: Vec::with_capacity(config.input.bars.len()),
+            owned_checkpoints: Vec::with_capacity(checkpoint_capacity),
         })
     }
 
