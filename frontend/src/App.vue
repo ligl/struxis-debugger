@@ -47,7 +47,9 @@ const {
   snapshots,
   snapshotsLoading,
   snapshotsError,
+  snapshotSaveBusy,
   refreshSnapshots,
+  saveCompletedRunSnapshot,
 } = useSnapshots();
 
 const {
@@ -240,11 +242,6 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   if (command === "step" || command === "start" || command === "restart") {
     await refreshReplayInspector();
   }
-  if (runState.value?.status === "completed") {
-    // Snapshot publication is a separate lifecycle event; never await catalog
-    // discovery as part of the Step / Playback completion path.
-    void refreshSnapshots();
-  }
 }
 
 const {
@@ -260,8 +257,12 @@ const {
   runError,
   executeRunCommand,
   refreshReplayInspector,
-  () => { void refreshSnapshots(); },
 );
+
+async function handleSaveSnapshot(): Promise<void> {
+  if (playbackStatus.value === "playing" || runState.value?.status !== "completed") return;
+  await saveCompletedRunSnapshot();
+}
 
 const canControlPlaybackShortcut = computed(() =>
   workspaceMode.value === "replay" &&
@@ -328,6 +329,7 @@ onMounted(async () => {
               :run-state="runState"
               :run-busy="runBusy"
               :run-error="runError"
+              :snapshot-save-busy="snapshotSaveBusy"
               :playback-status="playbackStatus"
               :playback-delay-ms="playbackDelayMs"
               @set-playback-delay="setPlaybackDelay"
@@ -335,6 +337,7 @@ onMounted(async () => {
               :can-restart-run="canRestartRun"
               @command="handleRunCommand"
               @refresh="refreshRunState"
+              @save-snapshot="handleSaveSnapshot"
             />
             <CompareToolbarControls
               v-show="workspaceMode === 'compare'"
