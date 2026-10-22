@@ -301,6 +301,10 @@ watch(replayReferenceSnapshots, (available) => {
     selectedReplayReferenceSnapshotId.value = null;
   }
 });
+watch(() => origin.value?.originDatasetId, () => {
+  selectedInspectorObject.value = null;
+});
+
 watch(workspaceMode, (mode) => {
   selectedInspectorObject.value = null;
   if (mode !== "compare") selectedCompareDifferenceKey.value = null;
