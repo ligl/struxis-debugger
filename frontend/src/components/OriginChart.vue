@@ -10,7 +10,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
   bars: SBarDto[];
@@ -24,6 +24,7 @@ const props = defineProps<{
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
+  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
@@ -197,6 +198,61 @@ function handleSbarSelectionRequest(event: Event): void {
   selectSbarById(detail.sbarId);
 }
 
+function distanceToSegment(
+  x: number,
+  y: number,
+  segment: SwingSegment,
+): number {
+  const dx = segment.x2 - segment.x1;
+  const dy = segment.y2 - segment.y1;
+  const lengthSquared = dx * dx + dy * dy;
+  const projection = lengthSquared === 0
+    ? 0
+    : Math.max(0, Math.min(1, ((x - segment.x1) * dx + (y - segment.y1) * dy) / lengthSquared));
+  return Math.hypot(x - (segment.x1 + projection * dx), y - (segment.y1 + projection * dy));
+}
+
+function distanceToRectangleBorder(
+  x: number,
+  y: number,
+  rectangle: CBarRectangle,
+): number {
+  const left = Math.min(rectangle.x, rectangle.x + rectangle.width);
+  const right = Math.max(rectangle.x, rectangle.x + rectangle.width);
+  const top = Math.min(rectangle.y, rectangle.y + rectangle.height);
+  const bottom = Math.max(rectangle.y, rectangle.y + rectangle.height);
+  const outsideX = x < left ? left - x : x > right ? x - right : 0;
+  const outsideY = y < top ? top - y : y > bottom ? y - bottom : 0;
+  if (outsideX > 0 || outsideY > 0) return Math.hypot(outsideX, outsideY);
+  return Math.min(x - left, right - x, y - top, bottom - y);
+}
+
+function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" }> | null {
+  const tolerance = 6;
+  const candidates = [
+    ...swingSegments.value.map((segment) => ({
+      kind: "swing" as const,
+      id: segment.id,
+      distance: distanceToSegment(x, y, segment),
+      priority: 0,
+    })),
+    ...cbarRectangles.value.map((rectangle) => ({
+      kind: "cbar" as const,
+      id: rectangle.id,
+      distance: distanceToRectangleBorder(x, y, rectangle),
+      priority: 1,
+    })),
+  ].filter((candidate) => candidate.distance <= tolerance);
+
+  candidates.sort((a, b) =>
+    a.distance - b.distance ||
+    a.priority - b.priority ||
+    a.id.localeCompare(b.id),
+  );
+  const candidate = candidates[0];
+  return candidate ? { kind: candidate.kind, id: candidate.id } : null;
+}
+
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   if (chartError.value || props.bars.length === 0) return;
   const pointX = param.point?.x;
@@ -205,8 +261,17 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
     return;
   }
 
-  // Selection is based only on the horizontal time-axis coordinate. The
-  // pointer's y coordinate and candle geometry are intentionally irrelevant.
+  const pointY = param.point?.y;
+  if (typeof pointY === "number" && Number.isFinite(pointY)) {
+    const selectedStructureObject = hitTestStructureObject(pointX, pointY);
+    if (selectedStructureObject) {
+      emit("objectClick", selectedStructureObject);
+      return;
+    }
+  }
+
+  // A miss on structure geometry falls back to the existing SBar time-axis
+  // selection. It never picks the nearest structure object.
   const logical = chart?.timeScale().coordinateToLogical(pointX);
   if (logical === null || logical === undefined || !Number.isFinite(logical)) {
     emit("selectionError", "The clicked horizontal position does not map to the Origin time axis.");
