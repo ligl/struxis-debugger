@@ -983,6 +983,7 @@ describe("Test, Run and Snapshot workbench", () => {
     await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
 
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     document.body.focus();
     const playEvent = new KeyboardEvent("keydown", {
       key: " ",
@@ -994,6 +995,7 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(playEvent.defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(invokeMock.mock.calls.filter(([command]) => command === "step_run")).toHaveLength(1));
 
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     document.body.focus();
     const pauseEvent = new KeyboardEvent("keydown", {
       key: " ",
