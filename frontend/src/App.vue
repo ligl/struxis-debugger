@@ -23,7 +23,7 @@ import { useDockLayout } from "./composables/useDockLayout";
 import { useInspectorSelection } from "./composables/useInspectorSelection";
 import { useReplayInspector } from "./composables/useReplayInspector";
 import { useReplayKeyboardShortcut } from "./composables/useReplayKeyboardShortcut";
-import { useRunPolling } from "./composables/useRunPolling";
+import { usePlaybackController } from "./composables/usePlaybackController";
 import { useDevtoolsContextMenu } from "./composables/useDevtoolsContextMenu";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
 
@@ -63,7 +63,7 @@ const {
   runError,
   refreshRunState,
   executeRunCommand,
-} = useRunControl(refreshSnapshots);
+} = useRunControl();
 
 const canMutateTest = computed(
   () => !loading.value && !runBusy.value &&
@@ -210,6 +210,14 @@ const {
 let originHandoffDuringStartup = false;
 
 async function handleRunCommand(command: RunCommand): Promise<void> {
+  if (command === "play") {
+    startPlayback();
+    return;
+  }
+  if (command === "pause") {
+    await pausePlayback();
+    return;
+  }
   if (!isRunCommandEligible(
     command,
     runState.value?.status ?? null,
@@ -218,12 +226,24 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
     canRestartRun.value,
   )) return;
 
+  // Stop scheduling and wait for an in-flight Step before any conflicting command.
+  await stopPlayback();
   await executeRunCommand(command);
-  await refreshReplayInspector();
+  if (command === "step" || command === "start" || command === "restart") {
+    await refreshReplayInspector();
+  }
 }
 
-useReplayKeyboardShortcut(runState, runBusy, handleRunCommand);
-useRunPolling(runState, runBusy, refreshRunState, refreshReplayInspector);
+const {
+  playbackStatus,
+  playbackDelayMs,
+  play: startPlayback,
+  pauseAndWait: pausePlayback,
+  stopAndWait: stopPlayback,
+  setPlaybackDelay,
+} = usePlaybackController(runState, runBusy, runError, executeRunCommand, refreshReplayInspector);
+
+useReplayKeyboardShortcut(playbackStatus, runBusy, handleRunCommand);
 
 async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
@@ -274,6 +294,9 @@ onMounted(async () => {
               :run-state="runState"
               :run-busy="runBusy"
               :run-error="runError"
+              :playback-status="playbackStatus"
+              :playback-delay-ms="playbackDelayMs"
+              @set-playback-delay="setPlaybackDelay"
               :can-start-run="canStartRun"
               :can-restart-run="canRestartRun"
               @command="handleRunCommand"
