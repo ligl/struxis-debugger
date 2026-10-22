@@ -648,12 +648,6 @@ onBeforeUnmount(() => {
         <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
-        <div v-if="latestBar" class="chart-meta" aria-label="Latest SBar OHLC">
-          <span>O <b>{{ latestBar.open }}</b></span>
-          <span>H <b>{{ latestBar.high }}</b></span>
-          <span>L <b>{{ latestBar.low }}</b></span>
-          <span>C <b>{{ latestBar.close }}</b></span>
-        </div>
         <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
         <button class="chart-tool-button" type="button" :disabled="bars.length === 0" @click="fitContent">FIT</button>
       </div>

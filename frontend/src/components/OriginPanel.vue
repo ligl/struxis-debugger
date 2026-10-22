@@ -12,8 +12,7 @@ defineProps<{
   <section class="panel result-panel">
     <div class="panel-heading">
       <div>
-        <p class="section-index">02 / RESULT</p>
-        <h2>Current Origin</h2>
+        <h2>Current Dataset</h2>
       </div>
       <span class="status-label" :class="loadStatus">
         {{ loadStatus === "loading" ? "LOADING" : loadStatus === "loaded" ? "LATEST LOAD OK" : loadStatus === "failed" ? "LATEST LOAD FAILED" : "SESSION STATE" }}
