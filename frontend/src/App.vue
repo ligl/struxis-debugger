@@ -218,9 +218,12 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
     await pausePlayback();
     return;
   }
-  // STOP remains actionable during an in-flight playback Step: first stop
-  // scheduling and await that Step, then validate and issue the lifecycle command.
-  if (command === "stop" && playbackStatus.value === "playing") {
+  // Lifecycle commands must wait for an in-flight playback Step before
+  // validating against the resulting authoritative RunState.
+  if (
+    ["stop", "restart", "dispose"].includes(command) &&
+    playbackStatus.value === "playing"
+  ) {
     await stopPlayback();
   }
   if (!isRunCommandEligible(
