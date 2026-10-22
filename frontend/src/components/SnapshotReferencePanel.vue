@@ -1,26 +1,30 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import type { SnapshotArtifactDto } from "../origin-types";
 
 const props = defineProps<{
   snapshots: SnapshotArtifactDto[];
-  selectedSnapshotId: string | null;
 }>();
 
-const emit = defineEmits<{
-  "update:selectedSnapshotId": [snapshotId: string | null];
-}>();
-
+const selectedSnapshotId = ref<string | null>(null);
 const availableSnapshots = computed(() =>
   props.snapshots.filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null),
 );
 const selectedSnapshot = computed(
-  () => availableSnapshots.value.find((snapshot) => snapshot.snapshotId === props.selectedSnapshotId) ?? null,
+  () => availableSnapshots.value.find((snapshot) => snapshot.snapshotId === selectedSnapshotId.value) ?? null,
 );
+
+// Selection belongs to this panel and is invalidated when its Snapshot disappears
+// or ceases to be eligible as an immutable Replay reference.
+watch(availableSnapshots, (available) => {
+  if (!available.some((snapshot) => snapshot.snapshotId === selectedSnapshotId.value)) {
+    selectedSnapshotId.value = null;
+  }
+});
 
 function handleSelection(event: Event): void {
   const value = (event.target as HTMLSelectElement).value;
-  emit("update:selectedSnapshotId", value || null);
+  selectedSnapshotId.value = value || null;
 }
 </script>
 
