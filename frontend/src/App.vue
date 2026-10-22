@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
@@ -226,6 +226,7 @@ const {
   shellStyle, setDock, toggleCollapsed, handleDiagnosticsHeadingClick,
   startPanelResize, handlePanelResizeKey, inspectorWidthLimit, inspectorHeightLimit,
   diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
+  closeDockMenus,
 } = useDockLayout();
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
@@ -261,20 +262,7 @@ async function startLoad(): Promise<void> {
 }
 
 
-function closeDockMenus(event?: Event): void {
-  const target = event?.target;
-  document.querySelectorAll<HTMLDetailsElement>(".dock-menu[open]").forEach((menu) => {
-    if (target instanceof Element && menu.contains(target)) return;
-    menu.open = false;
-  });
-}
-
-function handleDockMenuPointerDown(event: PointerEvent): void {
-  closeDockMenus(event);
-}
-
 onMounted(async () => {
-  document.addEventListener("pointerdown", handleDockMenuPointerDown);
   await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
@@ -284,9 +272,6 @@ onMounted(async () => {
   }
 });
 
-onUnmounted(() => {
-  document.removeEventListener("pointerdown", handleDockMenuPointerDown);
-});
 </script>
 
 <template>
