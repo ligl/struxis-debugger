@@ -46,7 +46,8 @@ describe("CompareWorkspace", () => {
     await wrapper.setProps({ active: false });
     await nextTick();
 
-    expect(wrapper.emitted("selectDifference")?.at(-1)).toEqual([null]);
+    const selectionEvents = wrapper.emitted("selectDifference") ?? [];
+    expect(selectionEvents[selectionEvents.length - 1]).toEqual([null]);
     expect(wrapper.findComponent(SnapshotPanel).props("selectedDifferenceKey")).toBeNull();
   });
 });
