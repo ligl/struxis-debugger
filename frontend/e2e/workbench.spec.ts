@@ -179,6 +179,20 @@ test("Dataset catalog controls remain available and Inspector can collapse and r
   await expect(page.getByRole("button", { name: "Collapse Inspector" })).toBeVisible();
 });
 
+test("collapsed Inspector expands when its title bar is clicked", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  const inspector = page.getByTestId("inspector-panel");
+  await inspector.getByRole("button", { name: "Collapse Inspector" }).click();
+  await expect(inspector).toHaveClass(/collapsed/);
+  await expect(inspector.getByTestId("inspector-heading")).toBeVisible();
+
+  await inspector.getByTestId("inspector-heading").click();
+  await expect(inspector).not.toHaveClass(/collapsed/);
+  await expect(inspector.getByRole("button", { name: "Collapse Inspector" })).toBeVisible();
+});
+
 test("Diagnostics is collapsed by default and can expand and collapse", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
