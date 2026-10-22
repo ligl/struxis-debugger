@@ -268,11 +268,23 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-cbar-cbarId"]').text()).toBe("cbar-100");
     expect(wrapper.get('[data-testid="inspector-cbar-high"]').text()).toBe("13.00");
     expect(wrapper.get('[data-testid="inspector-cbar-fractalType"]').text()).toBe("Top");
+    expect(wrapper.get('[data-testid="inspector-cbar-createdAt"]').attributes("data-copy-value")).toBe("100");
+    expect(wrapper.findAll(".inspector-fields dt").map((field) => field.text())).toEqual([
+      "CBar ID", "High", "Low", "SBar Start ID", "SBar End ID", "Span SBars", "Fractal Type", "Created At",
+    ]);
 
     await wrapper.get('[data-testid="origin-swing-click-swing-100"]').trigger("click");
     expect(wrapper.get('[data-testid="inspector-swing-swingId"]').text()).toBe("swing-100");
     expect(wrapper.get('[data-testid="inspector-swing-state"]').text()).toBe("Confirmed");
     expect(wrapper.get('[data-testid="inspector-swing-volume"]').text()).toBe("220");
+    expect(wrapper.get('[data-testid="inspector-swing-startOi"]').text()).toBe("null");
+    expect(wrapper.get('[data-testid="inspector-swing-endOi"]').text()).toBe("null");
+    expect(wrapper.get('[data-testid="inspector-swing-updatedAt"]').attributes("data-copy-value")).toBe("200");
+    expect(wrapper.findAll(".inspector-fields dt").map((field) => field.text())).toEqual([
+      "Swing ID", "Direction", "High", "Low", "CBar Start ID", "CBar End ID",
+      "SBar Start ID", "SBar End ID", "Start OI", "End OI", "Volume", "Span SBars",
+      "State", "Created At", "Updated At",
+    ]);
   });
 
   it("shows backend-confirmed Replay object counts without Inspector-owned object selection", async () => {
