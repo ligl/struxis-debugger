@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
+import ReplayToolbarControls from "./components/ReplayToolbarControls.vue";
 import ObjectInspector from "./components/ObjectInspector.vue";
 import Diagnostics from "./components/Diagnostics.vue";
 import DatasetWorkspace from "./components/DatasetWorkspace.vue";
@@ -268,24 +269,16 @@ onMounted(async () => {
           :replay-context="replayToolbarContext"
         >
           <template #actions>
-            <div v-if="workspaceMode === 'replay'" class="toolbar-actions replay-toolbar-actions">
-              <div class="replay-transport" role="group" aria-label="Replay transport controls">
-                <button class="subtle-button" data-testid="run-start" title="Start a new replay run" :disabled="!isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('start')">START</button>
-                <button class="subtle-button" data-testid="run-step" title="Process one SBar" :disabled="!isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('step')">STEP ▶|</button>
-                <button class="subtle-button replay-play-toggle" data-testid="run-play-pause" :title="runState?.status === 'running' ? 'Pause replay (Space)' : 'Play replay (Space)'" :disabled="!isRunCommandEligible(runState?.status === 'running' ? 'pause' : 'play', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand(runState?.status === 'running' ? 'pause' : 'play')">{{ runState?.status === 'running' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
-                <button class="subtle-button" data-testid="run-stop" title="Stop the current run" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('stop')">STOP</button>
-                <button class="subtle-button" data-testid="run-restart" title="Reset by restarting the run" :disabled="!isRunCommandEligible('restart', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="handleRunCommand('restart')">RESET</button>
-              </div>
-              <span class="run-state" data-testid="run-toolbar-status">
-                <b :class="`run-status-${runState?.status ?? 'none'}`">{{ runState?.status ? runState.status.toUpperCase() : "NO RUN" }}</b>
-                <span>{{ runState ? `${runState.processedCount.toLocaleString()} / ${runState.inputCount.toLocaleString()}` : "—" }}</span>
-              </span>
-              <div class="progress replay-progress" aria-label="Replay progress" role="progressbar" :aria-valuenow="runState?.processedCount ?? 0" :aria-valuemin="0" :aria-valuemax="runState?.inputCount ?? 0">
-                <i :style="{ width: runState && runState.inputCount > 0 ? (runState.processedCount / runState.inputCount * 100) + '%' : '0%' }"></i>
-              </div>
-              <button class="subtle-button replay-refresh" data-testid="run-refresh-state" title="Refresh state from the backend" :disabled="runBusy" @click="refreshRunState">REFRESH</button>
-              <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
-            </div>
+            <ReplayToolbarControls
+              v-if="workspaceMode === 'replay'"
+              :run-state="runState"
+              :run-busy="runBusy"
+              :run-error="runError"
+              :can-start-run="canStartRun"
+              :can-restart-run="canRestartRun"
+              @command="handleRunCommand"
+              @refresh="refreshRunState"
+            />
             <CompareToolbarControls
               v-show="workspaceMode === 'compare'"
               :snapshots="snapshots"
