@@ -1050,7 +1050,7 @@ body,
   }
 }
 
-.workbench-body {
+.debugger-shell {
   display: grid;
   grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
   flex: 1 1 0;
@@ -1106,7 +1106,7 @@ body,
   font-size: 12px;
 }
 
-.workbench-body.catalog-is-collapsed {
+.debugger-shell.catalog-is-collapsed {
   grid-template-columns: 42px minmax(0, 1fr);
 }
 
@@ -1145,7 +1145,7 @@ body,
   min-height: 0;
 }
 
-.workbench-body.inspector-is-collapsed .primary-workspace {
+.debugger-shell.inspector-is-collapsed .primary-workspace {
   grid-template-columns: minmax(0, 1fr) 42px;
 }
 
@@ -1285,19 +1285,19 @@ body,
   cursor: pointer;
 }
 
-.workbench-topbar + .workbench-body ~ .footer-bar {
+.workbench-topbar + .debugger-shell ~ .footer-bar {
   padding: 8px 12px;
   background: var(--dbg-bg);
 }
 
 @media (min-width: 1600px) {
-  .workbench-body {
+  .debugger-shell {
     grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
   }
   .primary-workspace {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   }
-  .workbench-body.catalog-is-collapsed {
+  .debugger-shell.catalog-is-collapsed {
     grid-template-columns: 42px minmax(0, 1fr);
   }
 }
@@ -1309,8 +1309,8 @@ body,
 }
 
 @media (max-width: 760px) {
-  .workbench-body,
-  .workbench-body.catalog-is-collapsed {
+  .debugger-shell,
+  .debugger-shell.catalog-is-collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
   .catalog-rail {
@@ -1321,7 +1321,7 @@ body,
     display: none;
   }
   .primary-workspace,
-  .workbench-body.inspector-is-collapsed .primary-workspace {
+  .debugger-shell.inspector-is-collapsed .primary-workspace {
     grid-template-columns: minmax(0, 1fr);
   }
   .inspector-rail {
@@ -1838,7 +1838,7 @@ body,
 }
 
 /* Dataset owns Catalog discovery; Replay and Compare reclaim the full workspace width. */
-.workbench-body.catalog-is-hidden {
+.debugger-shell.catalog-is-hidden {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -1975,7 +1975,7 @@ body { background: var(--dbg-bg); }
   font-size: 10px;
   white-space: nowrap;
 }
-.workbench-body {
+.debugger-shell {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2059,7 +2059,7 @@ body { background: var(--dbg-bg); }
   box-shadow: 0 8px 28px #0005;
 }
 .catalog-rail.collapsed { width: 38px; }
-.workbench-body.catalog-is-hidden .catalog-rail { display: none; }
+.debugger-shell.catalog-is-hidden .catalog-rail { display: none; }
 .catalog-rail .rail-heading { margin: -8px -8px 8px; }
 .catalog-rail .catalog-panel { margin-top: 4px; }
 .catalog-rail .instrument-group-row { padding: 7px 8px; }
@@ -2870,7 +2870,7 @@ th, td { padding: 6px 8px; }
 
 
 /* Explicit App Shell geometry: Workbench owns three peer regions. */
-.workbench-body {
+.debugger-shell {
   position: relative;
   display: block;
   flex: 1 1 0;
@@ -2894,7 +2894,7 @@ th, td { padding: 6px 8px; }
 
 /* Keep the Chart Workspace edge 5px above bottom-docked Diagnostics, matching
    the Inspector-to-Diagnostics gap without shrinking chart content internally. */
-.workbench-body.diagnostics-dock-bottom .workbench-main {
+.debugger-shell.diagnostics-dock-bottom .workbench-main {
   bottom: calc(
     var(--diagnostics-reserve-bottom, 0px) +
     var(--inspector-reserve-bottom, 0px) +
@@ -2915,7 +2915,7 @@ th, td { padding: 6px 8px; }
   grid-template-columns: 42px minmax(0, 1fr);
 }
 
-.workbench-body.catalog-is-hidden .chart-panels {
+.debugger-shell.catalog-is-hidden .chart-panels {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -3300,10 +3300,10 @@ th, td { padding: 6px 8px; }
   margin: 0;
 }
 
-.workbench-body.diagnostics-dock-left .diagnostics-reopen { left: 6px; top: 8px; right: auto; bottom: auto; writing-mode: vertical-rl; }
-.workbench-body.diagnostics-dock-right .diagnostics-reopen { right: 6px; top: 8px; left: auto; bottom: auto; writing-mode: vertical-rl; }
-.workbench-body.diagnostics-dock-top .diagnostics-reopen { left: 8px; top: 6px; right: auto; bottom: auto; }
-.workbench-body.diagnostics-dock-bottom .diagnostics-reopen { left: 8px; bottom: 6px; right: auto; top: auto; }
+.debugger-shell.diagnostics-dock-left .diagnostics-reopen { left: 6px; top: 8px; right: auto; bottom: auto; writing-mode: vertical-rl; }
+.debugger-shell.diagnostics-dock-right .diagnostics-reopen { right: 6px; top: 8px; left: auto; bottom: auto; writing-mode: vertical-rl; }
+.debugger-shell.diagnostics-dock-top .diagnostics-reopen { left: 8px; top: 6px; right: auto; bottom: auto; }
+.debugger-shell.diagnostics-dock-bottom .diagnostics-reopen { left: 8px; bottom: 6px; right: auto; top: auto; }
 
 .diagnostics-dock.dock-top .dock-menu-options,
 .diagnostics-dock.dock-bottom .dock-menu-options,
@@ -3321,7 +3321,7 @@ th, td { padding: 6px 8px; }
 @media (max-width: 760px) {
   .chart-panels,
   .chart-panels.catalog-is-collapsed,
-  .workbench-body.catalog-is-hidden .chart-panels {
+  .debugger-shell.catalog-is-hidden .chart-panels {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -4043,7 +4043,7 @@ th, td { padding: 6px 8px; }
    The left-facing frame belongs to the positioned workspace itself, so inset that
    workspace by 5px rather than trying to move only its inner grid. Replay/Compare
    remain unchanged. */
-.workbench-body:not(.catalog-is-hidden).inspector-dock-left .workbench-main {
+.debugger-shell:not(.catalog-is-hidden).inspector-dock-left .workbench-main {
   left: calc(
     var(--diagnostics-reserve-left, 0px) +
     var(--inspector-reserve-left, 0px) +
