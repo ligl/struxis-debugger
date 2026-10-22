@@ -829,23 +829,6 @@ mod tests {
     }
 
     #[test]
-    fn step_permission_is_strictly_bound_to_execution_mode() {
-        use super::step_allowed;
-
-        assert!(step_allowed(RunStatus::Ready, false));
-        assert!(step_allowed(RunStatus::Paused, false));
-        assert!(!step_allowed(RunStatus::Running, false));
-        assert!(!step_allowed(RunStatus::Completed, false));
-
-        assert!(step_allowed(RunStatus::Running, true));
-        assert!(!step_allowed(RunStatus::Ready, true));
-        assert!(!step_allowed(RunStatus::Paused, true));
-        assert!(!step_allowed(RunStatus::Completed, true));
-        assert!(!step_allowed(RunStatus::Failed, true));
-        assert!(!step_allowed(RunStatus::Disposed, true));
-    }
-
-    #[test]
     fn worker_processes_one_test_sbar_per_step_and_commits_before_advancing() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
@@ -927,75 +910,30 @@ mod tests {
         assert!(failed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
     }
 
-    #[test]
-    fn asynchronous_play_failure_is_observable_without_dispose() {
-        let test = fixture_test();
-        let input = LoadedInput::from_test(&test).expect("LoadedInput");
-        let instrument = InstrumentAny::CurrencyPair(audusd_sim());
-        let (mut worker, _) = ReplayWorker::spawn(
-            ReplayWorkerConfig {
-                run_id: "worker-async-failure-observable".into(),
-                input,
-                instrument,
-            },
-            Box::new(FailingCheckpointSink),
-        ).expect("worker should initialize");
-
-        assert_eq!(worker.play().expect("Play should be accepted").status, RunStatus::Running);
-
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-        let failed = loop {
-            let state = worker.state().expect("state query should remain available");
-            if state.status == RunStatus::Failed {
-                break state;
-            }
-            assert!(
-                std::time::Instant::now() < deadline,
-                "asynchronous Play failure was not observable before timeout"
-            );
-            std::thread::yield_now();
-        };
-
-        assert_eq!(failed.processed_count, 0);
-        assert!(failed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
-        let disposed = worker.dispose().expect("Dispose should release failed Run");
-        assert_eq!(disposed.status, RunStatus::Disposed);
-        assert!(disposed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
-    }
 
     #[test]
-    fn worker_play_completion_then_stop_returns_disposed_with_completed_facts() {
+    fn backend_play_and_pause_are_rejected_without_advancing_replay() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
-        let sink = MemoryCheckpointSink::default();
-        let observed = sink.clone();
         let instrument = InstrumentAny::CurrencyPair(audusd_sim());
         let (mut worker, initial) = ReplayWorker::spawn(
             ReplayWorkerConfig {
-                run_id: "worker-play-contract".into(),
+                run_id: "worker-frontend-playback-only".into(),
                 input,
                 instrument,
             },
-            Box::new(sink),
+            Box::new(MemoryCheckpointSink::default()),
         ).expect("worker should initialize");
 
         assert_eq!(initial.status, RunStatus::Ready);
-        let running = worker.play().expect("Play should be accepted");
-        assert_eq!(running.status, RunStatus::Running);
+        assert!(worker.play().expect_err("backend Play must be rejected").contains("frontend-owned"));
+        assert!(worker.pause().expect_err("backend Pause must be rejected").contains("frontend-owned"));
 
-        // Let the worker run independently, then verify that every input
-        // checkpoint was committed before disposing the completed session.
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-        while observed.checkpoints.lock().expect("checkpoints").len() < 3
-            && std::time::Instant::now() < deadline
-        {
-            std::thread::yield_now();
-        }
-        assert_eq!(observed.checkpoints.lock().expect("checkpoints").len(), 3);
-        let stopped = worker.stop().expect("worker Stop");
-        assert_eq!(stopped.status, RunStatus::Disposed);
-        assert_eq!(stopped.processed_count, 3);
-        assert_eq!(stopped.cursor_sbar_id.as_deref(), Some("1735689720000000000"));
+        let unchanged = worker.state().expect("RunState remains queryable");
+        assert_eq!(unchanged.status, RunStatus::Ready);
+        assert_eq!(unchanged.processed_count, 0);
+        assert_eq!(unchanged.cursor_sbar_id, None);
+        worker.dispose().expect("worker Dispose");
     }
 
 }
