@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { ObjectDifferenceDto, ReplayInspectorDto, SBarDto } from "../origin-types";
+import type { ObjectDifferenceDto, ReplayInspectorCBarDto, ReplayInspectorDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
   selectedSbar: SBarDto | null;
+  selectedCbar: ReplayInspectorCBarDto | null;
+  selectedSwing: ReplayInspectorSwingDto | null;
   originDatasetId: string | null;
   timeframe: string | null;
   workspaceMode: "dataset" | "replay" | "compare";
@@ -16,6 +18,23 @@ const props = defineProps<{
 }>();
 
 const selectedReplayObjectKey = ref<string | null>(null);
+const copyStatus = ref("");
+
+async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const valueNode = target.closest("dd, code");
+  if (!valueNode || !event.currentTarget?.contains(valueNode)) return;
+  const value = valueNode.getAttribute("data-copy-value") ?? valueNode.textContent ?? "";
+  if (value.length === 0) return;
+  event.preventDefault();
+  try {
+    await navigator.clipboard.writeText(value);
+    copyStatus.value = "COPIED";
+  } catch {
+    copyStatus.value = "COPY FAILED · CLIPBOARD UNAVAILABLE";
+  }
+}
 const selectedReplayCbar = computed(() => {
   if (!selectedReplayObjectKey.value?.startsWith("cbar:")) return null;
   const id = selectedReplayObjectKey.value.slice("cbar:".length);
@@ -59,7 +78,7 @@ function formatReplayField(field: string, value: unknown): string {
 </script>
 
 <template>
-  <section class="inspector-object" data-testid="inspector-object">
+  <section class="inspector-object" data-testid="inspector-object" @contextmenu="handleInspectorContextMenu">
     <template v-if="workspaceMode === 'dataset' && selectedSbar">
       <div class="inspector-object-heading">
         <div>
@@ -103,6 +122,38 @@ function formatReplayField(field: string, value: unknown): string {
       <p class="inspector-provenance">Values shown verbatim from the validated Origin SBar projection. No domain fields are inferred in the UI.</p>
     </template>
 
+    <template v-else-if="workspaceMode === 'dataset' && selectedCbar">
+      <div class="inspector-object-heading">
+        <div>
+          <p class="section-index">SELECTED DOMAIN OBJECT</p>
+          <h3>CBar</h3>
+        </div>
+        <span class="inspector-object-kind">STRUCTURE</span>
+      </div>
+      <dl class="inspector-fields">
+        <div v-for="(value, field) in selectedCbar" :key="field" class="inspector-field">
+          <dt>{{ field }}</dt>
+          <dd><code :data-testid="'inspector-cbar-' + String(field)" :data-copy-value="value == null ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
+        </div>
+      </dl>
+      <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
+    </template>
+    <template v-else-if="workspaceMode === 'dataset' && selectedSwing">
+      <div class="inspector-object-heading">
+        <div>
+          <p class="section-index">SELECTED DOMAIN OBJECT</p>
+          <h3>Swing</h3>
+        </div>
+        <span class="inspector-object-kind">{{ selectedSwing.state.toUpperCase() }}</span>
+      </div>
+      <dl class="inspector-fields">
+        <div v-for="(value, field) in selectedSwing" :key="field" class="inspector-field">
+          <dt>{{ field }}</dt>
+          <dd><code :data-testid="'inspector-swing-' + String(field)" :data-copy-value="value == null ? '—' : String(value)">{{ formatReplayField(String(field), value) }}</code></dd>
+        </div>
+      </dl>
+      <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
+    </template>
     <template v-else-if="workspaceMode === 'compare' && selectedDifference">
       <div class="inspector-object-heading">
         <div>
@@ -160,7 +211,7 @@ function formatReplayField(field: string, value: unknown): string {
     <div v-else-if="workspaceMode === 'dataset'" class="inspector-empty" data-testid="inspector-empty">
       <span class="placeholder-mark">S/</span>
       <h3>Object Inspector</h3>
-      <p>Select an SBar on the Origin chart to inspect its exact identity, timestamps and market fields.</p>
+      <p>Click an SBar, CBar range, or Swing segment on the Origin chart to inspect its exact domain fields.</p>
       <small>Authoritative Origin data only</small>
     </div>
     <template v-else-if="workspaceMode === 'replay' && replayInspector">
@@ -280,5 +331,6 @@ function formatReplayField(field: string, value: unknown): string {
       <p>Structural-object selection for Replay is not connected to an authoritative object projection yet.</p>
       <small>No inferred or fabricated domain state is displayed.</small>
     </div>
+    <p v-if="copyStatus" class="inspector-copy-status" role="status">{{ copyStatus }}</p>
   </section>
 </template>
