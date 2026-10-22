@@ -15,7 +15,7 @@ defineProps<{
     <dd>
       <code
         :data-testid="testId"
-         :data-copy-value="copyValue ?? value"
+        :data-copy-value="copyValue ?? value"
         :title="title"
       >{{ value }}</code>
     </dd>
