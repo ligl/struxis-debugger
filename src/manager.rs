@@ -9,8 +9,11 @@ use crate::{
     checkpoint::ReplayInspectorProjection,
     replay::{ReplayCommandGate, ReplayCommandKind},
     run::RunState,
-    worker::{CheckpointSink, ReplaySnapshotData, ReplayWorker, ReplayWorkerConfig},
+    worker::{ReplaySnapshotData, ReplayWorker, ReplayWorkerConfig},
 };
+
+#[cfg(test)]
+use crate::worker::CheckpointSink;
 
 /// Owns the single active Run worker for one Debugger application session.
 #[derive(Default)]
@@ -46,6 +49,7 @@ impl ReplayManager {
     ///
     /// Compatibility orchestration API used by recording-contract tests.
     /// Production application workflows use `start_interactive` and explicit save.
+    #[cfg(test)]
     pub(crate) fn start(
         &mut self,
         config: ReplayWorkerConfig,
@@ -156,6 +160,7 @@ impl ReplayManager {
 
     /// Compatibility restart path for recording-contract tests. Production uses
     /// `restart_interactive`; both paths require confirmed release of the old Run.
+    #[cfg(test)]
     pub(crate) fn restart(
         &mut self,
         config: ReplayWorkerConfig,
