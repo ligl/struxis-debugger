@@ -8,6 +8,7 @@ defineProps<{
   runState: RunStateDto | null;
   runBusy: boolean;
   runError: string;
+  snapshotSaveBusy: boolean;
   playbackStatus: PlaybackStatus;
   playbackDelayMs: number;
   canStartRun: boolean;
@@ -17,6 +18,7 @@ defineProps<{
 const emit = defineEmits<{
   command: [command: RunCommand];
   refresh: [];
+  saveSnapshot: [];
   setPlaybackDelay: [milliseconds: number];
 }>();
 
@@ -54,6 +56,13 @@ function onSpeedChange(event: Event): void {
     <div class="progress replay-progress" aria-label="Replay progress" role="progressbar" :aria-valuenow="runState?.processedCount ?? 0" :aria-valuemin="0" :aria-valuemax="runState?.inputCount ?? 0">
       <i :style="{ width: runState && runState.inputCount > 0 ? (runState.processedCount / runState.inputCount * 100) + '%' : '0%' }"></i>
     </div>
+    <button
+      class="subtle-button replay-save-snapshot"
+      data-testid="run-save-snapshot"
+      title="Persist the completed Run as a new Snapshot"
+      :disabled="snapshotSaveBusy || runBusy || playbackStatus === 'playing' || runState?.status !== 'completed'"
+      @click="emit('saveSnapshot')"
+    >{{ snapshotSaveBusy ? 'SAVING…' : 'SAVE SNAPSHOT' }}</button>
     <button class="subtle-button replay-refresh" data-testid="run-refresh-state" title="Refresh state from the backend" :disabled="runBusy || playbackStatus === 'playing'" @click="emit('refresh')">REFRESH</button>
     <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
   </div>
