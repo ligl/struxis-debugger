@@ -46,6 +46,10 @@ export function listSnapshots(): Promise<SnapshotArtifactDto[]> {
   return invoke<SnapshotArtifactDto[]>("list_snapshots");
 }
 
+export function saveRunSnapshot(): Promise<string> {
+  return invoke<string>("save_run_snapshot");
+}
+
 export function compareSnapshots(
   baselineSnapshotId: string,
   candidateSnapshotId: string,
