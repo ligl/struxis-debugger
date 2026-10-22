@@ -307,11 +307,14 @@ function startPanelResize(target: Exclude<PanelResizeTarget, null>, event: Point
 type DockAxis = "horizontal" | "vertical";
 
 function workbenchExtent(axis: DockAxis): number {
-  const workbench = document.querySelector<HTMLElement>('[data-testid="debugger-shell"]');
-  const measured = axis === "horizontal" ? workbench?.clientWidth : workbench?.clientHeight;
+  const shell = document.querySelector<HTMLElement>('[data-testid="debugger-shell"]');
+  const topbarHeight = document.querySelector<HTMLElement>('[data-testid="topbar"]')?.clientHeight ?? 44;
+  const measured = axis === "horizontal"
+    ? shell?.clientWidth
+    : shell ? Math.max(0, shell.clientHeight - topbarHeight) : undefined;
   return measured && measured > 0
     ? measured
-    : axis === "horizontal" ? window.innerWidth : window.innerHeight;
+    : axis === "horizontal" ? window.innerWidth : Math.max(0, window.innerHeight - topbarHeight);
 }
 
 function peerDockReservation(target: Exclude<PanelResizeTarget, null>, axis: DockAxis): number {
