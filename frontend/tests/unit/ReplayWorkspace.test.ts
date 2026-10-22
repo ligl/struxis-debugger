@@ -1,7 +1,20 @@
 import { mount } from "@vue/test-utils";
+import { defineComponent } from "vue";
 import { describe, expect, it } from "vitest";
 import ReplayWorkspace from "../../src/components/ReplayWorkspace.vue";
-import RunChart from "../../src/components/RunChart.vue";
+
+const DualChartStackStub = defineComponent({
+  name: "DualChartStack",
+  template: "<section><slot name=\"upper\" /><slot name=\"lower\" /></section>",
+});
+const RunChartStub = defineComponent({
+  name: "RunChart",
+  template: "<div data-testid=\"run-chart-stub\" />",
+});
+const SnapshotReferencePanelStub = defineComponent({
+  name: "SnapshotReferencePanel",
+  template: "<div data-testid=\"snapshot-reference-panel-stub\" />",
+});
 
 describe("ReplayWorkspace", () => {
   it("keeps the workspace composition mounted while gating the live chart by active mode", async () => {
@@ -15,20 +28,20 @@ describe("ReplayWorkspace", () => {
       },
       global: {
         stubs: {
-          DualChartStack: true,
-          RunChart: true,
-          SnapshotReferencePanel: true,
+          DualChartStack: DualChartStackStub,
+          RunChart: RunChartStub,
+          SnapshotReferencePanel: SnapshotReferencePanelStub,
         },
       },
     });
 
     expect(wrapper.get('[data-testid="replay-workspace"]').isVisible()).toBe(false);
-    expect(wrapper.findComponent(RunChart).exists()).toBe(false);
-    expect(wrapper.findComponent({ name: "SnapshotReferencePanel" }).exists()).toBe(true);
+    expect(wrapper.find('[data-testid="run-chart-stub"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
 
     await wrapper.setProps({ active: true });
 
     expect(wrapper.get('[data-testid="replay-workspace"]').isVisible()).toBe(true);
-    expect(wrapper.findComponent(RunChart).exists()).toBe(true);
+    expect(wrapper.find('[data-testid="run-chart-stub"]').exists()).toBe(true);
   });
 });
