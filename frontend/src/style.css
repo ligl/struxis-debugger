@@ -2869,7 +2869,7 @@ th, td { padding: 6px 8px; }
 
 
 
-/* Explicit App Shell geometry: Workbench owns three peer regions. */
+/* Explicit App Shell geometry: four direct regions; chart content begins below the 44px Topbar. */
 .debugger-shell {
   position: relative;
   display: block;
@@ -2987,7 +2987,7 @@ th, td { padding: 6px 8px; }
   flex-direction: column;
 }
 
- .inspector-rail.dock-top {
+.inspector-rail.dock-top {
   top: 44px;
   bottom: auto;
   border-bottom: 1px solid #3a444b;
