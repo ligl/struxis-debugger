@@ -536,6 +536,15 @@ impl WorkerSession {
         self.owned_checkpoints.push(owned_checkpoint);
         self.latest_inspector = Some(inspector);
         self.next_index += 1;
+        if self.owned_checkpoints.len() != self.state.processed_count {
+            let diagnostic = format!(
+                "Owned Checkpoint trajectory mismatch: retained={}, processed={}",
+                self.owned_checkpoints.len(),
+                self.state.processed_count
+            );
+            let _ = self.state.fail(diagnostic.clone());
+            return Err(diagnostic);
+        }
 
         if self.state.status == RunStatus::Completed {
             if let Err(error) = self.engine.end() {
