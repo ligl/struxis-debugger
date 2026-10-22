@@ -211,6 +211,44 @@ function updateSbarMarkers(): void {
     : null;
 }
 
+function revealSelectedObject(): void {
+  const selected = props.selectedObject;
+  if (!chart || !selected || selected.originDatasetId !== props.originDatasetId) return;
+
+  let anchorIds: string[];
+  if (selected.kind === "sbar") {
+    anchorIds = [selected.id];
+  } else if (selected.kind === "cbar") {
+    const cbar = props.structure?.cbars.find((item) => item.cbarId === selected.id);
+    if (!cbar) return;
+    anchorIds = [cbar.sbarStartId, cbar.sbarEndId];
+  } else {
+    const swing = props.structure?.swings.find((item) => item.swingId === selected.id);
+    if (!swing) return;
+    anchorIds = [swing.sbarStartId, swing.sbarEndId];
+  }
+
+  const indices = anchorIds
+    .map((id) => indexBySbarId.get(id))
+    .filter((index): index is number => index !== undefined);
+  if (indices.length === 0) return;
+
+  const targetLeft = Math.min(...indices);
+  const targetRight = Math.max(...indices);
+  const visible = chart.timeScale().getVisibleLogicalRange();
+  if (!visible) return;
+
+  // Preserve the current zoom. Only pan when the selected object's actual
+  // SBar anchor interval is completely outside the visible chart range.
+  if (targetRight >= visible.from && targetLeft <= visible.to) return;
+  const span = visible.to - visible.from;
+  const center = (targetLeft + targetRight) / 2;
+  chart.timeScale().setVisibleLogicalRange({
+    from: center - span / 2,
+    to: center + span / 2,
+  });
+}
+
 function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
   if (!chart || !candleSeries || !layerVisibility.value.sbar || sbarIdByLogicalIndex.length === 0) return null;
   const logical = chart.timeScale().coordinateToLogical(x);
@@ -587,7 +625,10 @@ watch(() => [props.bars, props.structure, props.originDatasetId] as const, () =>
   updateChart();
   updateHoveredObject(undefined);
 });
-watch(() => props.selectedObject, updateSbarMarkers, { deep: true });
+watch(() => props.selectedObject, () => {
+  updateSbarMarkers();
+  revealSelectedObject();
+}, { deep: true });
 watch(() => layerVisibility.value.sbar, () => {
   if (!layerVisibility.value.sbar && hoveredObject.value?.kind === "sbar") hoveredObject.value = null;
   updateSbarMarkers();
