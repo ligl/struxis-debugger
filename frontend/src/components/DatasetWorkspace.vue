@@ -55,6 +55,10 @@ const emit = defineEmits<{
   selectionError: [message: string];
   cancelRangeSelection: [];
 }>();
+
+function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void {
+  emit("rangeBoundaryChange", edge, sbarId);
+}
 </script>
 
 <template>
@@ -109,7 +113,7 @@ const emit = defineEmits<{
     :selection-editable="selectionEditable"
     @sbar-click="emit('sbarClick', $event)"
     @object-click="emit('objectClick', $event)"
-    @range-boundary-change="emit('rangeBoundaryChange', $event[0], $event[1])"
+    @range-boundary-change="handleRangeBoundaryChange"
     @selection-error="emit('selectionError', $event)"
     @cancel-range-selection="emit('cancelRangeSelection')"
   />
