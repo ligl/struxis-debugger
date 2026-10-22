@@ -33,26 +33,11 @@ function formatReplayField(field: string, value: unknown): string {
         <span class="inspector-object-kind">SOURCE DATA</span>
       </div>
       <dl class="inspector-fields">
-        <div class="inspector-field inspector-field-wide">
-          <dt>SBar ID</dt>
-          <dd><code data-testid="inspector-sbar-id" :title="selectedSbar.sbarId">{{ selectedSbar.sbarId }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Origin Dataset</dt>
-          <dd><code :title="originDatasetId ?? ''">{{ originDatasetId ?? "—" }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Bar Type</dt>
-          <dd><code :title="selectedSbar.barType">{{ selectedSbar.barType }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Event Time · UTC</dt>
-          <dd><code data-testid="inspector-sbar-ts-event" :data-copy-value="selectedSbar.tsEvent">{{ formatDomainTimestamp(selectedSbar.tsEvent, timeframe) }}</code></dd>
-        </div>
-        <div class="inspector-field inspector-field-wide">
-          <dt>Init Time · UTC</dt>
-          <dd><code data-testid="inspector-sbar-ts-init" :data-copy-value="selectedSbar.tsInit">{{ formatDomainTimestamp(selectedSbar.tsInit, timeframe) }}</code></dd>
-        </div>
+        <InspectorPropertyField label="SBar ID" :value="selectedSbar.sbarId" :title="selectedSbar.sbarId" test-id="inspector-sbar-id" wide />
+        <InspectorPropertyField label="Origin Dataset" :value="originDatasetId ?? '—'" :title="originDatasetId ?? ''" wide />
+        <InspectorPropertyField label="Bar Type" :value="selectedSbar.barType" :title="selectedSbar.barType" wide />
+        <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp(selectedSbar.tsEvent, timeframe)" :copy-value="selectedSbar.tsEvent" test-id="inspector-sbar-ts-event" wide />
+        <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp(selectedSbar.tsInit, timeframe)" :copy-value="selectedSbar.tsInit" test-id="inspector-sbar-ts-init" wide />
       </dl>
       <div class="inspector-subsection">
         <p class="section-index">MARKET FIELDS</p>
