@@ -81,4 +81,52 @@ describe("useReplayInspector", () => {
     await first;
     expect(state.replayInspector.value).toEqual(checkpoint);
   });
+
+  it("ignores an outstanding response after the Run is cleared", async () => {
+    const state = useReplayInspector();
+    let resolveRead!: (value: ReplayInspectorDto) => void;
+    invoke.mockReturnValueOnce(new Promise<ReplayInspectorDto>((resolve) => {
+      resolveRead = resolve;
+    }));
+
+    const pendingRead = state.refresh(true);
+    await state.refresh(false);
+
+    expect(state.replayInspector.value).toBeNull();
+    expect(state.replayInspectorError.value).toBe("");
+
+    resolveRead(checkpoint);
+    await pendingRead;
+
+    expect(state.replayInspector.value).toBeNull();
+    expect(state.replayInspectorError.value).toBe("");
+  });
+
+  it("keeps the new read guard when an obsolete read finishes", async () => {
+    const state = useReplayInspector();
+    let resolveOldRead!: (value: ReplayInspectorDto) => void;
+    let resolveNewRead!: (value: ReplayInspectorDto) => void;
+    invoke
+      .mockReturnValueOnce(new Promise<ReplayInspectorDto>((resolve) => {
+        resolveOldRead = resolve;
+      }))
+      .mockReturnValueOnce(new Promise<ReplayInspectorDto>((resolve) => {
+        resolveNewRead = resolve;
+      }));
+
+    const oldRead = state.refresh(true);
+    await state.refresh(false);
+    const newRead = state.refresh(true);
+
+    resolveOldRead(checkpoint);
+    await oldRead;
+
+    // The obsolete request must not release the guard for the current read.
+    await state.refresh(true);
+    expect(invoke).toHaveBeenCalledTimes(2);
+
+    resolveNewRead(checkpoint);
+    await newRead;
+    expect(state.replayInspector.value).toEqual(checkpoint);
+  });
 });
