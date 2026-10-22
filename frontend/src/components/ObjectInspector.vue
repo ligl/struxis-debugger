@@ -130,12 +130,6 @@ function formatReplayField(field: string, value: unknown): string {
       <p class="inspector-provenance">Checkpoint and property values are read from the validated Snapshot Compare result. The Inspector does not reconstruct either Snapshot's domain state.</p>
     </template>
 
-    <div v-else-if="workspaceMode === 'dataset'" class="inspector-empty" data-testid="inspector-empty">
-      <span class="placeholder-mark">S/</span>
-      <h3>Object Inspector</h3>
-      <p>Click an SBar, CBar range, or Swing segment on the Origin chart to inspect its exact domain fields.</p>
-      <small>Authoritative Origin data only</small>
-    </div>
     <template v-else-if="workspaceMode === 'replay' && replayInspector">
       <div class="inspector-object-heading">
         <div>
