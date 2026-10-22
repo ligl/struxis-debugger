@@ -19,9 +19,7 @@ const snapshots: SnapshotArtifactDto[] = [
 
 describe("SnapshotReferencePanel", () => {
   it("shows a selected completed Snapshot without fabricating chart data", async () => {
-    const wrapper = mount(SnapshotReferencePanel, {
-      props: { snapshots, selectedSnapshotId: "snapshot-complete-01" },
-    });
+    const wrapper = mount(SnapshotReferencePanel, { props: { snapshots } });
 
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
     expect(wrapper.get('[data-testid="snapshot-reference-selected"]').text()).toContain("snapshot-complete-01");
@@ -54,12 +52,13 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(false);
   });
 
-  it("emits an explicit selection change", async () => {
-    const wrapper = mount(SnapshotReferencePanel, {
-      props: { snapshots, selectedSnapshotId: null },
-    });
-
+  it("clears the local selection when the referenced Snapshot disappears", async () => {
+    const wrapper = mount(SnapshotReferencePanel, { props: { snapshots } });
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
-    expect(wrapper.emitted("update:selectedSnapshotId")).toEqual([["snapshot-complete-01"]]);
+    expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(true);
+
+    await wrapper.setProps({ snapshots: [] });
+    expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(false);
+    expect((wrapper.get('[data-testid="replay-reference-select"]').element as HTMLSelectElement).value).toBe("");
   });
 });
