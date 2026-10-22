@@ -26,6 +26,7 @@ import { useOriginRangeSelection } from "./composables/useOriginRangeSelection";
 import { useDockLayout } from "./composables/useDockLayout";
 import { useInspectorSelection } from "./composables/useInspectorSelection";
 import { useReplayInspector } from "./composables/useReplayInspector";
+import { useReplayKeyboardShortcut } from "./composables/useReplayKeyboardShortcut";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
 
 const devtoolsContextMenu = ref({ visible: false, x: 0, y: 0 });
@@ -264,6 +265,8 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   await refreshReplayInspector();
 }
 
+useReplayKeyboardShortcut(runState, runBusy, handleRunCommand);
+
 async function startLoad(): Promise<void> {
   if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
@@ -275,54 +278,6 @@ async function startLoad(): Promise<void> {
     const currentTestDataset = await refreshCurrentTestDataset();
     initializeFromTestDataset(currentTestDataset);
   });
-}
-
-function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return false;
-  return target.closest(
-    [
-      "input",
-      "textarea",
-      "select",
-      "button",
-      "a[href]",
-      "summary",
-      "[contenteditable]:not([contenteditable='false'])",
-      "[role='button']",
-      "[role='link']",
-      "[role='checkbox']",
-      "[role='radio']",
-      "[role='switch']",
-      "[role='tab']",
-      "[role='menuitem']",
-      "[role='slider']",
-      "[role='spinbutton']",
-      "[role='textbox']",
-      "[role='combobox']",
-      "[tabindex]:not([tabindex='-1'])",
-    ].join(","),
-  ) !== null;
-}
-
-function handleReplayShortcut(event: KeyboardEvent): void {
-  if (event.code !== "Space" || event.repeat) return;
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  if (
-    isInteractiveKeyboardTarget(event.target) ||
-    isInteractiveKeyboardTarget(document.activeElement) ||
-    runBusy.value
-  ) return;
-
-  const status = runState.value?.status;
-  const command = status === "running"
-    ? "pause"
-    : status === "paused"
-      ? "play"
-      : null;
-  if (!command) return;
-
-  event.preventDefault();
-  void handleRunCommand(command);
 }
 
 function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
@@ -352,7 +307,6 @@ function handleDockMenuPointerDown(event: PointerEvent): void {
 }
 
 onMounted(async () => {
-  document.addEventListener("keydown", handleReplayShortcut);
   document.addEventListener("pointerdown", handleDockMenuPointerDown);
   // RunState is the only progress authority exposed by the backend. Poll while
   // the worker is running so the replay chart follows committed checkpoints.
@@ -385,7 +339,6 @@ onUnmounted(() => {
   window.removeEventListener("contextmenu", handleContextMenu);
   window.removeEventListener("click", dismissDevtoolsContextMenu);
   window.removeEventListener("keydown", dismissDevtoolsContextMenu);
-  document.removeEventListener("keydown", handleReplayShortcut);
   document.removeEventListener("pointerdown", handleDockMenuPointerDown);
   if (runPollInterval !== null) window.clearInterval(runPollInterval);
   runPollInterval = null;
