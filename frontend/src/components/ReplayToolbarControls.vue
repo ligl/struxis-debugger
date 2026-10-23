@@ -55,7 +55,6 @@ const selectedSpeed = () =>
           :aria-expanded="speedMenuOpen"
           aria-haspopup="menu"
           title="Playback speed"
-          @click="speedMenuOpen = !speedMenuOpen"
         >倍速</button>
         <div v-if="speedMenuOpen" class="replay-speed-menu" role="menu" aria-label="Playback speed options" data-testid="replay-speed-menu">
           <button
