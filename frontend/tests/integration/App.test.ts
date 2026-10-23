@@ -1275,6 +1275,46 @@ describe("startup and user-operation coordination", () => {
     expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
   });
 
+  it("reconciles backend Run ownership before replacing Test Dataset when local Run state is stale", async () => {
+    let runStateReads = 0;
+    const completedRun = {
+      runId: "run-completed",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "completed",
+      processedCount: 2,
+      cursorSbarId: "200",
+      failureDiagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") {
+        runStateReads += 1;
+        // Simulate stale local state at startup, then reveal the backend-owned completed Run.
+        return Promise.resolve(runStateReads === 1 ? null : completedRun);
+      }
+      if (command === "create_test_dataset") return Promise.resolve({ ...testDataset, testDatasetId: "test-replaced" });
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await selectOriginRange(wrapper);
+    const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
+    expect((replaceButton.element as HTMLButtonElement).disabled).toBe(false);
+
+    await replaceButton.trigger("click");
+    await vi.waitFor(() => expect(runStateReads).toBe(2));
+    await vi.waitFor(() => expect((replaceButton.element as HTMLButtonElement).disabled).toBe(true));
+
+    expect(invokeMock.mock.calls.filter(([command]) => command === "create_test_dataset")).toHaveLength(0);
+    expect(wrapper.text()).toContain("Dispose the current Run before replacing its Test Dataset.");
+  });
+
   it("blocks Test Dataset replacement while a Run command is pending", async () => {
     let resolveStart!: (value: unknown) => void;
     const pendingStart = new Promise((resolve) => { resolveStart = resolve; });
