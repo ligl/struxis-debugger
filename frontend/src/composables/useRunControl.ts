@@ -60,7 +60,7 @@ export function useRunControl() {
         case "stop":
           next = await stopRun();
           break;
-        case "dispose":
+        case "reset":
           await disposeRun();
           next = null;
           break;
