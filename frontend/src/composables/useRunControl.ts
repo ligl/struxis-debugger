@@ -8,7 +8,7 @@ import {
   stepRun,
   stopRun,
 } from "../origin-bridge";
-import type { RunStateDto } from "../origin-types";
+import type { ReplayStepResultDto, RunStateDto } from "../origin-types";
 import type { RunCommand } from "../run-command-eligibility";
 export type { RunCommand } from "../run-command-eligibility";
 
@@ -20,6 +20,7 @@ export function useRunControl() {
   const runState = ref<RunStateDto | null>(null);
   const runBusy = ref(false);
   const runError = ref("");
+  const lastStepResult = ref<ReplayStepResultDto | null>(null);
 
   async function refreshRunState(_silent = false): Promise<void> {
     if (runBusy.value) return;
@@ -40,6 +41,7 @@ export function useRunControl() {
     runError.value = "";
     try {
       let next: RunStateDto;
+      lastStepResult.value = null;
       switch (command) {
         case "start":
           next = await startRun();
@@ -47,9 +49,12 @@ export function useRunControl() {
         case "restart":
           next = await restartRun();
           break;
-        case "step":
-          next = await stepRun();
+        case "step": {
+          const result = await stepRun();
+          lastStepResult.value = result;
+          next = result.runState;
           break;
+        }
         case "stop":
           next = await stopRun();
           break;
@@ -72,6 +77,7 @@ export function useRunControl() {
     runState,
     runBusy,
     runError,
+    lastStepResult,
     refreshRunState,
     executeRunCommand,
   };
