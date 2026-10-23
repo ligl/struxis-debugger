@@ -591,7 +591,7 @@ onBeforeUnmount(() => {
         <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
           <line :x1="targetSbarX" y1="0" :x2="targetSbarX" y2="100%" stroke="#C6A06B" stroke-width="1.25" stroke-dasharray="5 4" />
           <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
-          <path :d="`M ${targetSbarX - 4} 0 L ${targetSbarX + 4} 0 L ${targetSbarX} 6 Z`" fill="#C6A06B" />
+          <circle :cx="targetSbarX" cy="98%" r="3" fill="#C6A06B" />
         </g>
         <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="rgb(195 203 209 / 8%)" stroke="rgb(195 203 209 / 48%)" stroke-width="1" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
         <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
