@@ -70,10 +70,6 @@ const displayedBar = computed(() => {
   const processedCount = Math.min(props.runState?.processedCount ?? 0, bars.value.length);
   return processedCount > 0 ? bars.value[processedCount - 1] : null;
 });
-const chartCountLabel = computed(() => replayProgressApplies.value
-  ? `${Math.min(props.runState?.processedCount ?? 0, bars.value.length).toLocaleString()} / ${bars.value.length.toLocaleString()} PROCESSED`
-  : `${bars.value.length.toLocaleString()} SBARS`,
-);
 
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
@@ -388,11 +384,5 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <footer class="run-chart-foot">
-      <span>{{ testDataset?.timeframe ?? origin?.timeframe ?? "—" }}</span>
-      <span>VISIBLE <b>{{ chartCountLabel }}</b></span>
-      <span>STATE <b :class="`run-status-${runState?.status ?? 'none'}`">{{ runState?.status?.toUpperCase() ?? "NO RUN" }}</b></span>
-      <span class="run-chart-cursor"><span>{{ replayProgressApplies ? "CURSOR SBAR ID" : "LAST SBAR ID" }}</span><b>{{ displayedBar?.sbarId ?? "—" }}</b></span>
-    </footer>
   </section>
 </template>
