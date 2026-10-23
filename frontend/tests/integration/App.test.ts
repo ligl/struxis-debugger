@@ -1322,6 +1322,7 @@ describe("startup and user-operation coordination", () => {
     expect(resetIndex).toBeGreaterThanOrEqual(0);
     expect(resetIndex).toBeLessThan(replaceIndex);
     expect(wrapper.text()).toContain("test-replaced");
+    expect(wrapper.get(`[data-testid="workspace-replay"]`).attributes("aria-current")).toBe("page");
     confirmSpy.mockRestore();
   });
 
