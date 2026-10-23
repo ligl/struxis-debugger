@@ -286,14 +286,35 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
     emit("objectSelect", { ...structureHit, checkpointSbarId });
     return;
   }
-  if (!layerVisibility.value.sbar) return;
   const logical = chart.timeScale().coordinateToLogical?.(x);
   if (logical === null || logical === undefined || !Number.isFinite(logical)) return;
   const index = Math.round(logical);
   const bar = bars.value[index];
   if (!bar) return;
   emit("objectSelect", { kind: "sbar", id: bar.sbarId, checkpointSbarId: checkpointSbarId ?? null });
-  if (hitTestSbar(x, y)) emit("targetSelect", bar.sbarId);
+}
+
+function handleChartDoubleClick(event: MouseEvent): void {
+  // Restart targeting is a chart-area gesture, not an OHLC hit test. Resolve
+  // the same horizontal coordinate used by the crosshair against the Test
+  // Dataset's logical SBar sequence; Y position and visible layer state do
+  // not affect which SBar is targeted.
+  const target = event.target;
+  if (
+    !chart ||
+    chartError.value ||
+    !(target instanceof Element) ||
+    target.closest(".run-chart-legend, button, .run-chart-heading")
+  ) return;
+  const hostLeft = chartHost.value?.getBoundingClientRect().left ?? 0;
+  const x = event.clientX - hostLeft;
+  if (!Number.isFinite(x)) return;
+  const logical = chart.timeScale().coordinateToLogical?.(x);
+  if (logical === null || logical === undefined || !Number.isFinite(logical)) return;
+  const index = Math.round(logical);
+  const bar = bars.value[index];
+  if (!bar) return;
+  emit("targetSelect", bar.sbarId);
 }
 
 function handleContextMenu(event: MouseEvent): void {
@@ -577,7 +598,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div class="run-chart-stage" @contextmenu="handleContextMenu">
+    <div class="run-chart-stage" @contextmenu="handleContextMenu" @dblclick="handleChartDoubleClick">
       <p v-if="projectionMessage" class="run-chart-message" data-testid="run-chart-empty">{{ projectionMessage }}</p>
       <p v-else-if="replayProgressApplies && !displayedBar" class="run-chart-message" data-testid="run-chart-awaiting-checkpoint">
         Waiting for the first backend-confirmed checkpoint. Future input SBars are dimmed.
