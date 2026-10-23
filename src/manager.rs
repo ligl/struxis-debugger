@@ -132,20 +132,25 @@ impl ReplayManager {
         if result.inspector.is_some() {
             self.last_inspector = result.inspector.clone();
         }
-        if result.run_state.status == crate::run::RunStatus::Completed {
+        if matches!(result.run_state.status, crate::run::RunStatus::Completed | crate::run::RunStatus::Failed) {
             let worker = self.active.as_mut().expect("active worker remains owned during Step");
-            let trajectory = worker.snapshot_data();
-            // Release runtime ownership even if exporting the trajectory fails.
+            let trajectory = if result.run_state.status == crate::run::RunStatus::Completed {
+                Some(worker.snapshot_data())
+            } else {
+                None
+            };
+            // Terminal processing outcomes release runtime ownership internally.
             let release = worker.dispose();
             match (trajectory, release) {
-                (Ok(data), Ok(_)) => self.completed_result = Some(data),
-                (Err(error), Ok(_)) => {
+                (Some(Ok(data)), Ok(_)) => self.completed_result = Some(data),
+                (Some(Err(error)), Ok(_)) => {
                     self.last_state = Some(result.run_state.clone());
                     self.active = None;
                     return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
                 }
+                (None, Ok(_)) => {}
                 (_, Err(error)) => {
-                    return Err(format!("Run completed, but runtime release is unconfirmed: {error}"));
+                    return Err(format!("Run reached a terminal processing state, but runtime release is unconfirmed: {error}"));
                 }
             }
             self.active = None;
@@ -260,6 +265,41 @@ impl ReplayManager {
     pub(crate) fn has_owned_run(&self) -> bool {
         self.active.is_some()
     }
+
+    #[test]
+    fn completed_run_releases_worker_but_retains_snapshot_trajectory() {
+        let mut manager = ReplayManager::new();
+        manager.start_interactive(worker_config("manager-auto-cleanup"),).expect("Run starts");
+        for expected in 1..=3 {
+            let result = manager.step_checkpoint().expect("Step succeeds");
+            assert_eq!(result.run_state.processed_count, expected);
+        }
+
+        assert!(!manager.has_owned_run(), "Completed Run must not retain a Worker");
+        let state = manager.state().expect("state query").expect("last result remains visible");
+        assert_eq!(state.status, crate::run::RunStatus::Completed);
+        assert_eq!(state.processed_count, 3);
+
+        let snapshot = manager.snapshot_data().expect("completed trajectory remains saveable");
+        assert_eq!(snapshot.state.status, crate::run::RunStatus::Completed);
+        assert_eq!(snapshot.checkpoints.len(), 3);
+    }
+
+    #[test]
+    fn reset_clears_completed_result_and_run_state() {
+        let mut manager = ReplayManager::new();
+        manager.start_interactive(worker_config("manager-reset"),).expect("Run starts");
+        for _ in 0..3 {
+            manager.step_checkpoint().expect("Step succeeds");
+        }
+        assert!(manager.snapshot_data().is_ok());
+
+        manager.dispose().expect("Reset clears the completed context");
+        assert!(!manager.has_owned_run());
+        assert!(manager.state().expect("state query").is_none());
+        assert!(manager.snapshot_data().is_err());
+    }
+
 }
 
 
