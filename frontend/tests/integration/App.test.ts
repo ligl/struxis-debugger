@@ -1395,6 +1395,7 @@ describe("startup and user-operation coordination", () => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "get_run_state") return Promise.resolve(null);
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "create_test_dataset") return pendingCreate;
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
