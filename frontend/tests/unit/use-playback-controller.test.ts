@@ -57,7 +57,7 @@ describe("usePlaybackController", () => {
 
     expect(execute).toHaveBeenCalledTimes(3);
     expect(maxActiveSteps).toBe(1);
-    expect(refreshInspector).toHaveBeenCalledTimes(3);
+    expect(refreshInspector).not.toHaveBeenCalled();
     expect(controller.playbackStatus.value).toBe("idle");
     wrapper.unmount();
   });
