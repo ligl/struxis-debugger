@@ -1519,7 +1519,10 @@ describe("startup and user-operation coordination", () => {
     )).toHaveLength(0);
 
     resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
-    await vi.waitFor(() => expect(wrapper.get('[data-testid="workspace-replay"]').attributes("aria-current")).toBe("page"));
+    // Replay is already active while creation is pending, so waiting for its
+    // active tab would pass too early. Flush the create flow before switching
+    // back to Dataset to inspect the newly committed Test Dataset.
+    await flushPromises();
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
   });
