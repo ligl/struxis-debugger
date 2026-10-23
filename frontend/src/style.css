@@ -2666,8 +2666,7 @@ th, td { padding: 6px 8px; }
   background: #121619;
 }
 
-.snapshot-reference-heading,
-.comparison-chart-heading {
+.snapshot-reference-heading {
   display: flex;
   min-height: 32px;
   align-items: center;
@@ -2678,13 +2677,29 @@ th, td { padding: 6px 8px; }
   background: #191e22;
 }
 
+.comparison-chart-heading {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #191e22;
+}
+
 .snapshot-reference-title {
   min-width: 0;
 }
 
-.snapshot-reference-heading h3,
-.comparison-chart-heading h3 {
+.snapshot-reference-heading h3 {
   margin: 0;
+  font-size: 10px;
+  letter-spacing: .07em;
+}
+
+.comparison-chart-heading h3 {
+  margin: 2px 0 0;
   font-size: 10px;
   letter-spacing: .07em;
 }
