@@ -259,3 +259,69 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
 
     std::fs::remove_dir_all(snapshot_root).expect("temporary Snapshot root should be removed");
 }
+
+
+#[test]
+fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    // A regular file at the configured Snapshot root makes directory creation
+    // fail deterministically, exercising the save failure after Run completion.
+    let snapshot_root = std::env::temp_dir().join(format!(
+        "capitus-debugger-snapshot-root-file-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after UNIX epoch")
+            .as_nanos()
+    ));
+    std::fs::write(&snapshot_root, b"not a directory")
+        .expect("blocking Snapshot root file should be created");
+    let state = AppState::with_snapshot_root(test_catalog_path(), snapshot_root.clone());
+
+    let entry = state
+        .discover_datasets()
+        .expect("Catalog discovery should succeed")
+        .into_iter()
+        .find(|entry| {
+            entry.available
+                && entry.bar_type.as_deref()
+                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+        })
+        .expect("fixture BTCUSDT stream should be available");
+
+    let origin = state.load_origin(&entry.id, true).expect("Origin should load");
+    assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
+    state
+        .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
+        .expect("two-SBar Test Dataset should be created");
+
+    state.start_run().expect("Run should start");
+    state.replay_step().expect("first SBar should process");
+    let completed = state.replay_step().expect("second SBar should complete Run");
+    assert_eq!(completed.status, RunStatus::Completed);
+    assert_eq!(completed.processed_count, 2);
+
+    let save_error = state
+        .save_run_snapshot()
+        .expect_err("Snapshot save must fail when its root path is a file");
+    assert!(
+        save_error.message.contains("Save Run Snapshot failed"),
+        "Unexpected save error: {}",
+        save_error.message
+    );
+
+    let after_failure = state
+        .replay_state()
+        .expect("failed Snapshot save must leave Run state queryable");
+    assert_eq!(after_failure.status, RunStatus::Completed);
+    assert_eq!(after_failure.processed_count, 2);
+    assert_eq!(
+        after_failure.cursor_sbar_id,
+        completed.cursor_sbar_id,
+        "failed Snapshot save must not roll back the confirmed cursor"
+    );
+
+    state.replay_dispose().expect("Run resources should be disposed");
+    drop(state);
+    std::fs::remove_file(snapshot_root).expect("blocking Snapshot root file should be removed");
+}
