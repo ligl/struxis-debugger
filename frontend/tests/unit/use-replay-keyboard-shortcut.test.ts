@@ -6,19 +6,33 @@ import type { PlaybackStatus } from "../../src/composables/usePlaybackController
 
 let cleanup: (() => void)[] = [];
 
-function mountShortcut(playback: PlaybackStatus = "idle", canControl = true, busy = false) {
+function mountShortcut(
+  playback: PlaybackStatus = "idle",
+  canControl = true,
+  busy = false,
+  target: string | null = null,
+) {
   const playbackStatus = ref<PlaybackStatus>(playback);
   const canControlPlayback = ref(canControl);
   const runBusy = ref(busy);
+  const targetSbarId = ref<string | null>(target);
+  const restartToTarget = vi.fn(async () => undefined);
   const executeCommand = vi.fn(async () => undefined);
   const wrapper = mount(defineComponent({
     setup() {
-      useReplayKeyboardShortcut(playbackStatus, canControlPlayback, runBusy, executeCommand);
+      useReplayKeyboardShortcut(
+        playbackStatus,
+        canControlPlayback,
+        runBusy,
+        targetSbarId,
+        restartToTarget,
+        executeCommand,
+      );
       return () => null;
     },
   }));
   cleanup.push(() => wrapper.unmount());
-  return { playbackStatus, canControlPlayback, runBusy, executeCommand, wrapper };
+  return { playbackStatus, canControlPlayback, runBusy, targetSbarId, restartToTarget, executeCommand, wrapper };
 }
 
 function pressSpace(target: EventTarget = document): KeyboardEvent {
@@ -53,6 +67,14 @@ describe("useReplayKeyboardShortcut", () => {
     expect(playEvent.defaultPrevented).toBe(true);
     expect(state.executeCommand).toHaveBeenLastCalledWith("play");
     expect(state.executeCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it("prioritizes Restart to SBar over Play/Pause when a target exists", () => {
+    const state = mountShortcut("playing", true, true, "1735689660000000000");
+    const event = pressSpace();
+    expect(event.defaultPrevented).toBe(true);
+    expect(state.restartToTarget).toHaveBeenCalledTimes(1);
+    expect(state.executeCommand).not.toHaveBeenCalled();
   });
 
   it("allows Play from an eligible ready Run", () => {
