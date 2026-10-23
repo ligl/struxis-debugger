@@ -3684,6 +3684,16 @@ th, td { padding: 6px 8px; }
   border-color: #75c6a1;
 }
 
+.replay-toolbar-actions .run-stop-toggle:not(:disabled) {
+  border-color: #665438;
+  background: #2c261c;
+  color: var(--dbg-warning);
+}
+
+.replay-toolbar-actions .run-stop-toggle:hover:not(:disabled) {
+  border-color: #a88956;
+}
+
 .run-state {
   display: flex;
   flex: 0 0 auto;
@@ -3716,18 +3726,19 @@ th, td { padding: 6px 8px; }
 }
 
 .replay-progress {
-  width: 74px;
+  width: 92px;
   height: 4px;
-  flex: 0 1 74px;
+  flex: 0 0 92px;
   overflow: hidden;
-  border-radius: 0;
-  background: var(--dbg-surface-3);
+  border-radius: 5px;
+  background: #343c42;
 }
 
 .replay-progress i {
   display: block;
   height: 100%;
-  background: var(--dbg-success);
+  border-radius: inherit;
+  background: #75c6a1;
   transition: width 120ms linear;
 }
 
@@ -3749,10 +3760,6 @@ th, td { padding: 6px 8px; }
     font-size: 8px;
   }
 
-  .replay-progress {
-    width: 48px;
-    flex-basis: 48px;
-  }
 }
 
 /* Dataset mode follows the prototype's single control row above the Origin chart. */
