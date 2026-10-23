@@ -196,6 +196,7 @@ function updateChart(): void {
     if (projectionMessage.value) {
       candleSeries.setData([]);
       volumeSeries.setData([]);
+      selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
       chartError.value = "";
@@ -238,6 +239,7 @@ function updateChart(): void {
   } catch (error) {
     candleSeries.setData([]);
     volumeSeries.setData([]);
+    selectedSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
