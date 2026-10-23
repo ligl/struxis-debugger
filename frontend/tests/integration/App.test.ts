@@ -814,7 +814,7 @@ describe("Test, Run and Snapshot workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
 
     await enterReplayWorkspace(wrapper);
-    const startButton = wrapper.get('[data-testid="run-start"]');
+    const startButton = wrapper.get('[data-testid="run-start-stop"]');
     expect(startButton).toBeDefined();
     await startButton!.trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
@@ -866,7 +866,7 @@ describe("Test, Run and Snapshot workbench", () => {
     await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
-    await wrapper.get('[data-testid="run-stop"]').trigger("click");
+    await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
     await flushPromises();
 
     const runIpcCommands = [
@@ -1145,7 +1145,7 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
-    const startButton = wrapper.get('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start-stop"]')!;
     await startButton.trigger("click");
     await startButton.trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) => command === "start_run")).toHaveLength(1);
@@ -1222,10 +1222,10 @@ describe("startup and user-operation coordination", () => {
       enableStructure: true,
     }));
     await enterReplayWorkspace(wrapper);
-    const startButton = wrapper.get('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start-stop"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    await wrapper.get('[data-testid="run-start"]').trigger("click");
+    await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
     await wrapper.get('[data-testid="run-restart"]').trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "start_run" || command === "restart_run",
@@ -1282,7 +1282,7 @@ describe("startup and user-operation coordination", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
-    const startButton = wrapper.get('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start-stop"]')!;
     await startButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("start_run"));
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
@@ -1359,10 +1359,10 @@ describe("startup and user-operation coordination", () => {
     }));
 
     await enterReplayWorkspace(wrapper);
-    const startButton = wrapper.get('[data-testid="run-start"]')!;
+    const startButton = wrapper.get('[data-testid="run-start-stop"]')!;
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    await wrapper.get('[data-testid="run-start"]').trigger("click");
+    await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
     await wrapper.get('[data-testid="run-restart"]').trigger("click");
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "start_run" || command === "restart_run",
@@ -1389,10 +1389,10 @@ describe("dual chart workspaces", () => {
     expect(wrapper.find('[data-testid="dual-chart-stack-replay"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="replay-upper-chart-track"]').find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="replay-toolbar-context"]').text()).toContain("NO TEST DATASET");
-    expect(wrapper.find('[data-testid="run-start"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="run-start-stop"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-step"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-play-pause"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="run-stop"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="run-start-stop"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-toolbar-status"]').exists()).toBe(true);
     expect(wrapper.find('[role="progressbar"][aria-label="Replay progress"]').exists()).toBe(true);
