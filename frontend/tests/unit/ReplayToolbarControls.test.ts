@@ -40,17 +40,16 @@ function mountControls(overrides: Partial<{
 }
 
 describe("ReplayToolbarControls", () => {
-  it("forwards eligible Run commands and manual refresh intents", async () => {
+  it("forwards eligible Run commands without a manual refresh control", async () => {
     const wrapper = mountControls();
 
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     expect(wrapper.get('[data-testid="run-start-stop"]').text()).toBe("STOP");
     await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
     await wrapper.get('[data-testid="run-restart"]').trigger("click");
-    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
 
     expect(wrapper.emitted("command")).toEqual([["step"], ["stop"], ["restart"]]);
-    expect(wrapper.emitted("refresh")).toHaveLength(1);
+    expect(wrapper.find('[data-testid="run-refresh-state"]').exists()).toBe(false);
   });
 
 
@@ -157,7 +156,7 @@ describe("ReplayToolbarControls", () => {
 
     expect(wrapper.get('[data-testid="run-start-stop"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-testid="run-step"]').attributes("disabled")).toBeDefined();
-    expect(wrapper.get('[data-testid="run-refresh-state"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.find('[data-testid="run-refresh-state"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY");
     expect(wrapper.get('[role="progressbar"]').attributes("aria-valuenow")).toBe("4");
     expect(wrapper.get('[role="progressbar"] i').attributes("style")).toContain("40%");
