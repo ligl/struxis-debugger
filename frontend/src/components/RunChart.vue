@@ -172,7 +172,13 @@ function moveCrosshairBy(delta: number): boolean {
     (props.runState?.cursorSbarId
       ? bars.value.findIndex((bar) => bar.sbarId === props.runState?.cursorSbarId)
       : 0);
-  return moveCrosshairTo(currentIndex + delta);
+  const targetIndex = currentIndex + delta;
+
+  // Dataset navigation is bounded, not cyclic. At either edge, leave the
+  // crosshair and viewport untouched instead of clamping and re-applying the
+  // same candle (or accidentally reinitializing from Replay progress).
+  if (targetIndex < 0 || targetIndex >= bars.value.length) return false;
+  return moveCrosshairTo(targetIndex);
 }
 
 function zoomTimeScale(direction: "in" | "out"): boolean {
@@ -414,10 +420,16 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
   // so T still targets the position the user was inspecting.
   if (typeof x === "number") {
     const logical = chart?.timeScale().coordinateToLogical?.(x);
-    crosshairLogicalIndex = logical !== null && logical !== undefined && Number.isFinite(logical) &&
+    // Only adopt a real candle under the pointer. When the pointer/crosshair
+    // is outside the Test Dataset, retain the last valid navigation anchor;
+    // clearing it makes the next keypress fall back to the backend cursor and
+    // can appear to jump back to the beginning after boundary navigation.
+    if (
+      logical !== null && logical !== undefined && Number.isFinite(logical) &&
       Math.round(logical) >= 0 && Math.round(logical) < bars.value.length
-      ? Math.round(logical)
-      : null;
+    ) {
+      crosshairLogicalIndex = Math.round(logical);
+    }
   }
   updateHoveredObject(param.point);
 }
