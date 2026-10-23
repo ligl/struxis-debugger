@@ -1,7 +1,8 @@
 //! Read-only Snapshot discovery and residual-artifact classification.
 //!
-//! Discovery never promotes or repairs files. Only a published
-//! `.snapshot.sqlite` with a Complete Manifest and valid checksum is usable.
+//! Discovery never promotes or repairs files and reads only the Manifest needed
+//! to classify/list artifacts. Full checksum and checkpoint validation is deferred
+//! until a published candidate is selected through the Snapshot Reference path.
 
 use std::{
     fmt,
