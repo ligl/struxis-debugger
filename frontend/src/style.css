@@ -853,7 +853,7 @@ td {
   white-space: nowrap;
 }
 
-.artifact-kind.verified {
+.artifact-kind.published {
   border-color: var(--dbg-success);
   color: var(--dbg-success);
 }
