@@ -166,7 +166,7 @@ fn active_run_rejects_origin_and_test_dataset_replacement() {
     assert_eq!(current_test.test_dataset_id, test.test_dataset_id);
     assert_eq!(current_test.sbar_sequence_fingerprint, test.sbar_sequence_fingerprint);
 
-    // A completed Run remains owned until explicit Dispose.
+    // An active Run remains owned until Stop or Reset releases its runtime.
     state.replay_dispose().expect("Run resources should be disposed");
 }
 
@@ -250,8 +250,7 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
         "Exactly one completed Snapshot should be discoverable"
     );
 
-    let disposed = state.replay_dispose().expect("Run resources should be disposed");
-    assert_eq!(disposed.status, RunStatus::Disposed);
+    state.replay_reset().expect("Reset clears the retained completed Run context");
     drop(state);
 
     // Reconstruct the application service with the same persistent root to
