@@ -79,6 +79,13 @@ describe("Run Bridge Functions", () => {
       expect(result).toEqual(mockRunState);
       expect(invokeMock).toHaveBeenCalledWith("get_run_state");
     });
+
+    it("returns null when no Run has been started", async () => {
+      invokeMock.mockResolvedValue(null);
+
+      await expect(getRunState()).resolves.toBeNull();
+      expect(invokeMock).toHaveBeenCalledWith("get_run_state");
+    });
   });
 
   describe("stepRun()", () => {
