@@ -12,6 +12,8 @@ const props = defineProps<{
   timeframe: string | null;
 }>();
 
+type InspectorRow = { label: string; value: string; copyValue?: string };
+
 const title = computed(() => props.selectedObject.kind.toUpperCase());
 const sourceLabel = computed(() => {
   if (props.selectedObject.kind === "sbar") {
@@ -20,7 +22,7 @@ const sourceLabel = computed(() => {
   return "CONFIRMED CHECKPOINT STRUCTURE";
 });
 
-const rows = computed(() => {
+const rows = computed<InspectorRow[]>(() => {
   const selected = props.selectedObject;
   if (selected.kind === "sbar") {
     const bar = selected.object;
