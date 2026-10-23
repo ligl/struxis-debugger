@@ -36,6 +36,7 @@ fn main() {
             commands::compare_snapshots,
             commands::start_run,
             commands::restart_run,
+            commands::restart_to_sbar,
             commands::get_run_state,
             commands::get_replay_inspector,
             commands::step_run,
