@@ -385,6 +385,17 @@ impl ReplayManager {
                     self.last_state = Some(state);
                     return Err(format!("Run completed, but runtime release is unconfirmed: {error}"));
                 }
+                (Err(trajectory_error), Err(release_error)) => {
+                    let mut state = result.run_state.clone();
+                    state.status = crate::run::RunStatus::Failed;
+                    state.failure_diagnostic = Some(format!(
+                        "Run completed, but its Checkpoint trajectory could not be retained for Snapshot save: {trajectory_error}; runtime release is unconfirmed: {release_error}"
+                    ));
+                    self.last_state = Some(state);
+                    return Err(format!(
+                        "Run completed, but its Checkpoint trajectory could not be retained for Snapshot save: {trajectory_error}; runtime release is unconfirmed: {release_error}"
+                    ));
+                }
             }
         }
         Ok(result)
