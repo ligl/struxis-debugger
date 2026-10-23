@@ -9,6 +9,7 @@ const props = defineProps<{
   copyValue?: string;
   title?: string;
   wide?: boolean;
+  domainId?: boolean;
 }>();
 
 const isDomainId = computed(() =>
