@@ -71,6 +71,13 @@ export function useRunControl() {
       runState.value = next;
     } catch (error) {
       runError.value = describeIpcError(error);
+      // A failed Step may still have produced a terminal backend outcome and
+      // completed internal cleanup. Reconcile state without hiding the original error.
+      try {
+        runState.value = await getRunState();
+      } catch {
+        // Keep the last confirmed UI state if the authoritative read also fails.
+      }
     } finally {
       runBusy.value = false;
     }
