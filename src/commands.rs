@@ -4,7 +4,7 @@ use tauri::State;
 
 use crate::{
     app::{AppState, OriginDatasetDto, TestDatasetDto},
-    checkpoint::ReplayInspectorProjection,
+    checkpoint::{ReplayInspectorProjection, ReplayStepResult},
     compare::{CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     discovery::CatalogDatasetEntry,
     ipc::{IpcError, IpcErrorCode},
@@ -168,7 +168,7 @@ pub(crate) async fn get_replay_inspector(
 }
 
 #[tauri::command]
-pub(crate) async fn step_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn step_run(state: State<'_, AppState>) -> Result<ReplayStepResult, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_step())
         .await
