@@ -857,6 +857,28 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("renders a stable default empty state when no Test Dataset is selected", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: null,
+        runState: null,
+      },
+    });
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="run-chart-empty"]').text()).toContain("LIVE REPLAY DATA NOT LOADED");
+    expect(wrapper.get('[data-testid="run-chart-empty"]').text()).toContain("Create a Test Dataset");
+    expect(wrapper.get('[aria-label="Replay data workflow"]').text()).toContain("LOAD ORIGIN");
+    expect(wrapper.get('[data-testid="run-chart-canvas"]').classes()).toContain("is-empty");
+    expect(wrapper.find('[data-testid="run-structure-overlay"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="run-layer-toggle-sbar"]').exists()).toBe(false);
+    expect(mocks.candleSetData).toHaveBeenCalledWith([]);
+    expect(mocks.volumeSetData).toHaveBeenCalledWith([]);
+    expect(mocks.fitContent).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("does not display an Origin projection for a Test Dataset from another Origin", async () => {
     const wrapper = mount(RunChart, {
       props: {

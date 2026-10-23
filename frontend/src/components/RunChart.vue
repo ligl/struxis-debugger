@@ -795,16 +795,25 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="run-chart-stage" @contextmenu="handleContextMenu" @dblclick="handleChartDoubleClick">
-      <p v-if="projectionMessage" class="run-chart-message" data-testid="run-chart-empty">{{ projectionMessage }}</p>
+      <div v-if="projectionMessage" class="run-chart-empty" data-testid="run-chart-empty">
+        <div class="run-chart-empty-card">
+          <span class="run-chart-empty-kicker">REPLAY INPUT</span>
+          <strong class="run-chart-empty-title">LIVE REPLAY DATA NOT LOADED</strong>
+          <p class="run-chart-empty-description">{{ projectionMessage }}</p>
+          <div class="run-chart-empty-flow" aria-label="Replay data workflow">
+            <span>LOAD ORIGIN</span><i>→</i><span>CREATE TEST DATASET</span><i>→</i><span>LIVE REPLAY</span>
+          </div>
+        </div>
+      </div>
       <p v-else-if="replayProgressApplies && !displayedBar" class="run-chart-message" data-testid="run-chart-awaiting-checkpoint">
         Waiting for the first backend-confirmed checkpoint. Future input SBars are dimmed.
       </p>
       <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="run-chart-error">
         <strong>Chart projection rejected</strong><span>{{ chartError }}</span>
       </div>
-      <div ref="chartHost" class="run-chart-host" data-testid="run-chart-canvas"
+      <div ref="chartHost" class="run-chart-host" :class="{ 'is-empty': Boolean(projectionMessage) }" data-testid="run-chart-canvas"
         :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
-      <svg class="run-structure-overlay" :style="{ width: `${structureOverlayWidth}px` }" data-testid="run-structure-overlay" aria-hidden="true">
+      <svg v-if="!projectionMessage" class="run-structure-overlay" :style="{ width: `${structureOverlayWidth}px` }" data-testid="run-structure-overlay" aria-hidden="true">
         <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
           <line :x1="targetSbarX" y1="0" :x2="targetSbarX" y2="100%" stroke="#C6A06B" stroke-width="1.25" stroke-dasharray="5 4" />
           <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
@@ -818,7 +827,7 @@ onBeforeUnmount(() => {
         <rect v-for="rectangle in cbarRectangles.filter((item) => hoveredObject?.kind === 'cbar' && hoveredObject.id === item.id && hoveredObject.checkpointSbarId === runState?.cursorSbarId && !(selectedObject?.kind === 'cbar' && selectedObject.id === item.id && selectedObject.checkpointSbarId === runState?.cursorSbarId))" :key="`hover-${rectangle.id}`" :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height" fill="none" stroke="#C3CBD1" stroke-width="1.75" data-testid="run-hover-cbar" :data-cbar-id="rectangle.id" />
       </svg>
       <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="run-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
-      <div class="run-chart-legend" role="group" aria-label="Chart layer visibility">
+      <div v-if="!projectionMessage" class="run-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="run-layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="run-layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="run-layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
