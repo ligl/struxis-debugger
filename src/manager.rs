@@ -134,14 +134,23 @@ impl ReplayManager {
                 // Domain processing failures are terminal. Preserve their confirmed
                 // state, release runtime resources internally, and free the owner slot.
                 let failed_state = self.active.as_mut().and_then(|worker| worker.state().ok());
-                if let Some(state) = failed_state.filter(|state| state.status == crate::run::RunStatus::Failed) {
-                    self.last_state = Some(state);
+                if let Some(mut state) = failed_state.filter(|state| state.status == crate::run::RunStatus::Failed) {
                     if let Some(worker) = self.active.as_mut() {
-                        if let Err(release_error) = worker.dispose() {
-                            return Err(format!("{error}; Run failed and runtime release is unconfirmed: {release_error}"));
+                        match worker.dispose() {
+                            Ok(released_state) => {
+                                self.last_state = Some(released_state);
+                                self.active = None;
+                            }
+                            Err(release_error) => {
+                                state.failure_diagnostic = Some(format!(
+                                    "{}; runtime release is unconfirmed: {release_error}",
+                                    state.failure_diagnostic.clone().unwrap_or_else(|| error.clone())
+                                ));
+                                self.last_state = Some(state);
+                                return Err(format!("{error}; Run failed and runtime release is unconfirmed: {release_error}"));
+                            }
                         }
                     }
-                    self.active = None;
                 }
                 return Err(error);
             }
@@ -160,14 +169,33 @@ impl ReplayManager {
             // Terminal processing outcomes release runtime ownership internally.
             let release = worker.dispose();
             match (trajectory, release) {
-                (Some(Ok(data)), Ok(_)) => self.completed_result = Some(data),
-                (Some(Err(error)), Ok(_)) => {
+                (Some(Ok(data)), Ok(released_state)) => {
+                    self.completed_result = Some(data);
+                    self.last_state = Some(result.run_state.clone());
+                    debug_assert_eq!(released_state.status, crate::run::RunStatus::Disposed);
+                }
+                (Some(Err(error)), Ok(released_state)) => {
                     self.last_state = Some(result.run_state.clone());
                     self.active = None;
+                    let _ = released_state;
                     return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
                 }
-                (None, Ok(_)) => {}
+                (None, Ok(released_state)) => {
+                    self.last_state = Some(released_state);
+                }
+                (Some(Ok(data)), Err(error)) => {
+                    self.completed_result = Some(data);
+                    let mut state = result.run_state.clone();
+                    state.status = crate::run::RunStatus::Failed;
+                    state.failure_diagnostic = Some(format!("Run processing completed, but runtime release is unconfirmed: {error}"));
+                    self.last_state = Some(state);
+                    return Err(format!("Run completed, but runtime release is unconfirmed: {error}"));
+                }
                 (_, Err(error)) => {
+                    let mut state = result.run_state.clone();
+                    state.status = crate::run::RunStatus::Failed;
+                    state.failure_diagnostic = Some(format!("Terminal Run runtime release is unconfirmed: {error}"));
+                    self.last_state = Some(state);
                     return Err(format!("Run reached a terminal processing state, but runtime release is unconfirmed: {error}"));
                 }
             }
@@ -216,6 +244,7 @@ impl ReplayManager {
             .ok_or_else(|| "Dispose rejected: ReplayManager has no active Run".to_owned())?;
         let state = worker.dispose()?;
         self.active = None;
+        self.last_state = Some(state.clone());
         Ok(state)
     }
 
