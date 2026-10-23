@@ -12,7 +12,7 @@ const props = defineProps<{
   domainId?: boolean;
 }>();
 
-const isDomainId = computed(() =>
+const isDomainId = computed(() => props.domainId === true ||
   /\b(?:(?:Start|End) )?(?:SBar|CBar|Swing|Trend|KeyZone)(?: (?:Start|End))? ID$/i.test(props.label),
 );
 </script>
