@@ -1578,7 +1578,7 @@ body,
 .run-chart-message {
   position: absolute;
   z-index: 2;
-  top: 50%;
+  top: 5%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: max-content;
