@@ -18,7 +18,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   command: [command: RunCommand];
-  refresh: [];
   saveSnapshot: [];
   setPlaybackDelay: [milliseconds: number];
 }>();
@@ -96,7 +95,6 @@ const showStop = () =>
       :disabled="snapshotSaveBusy || runBusy || playbackStatus === 'playing' || runState?.status !== 'completed'"
       @click="emit('saveSnapshot')"
     >{{ snapshotSaveBusy ? 'SAVING…' : 'SAVE SNAPSHOT' }}</button>
-    <button class="subtle-button replay-refresh" data-testid="run-refresh-state" title="Refresh state from the backend" :disabled="runBusy || playbackStatus === 'playing'" @click="emit('refresh')">REFRESH</button>
     <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
   </div>
 </template>
