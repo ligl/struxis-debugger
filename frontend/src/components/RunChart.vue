@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   CandlestickSeries,
   ColorType,
+  CrosshairMode,
   HistogramSeries,
   createChart,
   type IChartApi,
@@ -214,12 +215,12 @@ onMounted(() => {
     },
   });
   candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: "#75c6a1",
-    downColor: "#e17e79",
-    borderUpColor: "#75c6a1",
-    borderDownColor: "#e17e79",
-    wickUpColor: "#75c6a1",
-    wickDownColor: "#e17e79",
+    upColor: "#79B58B",
+    downColor: "#D98282",
+    borderUpColor: "#79B58B",
+    borderDownColor: "#D98282",
+    wickUpColor: "#79B58B",
+    wickDownColor: "#D98282",
     priceLineVisible: false,
     // The last input candle may still be in the future during replay; the
     // cursor strip, not the final input price label, reports confirmed progress.
@@ -245,6 +246,7 @@ onMounted(() => {
       width: Math.max(1, Math.floor(entry.contentRect.width)),
       height: Math.max(1, Math.floor(entry.contentRect.height)),
     });
+    updateStructureOverlays();
   });
   resizeObserver.observe(chartHost.value);
   updateChart();
