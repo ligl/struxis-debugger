@@ -15,7 +15,6 @@ export function usePlaybackController(
   runBusy: Readonly<Ref<boolean>>,
   runError: Readonly<Ref<string>>,
   executeRunCommand: (command: RunCommand) => Promise<void>,
-  refreshReplayInspector: () => Promise<void>,
   onRunCompleted: () => void = () => undefined,
 ) {
   const playbackStatus = ref<PlaybackStatus>("idle");
