@@ -7,18 +7,31 @@ import {
   createChart,
   type IChartApi,
   type ISeriesApi,
+  type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { OriginDatasetDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
+import type { OriginDatasetDto, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
   runState: RunStateDto | null;
+  structure?: ReplayInspectorStructureDto | null;
 }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
+const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
+type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
+type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; color: string; dasharray: string; state: string };
+const cbarRectangles = ref<CBarRectangle[]>([]);
+const swingSegments = ref<SwingSegment[]>([]);
+let timeBySbarId: ReadonlyMap<string, Time> = new Map();
+const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
+  Confirmed: { color: "#B49ACD", dasharray: "" },
+  Tentative: { color: "#D6A85D", dasharray: "6 3" },
+  Extending: { color: "#8FA9C4", dasharray: "2 3" },
+};
 const bars = computed<SBarDto[]>(() => {
   const origin = props.origin;
   const test = props.testDataset;
@@ -63,6 +76,59 @@ let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedTestDatasetId: string | null = null;
 
+function toggleLayer(layer: keyof typeof layerVisibility.value): void {
+  layerVisibility.value[layer] = !layerVisibility.value[layer];
+  if (layer === "sbar" && candleSeries) {
+    candleSeries.applyOptions({ visible: layerVisibility.value.sbar });
+  }
+  if (layer === "volume" && volumeSeries) {
+    volumeSeries.applyOptions({ visible: layerVisibility.value.volume });
+  }
+  updateStructureOverlays();
+}
+
+function fitContent(): void {
+  chart?.timeScale().fitContent();
+}
+
+function updateStructureOverlays(): void {
+  if (!chart || !candleSeries) {
+    cbarRectangles.value = [];
+    swingSegments.value = [];
+    return;
+  }
+  const timeScale = chart.timeScale();
+  const structure = props.structure;
+  cbarRectangles.value = layerVisibility.value.cbar ? (structure?.cbars ?? []).flatMap((cbar) => {
+    const start = timeBySbarId.get(cbar.sbarStartId);
+    const end = timeBySbarId.get(cbar.sbarEndId);
+    const high = Number(cbar.high);
+    const low = Number(cbar.low);
+    if (start === undefined || end === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
+    const x1 = timeScale.timeToCoordinate(start);
+    const x2 = timeScale.timeToCoordinate(end);
+    const y1 = candleSeries?.priceToCoordinate(high);
+    const y2 = candleSeries?.priceToCoordinate(low);
+    if ([x1, x2, y1, y2].some((v) => v === null || v === undefined || !Number.isFinite(v))) return [];
+    return [{ id: cbar.cbarId, x: Math.min(x1 as number, x2 as number), y: Math.min(y1 as number, y2 as number), width: Math.abs((x2 as number) - (x1 as number)), height: Math.abs((y2 as number) - (y1 as number)) }];
+  }) : [];
+  swingSegments.value = layerVisibility.value.swing ? (structure?.swings ?? []).flatMap((swing) => {
+    const start = timeBySbarId.get(swing.sbarStartId);
+    const end = timeBySbarId.get(swing.sbarEndId);
+    const high = Number(swing.high);
+    const low = Number(swing.low);
+    if (start === undefined || end === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
+    const x1 = timeScale.timeToCoordinate(start);
+    const x2 = timeScale.timeToCoordinate(end);
+    const startsAtLow = swing.direction === "Up";
+    const y1 = candleSeries?.priceToCoordinate(startsAtLow ? low : high);
+    const y2 = candleSeries?.priceToCoordinate(startsAtLow ? high : low);
+    if ([x1, x2, y1, y2].some((v) => v === null || v === undefined || !Number.isFinite(v))) return [];
+    const style = swingStyleByState[swing.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
+    return [{ id: swing.swingId, x1: x1 as number, y1: y1 as number, x2: x2 as number, y2: y2 as number, color: style.color, dasharray: style.dasharray, state: swing.state }];
+  }) : [];
+}
+
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
@@ -76,23 +142,28 @@ function updateChart(): void {
     const processedCount = replayProgressApplies.value
       ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
       : bars.value.length;
+    timeBySbarId = new Map(bars.value.map((bar, index) => [bar.sbarId, projection.candles[index]!.time]));
     const candles = projection.candles.map((candle, index) => {
-      if (!replayProgressApplies.value || index < processedCount) return candle;
+      const base = layerVisibility.value.sbar ? candle : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
+      if (!replayProgressApplies.value || index < processedCount) return base;
       return {
-        ...candle,
-        color: "#454b53",
-        borderColor: "#454b53",
-        wickColor: "#454b53",
+        ...base,
+        color: layerVisibility.value.sbar ? "#454b53" : "rgba(0,0,0,0)",
+        borderColor: layerVisibility.value.sbar ? "#454b53" : "rgba(0,0,0,0)",
+        wickColor: layerVisibility.value.sbar ? "#454b53" : "rgba(0,0,0,0)",
       };
     });
     const volume = projection.volume.map((bar, index) =>
-      replayProgressApplies.value && index >= processedCount
-        ? { ...bar, color: "#454b53" }
-        : bar,
+      !layerVisibility.value.volume
+        ? { ...bar, color: "rgba(0,0,0,0)" }
+        : replayProgressApplies.value && index >= processedCount
+          ? { ...bar, color: "#454b53" }
+          : bar,
     );
     candleSeries.setData(candles);
     volumeSeries.setData(volume);
     chartError.value = "";
+    updateStructureOverlays();
     if (props.testDataset && fittedTestDatasetId !== props.testDataset.testDatasetId) {
       chart.timeScale().fitContent();
       chart.timeScale().setVisibleLogicalRange({
@@ -104,6 +175,8 @@ function updateChart(): void {
   } catch (error) {
     candleSeries.setData([]);
     volumeSeries.setData([]);
+    cbarRectangles.value = [];
+    swingSegments.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
   }
 }
@@ -176,6 +249,7 @@ watch(
     props.runState?.testDatasetId,
     props.runState?.status,
     props.runState?.processedCount,
+    props.structure,
   ] as const,
   updateChart,
 );
@@ -196,10 +270,14 @@ onBeforeUnmount(() => {
     <header class="run-chart-heading">
       <div class="run-chart-title">
         <div class="run-chart-title-line">
-          <span class="run-chart-name">LIVE REPLAY</span>
-          <span class="tag green">CANDIDATE</span>
+          <span class="run-chart-name">LIVE REPLAY · {{ testDataset?.barType ?? origin?.barType ?? "NO TEST" }}</span>
+          <span class="tag green">LIVE</span>
         </div>
-        <span class="run-chart-description">Backend-confirmed prefix · OHLCV projection only</span>
+        <span class="run-chart-description">Test SBar sequence · backend-confirmed progress · authoritative checkpoint structure</span>
+      </div>
+      <div class="chart-heading-actions">
+        <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
+        <button class="chart-tool-button" type="button" :disabled="bars.length === 0" data-testid="run-chart-fit" @click="fitContent">FIT</button>
       </div>
       <div class="run-chart-meta" aria-label="Displayed SBar OHLC">
         <span><small>O</small><strong>{{ displayedBar?.open ?? "—" }}</strong></span>
@@ -219,10 +297,15 @@ onBeforeUnmount(() => {
       </div>
       <div ref="chartHost" class="run-chart-host" data-testid="run-chart-canvas"
         :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
-      <div class="run-chart-legend" aria-label="Chart legend">
-        <span><i class="run-legend-sbar"></i>SBar</span>
-        <span><i class="run-legend-volume"></i>Volume</span>
-        <span class="run-chart-structure-gap">STRUCTURE OVERLAY NOT PROJECTED</span>
+      <svg class="run-structure-overlay" data-testid="run-structure-overlay" aria-hidden="true">
+        <line v-for="segment in swingSegments" :key="segment.id" :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2" :stroke="segment.color" stroke-width="1.25" :stroke-dasharray="segment.dasharray || undefined" stroke-linecap="round" data-testid="run-swing-segment" :data-swing-id="segment.id" :data-swing-state="segment.state" />
+        <rect v-for="rectangle in cbarRectangles" :key="rectangle.id" :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height" fill="none" stroke="#A0A7B0" stroke-width="1" data-testid="run-cbar-rectangle" :data-cbar-id="rectangle.id" />
+      </svg>
+      <div class="run-chart-legend" role="group" aria-label="Chart layer visibility">
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="run-layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="run-layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="run-layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="run-layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>
     </div>
 
