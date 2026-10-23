@@ -68,6 +68,10 @@ export function restartRun(): Promise<RunStateDto> {
   return invoke<RunStateDto>("restart_run");
 }
 
+export function restartToSBar(targetSbarId: string): Promise<ReplayStepResultDto> {
+  return invoke<ReplayStepResultDto>("restart_to_sbar", { targetSbarId });
+}
+
 export function getRunState(): Promise<RunStateDto | null> {
   return invoke<RunStateDto | null>("get_run_state");
 }
