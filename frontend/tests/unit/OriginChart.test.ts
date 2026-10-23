@@ -149,8 +149,10 @@ describe("OriginChart", () => {
 
     const chartOptions = chartMocks.createChart.mock.calls[0]?.[1] as {
       timeScale?: { borderColor?: string };
+      rightPriceScale?: { borderColor?: string };
     };
     expect(chartOptions.timeScale?.borderColor).toBe("#121619");
+    expect(chartOptions.rightPriceScale?.borderColor).toBe("#121619");
   });
 
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
