@@ -1279,7 +1279,7 @@ describe("startup and user-operation coordination", () => {
     expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
   });
 
-  it("resets Replay before replacing Test Dataset and confirms discard of an unsaved completed Run", async () => {
+  it("resets Replay before replacing Test Dataset regardless of Snapshot save state", async () => {
     let runStateReads = 0;
     const completedRun = {
       runId: "run-completed",
@@ -1291,7 +1291,7 @@ describe("startup and user-operation coordination", () => {
       cursorSbarId: "200",
       failureDiagnostic: null,
     };
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm");
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
@@ -1316,8 +1316,7 @@ describe("startup and user-operation coordination", () => {
     await replaceButton.trigger("click");
     await vi.waitFor(() => expect(invokeMock.mock.calls.some(([command]) => command === "create_test_dataset")).toBe(true));
 
-    expect(confirmSpy).toHaveBeenCalledOnce();
-    expect(confirmSpy.mock.calls[0]?.[0]).toContain("Save a Snapshot first");
+    expect(confirmSpy).not.toHaveBeenCalled();
     const resetIndex = invokeMock.mock.calls.findIndex(([command]) => command === "reset_run");
     const replaceIndex = invokeMock.mock.calls.findIndex(([command]) => command === "create_test_dataset");
     expect(resetIndex).toBeGreaterThanOrEqual(0);
@@ -1326,7 +1325,7 @@ describe("startup and user-operation coordination", () => {
     confirmSpy.mockRestore();
   });
 
-  it("does not Reset or replace Test Dataset when the user cancels discarding an unsaved Run", async () => {
+  it("does not consult Snapshot save state before replacing Test Dataset", async () => {
     let runStateReads = 0;
     const completedRun = {
       runId: "run-completed",
@@ -1338,7 +1337,7 @@ describe("startup and user-operation coordination", () => {
       cursorSbarId: "200",
       failureDiagnostic: null,
     };
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const confirmSpy = vi.spyOn(window, "confirm");
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
@@ -1349,6 +1348,7 @@ describe("startup and user-operation coordination", () => {
         return Promise.resolve(runStateReads === 1 ? null : completedRun);
       }
       if (command === "reset_run") return Promise.resolve();
+      if (command === "create_test_dataset") return Promise.resolve({ ...testDataset, testDatasetId: "test-replaced" });
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
@@ -1356,12 +1356,11 @@ describe("startup and user-operation coordination", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await selectOriginRange(wrapper);
     await wrapper.get('[data-testid="test-dataset-create"]').trigger("click");
-    await vi.waitFor(() => expect(confirmSpy).toHaveBeenCalledOnce());
-    await flushPromises();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
 
-    expect(invokeMock.mock.calls.some(([command]) => command === "reset_run")).toBe(false);
-    expect(invokeMock.mock.calls.some(([command]) => command === "create_test_dataset")).toBe(false);
-    expect(wrapper.text()).toContain("test-1");
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(invokeMock.mock.calls.some(([command]) => command === "reset_run")).toBe(true);
+    expect(confirmSpy).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
 
@@ -1377,12 +1376,10 @@ describe("startup and user-operation coordination", () => {
       cursorSbarId: "200",
       failureDiagnostic: null,
     };
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
-      if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "get_run_state") {
         runStateReads += 1;
         return Promise.resolve(runStateReads === 1 ? null : completedRun);
@@ -1399,7 +1396,6 @@ describe("startup and user-operation coordination", () => {
 
     expect(invokeMock.mock.calls.some(([command]) => command === "reset_run")).toBe(true);
     expect(invokeMock.mock.calls.some(([command]) => command === "create_test_dataset")).toBe(false);
-    confirmSpy.mockRestore();
   });
 
   it("blocks Test Dataset replacement while a Run command is pending", async () => {
