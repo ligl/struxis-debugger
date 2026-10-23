@@ -12,11 +12,11 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke, isTauri }));
 
 let wrapper: ReturnType<typeof mount> | null = null;
 
-function mountMenu() {
+function mountMenu(reloadPage?: () => void) {
   let api!: ReturnType<typeof useDevtoolsContextMenu>;
   wrapper = mount(defineComponent({
     setup() {
-      api = useDevtoolsContextMenu();
+      api = useDevtoolsContextMenu({ reloadPage });
       return () => null;
     },
   }));
@@ -84,11 +84,13 @@ describe("useDevtoolsContextMenu", () => {
   });
 
   it("dismisses the menu before invoking the page refresh action", () => {
-    const api = mountMenu();
+    const reloadPage = vi.fn();
+    const api = mountMenu(reloadPage);
     api.devtoolsContextMenu.value.visible = true;
 
     api.refreshPageFromContextMenu();
 
     expect(api.devtoolsContextMenu.value.visible).toBe(false);
+    expect(reloadPage).toHaveBeenCalledOnce();
   });
 });
