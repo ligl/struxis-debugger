@@ -363,12 +363,6 @@ onBeforeUnmount(() => {
         <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
         <button class="chart-tool-button" type="button" :disabled="bars.length === 0" data-testid="run-chart-fit" @click="fitContent">FIT</button>
       </div>
-      <div class="run-chart-meta" aria-label="Displayed SBar OHLC">
-        <span><small>O</small><strong>{{ displayedBar?.open ?? "—" }}</strong></span>
-        <span><small>H</small><strong>{{ displayedBar?.high ?? "—" }}</strong></span>
-        <span><small>L</small><strong>{{ displayedBar?.low ?? "—" }}</strong></span>
-        <span><small>C</small><strong :class="displayedBar ? (Number(displayedBar.close) >= Number(displayedBar.open) ? 'run-chart-up' : 'run-chart-down') : ''">{{ displayedBar?.close ?? "—" }}</strong></span>
-      </div>
     </header>
 
     <div class="run-chart-stage">
