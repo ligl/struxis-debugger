@@ -124,10 +124,28 @@ impl ReplayManager {
 
     pub(crate) fn step_checkpoint(&mut self) -> Result<ReplayStepResult, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Step)?;
-        let result = self.active
+        let step_result = self.active
             .as_mut()
             .ok_or_else(|| "Step rejected: ReplayManager has no active Run".to_owned())?
-            .step_checkpoint()?;
+            .step_checkpoint();
+        let result = match step_result {
+            Ok(result) => result,
+            Err(error) => {
+                // Domain processing failures are terminal. Preserve their confirmed
+                // state, release runtime resources internally, and free the owner slot.
+                let failed_state = self.active.as_mut().and_then(|worker| worker.state().ok());
+                if let Some(state) = failed_state.filter(|state| state.status == crate::run::RunStatus::Failed) {
+                    self.last_state = Some(state);
+                    if let Some(worker) = self.active.as_mut() {
+                        if let Err(release_error) = worker.dispose() {
+                            return Err(format!("{error}; Run failed and runtime release is unconfirmed: {release_error}"));
+                        }
+                    }
+                    self.active = None;
+                }
+                return Err(error);
+            }
+        };
         self.last_state = Some(result.run_state.clone());
         if result.inspector.is_some() {
             self.last_inspector = result.inspector.clone();
@@ -174,8 +192,8 @@ impl ReplayManager {
             .pause()
     }
 
-    /// Requests safe-boundary stop. The worker remains owned so its confirmed
-    /// terminal state can still be queried and so Restart can enforce cleanup.
+    /// Ends the user-visible Run and releases its worker/runtime ownership.
+    /// Confirmed progress remains available as a result state after cleanup.
     pub(crate) fn stop(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Stop)?;
         let worker = self.active.as_mut()
