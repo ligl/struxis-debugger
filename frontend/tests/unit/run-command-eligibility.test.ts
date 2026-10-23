@@ -15,7 +15,7 @@ describe("isRunCommandEligible", () => {
       play: [],
       pause: [],
       stop: ["ready", "running", "paused"],
-      dispose: ["ready", "paused", "completed", "failed", "disposed"],
+      dispose: statuses,
     };
 
     for (const command of Object.keys(expected) as RunCommand[]) {
@@ -32,14 +32,14 @@ describe("isRunCommandEligible", () => {
     }
   });
 
-  it("applies Start and Restart cross-domain prerequisites", () => {
+  it("applies Start and legacy Restart cross-domain prerequisites", () => {
     expect(isRunCommandEligible("start", null, false, true, false)).toBe(true);
     expect(isRunCommandEligible("start", null, false, false, false)).toBe(false);
     expect(isRunCommandEligible("restart", "ready", false, false, true)).toBe(true);
     expect(isRunCommandEligible("restart", "running", false, false, false)).toBe(false);
   });
 
-  it("rejects every command while a Run operation is busy", () => {
+  it("rejects every command, including Reset, while a Run operation is busy", () => {
     const commands: RunCommand[] = [
       "start", "restart", "step", "play", "pause", "stop", "dispose",
     ];
