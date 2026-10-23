@@ -821,6 +821,7 @@ onBeforeUnmount(() => {
 <template>
   <section
     class="origin-chart-panel"
+    :class="{ 'snapshot-reference-chart': props.displayContext === 'snapshot-reference' }"
     :aria-label="props.displayContext === 'snapshot-reference' ? 'Snapshot Reference chart' : 'Origin SBar chart'"
     data-testid="origin-chart-panel"
     @struxis-select-sbar="handleSbarSelectionRequest"
@@ -1039,6 +1040,11 @@ onBeforeUnmount(() => {
   border: 1px solid #30383f;
   border-radius: 0;
   background: #121619;
+}
+
+/* Snapshot Reference is already framed by its parent panel; avoid a doubled border. */
+.origin-chart-panel.snapshot-reference-chart {
+  border: 0;
 }
 
 .origin-chart-heading {
