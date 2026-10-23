@@ -310,40 +310,6 @@ impl ReplayManager {
         self.active.is_some()
     }
 
-    #[test]
-    fn completed_run_releases_worker_but_retains_snapshot_trajectory() {
-        let mut manager = ReplayManager::new();
-        manager.start_interactive(worker_config("manager-auto-cleanup"),).expect("Run starts");
-        for expected in 1..=3 {
-            let result = manager.step_checkpoint().expect("Step succeeds");
-            assert_eq!(result.run_state.processed_count, expected);
-        }
-
-        assert!(!manager.has_owned_run(), "Completed Run must not retain a Worker");
-        let state = manager.state().expect("state query").expect("last result remains visible");
-        assert_eq!(state.status, crate::run::RunStatus::Completed);
-        assert_eq!(state.processed_count, 3);
-
-        let snapshot = manager.snapshot_data().expect("completed trajectory remains saveable");
-        assert_eq!(snapshot.state.status, crate::run::RunStatus::Completed);
-        assert_eq!(snapshot.checkpoints.len(), 3);
-    }
-
-    #[test]
-    fn reset_clears_completed_result_and_run_state() {
-        let mut manager = ReplayManager::new();
-        manager.start_interactive(worker_config("manager-reset"),).expect("Run starts");
-        for _ in 0..3 {
-            manager.step_checkpoint().expect("Step succeeds");
-        }
-        assert!(manager.snapshot_data().is_ok());
-
-        manager.reset().expect("Reset clears the completed context");
-        assert!(!manager.has_owned_run());
-        assert!(manager.state().expect("state query").is_none());
-        assert!(manager.snapshot_data().is_err());
-    }
-
 }
 
 
@@ -490,4 +456,39 @@ mod tests {
         let disposed = manager.dispose().expect("replacement cleanup");
         assert_eq!(disposed.status, crate::run::RunStatus::Disposed);
     }
+
+    #[test]
+    fn completed_run_releases_worker_but_retains_snapshot_trajectory() {
+        let mut manager = ReplayManager::new();
+        manager.start_interactive(worker_config("manager-auto-cleanup"),).expect("Run starts");
+        for expected in 1..=3 {
+            let result = manager.step_checkpoint().expect("Step succeeds");
+            assert_eq!(result.run_state.processed_count, expected);
+        }
+
+        assert!(!manager.has_owned_run(), "Completed Run must not retain a Worker");
+        let state = manager.state().expect("state query").expect("last result remains visible");
+        assert_eq!(state.status, crate::run::RunStatus::Completed);
+        assert_eq!(state.processed_count, 3);
+
+        let snapshot = manager.snapshot_data().expect("completed trajectory remains saveable");
+        assert_eq!(snapshot.state.status, crate::run::RunStatus::Completed);
+        assert_eq!(snapshot.checkpoints.len(), 3);
+    }
+
+    #[test]
+    fn reset_clears_completed_result_and_run_state() {
+        let mut manager = ReplayManager::new();
+        manager.start_interactive(worker_config("manager-reset"),).expect("Run starts");
+        for _ in 0..3 {
+            manager.step_checkpoint().expect("Step succeeds");
+        }
+        assert!(manager.snapshot_data().is_ok());
+
+        manager.reset().expect("Reset clears the completed context");
+        assert!(!manager.has_owned_run());
+        assert!(manager.state().expect("state query").is_none());
+        assert!(manager.snapshot_data().is_err());
+    }
+
 }
