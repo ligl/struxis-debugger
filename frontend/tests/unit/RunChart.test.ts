@@ -717,6 +717,41 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("keeps Ctrl boundary navigation inside the dataset when only part of it is visible", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+    });
+    await nextTick();
+
+    // Simulate a narrow viewport that does not show the full Test Dataset.
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 0.5, to: 1.5 });
+    mocks.setVisibleLogicalRange.mockClear();
+
+    const startEvent = new KeyboardEvent("keydown", {
+      key: "ArrowLeft", ctrlKey: true, bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(startEvent);
+    expect(mocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({
+      from: -0.5,
+      to: 0.5,
+    });
+    expect(mocks.setCrosshairPosition).toHaveBeenLastCalledWith(11, 1700000060, expect.anything());
+
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 0.5, to: 1.5 });
+    mocks.setVisibleLogicalRange.mockClear();
+    const endEvent = new KeyboardEvent("keydown", {
+      key: "ArrowRight", ctrlKey: true, bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(endEvent);
+    expect(mocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({
+      from: 0.5,
+      to: 1.5,
+    });
+    expect(mocks.setCrosshairPosition).toHaveBeenLastCalledWith(11, 1700000120, expect.anything());
+
+    wrapper.unmount();
+  });
+
   it("zooms the visible logical range with up/down arrows", async () => {
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: runState() },
