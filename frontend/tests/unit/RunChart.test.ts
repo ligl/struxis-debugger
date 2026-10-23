@@ -640,6 +640,41 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("repeats held horizontal arrows and scrolls the selected candle into view", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState({ cursorSbarId: originBars[2]!.sbarId }),
+      },
+    });
+    await nextTick();
+
+    // The crosshair starts on the second (last) Test Dataset SBar. Holding
+    // Left emits repeated keydown events, which must continue moving it.
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 1, to: 4 });
+    mocks.setVisibleLogicalRange.mockClear();
+    const event = new KeyboardEvent("keydown", {
+      key: "ArrowLeft",
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(event, "repeat", { value: true });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(
+      11,
+      1700000060,
+      expect.anything(),
+    );
+    expect(mocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+    const range = mocks.setVisibleLogicalRange.mock.calls[0]![0] as { from: number; to: number };
+    expect(range.from).toBeLessThan(1);
+    expect(range.to).toBeLessThan(4);
+    wrapper.unmount();
+  });
+
   it("zooms the visible logical range with up/down arrows", async () => {
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: runState() },
