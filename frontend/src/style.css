@@ -1628,24 +1628,29 @@ body,
   pointer-events: none;
 }
 
-.run-chart-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.run-chart-legend i {
+/* RunChart cannot inherit OriginChart.vue's scoped legend-dot rules.
+   Keep the shared Dataset legend markers identical in Replay. */
+.run-chart-legend .legend-dot {
   display: inline-block;
   width: 7px;
   height: 7px;
-  flex: 0 0 auto;
+  flex: 0 0 7px;
+  border-radius: 1px;
 }
 
-.run-legend-sbar {
-  background: var(--dbg-success);
+.run-chart-legend .sbar-dot {
+  background: #75c6a1;
 }
 
-.run-legend-volume {
+.run-chart-legend .cbar-dot {
+  background: #A0A7B0;
+}
+
+.run-chart-legend .swing-dot {
+  background: #B49ACD;
+}
+
+.run-chart-legend .volume-dot {
   background: #c4a16b;
 }
 
