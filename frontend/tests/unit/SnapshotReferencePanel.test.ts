@@ -3,11 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.vue";
 import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../../src/origin-types";
 
-const { getSnapshotReferenceMock } = vi.hoisted(() => ({ getSnapshotReferenceMock: vi.fn() }));
-vi.mock("../../src/origin-bridge", () => ({
-  getSnapshotReference: getSnapshotReferenceMock,
-  describeIpcError: (error: unknown) => String(error),
-}));
+const { invokeMock } = vi.hoisted(() => ({ invokeMock: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 
 const reference = {
   snapshotId: "snapshot-complete-01",
@@ -40,7 +37,7 @@ const snapshots: SnapshotArtifactDto[] = [
 
 describe("SnapshotReferencePanel", () => {
   it("renders the verified historical chart for a selected completed Snapshot", async () => {
-    getSnapshotReferenceMock.mockResolvedValueOnce(reference);
+    invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
       props: { snapshots },
       global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
@@ -52,7 +49,7 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("run-01");
     expect(wrapper.text()).toContain("aaaaaaaaaaaa");
-    expect(getSnapshotReferenceMock).toHaveBeenCalledWith("snapshot-complete-01");
+    expect(invokeMock).toHaveBeenCalledWith("get_snapshot_reference", { snapshotId: "snapshot-complete-01" });
   });
 
   it("does not offer non-complete artifacts as Replay references", () => {
@@ -84,7 +81,7 @@ describe("SnapshotReferencePanel", () => {
       props: { snapshots },
       global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
     });
-    getSnapshotReferenceMock.mockResolvedValueOnce(reference);
+    invokeMock.mockResolvedValueOnce(reference);
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
     await flushPromises();
     expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
