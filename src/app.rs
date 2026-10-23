@@ -16,7 +16,7 @@ use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 use serde::Serialize;
 
 use crate::{
-    checkpoint::{ReplayInspectorProjection, StructureCheckpoint},
+    checkpoint::{ReplayInspectorProjection, ReplayStepResult, StructureCheckpoint},
     catalog::{OriginLoad, load_origin as load_origin_candidate},
     compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     dataset::TestDataset,
@@ -353,8 +353,8 @@ impl AppState {
         self.with_replay_manager(ReplayManager::inspector)
     }
 
-    pub(crate) fn replay_step(&self) -> Result<RunState, IpcError> {
-        self.with_replay_manager(ReplayManager::step)
+    pub(crate) fn replay_step(&self) -> Result<ReplayStepResult, IpcError> {
+        self.with_replay_manager(ReplayManager::step_checkpoint)
     }
 
     pub(crate) fn replay_play(&self) -> Result<RunState, IpcError> {
