@@ -4301,6 +4301,13 @@ th, td { padding: 6px 8px; }
 
 
 /* Replay playback speed selector — compact Bilibili-style current value + menu. */
+/* The toolbar normally clips horizontal overflow; let the speed menu escape below it. */
+.workflow-toolbar:has(.replay-speed-menu) {
+  position: relative;
+  z-index: 30;
+  overflow: visible;
+}
+
 .replay-speed-control {
   position: relative;
   display: inline-flex;
