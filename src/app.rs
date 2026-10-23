@@ -17,15 +17,15 @@ use serde::Serialize;
 
 use crate::{
     checkpoint::{ReplayInspectorProjection, ReplayStepResult, StructureCheckpoint},
-    catalog::{OriginLoad, load_origin as load_origin_candidate},
+    catalog::{load_bars, OriginLoad, load_origin as load_origin_candidate},
     compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
-    dataset::TestDataset,
+    dataset::{sequence_fingerprint, TestDataset},
     discovery::{CatalogDatasetEntry, configured_catalog_root, discover_catalog_datasets},
     ipc::{IpcError, IpcErrorCode},
     replay::LoadedInput,
     run::RunState,
     manager::ReplayManager,
-    snapshot_store::{discover_snapshot_artifacts, SnapshotArtifact},
+    snapshot_store::{discover_snapshot_artifacts, read_complete_snapshot_typed, SnapshotArtifact, SnapshotArtifactKind},
     snapshot_writer::SnapshotWriter,
     worker::ReplayWorkerConfig,
 };
@@ -275,6 +275,90 @@ impl AppState {
         })
     }
 
+    /// Resolves an immutable Snapshot Reference against its original Catalog input,
+    /// independently of whichever Origin Dataset is currently loaded in the UI.
+    pub(crate) fn snapshot_reference(&self, snapshot_id: &str) -> Result<SnapshotReferenceDto, IpcError> {
+        let artifacts = discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|error| {
+            IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery failed: {error}"))
+        })?;
+        let artifact = artifacts.iter().find(|artifact| {
+            artifact.kind == SnapshotArtifactKind::Complete
+                && (artifact.snapshot_id.as_deref() == Some(snapshot_id)
+                    || artifact.file_name.strip_suffix(".snapshot.sqlite") == Some(snapshot_id))
+        }).ok_or_else(|| IpcError::new(
+            IpcErrorCode::NotFound,
+            format!("No complete, published Snapshot exists for {snapshot_id}"),
+        ))?;
+
+        let (manifest, checkpoints) = read_complete_snapshot_typed(&artifact.path).map_err(|error| {
+            IpcError::new(IpcErrorCode::InvalidState, format!("Snapshot Reference rejected: {error}"))
+        })?;
+        if manifest.snapshot_id != snapshot_id
+            && artifact.file_name.strip_suffix(".snapshot.sqlite") != Some(snapshot_id)
+        {
+            return Err(IpcError::new(IpcErrorCode::InvalidState,
+                "Snapshot identity changed while resolving the reference"));
+        }
+
+        // Re-read the full exact BarType from Catalog. The persisted Snapshot
+        // fingerprint is only accepted after recomputing it over the exact
+        // inclusive input slice; a current Origin or matching time range alone
+        // is never treated as proof of market-data identity.
+        let catalog_bars = load_bars(&self.inner.catalog_path, &manifest.bar_type).map_err(|error| {
+            IpcError::new(IpcErrorCode::Internal,
+                format!("Resolve Snapshot Catalog input failed: {error}"))
+        })?;
+        let start = catalog_bars.iter().position(|bar| bar.ts_event.to_string() == manifest.input_start_sbar_id)
+            .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
+                format!("Snapshot input start SBar {} is absent from Catalog", manifest.input_start_sbar_id)))?;
+        let end = catalog_bars.iter().position(|bar| bar.ts_event.to_string() == manifest.input_end_sbar_id)
+            .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
+                format!("Snapshot input end SBar {} is absent from Catalog", manifest.input_end_sbar_id)))?;
+        if end < start {
+            return Err(IpcError::new(IpcErrorCode::InvalidState,
+                "Snapshot input boundaries are reversed in the current Catalog sequence"));
+        }
+        let bars = &catalog_bars[start..=end];
+        if bars.len() != manifest.input_bar_count
+            || bars.first().map(|bar| bar.ts_event.to_string()).as_deref() != Some(manifest.input_start_ts_event.as_str())
+            || bars.last().map(|bar| bar.ts_event.to_string()).as_deref() != Some(manifest.input_end_ts_event.as_str())
+        {
+            return Err(IpcError::new(IpcErrorCode::InvalidState,
+                "Catalog Snapshot input count or boundary timestamps do not match the Manifest"));
+        }
+        let state_key = capitus_struxis::StruxisStateKey::from_bar_type(&bars[0].bar_type);
+        if state_key.instrument_id.to_string() != manifest.instrument_id {
+            return Err(IpcError::new(IpcErrorCode::InvalidState,
+                "Catalog instrument identity does not match the Snapshot Manifest"));
+        }
+        let actual_fingerprint = sequence_fingerprint(state_key, bars).map_err(|error| {
+            IpcError::new(IpcErrorCode::Internal,
+                format!("Calculate Snapshot Catalog input fingerprint failed: {error}"))
+        })?;
+        if actual_fingerprint != manifest.sbar_sequence_fingerprint {
+            return Err(IpcError::new(IpcErrorCode::InvalidState,
+                "Catalog SBar sequence fingerprint does not match the Snapshot; historical chart is unavailable"));
+        }
+
+        let last_checkpoint = checkpoints.last().ok_or_else(|| IpcError::new(
+            IpcErrorCode::InvalidState, "Complete Snapshot contains no checkpoint records"))?;
+        let structure = serde_json::from_str::<serde_json::Value>(&last_checkpoint.state_data).map_err(|error| {
+            IpcError::new(IpcErrorCode::InvalidState,
+                format!("Decode Snapshot final structure state failed: {error}"))
+        })?;
+        Ok(SnapshotReferenceDto {
+            snapshot_id: manifest.snapshot_id,
+            run_id: manifest.run_id,
+            instrument_id: manifest.instrument_id,
+            bar_type: manifest.bar_type,
+            timeframe: state_key.timeframe.to_string(),
+            snapshot_generated_at: manifest.snapshot_generated_at,
+            sbar_sequence_fingerprint: manifest.sbar_sequence_fingerprint,
+            bars: bars.iter().map(sbar_to_dto).collect(),
+            structure,
+        })
+    }
+
     fn acquire_mutation_permit(&self) -> Result<MutationPermit<'_>, IpcError> {
         self.inner
             .mutation_active
@@ -480,6 +564,20 @@ pub(crate) struct OriginDatasetDto {
     pub(crate) last_ts_event: String,
     pub(crate) bars: Vec<SBarDto>,
     pub(crate) structure: Option<StructureCheckpoint>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SnapshotReferenceDto {
+    pub(crate) snapshot_id: String,
+    pub(crate) run_id: String,
+    pub(crate) instrument_id: String,
+    pub(crate) bar_type: String,
+    pub(crate) timeframe: String,
+    pub(crate) snapshot_generated_at: String,
+    pub(crate) sbar_sequence_fingerprint: String,
+    pub(crate) bars: Vec<SBarDto>,
+    pub(crate) structure: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize)]
