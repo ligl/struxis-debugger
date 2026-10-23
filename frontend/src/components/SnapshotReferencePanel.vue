@@ -118,21 +118,23 @@ function handleSelection(event: Event): void {
       </div>
       <label class="snapshot-reference-select">
         <span class="snapshot-reference-instrument">{{ displayInstrumentId }}</span>
-        <span class="snapshot-reference-selected-label" aria-hidden="true">
-          {{ selectedSnapshot ? describeSnapshot(selectedSnapshot).replace(/ · [^·]*$/, '') : "Choose completed Snapshot…" }}
+        <span class="snapshot-reference-control">
+          <span class="snapshot-reference-selected-label" aria-hidden="true">
+            {{ selectedSnapshot ? describeSnapshot(selectedSnapshot).replace(/ · [^·]*$/, '') : "Choose completed Snapshot…" }}
+          </span>
+          <select
+            data-testid="replay-reference-select"
+            :value="selectedSnapshotId ?? ''"
+            :disabled="availableSnapshots.length === 0"
+            :aria-label="`Snapshot Reference for ${displayInstrumentId}`"
+            @change="handleSelection"
+          >
+            <option value="">Choose completed Snapshot…</option>
+            <option v-for="snapshot in availableSnapshots" :key="snapshot.snapshotId ?? snapshot.fileName" :value="snapshot.snapshotId ?? ''">
+              {{ describeSnapshot(snapshot) }}
+            </option>
+          </select>
         </span>
-        <select
-          data-testid="replay-reference-select"
-          :value="selectedSnapshotId ?? ''"
-          :disabled="availableSnapshots.length === 0"
-          :aria-label="`Snapshot Reference for ${displayInstrumentId}`"
-          @change="handleSelection"
-        >
-          <option value="">Choose completed Snapshot…</option>
-          <option v-for="snapshot in availableSnapshots" :key="snapshot.snapshotId ?? snapshot.fileName" :value="snapshot.snapshotId ?? ''">
-            {{ describeSnapshot(snapshot) }}
-          </option>
-        </select>
       </label>
     </header>
 
