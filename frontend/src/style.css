@@ -1471,6 +1471,17 @@ body,
   flex: 0 0 auto;
 }
 
+.run-chart-heading .chart-tool-button {
+  min-width: 34px;
+  min-height: 22px;
+  padding: 0 6px;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  background: #20262c;
+  color: #c4cdd2;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .run-chart-title {
   display: flex;
   min-width: 0;
