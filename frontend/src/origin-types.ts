@@ -72,6 +72,11 @@ export interface RunStateDto {
   failureDiagnostic: string | null;
 }
 
+export interface ReplayStepResultDto {
+  runState: RunStateDto;
+  inspector: ReplayInspectorDto | null;
+}
+
 export interface ReplayInspectorSBarDto {
   sbarId: string;
   barType: string;
