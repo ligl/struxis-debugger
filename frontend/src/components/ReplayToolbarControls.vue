@@ -24,15 +24,12 @@ const emit = defineEmits<{
 }>();
 
 const speedMenuOpen = ref(false);
+const hasSelectedSpeed = ref(false);
 const speedOptions = [
-  { label: "0.5×", delayMs: 500 },
-  { label: "0.75×", delayMs: 300 },
-  { label: "1×", delayMs: 200 },
-  { label: "1.25×", delayMs: 160 },
-  { label: "1.5×", delayMs: 135 },
-  { label: "2×", delayMs: 100 },
-  { label: "3×", delayMs: 65 },
-  { label: "4×", delayMs: 50 },
+  { label: "0.5x", delayMs: 500 },
+  { label: "1x", delayMs: 200 },
+  { label: "2x", delayMs: 100 },
+  { label: "3x", delayMs: 65 },
   { label: "MAX", delayMs: 0 },
 ];
 const selectedSpeed = () =>
@@ -55,7 +52,7 @@ const selectedSpeed = () =>
           :aria-expanded="speedMenuOpen"
           aria-haspopup="menu"
           title="Playback speed"
-        >倍速</button>
+        >{{ hasSelectedSpeed ? selectedSpeed() : "倍速" }}</button>
         <div v-if="speedMenuOpen" class="replay-speed-menu" role="menu" aria-label="Playback speed options" data-testid="replay-speed-menu">
           <button
             v-for="option in speedOptions"
@@ -66,7 +63,7 @@ const selectedSpeed = () =>
             :class="{ selected: option.delayMs === playbackDelayMs }"
             :aria-checked="option.delayMs === playbackDelayMs"
             :data-speed-delay="option.delayMs"
-            @click="emit('setPlaybackDelay', option.delayMs); speedMenuOpen = false"
+            @click="emit('setPlaybackDelay', option.delayMs); hasSelectedSpeed = true; speedMenuOpen = false"
           >{{ option.label }}<span v-if="option.delayMs === playbackDelayMs" class="replay-speed-check">✓</span></button>
         </div>
       </div>
