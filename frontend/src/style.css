@@ -2756,6 +2756,45 @@ th, td { padding: 6px 8px; }
   overflow: hidden;
 }
 
+.snapshot-reference-loading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: var(--dbg-text-secondary);
+  text-align: center;
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.snapshot-reference-loading strong {
+  color: var(--dbg-text-primary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+}
+
+.snapshot-reference-loading-spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #343c42;
+  border-top-color: var(--dbg-accent, #D6A85D);
+  border-radius: 50%;
+  animation: snapshot-reference-spin 0.8s linear infinite;
+}
+
+@keyframes snapshot-reference-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snapshot-reference-loading-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
 .snapshot-reference-chart {
   display: flex;
   width: 100%;
