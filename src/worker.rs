@@ -89,6 +89,7 @@ enum WorkerCommand {
 }
 
 /// Stable, owned data exported only after a Run has completed.
+#[derive(Clone)]
 pub(crate) struct ReplaySnapshotData {
     pub(crate) state: RunState,
     pub(crate) input: LoadedInput,
