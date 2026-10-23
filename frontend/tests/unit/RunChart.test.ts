@@ -651,7 +651,7 @@ describe("RunChart", () => {
     document.dispatchEvent(zoomInEvent);
     expect(zoomInEvent.defaultPrevented).toBe(true);
     expect(mocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
-    const zoomedIn = mocks.setVisibleLogicalRange.mock.calls[0]?.[0];
+    const zoomedIn = mocks.setVisibleLogicalRange.mock.calls[0]![0] as { from: number; to: number };
     expect(zoomedIn.to - zoomedIn.from).toBeLessThan(6);
 
     const zoomOutEvent = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
