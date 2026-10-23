@@ -1303,6 +1303,22 @@ onBeforeUnmount(() => {
   font-size: 9px;
 }
 
+/* Keep the visible boundary line thin while providing a forgiving drag target. */
+.origin-selection-line {
+  position: absolute;
+}
+
+.origin-selection-line::before {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -8px;
+  width: 17px;
+  content: "";
+  background: transparent;
+  cursor: ew-resize;
+}
+ 
 @media (max-width: 1180px) {
   .chart-desc {
     display: none;
