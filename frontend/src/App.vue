@@ -239,7 +239,13 @@ function handleOriginSbarClick(sbarId: string): void {
 }
 
 async function createSelectedTestDataset(): Promise<void> {
-  if (!rangeSelectionReady.value) return;
+  if (!rangeSelectionReady.value || !canMutateTest.value) return;
+
+  // Reconcile against backend ownership immediately before mutating Test Dataset.
+  // The local Run DTO can be stale (for example after returning from Replay).
+  const refreshed = await refreshRunState();
+  if (!refreshed || !canMutateTest.value || !rangeSelectionReady.value) return;
+
   await createTestDataset(startSbarId.value, endSbarId.value);
 }
 const canStartRun = computed(
