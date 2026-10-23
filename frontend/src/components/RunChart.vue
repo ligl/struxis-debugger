@@ -589,7 +589,7 @@ onBeforeUnmount(() => {
           <span class="run-chart-name">LIVE REPLAY · {{ testDataset?.barType ?? origin?.barType ?? "NO TEST" }}</span>
           <span class="tag green">LIVE</span>
           <span v-if="fastForwarding" class="replay-target-status" data-testid="restart-to-sbar-status">REPLAYING TO TARGET</span>
-          <span v-else-if="targetSbarId" class="replay-target-status" data-testid="restart-to-sbar-prompt">SPACE · RESTART TO SBAR · RIGHT-CLICK TO CANCEL</span>
+          <span v-else class="replay-target-status" :data-testid="targetSbarId ? 'restart-to-sbar-prompt' : 'restart-to-sbar-hint'">{{ targetSbarId ? "DOUBLE-CLICK TO CHANGE TARGET · SPACE TO RESTART · RIGHT-CLICK TO CANCEL" : "DOUBLE-CLICK CHART TO SET RESTART TARGET" }}</span>
         </div>
       </div>
       <div class="chart-heading-actions">
