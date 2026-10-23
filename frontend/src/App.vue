@@ -253,27 +253,9 @@ async function createSelectedTestDataset(): Promise<void> {
   testError.value = "";
   const currentRun = runState.value;
   if (currentRun) {
-    if (hasCompletedRunResult(currentRun)) {
-      // Only a published, complete Snapshot is evidence that this Run's
-      // retained trajectory has been saved. Refresh before making that decision.
-      await refreshSnapshots();
-      const snapshotSaved = !snapshotsError.value &&
-        snapshots.value.some(
-          (snapshot) => snapshot.runId === currentRun.runId && snapshot.kind === "complete",
-        );
-      if (!snapshotSaved) {
-        const reason = snapshotsError.value
-          ? "The Snapshot catalog could not be checked. "
-          : "";
-        const discardConfirmed = window.confirm(
-          `${reason}This completed Run has no verified saved Snapshot. Replacing the Test Dataset will Reset Replay and discard its retained trajectory. Save a Snapshot first to preserve it. Continue and discard this Run result?`,
-        );
-        if (!discardConfirmed) return;
-      }
-    }
-
-    // Dataset owns the request; App coordinates Playback and Replay. Reset
-    // must finish successfully before the backend is asked to replace input.
+    // Replacing the Test Dataset is an explicit context change. Reset Replay
+    // unconditionally for an existing Run, regardless of Snapshot save state.
+    // Snapshot persistence is independent and must not gate this workflow.
     await stopPlayback();
     const resetSucceeded = await executeRunCommand("reset");
     if (!resetSucceeded || runState.value !== null) {
