@@ -133,9 +133,10 @@ function handleSelection(event: Event): void {
     </header>
 
     <div class="snapshot-reference-stage" :class="{ 'has-reference': reference }" data-testid="snapshot-reference-stage">
-      <div v-if="referenceLoading" class="snapshot-reference-empty" role="status" data-testid="snapshot-reference-loading">
-        <strong>RESOLVING HISTORICAL INPUT</strong>
-        <p>Reading the Snapshot manifest and validating its exact SBar sequence against Catalog.</p>
+      <div v-if="referenceLoading" class="snapshot-reference-loading" role="status" aria-live="polite" data-testid="snapshot-reference-loading">
+        <span class="snapshot-reference-loading-spinner" aria-hidden="true"></span>
+        <strong>LOADING SNAPSHOT</strong>
+        <span>Validating historical SBar data…</span>
       </div>
       <div v-else-if="referenceError" class="snapshot-reference-state" role="alert" data-testid="snapshot-reference-error">
         <div class="snapshot-reference-identity">
