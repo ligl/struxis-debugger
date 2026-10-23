@@ -110,9 +110,9 @@ describe("TestDatasetPanel details popover", () => {
 
     await trigger.trigger("click");
 
-    expect(wrapper.get('[data-testid="test-dataset-details-toggle"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="test-dataset-details-toggle"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="test-dataset-details-toggle"]').attributes("aria-expanded")).toBe("true");
-    expect(wrapper.get('[data-testid="test-dataset-details-popover"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="test-dataset-details-popover"]').exists()).toBe(true);
     const detailsText = wrapper.get('[data-testid="test-dataset-details-popover"]').text();
     expect(detailsText).toContain("INCLUSIVE INTERVAL");
     expect(detailsText).toContain("INSTRUMENT");
@@ -127,13 +127,13 @@ describe("TestDatasetPanel details popover", () => {
   it("closes the popover when pointer input occurs outside the controls", async () => {
     const wrapper = mountPanel();
     await wrapper.get('[data-testid="test-dataset-details-toggle"]').trigger("click");
-    expect(wrapper.get('[data-testid="test-dataset-details-popover"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="test-dataset-details-popover"]').exists()).toBe(true);
 
     document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     await nextTick();
 
     expect(wrapper.find('[data-testid="test-dataset-details-popover"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="test-dataset-details-toggle"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="test-dataset-details-toggle"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="test-dataset-details-toggle"]').attributes("aria-expanded")).toBe("false");
   });
 
