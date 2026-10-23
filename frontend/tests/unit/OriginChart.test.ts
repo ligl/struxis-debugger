@@ -137,6 +137,40 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("applies an existing Live viewport request when Snapshot Reference mounts late", () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "snapshot-reference-sync-late-mount",
+        structure: null,
+        displayContext: "snapshot-reference",
+        syncEnabled: true,
+        syncRequest: {
+          revision: 1,
+          source: "live",
+          fromSbarId: bars[0]!.sbarId,
+          fromOffset: 0.25,
+          toSbarId: bars[1]!.sbarId,
+          toOffset: 0.75,
+        },
+      },
+    });
+
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({
+      from: 0.25,
+      to: 1.75,
+    });
+    wrapper.unmount();
+  });
+
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
     mount(OriginChart, {
       props: {
