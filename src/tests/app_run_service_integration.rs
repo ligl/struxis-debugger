@@ -58,14 +58,12 @@ fn app_state_rejects_run_commands_when_no_run_active() {
 }
 
 #[test]
-fn app_state_get_run_state_returns_error_when_inactive() {
+fn app_state_get_run_state_returns_none_when_inactive() {
     let state = AppState::new(test_catalog_path());
 
     let result = state.replay_state();
 
-    assert!(result.is_err());
-    let error = result.unwrap_err();
-    assert_eq!(error.code, IpcErrorCode::InvalidState);
+    assert_eq!(result.expect("inactive Run state is a valid empty state"), None);
 }
 
 #[test]
