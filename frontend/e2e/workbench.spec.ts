@@ -95,11 +95,11 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
       shell: directTestIds(shell),
       chartWorkspace: directTestIds(chartWorkspace),
       chartPanels: directTestIds(chartPanels),
-      hasToastHostOutsideShell: Boolean(
-        document.querySelector("main[data-testid='debugger-shell']") &&
-        document.querySelector("main[data-testid='debugger-shell']")?.previousElementSibling?.tagName !== "APP-TOAST-HOST" &&
-        document.querySelector("main[data-testid='debugger-shell']")?.parentElement?.firstElementChild?.tagName === "APP-TOAST-HOST"
-      ),
+      hasToastHostOutsideShell: (() => {
+        const shell = document.querySelector("main[data-testid='debugger-shell']");
+        const toastHost = document.querySelector(".app-toast-host");
+        return Boolean(shell && toastHost && !shell.contains(toastHost));
+      })(),
       hasLegacyFooter: Boolean(document.querySelector(".footer-bar")),
       hasLegacyPrimaryWorkspace: Boolean(document.querySelector("[data-testid='primary-workspace']")),
     };
