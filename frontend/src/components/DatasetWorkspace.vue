@@ -35,7 +35,6 @@ defineProps<{
   testLoading: boolean;
   canMutateTest: boolean;
   testError: string;
-  testStatus: string;
   selectedObject: OriginObjectSelection | null;
   selectionStartSbarId: string | null;
   selectionEndSbarId: string | null;
@@ -75,7 +74,6 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
       :test-loading="testLoading"
       :can-mutate-test="canMutateTest"
       :test-error="testError"
-      :test-status="testStatus"
       @create="emit('createTestDataset')"
     >
       <template #source>
