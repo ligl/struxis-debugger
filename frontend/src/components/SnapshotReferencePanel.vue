@@ -6,6 +6,7 @@ import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types"
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
+  instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
 }>();
 
@@ -16,20 +17,17 @@ const referenceError = ref("");
 let requestRevision = 0;
 
 const availableSnapshots = computed(() =>
-  props.snapshots
-    .filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null)
-    .sort((left, right) => compareGeneratedAtDescending(left.generatedAt, right.generatedAt)),
+  props.instrumentId
+    ? props.snapshots
+      .filter((snapshot) => snapshot.instrumentId === props.instrumentId && snapshot.kind === "complete" && snapshot.snapshotId !== null)
+      .sort((left, right) => compareGeneratedAtDescending(left.generatedAt, right.generatedAt))
+    : [],
 );
 const selectedSnapshot = computed(
   () => availableSnapshots.value.find((snapshot) => snapshot.snapshotId === selectedSnapshotId.value) ?? null,
 );
 
-const displayInstrumentId = computed(
-  () => selectedSnapshot.value?.instrumentId
-    ?? reference.value?.instrumentId
-    ?? availableSnapshots.value[0]?.instrumentId
-    ?? "INSTRUMENT",
-);
+const displayInstrumentId = computed(() => props.instrumentId ?? "INSTRUMENT");
 
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
   if (left === right) return 0;
