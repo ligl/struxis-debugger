@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isRunCommandEligible, type RunCommand } from "../../src/run-command-eligibility";
+import { hasCompletedRunResult, isRunCommandEligible, type RunCommand } from "../../src/run-command-eligibility";
 import type { RunStatus } from "../../src/origin-types";
 
 const statuses: Array<RunStatus | null> = [
@@ -46,5 +46,30 @@ describe("isRunCommandEligible", () => {
     for (const command of commands) {
       expect(isRunCommandEligible(command, "ready", true, true, true)).toBe(false);
     }
+  });
+});
+
+
+describe("hasCompletedRunResult", () => {
+  const base = {
+    runId: "run-1",
+    testDatasetId: "test-1",
+    inputFingerprint: "fingerprint",
+    inputCount: 2,
+    processedCount: 2,
+    cursorSbarId: "200",
+    failureDiagnostic: null,
+  };
+
+  it("recognizes a completed trajectory even after runtime release", () => {
+    expect(hasCompletedRunResult({ ...base, status: "completed" })).toBe(true);
+    expect(hasCompletedRunResult({ ...base, status: "disposed" })).toBe(true);
+  });
+
+  it("rejects partial, empty, or diagnostically failed results", () => {
+    expect(hasCompletedRunResult({ ...base, status: "disposed", processedCount: 1 })).toBe(false);
+    expect(hasCompletedRunResult({ ...base, status: "disposed", inputCount: 0, processedCount: 0 })).toBe(false);
+    expect(hasCompletedRunResult({ ...base, status: "disposed", failureDiagnostic: "cleanup unconfirmed" })).toBe(false);
+    expect(hasCompletedRunResult(null)).toBe(false);
   });
 });
