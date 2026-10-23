@@ -664,11 +664,13 @@ describe("Test, Run and Snapshot workbench", () => {
       if (command === "get_current_origin") return Promise.resolve(origin);
       if (command === "get_current_test_dataset") return Promise.resolve(null);
       if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(null);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(true));
+    expect(wrapper.find(".toolbar-error").exists()).toBe(false);
     expect(wrapper.findAll('[data-testid="origin-chart-test-stub"]')).toHaveLength(1);
     expect(wrapper.findAll(".workspace-tab").map((tab) => tab.text())).toEqual([
       "01\u00a0 Dataset",
@@ -684,6 +686,7 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="run-chart-test-stub"]')).toHaveLength(1);
     expect(wrapper.get('[data-testid="workspace-toolbar-title"]').text()).toBe("REPLAY");
+    expect(wrapper.find(".toolbar-error").exists()).toBe(false);
   });
 
   it("supports keyboard resizing for the Inspector and Diagnostics docks", async () => {
