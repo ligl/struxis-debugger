@@ -210,6 +210,7 @@ onMounted(() => {
       rightOffset: 4,
     },
     crosshair: {
+      mode: CrosshairMode.Normal,
       vertLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
       horzLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
     },
