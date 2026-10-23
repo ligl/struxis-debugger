@@ -1258,6 +1258,7 @@ onBeforeUnmount(() => {
 
 .origin-chart-foot {
   display: flex;
+  background: #191e22;
   height: 18px;
   min-height: 18px;
   flex: 0 0 18px;
