@@ -2637,14 +2637,6 @@ th, td { padding: 6px 8px; }
   touch-action: none;
 }
 
-.dual-chart-splitter span {
-  width: 34px;
-  height: 2px;
-  border-top: 1px solid var(--dbg-border-strong);
-  border-bottom: 1px solid var(--dbg-border-strong);
-  opacity: .8;
-}
-
 .dual-chart-splitter:hover,
 .dual-chart-splitter:focus-visible {
   background: var(--dbg-surface-3);
