@@ -712,12 +712,11 @@ onMounted(() => {
       attributionLogo: false,
     },
     rightPriceScale: {
-      borderColor: "#30383f",
+      borderColor: "#121619",
       scaleMargins: { top: 0.08, bottom: 0.22 },
     },
     timeScale: {
-      // Snapshot Reference sits inside an already-framed panel; hide the internal time-axis border to avoid a doubled bottom edge beneath the volume pane.
-      borderColor: props.displayContext === "snapshot-reference" ? "#121619" : "#30383f",
+      borderColor: "#121619",
       timeVisible: true,
       secondsVisible: false,
       rightOffset: 4,
