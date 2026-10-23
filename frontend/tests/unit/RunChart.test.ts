@@ -162,7 +162,7 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
-  it("dims future input bars and reports only backend-confirmed cursor progress", async () => {
+  it("dims future input bars according to backend-confirmed cursor progress", async () => {
     const wrapper = mount(RunChart, {
       props: {
         origin: origin(),
@@ -192,8 +192,8 @@ describe("RunChart", () => {
       { time: 1700000060, value: 100, color: "#557E65" },
       { time: 1700000120, value: 100, color: "#454b53" },
     ]);
-    expect(wrapper.get(".run-chart-foot").text()).toContain("1 / 2 PROCESSED");
-    expect(wrapper.get(".run-chart-cursor").text()).toContain(originBars[1]!.sbarId);
+    // Replay no longer renders a footer: progress is represented by the backend-driven candle/volume state.
+    expect(wrapper.find(".run-chart-foot").exists()).toBe(false);
     wrapper.unmount();
   });
 
