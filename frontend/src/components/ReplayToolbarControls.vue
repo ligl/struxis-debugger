@@ -43,6 +43,7 @@ const activeRunStatuses = ["ready", "running", "paused"];
 const showStop = () =>
   props.playbackStatus === "playing" ||
   activeRunStatuses.includes(props.runState?.status ?? "");
+const resetDisabled = () => props.runBusy || props.playbackStatus === "playing";
 </script>
 
 <template>
@@ -58,7 +59,7 @@ const showStop = () =>
       >{{ showStop() ? 'STOP' : 'START' }}</button>
       <button class="subtle-button" data-testid="run-step" title="Process one SBar" :disabled="playbackStatus === 'playing' || !isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="emit('command', 'step')">STEP ▶|</button>
       <button class="subtle-button replay-play-toggle" data-testid="run-play-pause" :title="playbackStatus === 'playing' ? 'Pause replay (Space)' : 'Play replay (Space)'" :disabled="(runBusy && playbackStatus !== 'playing') || (playbackStatus !== 'playing' && !['ready', 'paused'].includes(runState?.status ?? ''))" @click="emit('command', playbackStatus === 'playing' ? 'pause' : 'play')">{{ playbackStatus === 'playing' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
-      <button class="subtle-button" data-testid="run-restart" title="Reset Replay to the initial state and clear the current Run context" :disabled="runBusy" @click="emit('command', 'reset')">RESET</button>
+      <button class="subtle-button" data-testid="run-restart" title="Reset Replay to the initial state and clear the current Run context" :disabled="resetDisabled()" @click="emit('command', 'reset')">RESET</button>
       <div class="replay-speed-control" data-testid="replay-speed-control" @mouseenter="speedMenuOpen = true" @mouseleave="speedMenuOpen = false">
         <button
           type="button"
