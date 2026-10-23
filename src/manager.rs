@@ -45,12 +45,11 @@ impl ReplayManager {
                     .to_owned(),
             );
         }
-        // Start begins a new Run context and intentionally discards any unsaved result.
-        self.completed_result = None;
-        self.last_state = None;
-        self.last_inspector = None;
         let (worker, initial_state) = ReplayWorker::spawn_interactive(config)?;
+        // A new Run context replaces the old unsaved result only after Start succeeds.
+        self.completed_result = None;
         self.last_state = Some(initial_state.clone());
+        self.last_inspector = None;
         self.active = Some(worker);
         Ok(initial_state)
     }
@@ -73,11 +72,10 @@ impl ReplayManager {
             );
         }
 
-        self.completed_result = None;
-        self.last_state = None;
-        self.last_inspector = None;
         let (worker, initial_state) = ReplayWorker::spawn(config, sink)?;
+        self.completed_result = None;
         self.last_state = Some(initial_state.clone());
+        self.last_inspector = None;
         self.active = Some(worker);
         Ok(initial_state)
     }
