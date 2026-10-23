@@ -150,6 +150,17 @@ pub(crate) async fn restart_run(state: State<'_, AppState>) -> Result<RunState, 
 }
 
 #[tauri::command]
+pub(crate) async fn restart_to_sbar(
+    state: State<'_, AppState>,
+    target_sbar_id: String,
+) -> Result<ReplayStepResult, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.restart_to_sbar(target_sbar_id))
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Restart to SBar worker failed: {error}")))?
+}
+
+#[tauri::command]
 pub(crate) async fn get_run_state(state: State<'_, AppState>) -> Result<Option<RunState>, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_state())
