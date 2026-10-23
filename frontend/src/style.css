@@ -2801,6 +2801,14 @@ th, td { padding: 6px 8px; }
   white-space: nowrap;
 }
 
+.snapshot-reference-control {
+  position: relative;
+  display: block;
+  width: min(300px, 32vw);
+  min-width: 180px;
+  flex: 0 1 auto;
+}
+
 .snapshot-reference-selected-label {
   position: absolute;
   z-index: 1;
@@ -2818,8 +2826,8 @@ th, td { padding: 6px 8px; }
 }
 
 .snapshot-reference-select select {
-  width: min(300px, 32vw);
-  min-width: 180px;
+  width: 100%;
+  min-width: 0;
   height: 24px;
   padding: 2px 6px;
   border: 1px solid #30353b;
