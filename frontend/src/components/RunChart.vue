@@ -723,6 +723,7 @@ onMounted(() => {
   });
   resizeObserver.observe(chartHost.value);
   updateChart();
+  if (props.syncEnabled) handleVisibleRangeChange();
 });
 
 watch(
