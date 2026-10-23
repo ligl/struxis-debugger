@@ -1,4 +1,4 @@
-import type { RunStatus } from "./origin-types";
+import type { RunStateDto, RunStatus } from "./origin-types";
 
 export type RunCommand =
   | "start"
@@ -39,4 +39,19 @@ export function isRunCommandEligible(
     case "reset":
       return true;
   }
+}
+
+
+/**
+ * A fully processed Run can retain a saveable trajectory after its runtime has
+ * been released. Do not equate runtime status "disposed" with lost results.
+ */
+export function hasCompletedRunResult(runState: RunStateDto | null): boolean {
+  return Boolean(
+    runState &&
+    runState.inputCount > 0 &&
+    runState.processedCount === runState.inputCount &&
+    runState.failureDiagnostic === null &&
+    (runState.status === "completed" || runState.status === "disposed"),
+  );
 }
