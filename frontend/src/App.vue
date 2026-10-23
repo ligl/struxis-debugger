@@ -391,6 +391,31 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
 
   // Stop scheduling and wait for an in-flight Step before any conflicting command.
   await stopPlayback();
+
+  // START owns the transition from a retained prior result to a fresh Run.
+  // Reset is still a lifecycle operation, but no longer a separate toolbar action.
+  if (command === "start" && runState.value) {
+    const resetSucceeded = await executeRunCommand("reset");
+    if (!resetSucceeded || runState.value !== null) {
+      runError.value = runError.value ||
+        "Replay could not clear the previous Run context; a new Run was not started.";
+      return;
+    }
+    replayInspector.value = null;
+    replayInspectorError.value = "";
+    selectedReplayChartObject.value = null;
+  }
+
+  // Re-check after the internal Reset; Start must not proceed unless the
+  // previous Run context is confirmed empty and all prerequisites still hold.
+  if (!isRunCommandEligible(
+    command,
+    runState.value?.status ?? null,
+    runBusy.value,
+    canStartRun.value,
+    canRestartRun.value,
+  )) return;
+
   const commandSucceeded = await executeRunCommand(command);
   if (!commandSucceeded) return;
   if (command === "start" || command === "restart") {
