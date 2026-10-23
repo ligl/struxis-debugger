@@ -315,7 +315,7 @@ describe("RunChart", () => {
         cbarStartId: "cbar-stable",
         cbarEndId: "cbar-stable",
         sbarStartId: originBars[1]!.sbarId,
-        sbarEndId: originBars[2]!.sbarId,
+        sbarEndId: originBars[1]!.sbarId,
         startOi: null,
         endOi: null,
         volume: "200",
