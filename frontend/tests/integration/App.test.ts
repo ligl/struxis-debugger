@@ -391,7 +391,6 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
     await enterReplayWorkspace(wrapper);
-    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("READY"));
     await vi.waitFor(() => {
       expect((wrapper.get('[data-testid="run-step"]').element as HTMLButtonElement).disabled).toBe(false);
@@ -903,7 +902,6 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
-    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     const readySpaceEvent = new KeyboardEvent("keydown", {
       key: " ",
@@ -944,7 +942,6 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
-    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
@@ -983,7 +980,6 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
-    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
 
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -1051,7 +1047,6 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(noRunEvent.defaultPrevented).toBe(false);
 
     await enterReplayWorkspace(wrapper);
-    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
 
     const repeatedEvent = new KeyboardEvent("keydown", {
@@ -1118,9 +1113,6 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
-    const refreshButton = wrapper.get('[data-testid="run-refresh-state"]');
-    expect((refreshButton.element as HTMLButtonElement).disabled).toBe(false);
-    await refreshButton.trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("step rejected by backend"));
@@ -1267,7 +1259,6 @@ describe("startup and user-operation coordination", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await enterReplayWorkspace(wrapper);
-    await wrapper.get('[data-testid="run-refresh-state"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     const loadButton = wrapper.find('[data-testid="catalog-load"]');
