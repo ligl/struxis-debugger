@@ -114,30 +114,47 @@ function moveCrosshairTo(index: number): boolean {
   const time = timeBySbarId.get(bar.sbarId);
   if (time === undefined) return false;
   crosshairLogicalIndex = nextIndex;
-  chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
 
-  // Keep the selected SBar and its candle visible when keyboard navigation
-  // crosses either edge of the current viewport. Preserve the current zoom.
+  // Keep the selected candle inside the viewport without scrolling the
+  // logical range beyond the Test Dataset's first/last candle. A simple
+  // edge shift can push the range past index 0 or the final index, making
+  // Ctrl+Left / Ctrl+Right appear to land outside the dataset.
   const timeScale = chart.timeScale();
   const range = timeScale.getVisibleLogicalRange?.();
   if (range && Number.isFinite(range.from) && Number.isFinite(range.to)) {
     const width = range.to - range.from;
     if (width > 0) {
       const margin = Math.min(2, width * 0.08);
-      let shift = 0;
-      if (nextIndex < range.from + margin) {
-        shift = nextIndex - (range.from + margin);
-      } else if (nextIndex > range.to - margin) {
-        shift = nextIndex - (range.to - margin);
+      let from = range.from;
+      let to = range.to;
+      if (nextIndex < from + margin) {
+        from = nextIndex - margin;
+        to = from + width;
+      } else if (nextIndex > to - margin) {
+        to = nextIndex + margin;
+        from = to - width;
       }
-      if (shift !== 0) {
-        timeScale.setVisibleLogicalRange({
-          from: range.from + shift,
-          to: range.to + shift,
-        });
+
+      // When the viewport is narrower than the dataset, constrain it to
+      // the logical candle-center bounds [-0.5, count - 0.5]. If it is
+      // wider than the dataset, leave its width intact and keep all candles
+      // available rather than inventing a narrower zoom level.
+      if (width < bars.value.length) {
+        from = Math.max(-0.5, Math.min(from, bars.value.length - 0.5 - width));
+        to = from + width;
+      } else {
+        from = Math.min(from, -0.5);
+        to = from + width;
+      }
+      if (Math.abs(from - range.from) > 0.001 || Math.abs(to - range.to) > 0.001) {
+        timeScale.setVisibleLogicalRange({ from, to });
       }
     }
   }
+
+  // Apply crosshair after viewport adjustment so its pixel position is
+  // computed against the final time scale.
+  chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
   return true;
 }
 
