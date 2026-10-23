@@ -718,6 +718,17 @@ describe("RunChart", () => {
       expect.anything(),
     );
 
+    // An out-of-dataset pointer coordinate must not erase the keyboard
+    // navigation anchor and fall back to the backend cursor (the first bar).
+    mocks.crosshairMoveListener?.({ point: { x: 999, y: 50 } });
+    mocks.setCrosshairPosition.mockClear();
+    const beyondEndEvent = new KeyboardEvent("keydown", {
+      key: "ArrowRight", bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(beyondEndEvent);
+    expect(beyondEndEvent.defaultPrevented).toBe(false);
+    expect(mocks.setCrosshairPosition).not.toHaveBeenCalled();
+
     wrapper.unmount();
   });
 
