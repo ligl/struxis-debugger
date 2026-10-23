@@ -76,6 +76,7 @@ let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let overlayUpdateFrame: number | null = null;
 let fittedTestDatasetId: string | null = null;
 let lastProcessedCount: number | null = null;
 let lastRunId: string | null = null;
@@ -146,6 +147,17 @@ function updateStructureOverlays(): void {
     const style = swingStyleByState[swing.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
     return [{ id: swing.swingId, x1: x1 as number, y1: y1 as number, x2: x2 as number, y2: y2 as number, color: style.color, dasharray: style.dasharray, state: swing.state }];
   }) : [];
+}
+
+function scheduleOverlayUpdate(): void {
+  // Coalesce rapid wheel-zoom / pan range events to one projection per frame.
+  // Lightweight Charts updates its canvas first; sample the public coordinate
+  // transforms on the next animation frame so SVG overlays follow that viewport.
+  if (overlayUpdateFrame !== null) cancelAnimationFrame(overlayUpdateFrame);
+  overlayUpdateFrame = requestAnimationFrame(() => {
+    overlayUpdateFrame = null;
+    updateStructureOverlays();
+  });
 }
 
 function distanceToSegment(x: number, y: number, segment: SwingSegment): number {
@@ -374,9 +386,8 @@ onMounted(() => {
     chart.subscribeClick(chartClickListener);
   }
   if (typeof timeScale.subscribeVisibleLogicalRangeChange === "function") {
-    const refreshOverlays = () => updateStructureOverlays();
-    timeScale.subscribeVisibleLogicalRangeChange(refreshOverlays);
-    visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(refreshOverlays);
+    timeScale.subscribeVisibleLogicalRangeChange(scheduleOverlayUpdate);
+    visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(scheduleOverlayUpdate);
   }
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
@@ -385,7 +396,7 @@ onMounted(() => {
       width: Math.max(1, Math.floor(entry.contentRect.width)),
       height: Math.max(1, Math.floor(entry.contentRect.height)),
     });
-    updateStructureOverlays();
+    scheduleOverlayUpdate();
   });
   resizeObserver.observe(chartHost.value);
   updateChart();
@@ -418,6 +429,10 @@ onBeforeUnmount(() => {
   chartClickListener = null;
   resizeObserver?.disconnect();
   resizeObserver = null;
+  if (overlayUpdateFrame !== null) {
+    cancelAnimationFrame(overlayUpdateFrame);
+    overlayUpdateFrame = null;
+  }
   chart?.remove();
   chart = null;
   candleSeries = null;
