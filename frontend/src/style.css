@@ -4309,37 +4309,30 @@ th, td { padding: 6px 8px; }
 
 .replay-speed-trigger {
   display: inline-flex;
-  min-width: 54px;
+  min-width: 38px;
   min-height: 28px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 7px;
-  border: 1px solid var(--dbg-border);
-  border-radius: 3px;
-  background: var(--dbg-surface-2);
-  color: var(--dbg-text-primary);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--dbg-text-secondary);
   font-size: 11px;
-  font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 
 .replay-speed-trigger:hover,
 .replay-speed-trigger[aria-expanded="true"] {
-  border-color: var(--dbg-border-strong);
-  background: var(--dbg-surface-3);
-}
-
-.replay-speed-chevron {
-  color: var(--dbg-text-muted);
-  font-size: 12px;
+  background: transparent;
+  color: var(--dbg-text-primary);
 }
 
 .replay-speed-menu {
   position: absolute;
   z-index: 1200;
+  top: 100%;
   right: 0;
-  bottom: calc(100% + 6px);
   display: flex;
   width: 86px;
   flex-direction: column;
