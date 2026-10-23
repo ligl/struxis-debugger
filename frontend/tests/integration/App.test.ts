@@ -1458,7 +1458,7 @@ describe("startup and user-operation coordination", () => {
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
     await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
-    await wrapper.get('[data-testid="run-restart"]').trigger("click");
+    expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(false);
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "start_run" || command === "restart_run",
     )).toHaveLength(0);
