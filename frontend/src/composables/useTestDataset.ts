@@ -13,7 +13,6 @@ export function useTestDataset(
   const testDataset = ref<TestDatasetDto | null>(null);
   const testLoading = ref(false);
   const testError = ref("");
-  const testStatus = ref("");
   let refreshGeneration = 0;
 
   function prepareForOrigin(_loadedOrigin: OriginDatasetDto): void {
@@ -43,7 +42,6 @@ export function useTestDataset(
     // Invalidate reads that began before this mutation takes ownership.
     refreshGeneration += 1;
     testError.value = "";
-    testStatus.value = "";
     try {
       const created = await createTestDatasetIpc(
         startSbarId.trim(),
@@ -51,7 +49,6 @@ export function useTestDataset(
       );
       testDataset.value = created;
       testError.value = "";
-      testStatus.value = "Test Dataset created from the backend-validated SBar interval.";
       return true;
     } catch (error) {
       testError.value = describeIpcError(error);
@@ -65,7 +62,6 @@ export function useTestDataset(
     testDataset,
     testLoading,
     testError,
-    testStatus,
     prepareForOrigin,
     refreshCurrentTestDataset,
     createTestDataset,
