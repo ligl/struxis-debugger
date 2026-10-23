@@ -57,7 +57,7 @@ const replayProgressApplies = computed(() =>
     props.runState &&
     props.testDataset &&
     props.runState.testDatasetId === props.testDataset.testDatasetId &&
-    props.runState.status !== "ready",
+    props.runState.status !== "disposed",
   ),
 );
 const displayedBar = computed(() => {
@@ -79,10 +79,10 @@ let fittedTestDatasetId: string | null = null;
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
   if (layer === "sbar" && candleSeries) {
-    candleSeries.applyOptions({ visible: layerVisibility.value.sbar });
+    candleSeries.applyOptions?.({ visible: layerVisibility.value.sbar });
   }
   if (layer === "volume" && volumeSeries) {
-    volumeSeries.applyOptions({ visible: layerVisibility.value.volume });
+    volumeSeries.applyOptions?.({ visible: layerVisibility.value.volume });
   }
   updateStructureOverlays();
 }
@@ -92,7 +92,7 @@ function fitContent(): void {
 }
 
 function updateStructureOverlays(): void {
-  if (!chart || !candleSeries) {
+  if (!chart || !candleSeries || typeof chart.timeScale().timeToCoordinate !== "function" || typeof candleSeries.priceToCoordinate !== "function") {
     cbarRectangles.value = [];
     swingSegments.value = [];
     return;
