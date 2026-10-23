@@ -333,8 +333,11 @@ impl ReplayManager {
                     if let Ok(state) = worker.state() {
                         if state.status == crate::run::RunStatus::Failed {
                             match worker.dispose() {
-                                Ok(released_state) => {
-                                    self.last_state = Some(released_state);
+                                Ok(_released_state) => {
+                                    // Release confirms resource cleanup; it must not
+                                    // overwrite the processing failure or its last
+                                    // confirmed cursor with a Disposed RunState.
+                                    self.last_state = Some(state);
                                     self.active = None;
                                 }
                                 Err(release_error) => {
