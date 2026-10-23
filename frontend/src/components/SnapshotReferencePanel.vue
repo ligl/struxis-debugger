@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { SnapshotArtifactDto } from "../origin-types";
+import OriginChart from "./OriginChart.vue";
+import { describeIpcError, getSnapshotReference } from "../origin-bridge";
+import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
 
 const props = defineProps<{
   snapshots: SnapshotArtifactDto[];
 }>();
 
 const selectedSnapshotId = ref<string | null>(null);
+const reference = ref<SnapshotReferenceDto | null>(null);
+const referenceLoading = ref(false);
+const referenceError = ref("");
+let requestRevision = 0;
+
 const availableSnapshots = computed(() =>
   props.snapshots.filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null),
 );
@@ -14,11 +21,33 @@ const selectedSnapshot = computed(
   () => availableSnapshots.value.find((snapshot) => snapshot.snapshotId === selectedSnapshotId.value) ?? null,
 );
 
-// Selection belongs to this panel and is invalidated when its Snapshot disappears
-// or ceases to be eligible as an immutable Replay reference.
 watch(availableSnapshots, (available) => {
   if (!available.some((snapshot) => snapshot.snapshotId === selectedSnapshotId.value)) {
     selectedSnapshotId.value = null;
+    reference.value = null;
+    referenceError.value = "";
+  }
+});
+
+watch(selectedSnapshotId, async (snapshotId) => {
+  const revision = ++requestRevision;
+  reference.value = null;
+  referenceError.value = "";
+  if (!snapshotId) {
+    referenceLoading.value = false;
+    return;
+  }
+
+  referenceLoading.value = true;
+  try {
+    const result = await getSnapshotReference(snapshotId);
+    if (revision !== requestRevision || selectedSnapshotId.value !== snapshotId) return;
+    reference.value = result;
+  } catch (error) {
+    if (revision !== requestRevision || selectedSnapshotId.value !== snapshotId) return;
+    referenceError.value = describeIpcError(error);
+  } finally {
+    if (revision === requestRevision) referenceLoading.value = false;
   }
 });
 
@@ -51,16 +80,28 @@ function handleSelection(event: Event): void {
       </label>
     </header>
 
-    <div class="snapshot-reference-stage" :class="{ 'has-reference': selectedSnapshot }" data-testid="snapshot-reference-stage">
-      <div v-if="selectedSnapshot" class="snapshot-reference-state" data-testid="snapshot-reference-selected">
+    <div class="snapshot-reference-stage" :class="{ 'has-reference': reference }" data-testid="snapshot-reference-stage">
+      <div v-if="referenceLoading" class="snapshot-reference-empty" role="status" data-testid="snapshot-reference-loading">
+        <strong>RESOLVING HISTORICAL INPUT</strong>
+        <p>Reading the Snapshot manifest and validating its exact SBar sequence against Catalog.</p>
+      </div>
+      <div v-else-if="referenceError" class="snapshot-reference-state" role="alert" data-testid="snapshot-reference-error">
         <div class="snapshot-reference-identity">
-          <span class="reference-status-dot" aria-hidden="true"></span>
-          <strong>{{ selectedSnapshot.snapshotId }}</strong>
-          <span class="reference-tag">COMPLETE SNAPSHOT</span>
+          <span class="reference-status-dot reference-status-dot-error" aria-hidden="true"></span>
+          <strong>{{ selectedSnapshotId }}</strong>
+          <span class="reference-tag">REFERENCE UNAVAILABLE</span>
         </div>
-        <p class="snapshot-reference-unavailable" role="status">
-          Historical chart unavailable: the current Snapshot IPC exposes artifact metadata, but not the authoritative SBar OHLCV sequence or enough instrument metadata to verify compatibility. No bars or Struxis objects are synthesized.
-        </p>
+        <p class="snapshot-reference-unavailable">{{ referenceError }}</p>
+        <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
+      </div>
+      <div v-else-if="reference" class="snapshot-reference-chart" data-testid="snapshot-reference-chart">
+        <OriginChart
+          :bars="reference.bars"
+          :structure="reference.structure"
+          :origin-dataset-id="reference.snapshotId"
+          :selection-editable="false"
+          display-context="snapshot-reference"
+        />
       </div>
       <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">
         <strong>{{ availableSnapshots.length ? "SELECT A COMPLETED SNAPSHOT" : "NO COMPLETED SNAPSHOT AVAILABLE" }}</strong>
@@ -68,11 +109,11 @@ function handleSelection(event: Event): void {
       </div>
     </div>
 
-    <footer v-if="selectedSnapshot" class="snapshot-reference-foot" data-testid="snapshot-reference-metadata">
-      <span>RUN <b>{{ selectedSnapshot.runId ?? "—" }}</b></span>
-      <span>CHECKPOINTS <b>{{ selectedSnapshot.checkpointCount ?? "—" }}</b></span>
-      <span>GENERATED <b>{{ selectedSnapshot.generatedAt ?? "—" }}</b></span>
-      <span class="snapshot-reference-state-key">STATE KEY <b>{{ selectedSnapshot.stateKey ?? "—" }}</b></span>
+    <footer v-if="reference" class="snapshot-reference-foot" data-testid="snapshot-reference-metadata">
+      <span>RUN <b>{{ reference.runId }}</b></span>
+      <span>SBARS <b>{{ reference.bars.length.toLocaleString() }}</b></span>
+      <span>GENERATED <b>{{ reference.snapshotGeneratedAt }}</b></span>
+      <span class="snapshot-reference-state-key">FINGERPRINT <b>{{ reference.sbarSequenceFingerprint.slice(0, 12) }}</b></span>
     </footer>
   </section>
 </template>
