@@ -19,8 +19,14 @@ const props = defineProps<{
   runState: RunStateDto | null;
   structure?: ReplayInspectorStructureDto | null;
   selectedObject?: ReplayChartSelection | null;
+  targetSbarId?: string | null;
+  fastForwarding?: boolean;
 }>();
-const emit = defineEmits<{ objectSelect: [selection: ReplayChartSelection] }>();
+const emit = defineEmits<{
+  objectSelect: [selection: ReplayChartSelection];
+  targetSelect: [sbarId: string];
+  targetCancel: [];
+}>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
@@ -29,6 +35,7 @@ type CBarRectangle = { id: string; x: number; y: number; width: number; height: 
 type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; color: string; dasharray: string; state: string };
 type SBarSelectionMarker = { id: string; x: number; y: number; width: number; height: number };
 const selectedSbarMarker = ref<SBarSelectionMarker | null>(null);
+const targetSbarX = ref<number | null>(null);
 const hoveredSbarMarker = ref<SBarSelectionMarker | null>(null);
 const hoveredObject = ref<ReplayChartSelection | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
@@ -108,6 +115,7 @@ function updateStructureOverlays(): void {
     hoveredSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
+    targetSbarX.value = null;
     return;
   }
   const timeScale = chart.timeScale();
@@ -151,6 +159,11 @@ function updateStructureOverlays(): void {
     const style = swingStyleByState[swing.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
     return [{ id: swing.swingId, x1: x1 as number, y1: y1 as number, x2: x2 as number, y2: y2 as number, color: style.color, dasharray: style.dasharray, state: swing.state }];
   }) : [];
+  const targetTime = props.targetSbarId ? timeBySbarId.get(props.targetSbarId) : undefined;
+  const targetX = targetTime === undefined ? null : timeScale.timeToCoordinate(targetTime);
+  targetSbarX.value = targetX !== null && targetX !== undefined && Number.isFinite(targetX)
+    ? targetX
+    : null;
   updateHoverMarker();
 }
 
@@ -280,6 +293,14 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   const bar = bars.value[index];
   if (!bar) return;
   emit("objectSelect", { kind: "sbar", id: bar.sbarId, checkpointSbarId: checkpointSbarId ?? null });
+  if (hitTestSbar(x, y)) emit("targetSelect", bar.sbarId);
+}
+
+function handleContextMenu(event: MouseEvent): void {
+  if (!props.targetSbarId) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("targetCancel");
 }
 
 function updateChart(): void {
@@ -510,6 +531,7 @@ watch(() => props.structure, () => {
   updateHoveredObject(undefined);
 });
 watch(() => props.selectedObject, updateStructureOverlays);
+watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
@@ -537,12 +559,15 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="run-chart-panel" aria-label="Live Replay SBar chart" data-testid="run-chart-panel"
-    :data-test-dataset-id="testDataset?.testDatasetId ?? ''" :data-sbar-count="bars.length">
+    :data-test-dataset-id="testDataset?.testDatasetId ?? ''" :data-sbar-count="bars.length"
+    @contextmenu="handleContextMenu">
     <header class="run-chart-heading">
       <div class="run-chart-title">
         <div class="run-chart-title-line">
           <span class="run-chart-name">LIVE REPLAY · {{ testDataset?.barType ?? origin?.barType ?? "NO TEST" }}</span>
           <span class="tag green">LIVE</span>
+          <span v-if="fastForwarding" class="replay-target-status" data-testid="restart-to-sbar-status">REPLAYING TO TARGET</span>
+          <span v-else-if="targetSbarId" class="replay-target-status" data-testid="restart-to-sbar-prompt">SPACE · RESTART TO SBAR · RIGHT-CLICK TO CANCEL</span>
         </div>
       </div>
       <div class="chart-heading-actions">
@@ -562,6 +587,11 @@ onBeforeUnmount(() => {
       <div ref="chartHost" class="run-chart-host" data-testid="run-chart-canvas"
         :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
       <svg class="run-structure-overlay" data-testid="run-structure-overlay" aria-hidden="true">
+        <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
+          <line :x1="targetSbarX" y1="0" :x2="targetSbarX" y2="100%" stroke="#C6A06B" stroke-width="1.25" stroke-dasharray="5 4" />
+          <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
+          <path :d="`M ${targetSbarX - 4} 0 L ${targetSbarX + 4} 0 L ${targetSbarX} 6 Z`" fill="#C6A06B" />
+        </g>
         <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="rgb(195 203 209 / 8%)" stroke="rgb(195 203 209 / 48%)" stroke-width="1" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
         <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
         <line v-for="segment in swingSegments" :key="segment.id" :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2" :stroke="selectedObject?.kind === 'swing' && selectedObject.id === segment.id && selectedObject.checkpointSbarId === runState?.cursorSbarId ? '#D6A85D' : segment.color" :stroke-width="selectedObject?.kind === 'swing' && selectedObject.id === segment.id && selectedObject.checkpointSbarId === runState?.cursorSbarId ? 2.25 : 1.25" :stroke-dasharray="segment.dasharray || undefined" stroke-linecap="round" data-testid="run-swing-segment" :data-swing-id="segment.id" :data-swing-state="segment.state" />
