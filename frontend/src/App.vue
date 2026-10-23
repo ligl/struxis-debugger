@@ -66,6 +66,7 @@ const {
   lastStepResult,
   refreshRunState,
   executeRunCommand,
+  executeRestartToSBar,
 } = useRunControl();
 
 const canMutateTest = computed(
@@ -107,6 +108,47 @@ watch(lastStepResult, (result) => {
 
 const selectedCompareDifference = ref<ObjectDifferenceDto | null>(null);
 const selectedReplayChartObject = ref<ReplayChartSelection | null>(null);
+const targetSbarId = ref<string | null>(null);
+const fastForwarding = ref(false);
+
+function handleReplayTargetSelection(sbarId: string): void {
+  const test = testDataset.value;
+  const currentOrigin = origin.value;
+  if (
+    workspaceMode.value !== "replay" ||
+    !test ||
+    !currentOrigin ||
+    currentOrigin.originDatasetId !== test.originDatasetId ||
+    !currentOrigin.bars.some((bar) => bar.sbarId === sbarId)
+  ) return;
+  const start = currentOrigin.bars.findIndex((bar) => bar.sbarId === test.startSbarId);
+  const end = currentOrigin.bars.findIndex((bar) => bar.sbarId === test.endSbarId);
+  const target = currentOrigin.bars.findIndex((bar) => bar.sbarId === sbarId);
+  if (start < 0 || end < start || target < start || target > end) return;
+  targetSbarId.value = sbarId;
+}
+
+function cancelReplayTarget(): void {
+  if (!fastForwarding.value) targetSbarId.value = null;
+}
+
+async function handleRestartToSBar(): Promise<void> {
+  const target = targetSbarId.value;
+  if (!target || fastForwarding.value || runBusy.value || workspaceMode.value !== "replay") return;
+  await stopPlayback();
+  if (runBusy.value) return;
+
+  fastForwarding.value = true;
+  try {
+    const succeeded = await executeRestartToSBar(target);
+    if (succeeded) {
+      replayInspector.value = lastStepResult.value?.inspector ?? null;
+      replayInspectorError.value = "";
+    }
+  } finally {
+    fastForwarding.value = false;
+  }
+}
 
 function handleReplayObjectSelection(selection: ReplayChartSelection): void {
   const currentRun = runState.value;
@@ -217,6 +259,10 @@ watch(
   ],
   () => { selectedReplayChartObject.value = null; },
 );
+
+watch(() => testDataset.value?.testDatasetId, () => {
+  targetSbarId.value = null;
+});
 
 async function refreshReplayInspector(): Promise<void> {
   await refreshReplayInspectorState(Boolean(runState.value));
@@ -453,7 +499,7 @@ async function handleSaveSnapshot(): Promise<void> {
 
 const canControlPlaybackShortcut = computed(() =>
   workspaceMode.value === "replay" &&
-  (playbackStatus.value === "playing" ||
+  (Boolean(targetSbarId.value) || playbackStatus.value === "playing" ||
     Boolean(runState.value && ["ready", "paused"].includes(runState.value.status))),
 );
 watch(workspaceMode, (mode) => {
@@ -464,6 +510,8 @@ useReplayKeyboardShortcut(
   playbackStatus,
   canControlPlaybackShortcut,
   runBusy,
+  targetSbarId,
+  handleRestartToSBar,
   handleRunCommand,
 );
 
@@ -596,8 +644,12 @@ onMounted(async () => {
               :run-state="runState"
               :structure="replayInspector?.sbarId === runState?.cursorSbarId ? (replayInspector?.structure ?? null) : null"
               :selected-object="selectedReplayChartObject"
+              :target-sbar-id="targetSbarId"
+              :fast-forwarding="fastForwarding"
               :snapshots="snapshots"
               @object-select="handleReplayObjectSelection"
+              @target-select="handleReplayTargetSelection"
+              @target-cancel="cancelReplayTarget"
             />
 <CompareWorkspace
               :active="workspaceMode === 'compare'"
