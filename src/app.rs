@@ -303,7 +303,7 @@ impl AppState {
         if manager.has_owned_run() {
             return Err(IpcError::new(
                 IpcErrorCode::Conflict,
-                "Dataset mutation rejected: Dispose the owned Run before changing Origin or Test Dataset",
+                "Dataset mutation rejected: an active Run still owns the Origin or Test Dataset; stop or reset Replay first",
             ));
         }
         Ok(())
