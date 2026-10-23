@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
+import ReplayObjectDetails from "./ReplayObjectDetails.vue";
 import type { InspectorWorkspaceContext, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
@@ -51,6 +52,9 @@ const compareCandidateSnapshotId = computed(() =>
 );
 const replayInspector = computed(() =>
   props.context.workspace === "replay" ? props.context.checkpoint : null,
+);
+const selectedReplayObject = computed(() =>
+  props.context.workspace === "replay" ? props.context.selectedObject : null,
 );
 const replayInspectorError = computed(() =>
   props.context.workspace === "replay" ? props.context.error : "",
@@ -107,6 +111,9 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
       />
     </template>
 
+    <template v-else-if="workspaceMode === 'replay' && selectedReplayObject">
+      <ReplayObjectDetails :selected-object="selectedReplayObject" :timeframe="timeframe" />
+    </template>
     <template v-else-if="workspaceMode === 'replay' && replayInspector">
       <ReplayCheckpointSummary
         :replay-inspector="replayInspector"
