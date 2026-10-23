@@ -32,7 +32,9 @@ use nautilus_model::{
 };
 
 use crate::{
-    checkpoint::{OwnedCheckpoint, ReplayCheckpointProjection, ReplayInspectorProjection, ReplayStepResult},
+    checkpoint::{
+        OwnedCheckpoint, ReplayCheckpointProjection, ReplayInspectorProjection, ReplayStepResult,
+    },
     effective_config::EffectiveStruxisConfig,
     replay::{LoadedInput, ReplayCommandGate, ReplayCommandKind},
     run::{RunState, RunStatus},
