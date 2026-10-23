@@ -167,6 +167,13 @@ describe("ReplayToolbarControls", () => {
     expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("3x");
   });
 
+  it("keeps Reset disabled while playback is active", () => {
+    const playing = mountControls({ playbackStatus: "playing", runBusy: false });
+    expect(playing.get('[data-testid="run-restart"]').attributes("disabled")).toBeDefined();
+    const paused = mountControls({ playbackStatus: "paused", runBusy: false });
+    expect(paused.get('[data-testid="run-restart"]').attributes("disabled")).toBeUndefined();
+  });
+
   it("preserves command gating, progress, status and error presentation", () => {
     const wrapper = mountControls({
       runBusy: true,
