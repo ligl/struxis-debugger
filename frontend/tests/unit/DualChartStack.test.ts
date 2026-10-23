@@ -18,16 +18,17 @@ describe("DualChartStack", () => {
 
     const splitter = wrapper.get('[data-testid="replay-chart-splitter"]');
     expect(splitter.attributes("role")).toBe("separator");
-    expect(splitter.attributes("aria-valuenow")).toBe("50");
+    // Replay defaults to the maximum upper-chart share, leaving the lower chart at its minimum share.
+    expect(splitter.attributes("aria-valuenow")).toBe("75");
 
-    await splitter.trigger("keydown", { key: "ArrowDown" });
-    expect(splitter.attributes("aria-valuenow")).toBe("52");
+    await splitter.trigger("keydown", { key: "ArrowUp" });
+    expect(splitter.attributes("aria-valuenow")).toBe("73");
 
     await splitter.trigger("keydown", { key: "Home" });
     expect(splitter.attributes("aria-valuenow")).toBe("25");
 
     await splitter.trigger("keydown", { key: "ArrowUp" });
-    expect(splitter.attributes("aria-valuenow")).toBe("25");
+    expect(splitter.attributes("aria-valuenow")).toBe("27");
 
     await splitter.trigger("keydown", { key: "End" });
     expect(splitter.attributes("aria-valuenow")).toBe("75");
@@ -48,6 +49,7 @@ describe("DualChartStack", () => {
     });
 
     const splitter = wrapper.get('[data-testid="compare-chart-splitter"]');
+    expect(splitter.attributes("aria-valuenow")).toBe("50");
 
     // jsdom may not expose PointerEvent; dispatch MouseEvents with the
     // pointer event names so button/clientY are present on the event object.
