@@ -13,7 +13,7 @@ export function useDockLayout() {
   const diagnosticsCollapsed = ref(true);
   const inspectorDock = ref<DockDirection>("right");
   const diagnosticsDock = ref<DockDirection>("bottom");
-  const inspectorWidth = ref(282);
+  const inspectorWidth = ref(300);
   const inspectorHeight = ref(145);
   const diagnosticsWidth = ref(330);
   const diagnosticsHeight = ref(164);
