@@ -70,7 +70,7 @@ const {
 
 const canMutateTest = computed(
   () => !loading.value && !runBusy.value &&
-    (!runState.value || ["completed", "failed", "disposed"].includes(runState.value.status)),
+    (!runState.value || ["completed", "disposed"].includes(runState.value.status)),
 );
 
 const {
