@@ -4,7 +4,7 @@ import RunChart from "./RunChart.vue";
 import SnapshotReferencePanel from "./SnapshotReferencePanel.vue";
 import type { OriginDatasetDto, ReplayChartSelection, ReplayInspectorStructureDto, RunStateDto, SnapshotArtifactDto, TestDatasetDto } from "../origin-types";
 
-defineProps<{
+withDefaults(defineProps<{
   active: boolean;
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
@@ -12,7 +12,9 @@ defineProps<{
   structure: ReplayInspectorStructureDto | null;
   selectedObject: ReplayChartSelection | null;
   snapshots: SnapshotArtifactDto[];
-}>();
+}>(), {
+  runState: null,
+});
 const emit = defineEmits<{ objectSelect: [selection: ReplayChartSelection] }>();
 </script>
 
