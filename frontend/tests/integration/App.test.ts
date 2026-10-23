@@ -708,10 +708,10 @@ describe("Test, Run and Snapshot workbench", () => {
 
     const inspectorSplitter = wrapper.get('[data-testid="inspector-resize-edge"]');
     expect(inspectorSplitter.attributes("tabindex")).toBe("0");
-    expect(inspectorSplitter.attributes("aria-valuenow")).toBe("282");
+    expect(inspectorSplitter.attributes("aria-valuenow")).toBe("300");
     await inspectorSplitter.trigger("keydown", { key: "ArrowLeft" });
-    expect(inspectorSplitter.attributes("aria-valuenow")).toBe("294");
-    expect(wrapper.get('[data-testid="debugger-shell"]').attributes("style")).toContain("--inspector-width: 294px");
+    expect(inspectorSplitter.attributes("aria-valuenow")).toBe("312");
+    expect(wrapper.get('[data-testid="debugger-shell"]').attributes("style")).toContain("--inspector-width: 312px");
 
     const diagnosticsSplitter = wrapper.get('[data-testid="diagnostics-resize-edge"]');
     expect(diagnosticsSplitter.attributes("aria-valuenow")).toBe("164");
