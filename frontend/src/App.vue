@@ -377,7 +377,6 @@ const {
   runBusy,
   runError,
   executeRunCommand,
-  refreshReplayInspector,
 );
 
 async function handleSaveSnapshot(): Promise<void> {
