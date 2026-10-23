@@ -4,6 +4,7 @@ import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBar
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import { formatInspectorValue } from "../inspector-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
+import InspectorDomainId from "./InspectorDomainId.vue";
 
 type ReplaySelectedObject = Extract<InspectorWorkspaceContext, { workspace: "replay" }>["selectedObject"];
 
@@ -149,7 +150,7 @@ const rows = computed<InspectorRow[]>(() => {
       class="inspector-related-item"
       :data-testid="'inspector-replay-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
     >
-      <summary>{{ endpoint.label }} <code>{{ endpoint.id }}</code></summary>
+      <summary>{{ endpoint.label }} <InspectorDomainId :value="endpoint.id" /></summary>
       <dl v-if="endpoint.kind === 'cbar'" class="inspector-fields inspector-related-fields">
         <InspectorPropertyField label="CBar ID" :value="(endpoint.object as ReplayInspectorCBarDto).cbarId" wide />
         <InspectorPropertyField label="High" :value="(endpoint.object as ReplayInspectorCBarDto).high" />
@@ -221,10 +222,8 @@ const rows = computed<InspectorRow[]>(() => {
 
 .inspector-related-item > summary code {
   min-width: 0;
-  overflow: hidden;
-  color: #c5cdd2;
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  text-overflow: ellipsis;
+  max-width: 65%;
+  overflow-x: auto;
   white-space: nowrap;
 }
 
