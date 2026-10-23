@@ -695,9 +695,7 @@ impl WorkerSession {
     ) -> Result<ReplayStepResult, String> {
         let target_index = self
             .input
-            .bars
-            .iter()
-            .position(|bar| bar.ts_event.to_string() == target_sbar_id)
+            .index_of_sbar_id(target_sbar_id)
             .ok_or_else(|| {
                 format!(
                     "Restart to SBar rejected: target {target_sbar_id} is not in Test Dataset {}",
