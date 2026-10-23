@@ -345,13 +345,23 @@ impl AppState {
         self.with_replay_manager(|manager| manager.restart_interactive(config))
     }
 
-    pub(crate) fn restart_to_sbar(&self, target_sbar_id: String) -> Result<ReplayStepResult, IpcError> {
+    pub(crate) fn restart_to_sbar(
+        &self,
+        target_sbar_id: String,
+    ) -> Result<ReplayStepResult, IpcError> {
         let _permit = self.acquire_mutation_permit()?;
         let config = self.prepare_run()?;
-        if !config.input.bars.iter().any(|bar| bar.ts_event.to_string() == target_sbar_id) {
+        if !config
+            .input
+            .bars
+            .iter()
+            .any(|bar| bar.ts_event.to_string() == target_sbar_id)
+        {
             return Err(IpcError::new(
                 IpcErrorCode::InvalidArgument,
-                format!("Restart to SBar rejected: target {target_sbar_id} is not in the current Test Dataset"),
+                format!(
+                    "Restart to SBar rejected: target {target_sbar_id} is not in the current Test Dataset"
+                ),
             ));
         }
         self.with_replay_manager(|manager| manager.restart_to_sbar(config, target_sbar_id))
