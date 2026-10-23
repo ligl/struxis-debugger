@@ -55,7 +55,7 @@ function formatStateKeyTimeframe(timeframe: string): string {
         </div>
         <div class="metric">
           <span>STRUXIS STATE KEY</span>
-          <strong data-testid="origin-struxis-state-key">{{ origin.instrumentId }} {{ formatStateKeyTimeframe(origin.timeframe) }}</strong>
+          <strong data-testid="origin-struxis-state-key">{{ origin.instrumentId }} · {{ formatStateKeyTimeframe(origin.timeframe) }}</strong>
         </div>
         <div class="metric">
           <span>BAR TYPE</span>
