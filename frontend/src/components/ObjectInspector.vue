@@ -112,7 +112,12 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
     </template>
 
     <template v-else-if="workspaceMode === 'replay' && selectedReplayObject">
-      <ReplayObjectDetails :selected-object="selectedReplayObject" :timeframe="timeframe" />
+      <ReplayObjectDetails
+        :selected-object="selectedReplayObject"
+        :timeframe="timeframe"
+        :checkpoint="replayInspector"
+        :bars="originBars"
+      />
     </template>
     <template v-else-if="workspaceMode === 'replay' && replayInspector">
       <ReplayCheckpointSummary
