@@ -38,12 +38,12 @@ fn app_state_rejects_run_commands_when_no_run_active() {
     let state = AppState::new(test_catalog_path());
 
     // All run control commands should fail without an active run
-    let results: Vec<(&str, Result<crate::run::RunState, IpcError>)> = vec![
-        ("step", state.replay_step()),
-        ("play", state.replay_play()),
-        ("pause", state.replay_pause()),
-        ("stop", state.replay_stop()),
-        ("dispose", state.replay_dispose()),
+    let results: Vec<(&str, Result<(), IpcError>)> = vec![
+        ("step", state.replay_step().map(|_| ())),
+        ("play", state.replay_play().map(|_| ())),
+        ("pause", state.replay_pause().map(|_| ())),
+        ("stop", state.replay_stop().map(|_| ())),
+        ("dispose", state.replay_dispose().map(|_| ())),
     ];
 
     for (name, result) in results {
@@ -211,12 +211,22 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     assert!(premature_save.message.contains("Completed Run"));
 
     let first = state.replay_step().expect("first SBar should process");
-    assert_eq!(first.processed_count, 1);
-    assert_eq!(first.status, RunStatus::Paused);
+    assert_eq!(first.run_state.processed_count, 1);
+    assert_eq!(first.run_state.status, RunStatus::Paused);
+    assert_eq!(
+        first.inspector.as_ref().map(|checkpoint| checkpoint.sbar_id.as_str()),
+        first.run_state.cursor_sbar_id.as_deref(),
+        "Step response must pair RunState with its own Inspector Checkpoint"
+    );
 
     let completed = state.replay_step().expect("second SBar should complete Run");
-    assert_eq!(completed.processed_count, 2);
-    assert_eq!(completed.status, RunStatus::Completed);
+    assert_eq!(completed.run_state.processed_count, 2);
+    assert_eq!(completed.run_state.status, RunStatus::Completed);
+    assert_eq!(
+        completed.inspector.as_ref().map(|checkpoint| checkpoint.sbar_id.as_str()),
+        completed.run_state.cursor_sbar_id.as_deref(),
+        "final Step response must pair RunState with its own Inspector Checkpoint"
+    );
 
     assert!(
         state.discover_snapshots().expect("Snapshot discovery should work before save").is_empty(),
@@ -299,8 +309,8 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
     state.start_run().expect("Run should start");
     state.replay_step().expect("first SBar should process");
     let completed = state.replay_step().expect("second SBar should complete Run");
-    assert_eq!(completed.status, RunStatus::Completed);
-    assert_eq!(completed.processed_count, 2);
+    assert_eq!(completed.run_state.status, RunStatus::Completed);
+    assert_eq!(completed.run_state.processed_count, 2);
 
     let save_error = state
         .save_run_snapshot()
