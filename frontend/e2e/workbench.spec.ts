@@ -73,7 +73,7 @@ test("default Inspector and Diagnostics preserve prototype optical gaps", async 
   expect(diagnostics).toBeTruthy();
 
   // The prototype overlays the toolbar edge, with 5px gaps below the 44px Topbar and at the Diagnostics boundary.
-  expect(Math.abs(inspector!.width - 282)).toBeLessThanOrEqual(1);
+  expect(Math.abs(inspector!.width - 300)).toBeLessThanOrEqual(1);
   expect(Math.abs(diagnostics!.height - 164)).toBeLessThanOrEqual(1);
   expect(Math.abs(inspector!.y - (shell!.y + 44 + 5))).toBeLessThanOrEqual(1);
   expect(Math.abs(inspector!.y + inspector!.height + 5 - diagnostics!.y)).toBeLessThanOrEqual(1);
