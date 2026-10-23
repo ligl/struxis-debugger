@@ -32,7 +32,7 @@ use nautilus_model::{
 };
 
 use crate::{
-    checkpoint::{OwnedCheckpoint, ReplayCheckpointProjection, ReplayInspectorProjection},
+    checkpoint::{OwnedCheckpoint, ReplayCheckpointProjection, ReplayInspectorProjection, ReplayStepResult},
     effective_config::EffectiveStruxisConfig,
     replay::{LoadedInput, ReplayCommandGate, ReplayCommandKind},
     run::{RunState, RunStatus},
@@ -81,7 +81,7 @@ enum WorkerCommand {
     GetState(SyncSender<RunState>),
     GetInspector(SyncSender<Option<ReplayInspectorProjection>>),
     SnapshotData(SyncSender<Result<ReplaySnapshotData, String>>),
-    Step(SyncSender<Result<RunState, String>>),
+    Step(SyncSender<Result<ReplayStepResult, String>>),
     Stop(SyncSender<Result<RunState, String>>),
     Dispose(SyncSender<Result<RunState, String>>),
 }
@@ -233,6 +233,10 @@ impl ReplayWorker {
     /// Processes exactly one next Test SBar and returns after owned checkpoint
     /// extraction and Run progress confirmation. Production Replay installs no sink.
     pub(crate) fn step(&mut self) -> Result<RunState, String> {
+        self.step_checkpoint().map(|result| result.run_state)
+    }
+
+    pub(crate) fn step_checkpoint(&mut self) -> Result<ReplayStepResult, String> {
         let _permit = self.command_gate
             .try_enter(ReplayCommandKind::Step)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
@@ -506,7 +510,7 @@ impl WorkerSession {
     fn step(
         &mut self,
         sink: Option<&mut dyn CheckpointSink>,
-    ) -> Result<RunState, String> {
+    ) -> Result<ReplayStepResult, String> {
         let mut sink = sink;
         if !matches!(self.state.status, RunStatus::Ready | RunStatus::Paused) {
             return Err(format!(
@@ -645,7 +649,10 @@ impl WorkerSession {
             }
         }
 
-        Ok(self.state.clone())
+        Ok(ReplayStepResult {
+            run_state: self.state.clone(),
+            inspector: self.latest_inspector.clone(),
+        })
     }
 
     /// Nautilus exposes BacktestEngine::dispose as an infallible, void API.
