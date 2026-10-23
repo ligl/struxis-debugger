@@ -271,7 +271,8 @@ async function createSelectedTestDataset(): Promise<void> {
 
   // If Reset fails or its authoritative empty state is not confirmed, never
   // proceed to Test Dataset creation.
-  await createTestDataset(startSbarId.value, endSbarId.value);
+  const created = await createTestDataset(startSbarId.value, endSbarId.value);
+  if (created) workspaceMode.value = "replay";
 }
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
