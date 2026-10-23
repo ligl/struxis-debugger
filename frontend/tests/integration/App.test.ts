@@ -382,7 +382,12 @@ describe("Origin Load workbench", () => {
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "get_run_state") return Promise.resolve(readyRun);
-      if (command === "step_run") return Promise.resolve(pausedRun);
+      if (command === "step_run") {
+        return Promise.resolve({
+          runState: pausedRun,
+          inspector: replayInspector,
+        });
+      }
       if (command === "get_replay_inspector") return Promise.resolve(replayInspector);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
