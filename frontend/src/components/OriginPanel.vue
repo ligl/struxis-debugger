@@ -6,6 +6,21 @@ defineProps<{
   loadError: string;
   formatDomainTimestamp: (value: string | null, timeframe: string | null) => string;
 }>();
+
+function formatStateKeyTimeframe(timeframe: string): string {
+  const match = timeframe.trim().match(/^(\d+)\s*[- ]?\s*(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)S?$/i);
+  if (!match) return timeframe;
+  const units: Record<string, string> = {
+    SECOND: "s",
+    MINUTE: "m",
+    HOUR: "h",
+    DAY: "D",
+    WEEK: "W",
+    MONTH: "M",
+    YEAR: "Y",
+  };
+  return `${match[1]}${units[match[2].toUpperCase()]}`;
+}
 </script>
 
 <template>
@@ -39,12 +54,8 @@ defineProps<{
           <strong data-testid="origin-sbar-count">{{ origin.sbarCount.toLocaleString() }}</strong>
         </div>
         <div class="metric">
-          <span>INSTRUMENT</span>
-          <strong>{{ origin.instrumentId }}</strong>
-        </div>
-        <div class="metric">
-          <span>BAR TYPE</span>
-          <strong>{{ origin.barType }}</strong>
+          <span>STRUXIS STATE KEY</span>
+          <strong data-testid="origin-struxis-state-key">{{ origin.instrumentId }} {{ formatStateKeyTimeframe(origin.timeframe) }}</strong>
         </div>
         <div class="metric">
           <span>STRUCTURE</span>
