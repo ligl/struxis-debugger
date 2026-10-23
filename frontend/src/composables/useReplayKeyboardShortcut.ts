@@ -37,6 +37,8 @@ export function useReplayKeyboardShortcut(
   playbackStatus: Readonly<Ref<PlaybackStatus>>,
   canControlPlayback: Readonly<Ref<boolean>>,
   runBusy: Readonly<Ref<boolean>>,
+  targetSbarId: Readonly<Ref<string | null>>,
+  restartToTarget: () => Promise<void>,
   executeCommand: (command: RunCommand) => Promise<void>,
 ): void {
   function handleKeydown(event: KeyboardEvent): void {
@@ -47,6 +49,12 @@ export function useReplayKeyboardShortcut(
       isInteractiveKeyboardTarget(document.activeElement) ||
       (runBusy.value && playbackStatus.value !== "playing")
     ) return;
+
+    if (targetSbarId.value) {
+      event.preventDefault();
+      void restartToTarget();
+      return;
+    }
 
     const command = playbackStatus.value === "playing"
       ? "pause"
