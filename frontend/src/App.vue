@@ -165,6 +165,7 @@ async function handleRestartToSBar(): Promise<void> {
   } finally {
     fastForwarding.value = false;
     restartToSBarPending.value = false;
+    targetSbarId.value = null;
   }
 }
 
