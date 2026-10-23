@@ -189,33 +189,57 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
-  it("sets a separate Restart to SBar target when the SBar candle is clicked", async () => {
-    const targetId = originBars[1]!.sbarId;
+  it("sets Restart to SBar from the crosshair X on double-click anywhere in the chart area", async () => {
     const wrapper = mount(RunChart, {
-      props: {
-        origin: origin(),
-        testDataset: testDataset(),
-        runState: null,
-        targetSbarId: targetId,
-      },
+      props: { origin: origin(), testDataset: testDataset(), runState: null },
     });
     await nextTick();
 
-    expect(wrapper.get('[data-testid="restart-to-sbar-target"]').attributes("data-target-sbar-id")).toBe(targetId);
-    mocks.clickListener?.({ point: { x: 60, y: 190 } });
+    // A normal single click keeps its existing Inspector/object-selection role
+    // and must not set a Restart target.
+    mocks.clickListener?.({ point: { x: 60, y: 150 } });
     await nextTick();
-
     expect(wrapper.emitted("objectSelect")?.[0]?.[0]).toMatchObject({
       kind: "sbar",
-      id: targetId,
+      id: originBars[1]!.sbarId,
       checkpointSbarId: null,
     });
-    expect(wrapper.emitted("targetSelect")?.[0]).toEqual([targetId]);
+    expect(wrapper.emitted("targetSelect")).toBeUndefined();
 
+    // Double-clicking at a different Y coordinate still resolves by the
+    // crosshair's vertical X coordinate, mapping Test Dataset logical index 1.
+    const stage = wrapper.get(".run-chart-stage").element;
+    stage.dispatchEvent(new MouseEvent("dblclick", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 100,
+      clientY: 20,
+    }));
+    await nextTick();
+    expect(wrapper.emitted("targetSelect")?.[0]).toEqual([originBars[2]!.sbarId]);
+
+    // The existing right-click cancellation remains target-only.
+    await wrapper.setProps({ targetSbarId: originBars[2]!.sbarId });
     const contextEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
-    wrapper.get(".run-chart-stage").element.dispatchEvent(contextEvent);
+    stage.dispatchEvent(contextEvent);
     expect(contextEvent.defaultPrevented).toBe(true);
     expect(wrapper.emitted("targetCancel")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("does not set a Restart target when a double-click maps outside the Test Dataset", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: null },
+    });
+    await nextTick();
+    mocks.coordinateToLogical.mockReturnValue(5);
+    wrapper.get(".run-chart-stage").element.dispatchEvent(new MouseEvent("dblclick", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 200,
+      clientY: 200,
+    }));
+    expect(wrapper.emitted("targetSelect")).toBeUndefined();
     wrapper.unmount();
   });
 
