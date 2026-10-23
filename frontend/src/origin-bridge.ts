@@ -87,3 +87,7 @@ export function stopRun(): Promise<RunStateDto> {
 export function disposeRun(): Promise<RunStateDto> {
   return invoke<RunStateDto>("dispose_run");
 }
+
+export function resetRun(): Promise<void> {
+  return invoke<void>("reset_run");
+}
