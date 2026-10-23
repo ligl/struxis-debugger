@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import OriginChart from "./OriginChart.vue";
 import { describeIpcError, getSnapshotReference } from "../origin-bridge";
 import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
+import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
   snapshots: SnapshotArtifactDto[];
@@ -15,11 +16,58 @@ const referenceError = ref("");
 let requestRevision = 0;
 
 const availableSnapshots = computed(() =>
-  props.snapshots.filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null),
+  props.snapshots
+    .filter((snapshot) => snapshot.kind === "complete" && snapshot.snapshotId !== null)
+    .sort((left, right) => compareGeneratedAtDescending(left.generatedAt, right.generatedAt)),
 );
 const selectedSnapshot = computed(
   () => availableSnapshots.value.find((snapshot) => snapshot.snapshotId === selectedSnapshotId.value) ?? null,
 );
+
+function compareGeneratedAtDescending(left: string | null, right: string | null): number {
+  if (left === right) return 0;
+  if (!left) return 1;
+  if (!right) return -1;
+  if (/^\\d+$/.test(left) && /^\\d+$/.test(right)) {
+    const a = BigInt(left);
+    const b = BigInt(right);
+    return a === b ? 0 : a > b ? -1 : 1;
+  }
+  return right.localeCompare(left);
+}
+
+function timeframeFromBarType(barType: string | null | undefined): string {
+  if (!barType) return "—";
+  const match = /-(\\d+)-(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)-/i.exec(barType);
+  if (!match) return "—";
+  const amount = match[1];
+  switch (match[2]!.toUpperCase()) {
+    case "SECOND": return `${amount}s`;
+    case "MINUTE": return `${amount}m`;
+    case "HOUR": return `${amount}h`;
+    case "DAY": return `${amount}D`;
+    case "WEEK": return `${amount}W`;
+    case "MONTH": return `${amount}M`;
+    case "YEAR": return `${amount}Y`;
+    default: return "—";
+  }
+}
+
+function formatEventTime(value: string | null | undefined, barType: string | null | undefined): string {
+  return formatDomainTimestamp(value, timeframeFromBarType(barType));
+}
+
+function formatGeneratedAt(value: string | null | undefined): string {
+  if (!value) return "time unavailable";
+  return /^\\d+$/.test(value) ? formatLifecycleTimestamp(value) : value;
+}
+
+function describeSnapshot(snapshot: SnapshotArtifactDto): string {
+  const timeframe = timeframeFromBarType(snapshot.barType);
+  const start = formatEventTime(snapshot.inputStartTsEvent, snapshot.barType);
+  const end = formatEventTime(snapshot.inputEndTsEvent, snapshot.barType);
+  return `${timeframe} · ${start} — ${end} · ${formatGeneratedAt(snapshot.generatedAt)}`;
+}
 
 watch(availableSnapshots, (available) => {
   if (!available.some((snapshot) => snapshot.snapshotId === selectedSnapshotId.value)) {
@@ -61,11 +109,10 @@ function handleSelection(event: Event): void {
   <section class="snapshot-reference-panel" data-testid="snapshot-reference-panel">
     <header class="snapshot-reference-heading">
       <div class="snapshot-reference-title">
-        <p class="section-index">REFERENCE / IMMUTABLE</p>
         <h3>SNAPSHOT REFERENCE</h3>
       </div>
       <label class="snapshot-reference-select">
-        <span>REFERENCE</span>
+        <span>{{ selectedSnapshot?.instrumentId ?? "INSTRUMENT" }}</span>
         <select
           data-testid="replay-reference-select"
           :value="selectedSnapshotId ?? ''"
@@ -74,7 +121,7 @@ function handleSelection(event: Event): void {
         >
           <option value="">Choose completed Snapshot…</option>
           <option v-for="snapshot in availableSnapshots" :key="snapshot.snapshotId ?? snapshot.fileName" :value="snapshot.snapshotId ?? ''">
-            {{ snapshot.snapshotId }} · {{ snapshot.generatedAt ?? "time unavailable" }}
+            {{ describeSnapshot(snapshot) }}
           </option>
         </select>
       </label>
