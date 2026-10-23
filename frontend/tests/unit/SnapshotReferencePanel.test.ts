@@ -29,6 +29,10 @@ const snapshots: SnapshotArtifactDto[] = [
     snapshotId: "snapshot-complete-01",
     runId: "run-01",
     stateKey: "state-key-01",
+    instrumentId: "AUD/USD.SIM",
+    barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
+    inputStartTsEvent: "100",
+    inputEndTsEvent: "120",
     generatedAt: "2026-10-20T10:00:00Z",
     checkpointCount: 12,
     diagnostic: null,
@@ -43,8 +47,10 @@ describe("SnapshotReferencePanel", () => {
       global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
     });
 
+    expect(wrapper.get(".snapshot-reference-select > span").text()).toBe("AUD/USD.SIM");
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
     await flushPromises();
+    expect(wrapper.get(".snapshot-reference-select > span").text()).toBe("AUD/USD.SIM");
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("run-01");
