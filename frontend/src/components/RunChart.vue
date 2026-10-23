@@ -29,6 +29,8 @@ type CBarRectangle = { id: string; x: number; y: number; width: number; height: 
 type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; color: string; dasharray: string; state: string };
 type SBarSelectionMarker = { id: string; x: number; y: number; width: number; height: number };
 const selectedSbarMarker = ref<SBarSelectionMarker | null>(null);
+const hoveredSbarMarker = ref<SBarSelectionMarker | null>(null);
+const hoveredObject = ref<ReplayChartSelection | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
@@ -83,6 +85,7 @@ let lastRunId: string | null = null;
 let lastProgressApplies: boolean | null = null;
 let visibleRangeListener: (() => void) | null = null;
 let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
+let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
@@ -149,6 +152,35 @@ function updateStructureOverlays(): void {
   }) : [];
 }
 
+function markerForSbar(sbarId: string | null | undefined): SBarSelectionMarker | null {
+  if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
+  const index = bars.value.findIndex((bar) => bar.sbarId === sbarId);
+  const bar = index >= 0 ? bars.value[index] : undefined;
+  const time = timeBySbarId.get(sbarId);
+  if (!bar || time === undefined) return null;
+  const x = chart.timeScale().timeToCoordinate(time);
+  const highY = candleSeries.priceToCoordinate(Number(bar.high));
+  const lowY = candleSeries.priceToCoordinate(Number(bar.low));
+  if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
+  const adjacentXs = [
+    index > 0 ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index - 1]!.sbarId)!) : null,
+    index + 1 < bars.value.length ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index + 1]!.sbarId)!) : null,
+  ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
+  const spacing = adjacentXs.length
+    ? Math.min(...adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0))
+    : 8;
+  const width = Math.max(4, Math.min(12, Number.isFinite(spacing) && spacing > 0 ? spacing * 0.42 : 6));
+  const top = Math.min(highY as number, lowY as number);
+  const bottom = Math.max(highY as number, lowY as number);
+  return { id: sbarId, x: (x as number) - width / 2, y: top, width, height: Math.max(2, bottom - top) };
+}
+
+function updateHoverMarker(): void {
+  hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar"
+    ? markerForSbar(hoveredObject.value.id)
+    : null;
+}
+
 function scheduleOverlayUpdate(): void {
   // Coalesce rapid wheel-zoom / pan range events to one projection per frame.
   // Lightweight Charts updates its canvas first; sample the public coordinate
@@ -177,6 +209,56 @@ function distanceToRectangleBorder(x: number, y: number, rectangle: CBarRectangl
   const outsideY = y < top ? top - y : y > bottom ? y - bottom : 0;
   if (outsideX > 0 || outsideY > 0) return Math.hypot(outsideX, outsideY);
   return Math.min(x - left, right - x, y - top, bottom - y);
+}
+
+function hitTestStructureObject(x: number, y: number): { kind: "swing" | "cbar"; id: string } | null {
+  if (!props.runState?.cursorSbarId) return null;
+  const candidates: Array<{ kind: "swing" | "cbar"; id: string; distance: number; priority: number }> = [];
+  if (layerVisibility.value.swing) {
+    for (const segment of swingSegments.value) candidates.push({ kind: "swing", id: segment.id, distance: distanceToSegment(x, y, segment), priority: 0 });
+  }
+  if (layerVisibility.value.cbar) {
+    for (const rectangle of cbarRectangles.value) candidates.push({ kind: "cbar", id: rectangle.id, distance: distanceToRectangleBorder(x, y, rectangle), priority: 1 });
+  }
+  candidates.sort((a, b) => a.distance - b.distance || a.priority - b.priority || a.id.localeCompare(b.id));
+  const best = candidates[0];
+  return best && best.distance <= 6 ? { kind: best.kind, id: best.id } : null;
+}
+
+function hitTestSbar(x: number, y: number): string | null {
+  if (!chart || !candleSeries || !layerVisibility.value.sbar || bars.value.length === 0) return null;
+  const logical = chart.timeScale().coordinateToLogical?.(x);
+  if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
+  const index = Math.round(logical);
+  const bar = bars.value[index];
+  if (!bar) return null;
+  const marker = markerForSbar(bar.sbarId);
+  if (!marker) return null;
+  const centerX = marker.x + marker.width / 2;
+  if (Math.abs(x - centerX) > Math.max(3, marker.width / 2 + 1) ||
+      y < marker.y - 5 || y > marker.y + marker.height + 5) return null;
+  return bar.sbarId;
+}
+
+function updateHoveredObject(point: { x: number; y: number } | undefined): void {
+  const checkpointSbarId = props.runState?.cursorSbarId ?? null;
+  let next: ReplayChartSelection | null = null;
+  if (point && Number.isFinite(point.x) && Number.isFinite(point.y) && !chartError.value) {
+    const structureHit = hitTestStructureObject(point.x, point.y);
+    if (structureHit && checkpointSbarId) next = { ...structureHit, checkpointSbarId };
+    else {
+      const sbarId = hitTestSbar(point.x, point.y);
+      if (sbarId) next = { kind: "sbar", id: sbarId, checkpointSbarId };
+    }
+  }
+  const current = hoveredObject.value;
+  if (current?.kind === next?.kind && current?.id === next?.id && current?.checkpointSbarId === next?.checkpointSbarId) return;
+  hoveredObject.value = next;
+  updateHoverMarker();
+}
+
+function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
+  updateHoveredObject(param.point);
 }
 
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
@@ -385,6 +467,10 @@ onMounted(() => {
     chartClickListener = handleChartClick;
     chart.subscribeClick(chartClickListener);
   }
+  if (typeof chart.subscribeCrosshairMove === "function") {
+    chartMoveListener = handleChartMove;
+    chart.subscribeCrosshairMove(chartMoveListener);
+  }
   if (typeof timeScale.subscribeVisibleLogicalRangeChange === "function") {
     timeScale.subscribeVisibleLogicalRangeChange(scheduleOverlayUpdate);
     visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(scheduleOverlayUpdate);
@@ -419,14 +505,23 @@ watch(
   () => updateProgressSeries(),
 );
 
-watch(() => props.structure, updateStructureOverlays);
+watch(() => props.structure, () => {
+  updateStructureOverlays();
+  updateHoveredObject(undefined);
+});
 watch(() => props.selectedObject, updateStructureOverlays);
+watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
+watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
 onBeforeUnmount(() => {
   visibleRangeListener?.();
   visibleRangeListener = null;
   if (chart && chartClickListener) chart.unsubscribeClick?.(chartClickListener);
+  if (chart && chartMoveListener) chart.unsubscribeCrosshairMove?.(chartMoveListener);
   chartClickListener = null;
+  chartMoveListener = null;
+  hoveredObject.value = null;
+  hoveredSbarMarker.value = null;
   resizeObserver?.disconnect();
   resizeObserver = null;
   if (overlayUpdateFrame !== null) {
