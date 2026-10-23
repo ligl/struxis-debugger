@@ -134,7 +134,9 @@ function cancelReplayTarget(): void {
 
 async function handleRestartToSBar(): Promise<void> {
   const target = targetSbarId.value;
-  if (!target || fastForwarding.value || runBusy.value || workspaceMode.value !== "replay") return;
+  if (!target || fastForwarding.value || workspaceMode.value !== "replay") return;
+  // A Play tick may own runBusy while its Step is in flight. Stop scheduling
+  // first, then wait for that Step to settle before acquiring the fast-forward path.
   await stopPlayback();
   if (runBusy.value) return;
 
