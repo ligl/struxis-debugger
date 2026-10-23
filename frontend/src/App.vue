@@ -81,7 +81,6 @@ const {
   testDataset,
   testLoading,
   testError,
-  testStatus,
   refreshCurrentTestDataset,
   prepareForOrigin,
   createTestDataset,
@@ -604,6 +603,7 @@ async function startLoad(): Promise<void> {
     prepareForOrigin(loadedOrigin);
     const currentTestDataset = await refreshCurrentTestDataset();
     initializeFromTestDataset(currentTestDataset);
+    if (testError.value) notifyError("Test Dataset refresh failed", testError.value);
   });
 }
 
@@ -615,7 +615,10 @@ onMounted(async () => {
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
   if (!originHandoffDuringStartup) {
     const currentTestDataset = await refreshCurrentTestDataset();
-    if (!originHandoffDuringStartup) initializeFromTestDataset(currentTestDataset);
+    if (!originHandoffDuringStartup) {
+      initializeFromTestDataset(currentTestDataset);
+      if (testError.value) notifyError("Test Dataset refresh failed", testError.value);
+    }
   }
 });
 
@@ -700,7 +703,6 @@ onMounted(async () => {
               :test-loading="testLoading"
               :can-mutate-test="canMutateTest"
               :test-error="testError"
-              :test-status="testStatus"
               :selected-object="selectedInspectorObject"
               :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
               :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
