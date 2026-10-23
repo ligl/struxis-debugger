@@ -92,6 +92,82 @@ let lastProgressApplies: boolean | null = null;
 let visibleRangeListener: (() => void) | null = null;
 let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
+let crosshairLogicalIndex: number | null = null;
+
+function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return target.closest(
+    "input, textarea, select, button, a[href], summary, [contenteditable]:not([contenteditable='false']), [role='button'], [role='link'], [role='menuitem'], [role='slider'], [role='textbox'], [role='combobox'], [tabindex]:not([tabindex='-1'])",
+  ) !== null;
+}
+
+function barAtLogicalIndex(logical: number): SBarDto | null {
+  if (!Number.isFinite(logical)) return null;
+  return bars.value[Math.round(logical)] ?? null;
+}
+
+function moveCrosshairBy(delta: number): boolean {
+  if (!chart || !candleSeries || bars.value.length === 0) return false;
+  const currentIndex = crosshairLogicalIndex ??
+    (props.runState?.cursorSbarId
+      ? bars.value.findIndex((bar) => bar.sbarId === props.runState?.cursorSbarId)
+      : 0);
+  const nextIndex = Math.max(0, Math.min(bars.value.length - 1, currentIndex + delta));
+  const bar = bars.value[nextIndex];
+  if (!bar) return false;
+  const time = timeBySbarId.get(bar.sbarId);
+  if (time === undefined) return false;
+  crosshairLogicalIndex = nextIndex;
+  chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
+  return true;
+}
+
+function zoomTimeScale(direction: "in" | "out"): boolean {
+  if (!chart || bars.value.length === 0) return false;
+  const timeScale = chart.timeScale();
+  const range = timeScale.getVisibleLogicalRange?.();
+  if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return false;
+  const width = range.to - range.from;
+  if (width <= 0) return false;
+  const nextWidth = Math.max(
+    2,
+    Math.min(bars.value.length + 8, width * (direction === "in" ? 0.8 : 1.25)),
+  );
+  if (Math.abs(nextWidth - width) < 0.01) return false;
+  const anchor = crosshairLogicalIndex !== null &&
+    crosshairLogicalIndex >= range.from && crosshairLogicalIndex <= range.to
+    ? crosshairLogicalIndex
+    : (range.from + range.to) / 2;
+  const anchorRatio = (anchor - range.from) / width;
+  const from = anchor - nextWidth * anchorRatio;
+  timeScale.setVisibleLogicalRange({ from, to: from + nextWidth });
+  return true;
+}
+
+function handleChartKeyboard(event: KeyboardEvent): void {
+  if (
+    event.repeat ||
+    event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+    isInteractiveKeyboardTarget(event.target) ||
+    isInteractiveKeyboardTarget(document.activeElement) ||
+    chartError.value || projectionMessage.value || bars.value.length === 0
+  ) return;
+
+  let handled = false;
+  if (event.key === "ArrowUp") handled = zoomTimeScale("in");
+  else if (event.key === "ArrowDown") handled = zoomTimeScale("out");
+  else if (event.key === "ArrowLeft") handled = moveCrosshairBy(-1);
+  else if (event.key === "ArrowRight") handled = moveCrosshairBy(1);
+  else if (event.key.toLowerCase() === "t") {
+    const bar = crosshairLogicalIndex === null ? null : barAtLogicalIndex(crosshairLogicalIndex);
+    if (bar) {
+      emit("targetSelect", bar.sbarId);
+      handled = true;
+    }
+  }
+
+  if (handled) event.preventDefault();
+}
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
@@ -272,6 +348,12 @@ function updateHoveredObject(point: { x: number; y: number } | undefined): void 
 }
 
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
+  const x = param.point?.x;
+  const logical = typeof x === "number" ? chart?.timeScale().coordinateToLogical?.(x) : null;
+  crosshairLogicalIndex = logical !== null && logical !== undefined && Number.isFinite(logical) &&
+    Math.round(logical) >= 0 && Math.round(logical) < bars.value.length
+    ? Math.round(logical)
+    : null;
   updateHoveredObject(param.point);
 }
 
@@ -310,8 +392,7 @@ function handleChartDoubleClick(event: MouseEvent): void {
   if (!Number.isFinite(x)) return;
   const logical = chart.timeScale().coordinateToLogical?.(x);
   if (logical === null || logical === undefined || !Number.isFinite(logical)) return;
-  const index = Math.round(logical);
-  const bar = bars.value[index];
+  const bar = barAtLogicalIndex(logical);
   if (!bar) return;
   emit("targetSelect", bar.sbarId);
 }
@@ -454,6 +535,7 @@ function updateProgressSeries(): void {
 }
 
 onMounted(() => {
+  document.addEventListener("keydown", handleChartKeyboard);
   if (!chartHost.value) return;
   chart = createChart(chartHost.value, {
     width: Math.max(1, chartHost.value.clientWidth),
@@ -558,6 +640,8 @@ watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
 onBeforeUnmount(() => {
+  document.removeEventListener("keydown", handleChartKeyboard);
+  crosshairLogicalIndex = null;
   visibleRangeListener?.();
   visibleRangeListener = null;
   if (chart && chartClickListener) chart.unsubscribeClick?.(chartClickListener);
