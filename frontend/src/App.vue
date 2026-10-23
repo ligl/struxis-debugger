@@ -244,8 +244,13 @@ async function createSelectedTestDataset(): Promise<void> {
   // Reconcile against backend ownership immediately before coordinating the
   // cross-workspace mutation. The local Run DTO may be stale.
   const refreshed = await refreshRunState();
-  if (!refreshed || !canMutateTest.value || !rangeSelectionReady.value) return;
+  if (!refreshed) {
+    testError.value = runError.value || "Could not verify Replay state; Test Dataset was not replaced.";
+    return;
+  }
+  if (!canMutateTest.value || !rangeSelectionReady.value) return;
 
+  testError.value = "";
   const currentRun = runState.value;
   if (currentRun) {
     const hasCompletedResult =
@@ -276,7 +281,11 @@ async function createSelectedTestDataset(): Promise<void> {
     // must finish successfully before the backend is asked to replace input.
     await stopPlayback();
     const resetSucceeded = await executeRunCommand("reset");
-    if (!resetSucceeded || runState.value !== null) return;
+    if (!resetSucceeded || runState.value !== null) {
+      testError.value = runError.value ||
+        "Replay Reset did not confirm an empty Run state; Test Dataset was not replaced.";
+      return;
+    }
 
     replayInspector.value = null;
     replayInspectorError.value = "";
