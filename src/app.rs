@@ -373,6 +373,10 @@ impl AppState {
         self.with_replay_manager(ReplayManager::dispose)
     }
 
+    pub(crate) fn replay_reset(&self) -> Result<(), IpcError> {
+        self.with_replay_manager(ReplayManager::reset)
+    }
+
     /// Explicitly persists a completed Run's owned trajectory as a new Snapshot.
     /// The manager lock is released after exporting the immutable data, before
     /// SQLite I/O and publication begin.
