@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBarDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
+import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBarDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import { formatInspectorValue } from "../inspector-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
