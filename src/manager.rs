@@ -283,6 +283,104 @@ impl ReplayManager {
         Ok(initial_state)
     }
 
+    /// Restarts from the Test Dataset beginning and processes through target_sbar_id
+    /// inside the Worker, publishing only the final confirmed checkpoint.
+    pub(crate) fn restart_to_sbar(
+        &mut self,
+        config: ReplayWorkerConfig,
+        target_sbar_id: String,
+    ) -> Result<ReplayStepResult, String> {
+        let _permit = self.gate.try_enter(ReplayCommandKind::RestartToSBar)?;
+        if let Some(worker) = self.active.as_mut() {
+            worker.dispose().map_err(|error| {
+                format!("Restart to SBar aborted: previous Run release is unconfirmed: {error}")
+            })?;
+        }
+
+        // Do not clear the prior context until the old runtime has been released.
+        self.active = None;
+        self.completed_result = None;
+        self.last_state = None;
+        self.last_inspector = None;
+
+        let (worker, initial_state) = ReplayWorker::spawn_interactive(config)?;
+        self.last_state = Some(initial_state);
+        self.active = Some(worker);
+
+        let result = self.active.as_mut()
+            .expect("new Worker is installed before fast-forward")
+            .fast_forward_to_sbar(target_sbar_id);
+
+        let result = match result {
+            Ok(result) => result,
+            Err(error) => {
+                if let Some(worker) = self.active.as_mut() {
+                    if let Ok(Some(inspector)) = worker.inspector() {
+                        self.last_inspector = Some(inspector);
+                    }
+                    if let Ok(state) = worker.state() {
+                        if state.status == crate::run::RunStatus::Failed {
+                            match worker.dispose() {
+                                Ok(released_state) => {
+                                    self.last_state = Some(released_state);
+                                    self.active = None;
+                                }
+                                Err(release_error) => {
+                                    let mut state = state;
+                                    state.failure_diagnostic = Some(format!(
+                                        "{}; runtime release is unconfirmed: {release_error}",
+                                        state.failure_diagnostic.clone().unwrap_or_else(|| error.clone())
+                                    ));
+                                    self.last_state = Some(state);
+                                    return Err(format!("{error}; Run failed and runtime release is unconfirmed: {release_error}"));
+                                }
+                            }
+                        }
+                    }
+                }
+                return Err(error);
+            }
+        };
+
+        self.last_state = Some(result.run_state.clone());
+        if result.inspector.is_some() {
+            self.last_inspector = result.inspector.clone();
+        }
+
+        if result.run_state.status == crate::run::RunStatus::Completed {
+            let worker = self.active.as_mut()
+                .expect("active Worker remains owned until terminal cleanup");
+            let trajectory = worker.snapshot_data();
+            let release = worker.dispose();
+            match (trajectory, release) {
+                (Ok(data), Ok(_released_state)) => {
+                    self.completed_result = Some(data);
+                    self.last_state = Some(result.run_state.clone());
+                    self.active = None;
+                }
+                (Err(error), Ok(released_state)) => {
+                    let mut state = released_state;
+                    state.failure_diagnostic = Some(format!(
+                        "Run completed, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"
+                    ));
+                    self.last_state = Some(state);
+                    self.active = None;
+                    return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
+                }
+                (Ok(_), Err(error)) => {
+                    let mut state = result.run_state.clone();
+                    state.status = crate::run::RunStatus::Failed;
+                    state.failure_diagnostic = Some(format!(
+                        "Run processing completed, but runtime release is unconfirmed: {error}"
+                    ));
+                    self.last_state = Some(state);
+                    return Err(format!("Run completed, but runtime release is unconfirmed: {error}"));
+                }
+            }
+        }
+        Ok(result)
+    }
+
     /// Compatibility restart path for recording-contract tests. Production uses
     /// `restart_interactive`; both paths require confirmed release of the old Run.
     #[cfg(test)]
