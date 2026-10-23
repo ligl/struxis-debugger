@@ -317,7 +317,7 @@ describe("RunChart", () => {
     };
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure, selectedObject: { kind: "cbar", id: "cbar-1", checkpointSbarId: originBars[1]!.sbarId } },
-    });
+    }) as VueWrapper<any>;
     await nextTick();
 
     expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-1"]').exists()).toBe(true);
