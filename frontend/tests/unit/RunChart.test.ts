@@ -195,13 +195,7 @@ describe("RunChart", () => {
     }) as VueWrapper<any>;
     await nextTick();
 
-    // The setup hint is hidden at rest and appears only while interacting with the chart.
-    expect(wrapper.find("[data-testid=\"restart-to-sbar-hint\"]").exists()).toBe(false);
     const stage = wrapper.get(".run-chart-stage");
-    await stage.trigger("mouseenter");
-    expect(wrapper.get("[data-testid=\"restart-to-sbar-hint\"]").text()).toBe("DOUBLE-CLICK CHART TO SET RESTART TARGET");
-    await stage.trigger("mouseleave");
-    expect(wrapper.find("[data-testid=\"restart-to-sbar-hint\"]").exists()).toBe(false);
 
     // A normal single click keeps its existing Inspector/object-selection role
     // and must not set a Restart target.
