@@ -42,7 +42,7 @@ export function useRunControl() {
     runBusy.value = true;
     runError.value = "";
     try {
-      let next: RunStateDto;
+      let next: RunStateDto | null;
       lastStepResult.value = null;
       switch (command) {
         case "start":
@@ -61,7 +61,8 @@ export function useRunControl() {
           next = await stopRun();
           break;
         case "dispose":
-          next = await disposeRun();
+          await disposeRun();
+          next = null;
           break;
         case "play":
         case "pause":
