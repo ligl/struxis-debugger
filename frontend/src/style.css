@@ -2809,6 +2809,19 @@ th, td { padding: 6px 8px; }
   flex: 0 1 auto;
 }
 
+.snapshot-reference-control::after {
+  position: absolute;
+  top: 8px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-right: 1px solid var(--dbg-text-secondary);
+  border-bottom: 1px solid var(--dbg-text-secondary);
+  content: "";
+  pointer-events: none;
+  transform: rotate(45deg);
+}
+
 .snapshot-reference-selected-label {
   position: absolute;
   z-index: 1;
@@ -2830,13 +2843,13 @@ th, td { padding: 6px 8px; }
   min-width: 0;
   height: 22px;
   padding: 1px 4px;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  background-color: transparent;
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: transparent;
   font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
   color-scheme: dark;
-  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .snapshot-reference-select select option {
@@ -2845,14 +2858,11 @@ th, td { padding: 6px 8px; }
 }
 
 .snapshot-reference-select select:hover:not(:disabled) {
-  border-color: #30353b;
-  background-color: #1c2125;
+  background: transparent;
 }
 
 .snapshot-reference-select select:focus-visible {
-  border-color: #454c55;
-  outline: 1px solid rgb(133 141 151 / 18%);
-  outline-offset: 0;
+  outline: none;
 }
 
 .snapshot-reference-select select:disabled {
