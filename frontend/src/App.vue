@@ -406,7 +406,7 @@ onMounted(async () => {
               :origin="origin"
               :test-dataset="testDataset"
               :run-state="runState"
-              :structure="replayInspector?.structure ?? null"
+              :structure="replayInspector?.sbarId === runState?.cursorSbarId ? (replayInspector?.structure ?? null) : null"
               :snapshots="snapshots"
             />
 <CompareWorkspace
