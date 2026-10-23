@@ -32,7 +32,7 @@ function mountWorkspace(active = true) {
 describe("CompareWorkspace", () => {
   it("owns difference selection and forwards the selected domain difference", async () => {
     const wrapper = mountWorkspace();
-    wrapper.findComponent(SnapshotPanel).vm.$emit("select-difference", difference);
+    wrapper.findComponent(SnapshotPanel).vm.$emit("selectDifference", difference);
     await nextTick();
 
     expect(wrapper.emitted("selectDifference")).toEqual([[difference]]);
@@ -42,7 +42,7 @@ describe("CompareWorkspace", () => {
 
   it("clears the selection when leaving Compare", async () => {
     const wrapper = mountWorkspace();
-    wrapper.findComponent(SnapshotPanel).vm.$emit("select-difference", difference);
+    wrapper.findComponent(SnapshotPanel).vm.$emit("selectDifference", difference);
     await wrapper.setProps({ active: false } as never);
     await nextTick();
 
