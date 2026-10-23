@@ -186,7 +186,7 @@ const emit = defineEmits<{
   border: 0;
   border-radius: 3px;
   background: transparent;
-  color: #aeb7bf;
+  color: #727b83;
   cursor: pointer;
   font-size: 15px;
   line-height: 1;
@@ -194,8 +194,8 @@ const emit = defineEmits<{
 }
 
 .catalog-icon-action:hover:not(:disabled) {
-  background: #29241e;
-  color: #c49a62;
+  background: #242321;
+  color: #9b805c;
 }
 
 .catalog-icon-action:active:not(:disabled) {
@@ -209,7 +209,7 @@ const emit = defineEmits<{
 
 .catalog-icon-action:disabled:hover {
   background: transparent;
-  color: #aeb7bf;
+  color: #727b83;
 }
 
 .catalog-structure-toggle {
