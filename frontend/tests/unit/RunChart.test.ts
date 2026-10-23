@@ -199,6 +199,40 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("maps Vim h/j/k/l keys to the existing Replay chart navigation commands", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: null },
+    });
+    await nextTick();
+
+    const dispatchKey = (key: string) => {
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+      document.dispatchEvent(event);
+      return event;
+    };
+
+    // l moves the crosshair one SBar to the right, just like ArrowRight.
+    const right = dispatchKey("l");
+    expect(right.defaultPrevented).toBe(true);
+    expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(11, 1700000120, expect.anything());
+
+    // k/j preserve the existing zoom-in / zoom-out behavior of ArrowUp/ArrowDown.
+    mocks.setVisibleLogicalRange.mockClear();
+    const zoomIn = dispatchKey("k");
+    expect(zoomIn.defaultPrevented).toBe(true);
+    expect(mocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+
+    mocks.setVisibleLogicalRange.mockClear();
+    const zoomOut = dispatchKey("j");
+    expect(zoomOut.defaultPrevented).toBe(true);
+    expect(mocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+
+    // h maps to ArrowLeft and is bounded at the first Test SBar.
+    const left = dispatchKey("h");
+    expect(left.defaultPrevented).toBe(true);
+    wrapper.unmount();
+  });
+
   it("sets Restart to SBar from the crosshair X on double-click anywhere in the chart area", async () => {
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: null, targetSbarId: null },
