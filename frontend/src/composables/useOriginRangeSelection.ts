@@ -64,7 +64,7 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = true;
     selectedRangeCount.value = result.count;
-    rangeSelectionStatus.value = "";
+    rangeSelectionStatus.value = `Selected inclusive interval: ${result.count} SBars (${displaySbarTime(currentOrigin, result.startSbarId)} – ${displaySbarTime(currentOrigin, result.endSbarId)}).`;
   }
 
   function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void {
@@ -90,7 +90,7 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     selectedRangeCount.value = endIndex - startIndex + 1;
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = true;
-    rangeSelectionStatus.value = "";
+    rangeSelectionStatus.value = `Adjusted inclusive interval: ${selectedRangeCount.value} SBars (${displaySbarTime(currentOrigin, startSbarId.value)} – ${displaySbarTime(currentOrigin, endSbarId.value)}).`;
   }
 
   function handleRangeSelectionError(message: string): void { rangeSelectionStatus.value = message; }
