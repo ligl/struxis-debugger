@@ -30,7 +30,7 @@ const emit = defineEmits<{
         <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
-        <SnapshotReferencePanel :snapshots="snapshots" />
+        <SnapshotReferencePanel :instrument-id="testDataset?.instrumentId ?? null" :snapshots="snapshots" />
       </template>
     </DualChartStack>
   </div>
