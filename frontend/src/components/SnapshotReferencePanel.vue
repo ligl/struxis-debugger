@@ -2,12 +2,23 @@
 import { computed, ref, watch } from "vue";
 import OriginChart from "./OriginChart.vue";
 import { describeIpcError, getSnapshotReference } from "../origin-bridge";
-import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
+import type { ReplayChartViewportSync, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
+  liveBarType: string | null;
+  liveSbarIds: string[];
+  syncEnabled: boolean;
+  syncRequest: ReplayChartViewportSync | null;
+  isPlaying: boolean;
+  replayProgress: number;
+}>();
+
+const emit = defineEmits<{
+  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision">];
+  syncEligibility: [eligible: boolean];
 }>();
 
 const selectedSnapshotId = ref<string | null>(null);
@@ -33,6 +44,34 @@ const selectedSnapshotLabel = computed(() =>
     ? describeSnapshot(selectedSnapshot.value).replace(/ · [^·]*$/, "")
     : "Choose completed Snapshot…",
 );
+
+function timeframeKey(barType: string | null | undefined): string | null {
+  if (!barType) return null;
+  const match = /-(\\d+)-(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)-/i.exec(barType);
+  return match ? match[1] + ":" + match[2]!.toUpperCase() : null;
+}
+
+const syncEligible = computed(() => {
+  const snapshot = selectedSnapshot.value;
+  const bars = reference.value?.bars;
+  const liveIds = props.liveSbarIds;
+  if (!props.syncEnabled || !snapshot || !bars || liveIds.length === 0) return false;
+  const liveTimeframe = timeframeKey(props.liveBarType);
+  const snapshotTimeframe = timeframeKey(snapshot.barType);
+  if (!liveTimeframe || liveTimeframe !== snapshotTimeframe) return false;
+  const indexById = new Map(bars.map((bar, index) => [bar.sbarId, index] as const));
+  const first = indexById.get(liveIds[0]!);
+  if (first === undefined) return false;
+  return liveIds.every((sbarId, offset) => indexById.get(sbarId) === first + offset);
+});
+const syncBrightnessFilter = computed(() =>
+  syncEligible.value && props.isPlaying
+    ? "brightness(" + (0.55 + 0.45 * Math.max(0, Math.min(1, props.replayProgress))) + ")"
+    : "none",
+);
+
+watch(syncEligible, (eligible) => emit("syncEligibility", eligible), { immediate: true });
+
 
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
   if (left === right) return 0;
@@ -158,13 +197,16 @@ function handleSelection(event: Event): void {
         <p class="snapshot-reference-unavailable">{{ referenceError }}</p>
         <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
       </div>
-      <div v-else-if="reference" class="snapshot-reference-chart" data-testid="snapshot-reference-chart">
+      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-replay-playing': syncEligible && isPlaying }" :style="{ filter: syncBrightnessFilter }" :data-sync-eligible="syncEligible" :data-replay-playing="syncEligible && isPlaying" data-testid="snapshot-reference-chart">
         <OriginChart
           :bars="reference.bars"
           :structure="reference.structure"
           :origin-dataset-id="reference.snapshotId"
           :selection-editable="false"
           display-context="snapshot-reference"
+          :sync-enabled="syncEligible"
+          :sync-request="syncRequest"
+          @viewport-change="emit('viewportChange', $event)"
         />
       </div>
       <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">
