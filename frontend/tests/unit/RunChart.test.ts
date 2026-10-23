@@ -104,12 +104,15 @@ function installResizeObserverMock(): void {
 function installChartMock(): void {
   mocks.createChart.mockReturnValue({
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: mocks.candleSetData })
-      .mockReturnValueOnce({ setData: mocks.volumeSetData }),
+      .mockReturnValueOnce({ setData: mocks.candleSetData, priceToCoordinate: (price: number) => 200 - price, applyOptions: vi.fn() })
+      .mockReturnValueOnce({ setData: mocks.volumeSetData, applyOptions: vi.fn() }),
     priceScale: vi.fn(() => ({ applyOptions: mocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
       fitContent: mocks.fitContent,
       setVisibleLogicalRange: mocks.setVisibleLogicalRange,
+      timeToCoordinate: (time: number) => time - 1700000000,
+      subscribeVisibleLogicalRangeChange: vi.fn(),
+      unsubscribeVisibleLogicalRangeChange: vi.fn(),
     })),
     applyOptions: mocks.applyChartOptions,
     remove: mocks.chartRemove,
@@ -183,6 +186,58 @@ describe("RunChart", () => {
     ]);
     expect(wrapper.get(".run-chart-foot").text()).toContain("1 / 2 PROCESSED");
     expect(wrapper.get(".run-chart-cursor").text()).toContain(originBars[1]!.sbarId);
+    wrapper.unmount();
+  });
+
+
+  it("renders authoritative CBar and Swing layers from the confirmed Replay checkpoint", async () => {
+    const structure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-1",
+        high: "12",
+        low: "9",
+        sbarStartId: originBars[1]!.sbarId,
+        sbarEndId: originBars[2]!.sbarId,
+        spanSbars: 2,
+        fractalType: null,
+        createdAt: "2026-10-23T00:00:00Z",
+      }],
+      swingCount: 1,
+      swings: [{
+        swingId: "swing-1",
+        direction: "Up",
+        high: "12",
+        low: "9",
+        cbarStartId: "cbar-1",
+        cbarEndId: "cbar-1",
+        sbarStartId: originBars[1]!.sbarId,
+        sbarEndId: originBars[2]!.sbarId,
+        startOi: null,
+        endOi: null,
+        volume: "200",
+        spanSbars: 2,
+        state: "Confirmed",
+        createdAt: "2026-10-23T00:00:00Z",
+        updatedAt: "2026-10-23T00:00:00Z",
+      }],
+    };
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure },
+    });
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-1"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-1"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("true");
+
+    await wrapper.get('[data-testid="run-layer-toggle-cbar"]').trigger("click");
+    await nextTick();
+    expect(wrapper.find('[data-testid="run-cbar-rectangle"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
+
+    await wrapper.get('[data-testid="run-chart-fit"]').trigger("click");
+    expect(mocks.fitContent).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 
