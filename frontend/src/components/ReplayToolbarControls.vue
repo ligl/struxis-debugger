@@ -5,7 +5,7 @@ import type { PlaybackStatus } from "../composables/usePlaybackController";
 import { ref, watch } from "vue";
 import { isRunCommandEligible } from "../run-command-eligibility";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   runState: RunStateDto | null;
   runBusy: boolean;
   runError: string;
@@ -14,7 +14,9 @@ const props = defineProps<{
   playbackDelayMs: number;
   canStartRun: boolean;
   canRestartRun: boolean;
-}>();
+}>(), {
+  runState: null,
+});
 
 const emit = defineEmits<{
   command: [command: RunCommand];
