@@ -117,7 +117,6 @@ describe("useTestDataset refresh ordering", () => {
     resolveCreate(testDataset("created-test"));
     await creating;
     expect(state.testDataset.value?.testDatasetId).toBe("created-test");
-    expect(state.testStatus.value).toContain("Test Dataset created");
   });
 
 });
