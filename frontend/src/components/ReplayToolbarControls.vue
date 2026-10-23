@@ -84,7 +84,7 @@ const showStop = () =>
       </div>
     </div>
     <span class="run-state" data-testid="run-toolbar-status">
-      <b :class="`run-status-${playbackStatus === 'playing' ? 'running' : (runState?.status ?? 'none')}`">{{ playbackStatus === 'playing' ? 'PLAYING' : (runState?.status === 'disposed' ? 'STOPPED' : (runState?.status ? runState.status.toUpperCase() : "NO RUN")) }}</b>
+      <b :class="`run-status-${playbackStatus === 'playing' ? 'running' : (runState?.status ?? 'none')}`">{{ playbackStatus === 'playing' ? 'PLAYING' : (runState?.status === 'disposed' ? (runState.failureDiagnostic ? 'FAILED' : 'STOPPED') : (runState?.status ? runState.status.toUpperCase() : "NO RUN")) }}</b>
       <span>{{ runState ? `${runState.processedCount.toLocaleString()} / ${runState.inputCount.toLocaleString()}` : "—" }}</span>
     </span>
     <div class="progress replay-progress" aria-label="Replay progress" role="progressbar" :aria-valuenow="runState?.processedCount ?? 0" :aria-valuemin="0" :aria-valuemax="runState?.inputCount ?? 0">
