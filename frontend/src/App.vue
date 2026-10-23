@@ -487,12 +487,14 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
     if (!resetSucceeded) {
       runError.value = runError.value ||
         "Replay could not clear the previous Run context; a new Run was not started.";
+      notifyError("Replay start failed", runError.value);
       return;
     }
     const resetStateConfirmed = await refreshRunState();
     if (!resetStateConfirmed || runState.value !== null) {
       runError.value = runError.value ||
         "Replay did not confirm an empty Run state; a new Run was not started.";
+      notifyError("Replay start failed", runError.value);
       return;
     }
     replayInspector.value = null;
@@ -555,6 +557,7 @@ async function handleRefreshCatalog(): Promise<void> {
 }
 
 async function handleLoadOrigin(): Promise<void> {
+  if (!canLoadOrigin.value) return;
   try {
     await startLoad();
     if (loadStatus.value === "failed") notifyError("Origin load failed", loadError.value);
