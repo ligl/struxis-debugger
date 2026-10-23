@@ -11,6 +11,7 @@ function mountShortcut(
   canControl = true,
   busy = false,
   target: string | null = null,
+  canUseShortcuts = canControl,
 ) {
   const playbackStatus = ref<PlaybackStatus>(playback);
   const canControlPlayback = ref(canControl);
@@ -27,6 +28,7 @@ function mountShortcut(
         targetSbarId,
         restartToTarget,
         executeCommand,
+        ref(canUseShortcuts),
       );
       return () => null;
     },
@@ -38,6 +40,18 @@ function mountShortcut(
 function pressSpace(target: EventTarget = document): KeyboardEvent {
   const event = new KeyboardEvent("keydown", {
     code: "Space",
+    bubbles: true,
+    cancelable: true,
+  });
+  target.dispatchEvent(event);
+  return event;
+}
+
+function pressKey(key: string, target: EventTarget = document): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", {
+    key,
+    code: key === " " ? "Space" : "",
+    shiftKey: key === "S",
     bubbles: true,
     cancelable: true,
   });
@@ -118,6 +132,38 @@ describe("useReplayKeyboardShortcut", () => {
     const event = pressSpace();
     expect(event.defaultPrevented).toBe(true);
     expect(state.executeCommand).toHaveBeenCalledWith("pause");
+  });
+
+  it("maps N, S, Shift+S, and R to Step, Start, Stop, and Stop then Start", async () => {
+    const state = mountShortcut("idle", true, false, null, true);
+
+    expect(pressKey("n").defaultPrevented).toBe(true);
+    expect(state.executeCommand).toHaveBeenLastCalledWith("step");
+
+    expect(pressKey("s").defaultPrevented).toBe(true);
+    expect(state.executeCommand).toHaveBeenLastCalledWith("start");
+
+    expect(pressKey("S").defaultPrevented).toBe(true);
+    expect(state.executeCommand).toHaveBeenLastCalledWith("stop");
+
+    state.executeCommand.mockClear();
+    expect(pressKey("r").defaultPrevented).toBe(true);
+    await Promise.resolve();
+    expect(state.executeCommand.mock.calls).toEqual([["stop"], ["start"]]);
+  });
+
+  it("does not run transport shortcuts outside Replay or from interactive controls", () => {
+    const outsideReplay = mountShortcut("idle", false, false, null, false);
+    const ignored = pressKey("n");
+    expect(ignored.defaultPrevented).toBe(false);
+    expect(outsideReplay.executeCommand).not.toHaveBeenCalled();
+
+    const state = mountShortcut("idle", true, false, null, true);
+    const button = document.createElement("button");
+    document.body.append(button);
+    const event = pressKey("s", button);
+    expect(event.defaultPrevented).toBe(false);
+    expect(state.executeCommand).not.toHaveBeenCalled();
   });
 
   it("removes the global listener when the owner unmounts", () => {
