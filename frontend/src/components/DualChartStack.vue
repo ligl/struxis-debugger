@@ -5,10 +5,11 @@ const props = defineProps<{
   workspace: "replay" | "compare";
 }>();
 
-const upperShare = ref(50);
+const initialUpperShare = props.workspace === "replay" ? 75 : 50;
+const upperShare = ref(initialUpperShare);
 const stackElement = ref<HTMLElement | null>(null);
 let dragStartY = 0;
-let dragStartShare = 50;
+let dragStartShare = initialUpperShare;
 
 function clampShare(value: number): number {
   return Math.max(25, Math.min(75, value));
