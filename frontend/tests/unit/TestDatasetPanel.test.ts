@@ -78,6 +78,30 @@ function mountPanel() {
 }
 
 describe("TestDatasetPanel details popover", () => {
+  it("always renders TEST DETAILS and disables it when no Test Dataset is available", async () => {
+    const wrapper = mount(TestDatasetPanel, {
+      props: {
+        origin,
+        testDataset: null,
+        startSbarId: origin.firstSbarId,
+        endSbarId: origin.lastSbarId,
+        rangeSelectionReady: false,
+        rangeSelectionPending: false,
+        selectedRangeCount: 0,
+        rangeSelectionStatus: "",
+        testLoading: false,
+        canMutateTest: true,
+        testError: "",
+        testStatus: "",
+      },
+    });
+
+    const trigger = wrapper.get('[data-testid="test-dataset-details-toggle"]');
+    expect(trigger.text()).toBe("TEST DETAILS");
+    expect(trigger.attributes("disabled")).toBeDefined();
+    expect(wrapper.find('[data-testid="test-dataset-details-popover"]').exists()).toBe(false);
+  });
+
   it("keeps the TEST DETAILS trigger visible while the popover is open", async () => {
     const wrapper = mountPanel();
 
@@ -89,8 +113,15 @@ describe("TestDatasetPanel details popover", () => {
     expect(wrapper.get('[data-testid="test-dataset-details-toggle"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="test-dataset-details-toggle"]').attributes("aria-expanded")).toBe("true");
     expect(wrapper.get('[data-testid="test-dataset-details-popover"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="test-dataset-details-popover"]').text()).toContain("INCLUSIVE INTERVAL");
-    expect(wrapper.text()).toContain("SEQUENCE FINGERPRINT");
+    const detailsText = wrapper.get('[data-testid="test-dataset-details-popover"]').text();
+    expect(detailsText).toContain("INCLUSIVE INTERVAL");
+    expect(detailsText).toContain("INSTRUMENT");
+    expect(detailsText).toContain("BTCUSDT-PERP.BINANCE");
+    expect(detailsText).toContain("TIMEFRAME");
+    expect(detailsText).toContain("1D");
+    expect(detailsText).toContain("SEQUENCE FINGERPRINT");
+    expect(trigger.text()).toBe("TEST DETAILS");
+    expect(trigger.find("svg, img").exists()).toBe(false);
   });
 
   it("closes the popover when pointer input occurs outside the controls", async () => {
