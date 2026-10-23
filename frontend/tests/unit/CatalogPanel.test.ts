@@ -4,24 +4,26 @@ import CatalogPanel from "../../src/components/CatalogPanel.vue";
 
 describe("CatalogPanel", () => {
   it("keeps Catalog refresh available when unrelated mutations are blocked", async () => {
-    const wrapper = mount(CatalogPanel, {
-      props: {
-        datasets: [],
-        selectedId: "",
-        selectedDataset: null,
-        instrumentGroups: [],
-        refreshing: false,
-        loading: false,
-        mutationBusy: true,
-        discoveryError: "",
-        enableStructure: true,
-        origin: null,
-        loadStatus: "idle",
-        loadError: "",
-        formatDomainTimestamp: (value: string | null) => value ?? "—",
-      },
+    const props = {
+      datasets: [],
+      selectedId: "",
+      selectedDataset: null,
+      instrumentGroups: [],
+      refreshing: false,
+      loading: false,
+      mutationBusy: true,
+      discoveryError: "",
+      enableStructure: true,
+      origin: null,
+      loadStatus: "idle" as const,
+      loadError: "",
+      formatDomainTimestamp: (value: string | null) => value ?? "—",
+    };
+    const mountPanel = (overrides: Partial<typeof props> = {}) => mount(CatalogPanel, {
+      props: { ...props, ...overrides },
       global: { stubs: { OriginPanel: true } },
     });
+    let wrapper = mountPanel();
 
     const refresh = wrapper.get('[data-testid="catalog-refresh"]');
     expect((refresh.element as HTMLButtonElement).disabled).toBe(false);
@@ -29,11 +31,14 @@ describe("CatalogPanel", () => {
     await refresh.trigger("click");
     expect(wrapper.emitted("refresh")).toHaveLength(1);
 
-    await wrapper.setProps({ refreshing: true });
+    wrapper.unmount();
+    wrapper = mountPanel({ refreshing: true });
     expect((wrapper.get('[data-testid="catalog-refresh"]').element as HTMLButtonElement).disabled).toBe(true);
 
-    await wrapper.setProps({ refreshing: false, loading: true });
+    wrapper.unmount();
+    wrapper = mountPanel({ loading: true });
     expect((wrapper.get('[data-testid="catalog-refresh"]').element as HTMLButtonElement).disabled).toBe(true);
+    wrapper.unmount();
   });
 
   it("keeps popover interactions inside the Catalog and Origin status control", async () => {
