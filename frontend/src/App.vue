@@ -517,8 +517,8 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   }
   if (command === "start" || command === "restart") {
     await refreshReplayInspector();
-  } else if (command === "stop") {
-  } else if (command === "reset") {
+  }
+  if (command === "reset") {
     replayInspector.value = null;
     replayInspectorError.value = "";
   }
