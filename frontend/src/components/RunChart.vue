@@ -350,11 +350,15 @@ function updateHoveredObject(point: { x: number; y: number } | undefined): void 
 
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
   const x = param.point?.x;
-  const logical = typeof x === "number" ? chart?.timeScale().coordinateToLogical?.(x) : null;
-  crosshairLogicalIndex = logical !== null && logical !== undefined && Number.isFinite(logical) &&
-    Math.round(logical) >= 0 && Math.round(logical) < bars.value.length
-    ? Math.round(logical)
-    : null;
+  // A leave event clears hover, but retains the last logical crosshair anchor
+  // so T still targets the position the user was inspecting.
+  if (typeof x === "number") {
+    const logical = chart?.timeScale().coordinateToLogical?.(x);
+    crosshairLogicalIndex = logical !== null && logical !== undefined && Number.isFinite(logical) &&
+      Math.round(logical) >= 0 && Math.round(logical) < bars.value.length
+      ? Math.round(logical)
+      : null;
+  }
   updateHoveredObject(param.point);
 }
 
