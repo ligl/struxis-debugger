@@ -13,7 +13,7 @@ defineProps<{
 }>();
 function snapshotKindLabel(kind: SnapshotArtifactDto["kind"]): string {
   const labels: Record<SnapshotArtifactDto["kind"], string> = {
-    complete: "COMPLETE / VERIFIED",
+    complete: "COMPLETE / PUBLISHED",
     invalidPublished: "INVALID PUBLISHED",
     recordingTemporary: "RECORDING TEMP",
     finalizingTemporary: "FINALIZING TEMP",
@@ -77,7 +77,7 @@ function differenceKey(difference: ObjectDifferenceDto): string {
             <td>{{ snapshot.stateKey ?? "—" }}</td>
             <td>{{ formatLifecycleTimestamp(snapshot.generatedAt) }}</td>
             <td>{{ snapshot.checkpointCount ?? "—" }}</td>
-            <td><span class="artifact-kind" :class="{ verified: snapshot.kind === 'complete', invalid: snapshot.kind === 'invalidPublished' || snapshot.kind === 'unreadableTemporary' }">{{ snapshotKindLabel(snapshot.kind) }}</span><small v-if="snapshot.diagnostic" class="diagnostic">{{ snapshot.diagnostic }}</small></td>
+            <td><span class="artifact-kind" :class="{ published: snapshot.kind === 'complete', invalid: snapshot.kind === 'invalidPublished' || snapshot.kind === 'unreadableTemporary' }">{{ snapshotKindLabel(snapshot.kind) }}</span><small v-if="snapshot.diagnostic" class="diagnostic">{{ snapshot.diagnostic }}</small></td>
           </tr>
         </tbody>
       </table>
