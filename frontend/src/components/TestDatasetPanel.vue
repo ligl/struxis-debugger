@@ -72,7 +72,7 @@ const emit = defineEmits<{ create: [] }>();
 
     <div v-if="!canMutateTest && origin || testError || testStatus" class="dataset-controls-feedback">
       <p v-if="!canMutateTest && origin" class="dataset-feedback-note">
-        Dispose the current Run before replacing its Test Dataset.
+        Stop or Reset the active Run before changing its Test Dataset.
       </p>
       <p v-if="testError" class="error-message" role="alert">{{ testError }}</p>
       <p v-else-if="testStatus" class="success-message" role="status">{{ testStatus }}</p>
