@@ -105,6 +105,7 @@ function fitContent(): void {
 function updateStructureOverlays(): void {
   if (!chart || !candleSeries || typeof chart.timeScale().timeToCoordinate !== "function" || typeof candleSeries.priceToCoordinate !== "function") {
     selectedSbarMarker.value = null;
+    hoveredSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
     return;
@@ -150,6 +151,7 @@ function updateStructureOverlays(): void {
     const style = swingStyleByState[swing.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
     return [{ id: swing.swingId, x1: x1 as number, y1: y1 as number, x2: x2 as number, y2: y2 as number, color: style.color, dasharray: style.dasharray, state: swing.state }];
   }) : [];
+  updateHoverMarker();
 }
 
 function markerForSbar(sbarId: string | null | undefined): SBarSelectionMarker | null {
