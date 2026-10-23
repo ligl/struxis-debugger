@@ -821,7 +821,7 @@ onBeforeUnmount(() => {
 <template>
   <section
     class="origin-chart-panel"
-    :aria-label="props.displayContext === \"snapshot-reference\" ? \"Snapshot Reference chart\" : \"Origin SBar chart\""
+    :aria-label="props.displayContext === 'snapshot-reference' ? 'Snapshot Reference chart' : 'Origin SBar chart'"
     data-testid="origin-chart-panel"
     @struxis-select-sbar="handleSbarSelectionRequest"
     @contextmenu.prevent.stop="handleChartContextMenu"
@@ -859,7 +859,7 @@ onBeforeUnmount(() => {
         :data-selection-start-x="selectionStartX ?? ''"
         :data-selection-end-x="selectionEndX ?? ''"
         :data-selection-preview-x="previewX ?? ''"
-        :aria-label="`Candlestick and volume chart for ${props.displayContext === \"snapshot-reference\" ? \"Snapshot\" : \"Origin\"} ${originDatasetId}`"
+        :aria-label="`Candlestick and volume chart for ${props.displayContext === 'snapshot-reference' ? 'Snapshot' : 'Origin'} ${originDatasetId}`"
       ></div>
       <svg
         class="origin-structure-overlay"
