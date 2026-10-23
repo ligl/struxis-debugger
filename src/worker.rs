@@ -232,8 +232,8 @@ impl ReplayWorker {
         })
     }
 
-    /// Processes exactly one next Test SBar and returns after owned checkpoint
-    /// extraction and Run progress confirmation. Production Replay installs no sink.
+    /// Legacy test helper for assertions that only need the updated RunState.
+    #[cfg(test)]
     pub(crate) fn step(&mut self) -> Result<RunState, String> {
         self.step_checkpoint().map(|result| result.run_state)
     }
