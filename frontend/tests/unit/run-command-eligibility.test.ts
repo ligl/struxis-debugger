@@ -15,7 +15,7 @@ describe("isRunCommandEligible", () => {
       play: [],
       pause: [],
       stop: ["ready", "running", "paused"],
-      dispose: statuses,
+      reset: statuses,
     };
 
     for (const command of Object.keys(expected) as RunCommand[]) {
@@ -41,7 +41,7 @@ describe("isRunCommandEligible", () => {
 
   it("rejects every command, including Reset, while a Run operation is busy", () => {
     const commands: RunCommand[] = [
-      "start", "restart", "step", "play", "pause", "stop", "dispose",
+      "start", "restart", "step", "play", "pause", "stop", "reset",
     ];
     for (const command of commands) {
       expect(isRunCommandEligible(command, "ready", true, true, true)).toBe(false);
