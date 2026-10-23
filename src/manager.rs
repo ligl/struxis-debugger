@@ -105,8 +105,8 @@ impl ReplayManager {
         Ok(projection)
     }
 
-    /// Returns the authoritative Run state when a Run is owned, or `None`
-    /// when Replay has not started a Run in this application session.
+    /// Returns the active Run state, or the last user-visible processing result
+    /// after its worker has been released. Reset clears that retained result.
     pub(crate) fn state(&mut self) -> Result<Option<RunState>, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
         if let Some(worker) = self.active.as_mut() {
