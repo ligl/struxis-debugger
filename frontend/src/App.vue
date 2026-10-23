@@ -408,7 +408,8 @@ async function startLoad(): Promise<void> {
 
 
 onMounted(async () => {
-  await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots()]);
+  // Run state is part of startup hydration; Replay no longer relies on manual Refresh.
+  await Promise.all([refreshDatasets(), refreshCurrentOrigin(), refreshSnapshots(), refreshRunState()]);
   // If a user Load completed during startup, its handoff already refreshed the
   // Test Dataset. Do not issue a later startup read that could overwrite a mutation.
   if (!originHandoffDuringStartup) {
