@@ -159,7 +159,7 @@ function formatReplayField(field: string, value: unknown): string {
           class="inspector-related-item"
           :data-testid="'inspector-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
         >
-          <summary>{{ endpoint.label }} <code>{{ endpoint.id }}</code></summary>
+          <summary>{{ endpoint.label }} <InspectorDomainId :value="endpoint.id" /></summary>
           <dl v-if="endpoint.kind === 'cbar'" class="inspector-fields inspector-related-fields">
             <InspectorPropertyField label="CBar ID" :value="endpoint.object.cbarId" wide />
             <InspectorPropertyField label="High" :value="endpoint.object.high" />
