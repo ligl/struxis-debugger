@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("lightweight-charts", () => ({
   CandlestickSeries: { kind: "candlestick" },
   ColorType: { Solid: "solid" },
+  CrosshairMode: { Normal: 0 },
   HistogramSeries: { kind: "histogram" },
   createChart: mocks.createChart,
 }));
