@@ -1529,6 +1529,20 @@ body,
   pointer-events: none;
 }
 
+.replay-target-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 5px;
+  border: 1px solid rgb(198 160 107 / 45%);
+  color: #C6A06B;
+  background: rgb(198 160 107 / 8%);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
 .run-chart-legend {
   pointer-events: auto;
 }
