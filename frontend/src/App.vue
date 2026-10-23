@@ -27,7 +27,7 @@ import { useReplayKeyboardShortcut } from "./composables/useReplayKeyboardShortc
 import { usePlaybackController } from "./composables/usePlaybackController";
 import { useDevtoolsContextMenu } from "./composables/useDevtoolsContextMenu";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
-import { notifyError, notifySuccess } from "./composables/useAppToast";
+import { notifyError } from "./composables/useAppToast";
 
 const {
   datasets,
@@ -163,7 +163,6 @@ async function handleRestartToSBar(): Promise<void> {
     if (succeeded) {
       replayInspector.value = lastStepResult.value?.inspector ?? null;
       replayInspectorError.value = "";
-      notifySuccess("Replay restored", `Replay restored to SBar ${target}.`);
     } else {
       notifyError("Replay restore failed", runError.value || "Replay could not restore the selected checkpoint.");
     }
@@ -346,7 +345,6 @@ async function createSelectedTestDataset(): Promise<void> {
   const created = await createTestDataset(startSbarId.value, endSbarId.value);
   if (created) {
     workspaceMode.value = "replay";
-    notifySuccess("Test Dataset created", "Replay is ready to start from the selected inclusive interval.");
   } else if (testError.value) {
     notifyError("Test Dataset creation failed", testError.value);
   }
@@ -519,13 +517,10 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   }
   if (command === "start" || command === "restart") {
     await refreshReplayInspector();
-    notifySuccess(command === "start" ? "Replay started" : "Replay restarted");
   } else if (command === "stop") {
-    notifySuccess("Replay stopped");
   } else if (command === "reset") {
     replayInspector.value = null;
     replayInspectorError.value = "";
-    notifySuccess("Replay reset");
   }
 }
 
@@ -547,13 +542,11 @@ async function handleSaveSnapshot(): Promise<void> {
   if (playbackStatus.value === "playing" || !hasCompletedRunResult(runState.value)) return;
   await saveCompletedRunSnapshot();
   if (snapshotsError.value) notifyError("Snapshot save failed", snapshotsError.value);
-  else notifySuccess("Snapshot saved");
 }
 
 async function handleRefreshCatalog(): Promise<void> {
   await refreshDatasets();
   if (discoveryError.value) notifyError("Catalog refresh failed", discoveryError.value);
-  else notifySuccess("Catalog refreshed", `${datasets.value.length} Dataset entries discovered.`);
 }
 
 async function handleLoadOrigin(): Promise<void> {
@@ -561,7 +554,6 @@ async function handleLoadOrigin(): Promise<void> {
   try {
     await startLoad();
     if (loadStatus.value === "failed") notifyError("Origin load failed", loadError.value);
-    else if (loadStatus.value === "loaded") notifySuccess("Origin loaded", selectedDataset.value?.id ?? "Origin Dataset is ready.");
   } catch (error) {
     notifyError("Origin load failed", error instanceof Error ? error.message : String(error));
   }
@@ -570,13 +562,11 @@ async function handleLoadOrigin(): Promise<void> {
 async function handleCompare(baselineSnapshotId: string, candidateSnapshotId: string): Promise<void> {
   await runCompare(baselineSnapshotId, candidateSnapshotId);
   if (compareError.value) notifyError("Snapshot comparison failed", compareError.value);
-  else if (compareResult.value) notifySuccess("Snapshot comparison completed");
 }
 
 async function handleRefreshSnapshots(): Promise<void> {
   await refreshSnapshots();
   if (snapshotsError.value) notifyError("Snapshot list refresh failed", snapshotsError.value);
-  else notifySuccess("Snapshot list refreshed", `${snapshots.value.length} Snapshots available.`);
 }
 
 const canControlPlaybackShortcut = computed(() =>
