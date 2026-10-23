@@ -323,7 +323,8 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
 
     let after_failure = state
         .replay_state()
-        .expect("failed Snapshot save must leave Run state queryable");
+        .expect("failed Snapshot save must leave Run state queryable")
+        .expect("completed Run state must remain present after failed Snapshot save");
     assert_eq!(after_failure.status, RunStatus::Completed);
     assert_eq!(after_failure.processed_count, 2);
     assert_eq!(
