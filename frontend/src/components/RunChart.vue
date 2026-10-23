@@ -11,20 +11,24 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { OriginDatasetDto, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
+import type { OriginDatasetDto, ReplayChartSelection, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
   runState: RunStateDto | null;
   structure?: ReplayInspectorStructureDto | null;
+  selectedObject?: ReplayChartSelection | null;
 }>();
+const emit = defineEmits<{ objectSelect: [selection: ReplayChartSelection] }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; color: string; dasharray: string; state: string };
+type SBarSelectionMarker = { id: string; x: number; y: number; width: number; height: number };
+const selectedSbarMarker = ref<SBarSelectionMarker | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
@@ -77,6 +81,7 @@ let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedTestDatasetId: string | null = null;
 let visibleRangeListener: (() => void) | null = null;
+let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
@@ -95,12 +100,24 @@ function fitContent(): void {
 
 function updateStructureOverlays(): void {
   if (!chart || !candleSeries || typeof chart.timeScale().timeToCoordinate !== "function" || typeof candleSeries.priceToCoordinate !== "function") {
+    selectedSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
     return;
   }
   const timeScale = chart.timeScale();
   const structure = props.structure;
+  const selected = props.selectedObject;
+  if (selected?.kind === "sbar" && selected.checkpointSbarId === props.runState?.cursorSbarId) {
+    const selectedTime = timeBySbarId.get(selected.id);
+    const selectedBar = bars.value.find((bar) => bar.sbarId === selected.id);
+    const selectedX = selectedTime === undefined ? null : timeScale.timeToCoordinate(selectedTime);
+    const selectedHigh = selectedBar ? candleSeries.priceToCoordinate(Number(selectedBar.high)) : null;
+    const selectedLow = selectedBar ? candleSeries.priceToCoordinate(Number(selectedBar.low)) : null;
+    if (selectedBar && selectedX !== null && selectedX !== undefined && selectedHigh !== null && selectedHigh !== undefined && selectedLow !== null && selectedLow !== undefined) {
+      selectedSbarMarker.value = { id: selected.id, x: selectedX - 6, y: Math.min(selectedHigh, selectedLow), width: 12, height: Math.max(4, Math.abs(selectedLow - selectedHigh)) };
+    } else selectedSbarMarker.value = null;
+  } else selectedSbarMarker.value = null;
   cbarRectangles.value = layerVisibility.value.cbar ? (structure?.cbars ?? []).flatMap((cbar) => {
     const start = timeBySbarId.get(cbar.sbarStartId);
     const end = timeBySbarId.get(cbar.sbarEndId);
@@ -129,6 +146,48 @@ function updateStructureOverlays(): void {
     const style = swingStyleByState[swing.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
     return [{ id: swing.swingId, x1: x1 as number, y1: y1 as number, x2: x2 as number, y2: y2 as number, color: style.color, dasharray: style.dasharray, state: swing.state }];
   }) : [];
+}
+
+function distanceToSegment(x: number, y: number, segment: SwingSegment): number {
+  const dx = segment.x2 - segment.x1;
+  const dy = segment.y2 - segment.y1;
+  const lengthSquared = dx * dx + dy * dy;
+  const projection = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((x - segment.x1) * dx + (y - segment.y1) * dy) / lengthSquared));
+  return Math.hypot(x - (segment.x1 + projection * dx), y - (segment.y1 + projection * dy));
+}
+
+function distanceToRectangleBorder(x: number, y: number, rectangle: CBarRectangle): number {
+  const left = rectangle.x;
+  const right = rectangle.x + rectangle.width;
+  const top = rectangle.y;
+  const bottom = rectangle.y + rectangle.height;
+  const outsideX = x < left ? left - x : x > right ? x - right : 0;
+  const outsideY = y < top ? top - y : y > bottom ? y - bottom : 0;
+  if (outsideX > 0 || outsideY > 0) return Math.hypot(outsideX, outsideY);
+  return Math.min(x - left, right - x, y - top, bottom - y);
+}
+
+function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
+  const x = param.point?.x;
+  const y = param.point?.y;
+  if (!chart || chartError.value || typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) return;
+  const tolerance = 6;
+  const candidates: Array<{ kind: "swing" | "cbar"; id: string; distance: number; priority: number }> = [];
+  for (const segment of swingSegments.value) candidates.push({ kind: "swing", id: segment.id, distance: distanceToSegment(x, y, segment), priority: 0 });
+  for (const rectangle of cbarRectangles.value) candidates.push({ kind: "cbar", id: rectangle.id, distance: distanceToRectangleBorder(x, y, rectangle), priority: 1 });
+  candidates.sort((a, b) => a.distance - b.distance || a.priority - b.priority || a.id.localeCompare(b.id));
+  const structureHit = candidates[0];
+  const checkpointSbarId = props.runState?.cursorSbarId;
+  if (structureHit && structureHit.distance <= tolerance && checkpointSbarId) {
+    emit("objectSelect", { kind: structureHit.kind, id: structureHit.id, checkpointSbarId });
+    return;
+  }
+  const logical = chart.timeScale().coordinateToLogical?.(x);
+  if (logical === null || logical === undefined || !Number.isFinite(logical)) return;
+  const index = Math.round(logical);
+  const bar = bars.value[index];
+  if (!bar || !checkpointSbarId) return;
+  emit("objectSelect", { kind: "sbar", id: bar.sbarId, checkpointSbarId });
 }
 
 function updateChart(): void {
@@ -235,6 +294,10 @@ onMounted(() => {
   });
   chart.priceScale("").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
   const timeScale = chart.timeScale();
+  if (typeof chart.subscribeClick === "function") {
+    chartClickListener = handleChartClick;
+    chart.subscribeClick(chartClickListener);
+  }
   if (typeof timeScale.subscribeVisibleLogicalRangeChange === "function") {
     const refreshOverlays = () => updateStructureOverlays();
     timeScale.subscribeVisibleLogicalRangeChange(refreshOverlays);
@@ -269,6 +332,8 @@ watch(
 onBeforeUnmount(() => {
   visibleRangeListener?.();
   visibleRangeListener = null;
+  if (chart && chartClickListener) chart.unsubscribeClick?.(chartClickListener);
+  chartClickListener = null;
   resizeObserver?.disconnect();
   resizeObserver = null;
   chart?.remove();
@@ -312,8 +377,9 @@ onBeforeUnmount(() => {
       <div ref="chartHost" class="run-chart-host" data-testid="run-chart-canvas"
         :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
       <svg class="run-structure-overlay" data-testid="run-structure-overlay" aria-hidden="true">
-        <line v-for="segment in swingSegments" :key="segment.id" :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2" :stroke="segment.color" stroke-width="1.25" :stroke-dasharray="segment.dasharray || undefined" stroke-linecap="round" data-testid="run-swing-segment" :data-swing-id="segment.id" :data-swing-state="segment.state" />
-        <rect v-for="rectangle in cbarRectangles" :key="rectangle.id" :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height" fill="none" stroke="#A0A7B0" stroke-width="1" data-testid="run-cbar-rectangle" :data-cbar-id="rectangle.id" />
+        <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
+        <line v-for="segment in swingSegments" :key="segment.id" :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2" :stroke="selectedObject?.kind === 'swing' && selectedObject.id === segment.id && selectedObject.checkpointSbarId === runState?.cursorSbarId ? '#D6A85D' : segment.color" :stroke-width="selectedObject?.kind === 'swing' && selectedObject.id === segment.id && selectedObject.checkpointSbarId === runState?.cursorSbarId ? 2.25 : 1.25" :stroke-dasharray="segment.dasharray || undefined" stroke-linecap="round" data-testid="run-swing-segment" :data-swing-id="segment.id" :data-swing-state="segment.state" />
+        <rect v-for="rectangle in cbarRectangles" :key="rectangle.id" :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height" fill="none" :stroke="selectedObject?.kind === 'cbar' && selectedObject.id === rectangle.id && selectedObject.checkpointSbarId === runState?.cursorSbarId ? '#D6A85D' : '#A0A7B0'" :stroke-width="selectedObject?.kind === 'cbar' && selectedObject.id === rectangle.id && selectedObject.checkpointSbarId === runState?.cursorSbarId ? 2 : 1" data-testid="run-cbar-rectangle" :data-cbar-id="rectangle.id" />
       </svg>
       <div class="run-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="run-layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
