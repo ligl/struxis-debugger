@@ -328,7 +328,7 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
     assert_eq!(after_failure.processed_count, 2);
     assert_eq!(
         after_failure.cursor_sbar_id,
-        completed.cursor_sbar_id,
+        completed.run_state.cursor_sbar_id,
         "failed Snapshot save must not roll back the confirmed cursor"
     );
 
