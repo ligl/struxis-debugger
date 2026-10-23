@@ -84,12 +84,11 @@ impl ReplayManager {
         worker.inspector()
     }
 
-    pub(crate) fn state(&mut self) -> Result<RunState, String> {
+    /// Returns the authoritative Run state when a Run is owned, or `None`
+    /// when Replay has not started a Run in this application session.
+    pub(crate) fn state(&mut self) -> Result<Option<RunState>, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
-        self.active
-            .as_mut()
-            .ok_or_else(|| "GetState rejected: ReplayManager has no active Run".to_owned())?
-            .state()
+        self.active.as_mut().map(ReplayWorker::state).transpose()
     }
 
     pub(crate) fn step(&mut self) -> Result<RunState, String> {
