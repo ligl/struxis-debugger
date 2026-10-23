@@ -3,6 +3,7 @@ import {
   describeIpcError,
   getRunState,
   restartRun,
+  restartToSBar,
   resetRun,
   startRun,
   stepRun,
@@ -31,6 +32,29 @@ export function useRunControl() {
       return true;
     } catch (error) {
       runError.value = describeIpcError(error);
+      return false;
+    } finally {
+      runBusy.value = false;
+    }
+  }
+
+  async function executeRestartToSBar(targetSbarId: string): Promise<boolean> {
+    if (runBusy.value) return false;
+    runBusy.value = true;
+    runError.value = "";
+    lastStepResult.value = null;
+    try {
+      const result = await restartToSBar(targetSbarId);
+      lastStepResult.value = result;
+      runState.value = result.runState;
+      return true;
+    } catch (error) {
+      runError.value = describeIpcError(error);
+      try {
+        runState.value = await getRunState();
+      } catch {
+        // Keep the last confirmed state if reconciliation also fails.
+      }
       return false;
     } finally {
       runBusy.value = false;
@@ -92,5 +116,6 @@ export function useRunControl() {
     lastStepResult,
     refreshRunState,
     executeRunCommand,
+    executeRestartToSBar,
   };
 }
