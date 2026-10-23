@@ -307,7 +307,9 @@ impl ReplayManager {
         self.last_state = Some(initial_state);
         self.active = Some(worker);
 
-        let result = self.active.as_mut()
+        let result = self
+            .active
+            .as_mut()
             .expect("new Worker is installed before fast-forward")
             .fast_forward_to_sbar(target_sbar_id);
 
@@ -329,10 +331,15 @@ impl ReplayManager {
                                     let mut state = state;
                                     state.failure_diagnostic = Some(format!(
                                         "{}; runtime release is unconfirmed: {release_error}",
-                                        state.failure_diagnostic.clone().unwrap_or_else(|| error.clone())
+                                        state
+                                            .failure_diagnostic
+                                            .clone()
+                                            .unwrap_or_else(|| error.clone())
                                     ));
                                     self.last_state = Some(state);
-                                    return Err(format!("{error}; Run failed and runtime release is unconfirmed: {release_error}"));
+                                    return Err(format!(
+                                        "{error}; Run failed and runtime release is unconfirmed: {release_error}"
+                                    ));
                                 }
                             }
                         }
@@ -348,7 +355,9 @@ impl ReplayManager {
         }
 
         if result.run_state.status == crate::run::RunStatus::Completed {
-            let worker = self.active.as_mut()
+            let worker = self
+                .active
+                .as_mut()
                 .expect("active Worker remains owned until terminal cleanup");
             let trajectory = worker.snapshot_data();
             let release = worker.dispose();
