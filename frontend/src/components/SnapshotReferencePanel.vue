@@ -28,7 +28,7 @@ function compareGeneratedAtDescending(left: string | null, right: string | null)
   if (left === right) return 0;
   if (!left) return 1;
   if (!right) return -1;
-  if (/^\\d+$/.test(left) && /^\\d+$/.test(right)) {
+  if (/^\d+$/.test(left) && /^\d+$/.test(right)) {
     const a = BigInt(left);
     const b = BigInt(right);
     return a === b ? 0 : a > b ? -1 : 1;
@@ -38,7 +38,7 @@ function compareGeneratedAtDescending(left: string | null, right: string | null)
 
 function timeframeFromBarType(barType: string | null | undefined): string {
   if (!barType) return "—";
-  const match = /-(\\d+)-(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)-/i.exec(barType);
+  const match = /-(\d+)-(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)-/i.exec(barType);
   if (!match) return "—";
   const amount = match[1];
   switch (match[2]!.toUpperCase()) {
@@ -59,7 +59,7 @@ function formatEventTime(value: string | null | undefined, barType: string | nul
 
 function formatGeneratedAt(value: string | null | undefined): string {
   if (!value) return "time unavailable";
-  return /^\\d+$/.test(value) ? formatLifecycleTimestamp(value) : value;
+  return /^\d+$/.test(value) ? formatLifecycleTimestamp(value) : value;
 }
 
 function describeSnapshot(snapshot: SnapshotArtifactDto): string {
