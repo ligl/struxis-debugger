@@ -260,10 +260,18 @@ impl ReplayWorker {
     /// Replays from the clean Run start through the requested Test Dataset SBar.
     /// Intermediate calculations and owned checkpoints remain in the Worker;
     /// only the final confirmed checkpoint crosses this boundary.
-    pub(crate) fn fast_forward_to_sbar(&mut self, target_sbar_id: String) -> Result<ReplayStepResult, String> {
-        let _permit = self.command_gate.try_enter(ReplayCommandKind::RestartToSBar)?;
+    pub(crate) fn fast_forward_to_sbar(
+        &mut self,
+        target_sbar_id: String,
+    ) -> Result<ReplayStepResult, String> {
+        let _permit = self
+            .command_gate
+            .try_enter(ReplayCommandKind::RestartToSBar)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
-        if let Err(error) = self.commands.send(WorkerCommand::FastForwardToSBar(target_sbar_id, reply_tx)) {
+        if let Err(error) = self
+            .commands
+            .send(WorkerCommand::FastForwardToSBar(target_sbar_id, reply_tx))
+        {
             let detail = format!("Replay worker is unavailable during RestartToSBar: {error}");
             return Err(self.join_after_transport_failure(detail));
         }
@@ -685,12 +693,17 @@ impl WorkerSession {
         target_sbar_id: &str,
         sink: Option<&mut dyn CheckpointSink>,
     ) -> Result<ReplayStepResult, String> {
-        let target_index = self.input.bars.iter().position(|bar| {
-            bar.ts_event.to_string() == target_sbar_id
-        }).ok_or_else(|| format!(
-            "Restart to SBar rejected: target {target_sbar_id} is not in Test Dataset {}",
-            self.input.test_dataset_id
-        ))?;
+        let target_index = self
+            .input
+            .bars
+            .iter()
+            .position(|bar| bar.ts_event.to_string() == target_sbar_id)
+            .ok_or_else(|| {
+                format!(
+                    "Restart to SBar rejected: target {target_sbar_id} is not in Test Dataset {}",
+                    self.input.test_dataset_id
+                )
+            })?;
 
         let mut sink = sink;
         let mut final_result = None;
@@ -698,9 +711,9 @@ impl WorkerSession {
             let result = self.step(sink.as_deref_mut())?;
             final_result = Some(result);
         }
-        final_result.ok_or_else(|| format!(
-            "Restart to SBar did not process target {target_sbar_id}"
-        ))
+        final_result.ok_or_else(|| {
+            format!("Restart to SBar did not process target {target_sbar_id}")
+        })
     }
 
     /// Nautilus exposes BacktestEngine::dispose as an infallible, void API.
