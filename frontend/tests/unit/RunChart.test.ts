@@ -126,6 +126,7 @@ function installChartMock(): void {
       .mockReturnValueOnce({ setData: mocks.volumeSetData, update: mocks.volumeUpdate, applyOptions: vi.fn() }),
     priceScale: vi.fn(() => ({ applyOptions: mocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
+      width: () => 700,
       fitContent: mocks.fitContent,
       setVisibleLogicalRange: mocks.setVisibleLogicalRange,
       getVisibleLogicalRange: mocks.getVisibleLogicalRange,
@@ -192,6 +193,7 @@ describe("RunChart", () => {
       { time: 1700000120, value: 100, color: "#557E65" },
     ]);
     expect(wrapper.get('[data-testid="run-chart-panel"]').attributes("data-sbar-count")).toBe("2");
+    expect(wrapper.get('[data-testid="run-structure-overlay"]').attributes("style")).toContain("width: 700px");
     expect(mocks.fitContent).toHaveBeenCalledOnce();
     expect(mocks.setVisibleLogicalRange).toHaveBeenCalledWith({ from: -0.5, to: 5.5 });
     wrapper.unmount();
