@@ -207,6 +207,18 @@ export interface SnapshotArtifactDto {
   diagnostic: string | null;
 }
 
+export interface SnapshotReferenceDto {
+  snapshotId: string;
+  runId: string;
+  instrumentId: string;
+  barType: string;
+  timeframe: string;
+  snapshotGeneratedAt: string;
+  sbarSequenceFingerprint: string;
+  bars: SBarDto[];
+  structure: ReplayInspectorStructureDto;
+}
+
 export type CompareRejectCategory =
   | "inputMismatch"
   | "snapshotUnreadable"
