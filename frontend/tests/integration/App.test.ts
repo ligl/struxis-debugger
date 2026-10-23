@@ -1338,7 +1338,7 @@ describe("startup and user-operation coordination", () => {
       cursorSbarId: "200",
       failureDiagnostic: null,
     };
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
@@ -1360,6 +1360,7 @@ describe("startup and user-operation coordination", () => {
 
     expect(invokeMock.mock.calls.some(([command]) => command === "reset_run")).toBe(true);
     expect(invokeMock.mock.calls.some(([command]) => command === "create_test_dataset")).toBe(false);
+    confirmSpy.mockRestore();
   });
 
   it("blocks Test Dataset replacement while a Run command is pending", async () => {
