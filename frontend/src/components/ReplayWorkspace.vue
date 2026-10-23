@@ -49,7 +49,6 @@ function handleViewportChange(change: Omit<ReplayChartViewportSync, "revision">)
 }
 
 watch(() => props.testDataset?.testDatasetId, () => {
-  syncEligible.value = false;
   syncRequest.value = null;
 });
 
