@@ -1,6 +1,13 @@
 import { ref, type ComputedRef, type Ref } from "vue";
 import type { OriginDatasetDto, TestDatasetDto } from "../origin-types";
 import { resolveOriginRangeClick } from "../origin-range-selection";
+import { formatDomainTimestamp } from "../timestamp-format";
+
+/** Formats a stable SBar identity as the Origin's authoritative event time for user-facing feedback. */
+function displaySbarTime(origin: OriginDatasetDto, sbarId: string): string {
+  const bar = origin.bars.find((item) => item.sbarId === sbarId);
+  return bar ? formatDomainTimestamp(bar.tsEvent, origin.timeframe) : sbarId;
+}
 
 /** Owns the full interactive state for selecting and editing an inclusive Origin SBar interval. */
 export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, canMutate: ComputedRef<boolean>, testLoading: Ref<boolean>) {
@@ -49,7 +56,7 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
       endSbarId.value = "";
       rangeSelectionReady.value = false;
       selectedRangeCount.value = 0;
-      rangeSelectionStatus.value = `Start SBar selected: ${result.sbarId}. Move the pointer to preview the range, then click to fix the inclusive end boundary.`;
+      rangeSelectionStatus.value = `Start time selected: ${displaySbarTime(currentOrigin, result.sbarId)}. Move the pointer to preview the range, then click to fix the inclusive end boundary.`;
       return;
     }
     startSbarId.value = result.startSbarId;
@@ -57,7 +64,7 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = true;
     selectedRangeCount.value = result.count;
-    rangeSelectionStatus.value = `Selected ${result.count.toLocaleString()} SBars: ${result.startSbarId} → ${result.endSbarId} (inclusive).`;
+    rangeSelectionStatus.value = `Selected ${result.count.toLocaleString()} SBars: ${displaySbarTime(currentOrigin, result.startSbarId)} → ${displaySbarTime(currentOrigin, result.endSbarId)} (inclusive).`;
   }
 
   function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void {
@@ -83,7 +90,7 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     selectedRangeCount.value = endIndex - startIndex + 1;
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = true;
-    rangeSelectionStatus.value = `Adjusted inclusive interval: ${startSbarId.value} → ${endSbarId.value} (${selectedRangeCount.value.toLocaleString()} SBars).`;
+    rangeSelectionStatus.value = `Adjusted inclusive interval: ${displaySbarTime(currentOrigin, startSbarId.value)} → ${displaySbarTime(currentOrigin, endSbarId.value)} (${selectedRangeCount.value.toLocaleString()} SBars).`;
   }
 
   function handleRangeSelectionError(message: string): void { rangeSelectionStatus.value = message; }
