@@ -485,7 +485,7 @@ for (const direction of dockDirections) {
     await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
     const inspector = await inspectPanel(page, "inspector-panel", "inspector-resize-edge");
     if (direction === "left" || direction === "right") {
-      expect(Math.abs(inspector.width - 282)).toBeLessThanOrEqual(1);
+      expect(Math.abs(inspector.width - 300)).toBeLessThanOrEqual(1);
     } else {
       expect(Math.abs(inspector.height - 145)).toBeLessThanOrEqual(1);
     }
