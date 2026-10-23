@@ -22,6 +22,7 @@ const props = defineProps<{
   selectionEndSbarId?: string | null;
   selectionPending?: boolean;
   selectionEditable?: boolean;
+  displayContext?: "origin" | "snapshot-reference";
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -820,7 +821,7 @@ onBeforeUnmount(() => {
 <template>
   <section
     class="origin-chart-panel"
-    aria-label="Origin SBar chart"
+    :aria-label="props.displayContext === \"snapshot-reference\" ? \"Snapshot Reference chart\" : \"Origin SBar chart\""
     data-testid="origin-chart-panel"
     @struxis-select-sbar="handleSbarSelectionRequest"
     @contextmenu.prevent.stop="handleChartContextMenu"
@@ -831,8 +832,8 @@ onBeforeUnmount(() => {
   >
     <div class="origin-chart-heading">
       <div class="chart-title-block">
-        <h3>ORIGIN · {{ latestBar?.barType ?? originDatasetId }}</h3>
-        <span class="tag green">CATALOG SOURCE</span>
+        <h3>{{ props.displayContext === "snapshot-reference" ? "SNAPSHOT · " : "ORIGIN · " }}{{ latestBar?.barType ?? originDatasetId }}</h3>
+        <span class="tag" :class="props.displayContext === "snapshot-reference" ? "amber" : "green"">{{ props.displayContext === "snapshot-reference" ? "IMMUTABLE REFERENCE" : "CATALOG SOURCE" }}</span>
         <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
@@ -858,7 +859,7 @@ onBeforeUnmount(() => {
         :data-selection-start-x="selectionStartX ?? ''"
         :data-selection-end-x="selectionEndX ?? ''"
         :data-selection-preview-x="previewX ?? ''"
-        :aria-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
+        :aria-label="`Candlestick and volume chart for ${props.displayContext === \"snapshot-reference\" ? \"Snapshot\" : \"Origin\"} ${originDatasetId}`"
       ></div>
       <svg
         class="origin-structure-overlay"
