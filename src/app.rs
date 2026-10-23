@@ -345,7 +345,7 @@ impl AppState {
         self.with_replay_manager(|manager| manager.restart_interactive(config))
     }
 
-    pub(crate) fn replay_state(&self) -> Result<RunState, IpcError> {
+    pub(crate) fn replay_state(&self) -> Result<Option<RunState>, IpcError> {
         self.with_replay_manager(ReplayManager::state)
     }
 
