@@ -775,6 +775,7 @@ watch(
   () => {
     updateChart();
     updateHoveredObject(undefined);
+    if (props.syncEnabled) handleVisibleRangeChange();
   },
 );
 
