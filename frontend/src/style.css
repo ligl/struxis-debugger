@@ -1615,14 +1615,15 @@ body,
 .run-chart-legend {
   position: absolute;
   z-index: 2;
-  right: 10px;
-  bottom: 8px;
+  top: 7px;
+  right: auto;
+  bottom: auto;
   left: 10px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px 14px;
-  color: var(--dbg-text-secondary);
+  gap: 0 10px;
+  color: #9aa5ac;
   font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
   pointer-events: none;
 }
