@@ -70,7 +70,7 @@ const {
 
 const canMutateTest = computed(
   () => !loading.value && !runBusy.value &&
-    (!runState.value || runState.value.status === "disposed"),
+    (!runState.value || ["completed", "failed", "disposed"].includes(runState.value.status)),
 );
 
 const {
@@ -250,7 +250,7 @@ async function createSelectedTestDataset(): Promise<void> {
 }
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
-    !runState.value && !runBusy.value,
+    (!runState.value || ["completed", "failed", "disposed"].includes(runState.value.status)) && !runBusy.value,
 );
 const canRestartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
@@ -368,6 +368,9 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   await executeRunCommand(command);
   if (command === "start" || command === "restart") {
     await refreshReplayInspector();
+  } else if (command === "dispose") {
+    replayInspector.value = null;
+    replayInspectorError.value = "";
   }
 }
 
