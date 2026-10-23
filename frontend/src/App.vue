@@ -9,7 +9,7 @@ import Diagnostics from "./components/Diagnostics.vue";
 import DatasetWorkspace from "./components/DatasetWorkspace.vue";
 import ReplayWorkspace from "./components/ReplayWorkspace.vue";
 import CompareWorkspace from "./components/CompareWorkspace.vue";
-import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection } from "./origin-types";
+import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayChartSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -98,6 +98,82 @@ const {
   refresh: refreshReplayInspectorState,
 } = useReplayInspector();
 const selectedCompareDifference = ref<ObjectDifferenceDto | null>(null);
+const selectedReplayChartObject = ref<ReplayChartSelection | null>(null);
+
+function handleReplayObjectSelection(selection: ReplayChartSelection): void {
+  const currentRun = runState.value;
+  const currentCheckpoint = replayInspector.value;
+  const currentTest = testDataset.value;
+  const currentOrigin = origin.value;
+  if (
+    workspaceMode.value !== "replay" ||
+    !currentRun ||
+    !currentTest ||
+    !currentOrigin ||
+    currentRun.testDatasetId !== currentTest.testDatasetId ||
+    selection.checkpointSbarId !== currentRun.cursorSbarId ||
+    currentCheckpoint?.sbarId !== currentRun.cursorSbarId
+  ) return;
+
+  const start = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.startSbarId);
+  const end = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.endSbarId);
+  const selectedIndex = currentOrigin.bars.findIndex((bar) => bar.sbarId === selection.id);
+  if (start < 0 || end < start) return;
+
+  if (selection.kind === "sbar") {
+    if (selectedIndex < start || selectedIndex > end) return;
+  } else {
+    const structure = currentCheckpoint.structure;
+    const exists = selection.kind === "cbar"
+      ? structure?.cbars.some((item) => item.cbarId === selection.id)
+      : structure?.swings.some((item) => item.swingId === selection.id);
+    if (!exists) return;
+  }
+  selectedReplayChartObject.value = selection;
+}
+
+type ReplayInspectorSelection = Extract<InspectorWorkspaceContext, { workspace: "replay" }>["selectedObject"];
+const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
+  const selection = selectedReplayChartObject.value;
+  const checkpoint = replayInspector.value;
+  const currentRun = runState.value;
+  const currentTest = testDataset.value;
+  const currentOrigin = origin.value;
+  if (
+    !selection ||
+    !checkpoint ||
+    !currentRun ||
+    !currentTest ||
+    !currentOrigin ||
+    selection.checkpointSbarId !== currentRun.cursorSbarId ||
+    checkpoint.sbarId !== currentRun.cursorSbarId ||
+    currentRun.testDatasetId !== currentTest.testDatasetId
+  ) return null;
+
+  if (selection.kind === "sbar") {
+    if (selection.id === checkpoint.sbarId) {
+      return { kind: "sbar", object: checkpoint.sbar, source: "checkpoint" };
+    }
+    const start = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.startSbarId);
+    const end = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.endSbarId);
+    const index = currentOrigin.bars.findIndex((bar) => bar.sbarId === selection.id);
+    const inputBar = currentOrigin.bars[index];
+    return start >= 0 && end >= start && index >= start && index <= end && inputBar
+      ? { kind: "sbar", object: inputBar, source: "input" }
+      : null;
+  }
+  if (selection.kind === "cbar") {
+    const object = checkpoint.structure?.cbars.find((item) => item.cbarId === selection.id);
+    return object ? { kind: "cbar", object } : null;
+  }
+  const object = checkpoint.structure?.swings.find((item) => item.swingId === selection.id);
+  return object ? { kind: "swing", object } : null;
+});
+
+watch(
+  () => [runState.value?.runId, runState.value?.cursorSbarId, testDataset.value?.testDatasetId] as const,
+  () => { selectedReplayChartObject.value = null; },
+);
 
 async function refreshReplayInspector(): Promise<void> {
   await refreshReplayInspectorState(Boolean(runState.value));
@@ -184,6 +260,7 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
       workspace: "replay",
       timeframe: testDataset.value?.timeframe ?? origin.value?.timeframe ?? null,
       checkpoint: replayInspector.value,
+      selectedObject: selectedReplayInspectorObject.value,
       error: replayInspectorError.value,
     };
   }
@@ -196,6 +273,7 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
 });
 watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifference.value = null;
+  if (mode !== "replay") selectedReplayChartObject.value = null;
   if (mode === "replay") void refreshReplayInspector();
 });
 
@@ -407,7 +485,9 @@ onMounted(async () => {
               :test-dataset="testDataset"
               :run-state="runState"
               :structure="replayInspector?.sbarId === runState?.cursorSbarId ? (replayInspector?.structure ?? null) : null"
+              :selected-object="selectedReplayChartObject"
               :snapshots="snapshots"
+              @object-select="handleReplayObjectSelection"
             />
 <CompareWorkspace
               :active="workspaceMode === 'compare'"
