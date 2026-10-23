@@ -158,6 +158,14 @@ function handleSelection(event: Event): void {
     <header class="snapshot-reference-heading">
       <div class="snapshot-reference-title">
         <h3>SNAPSHOT REFERENCE</h3>
+        <span
+          v-if="syncEligible"
+          class="snapshot-reference-sync-indicator"
+          data-testid="snapshot-reference-sync-indicator"
+          role="img"
+          aria-label="Viewport synchronization available"
+          title="Viewport synchronization available"
+        >↔</span>
       </div>
       <label class="snapshot-reference-select">
         <span class="snapshot-reference-instrument">{{ displayInstrumentId }}</span>
