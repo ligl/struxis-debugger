@@ -20,7 +20,6 @@ const props = defineProps<{
   structure?: ReplayInspectorStructureDto | null;
   selectedObject?: ReplayChartSelection | null;
   targetSbarId?: string | null;
-  fastForwarding?: boolean;
 }>();
 const emit = defineEmits<{
   objectSelect: [selection: ReplayChartSelection];
@@ -30,7 +29,6 @@ const emit = defineEmits<{
 
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
-const isChartInteractionActive = ref(false);
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; color: string; dasharray: string; state: string };
@@ -589,9 +587,6 @@ onBeforeUnmount(() => {
         <div class="run-chart-title-line">
           <span class="run-chart-name">LIVE REPLAY · {{ testDataset?.barType ?? origin?.barType ?? "NO TEST" }}</span>
           <span class="tag green">LIVE</span>
-          <span v-if="fastForwarding" class="replay-target-status" data-testid="restart-to-sbar-status">REPLAYING TO TARGET</span>
-          <span v-else-if="targetSbarId" class="replay-target-status" data-testid="restart-to-sbar-prompt">DOUBLE-CLICK TO CHANGE TARGET · SPACE TO RESTART · RIGHT-CLICK TO CANCEL</span>
-          <span v-else-if="isChartInteractionActive" class="replay-target-status" data-testid="restart-to-sbar-hint">DOUBLE-CLICK CHART TO SET RESTART TARGET</span>
         </div>
       </div>
       <div class="chart-heading-actions">
@@ -600,7 +595,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div class="run-chart-stage" @mouseenter="isChartInteractionActive = true" @mouseleave="isChartInteractionActive = false" @contextmenu="handleContextMenu" @dblclick="handleChartDoubleClick">
+    <div class="run-chart-stage" @contextmenu="handleContextMenu" @dblclick="handleChartDoubleClick">
       <p v-if="projectionMessage" class="run-chart-message" data-testid="run-chart-empty">{{ projectionMessage }}</p>
       <p v-else-if="replayProgressApplies && !displayedBar" class="run-chart-message" data-testid="run-chart-awaiting-checkpoint">
         Waiting for the first backend-confirmed checkpoint. Future input SBars are dimmed.
