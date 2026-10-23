@@ -1238,7 +1238,7 @@ describe("startup and user-operation coordination", () => {
     expect((startButton.element as HTMLButtonElement).disabled).toBe(true);
 
     await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
-    await wrapper.get('[data-testid="run-restart"]').trigger("click");
+    expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(false);
     expect(invokeMock.mock.calls.filter(([command]) =>
       command === "start_run" || command === "restart_run",
     )).toHaveLength(0);
@@ -1487,8 +1487,8 @@ describe("dual chart workspaces", () => {
     expect(wrapper.find('[data-testid="run-start-stop"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-step"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-play-pause"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="run-start-stop"]').attributes("title")).toBe("Start a new replay Run");
-    expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-start-stop"]').attributes("title")).toContain("Start a new Run");
+    expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-toolbar-status"]').exists()).toBe(true);
     expect(wrapper.find('[role="progressbar"][aria-label="Replay progress"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="snapshot-reference-panel"]').exists()).toBe(true);
