@@ -40,15 +40,15 @@ function mountControls(overrides: Partial<{
 }
 
 describe("ReplayToolbarControls", () => {
-  it("forwards Step, Stop, and Reset without a manual refresh control", async () => {
+  it("forwards Step and Stop without exposing Reset or manual refresh", async () => {
     const wrapper = mountControls();
 
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     expect(wrapper.get('[data-testid="run-start-stop"]').text()).toBe("STOP");
     await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
-    await wrapper.get('[data-testid="run-restart"]').trigger("click");
 
-    expect(wrapper.emitted("command")).toEqual([["step"], ["stop"], ["reset"]]);
+    expect(wrapper.emitted("command")).toEqual([["step"], ["stop"]]);
+    expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-refresh-state"]').exists()).toBe(false);
   });
 
@@ -167,11 +167,9 @@ describe("ReplayToolbarControls", () => {
     expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("3x");
   });
 
-  it("keeps Reset disabled while playback is active", () => {
-    const playing = mountControls({ playbackStatus: "playing", runBusy: false });
-    expect(playing.get('[data-testid="run-restart"]').attributes("disabled")).toBeDefined();
-    const paused = mountControls({ playbackStatus: "paused", runBusy: false });
-    expect(paused.get('[data-testid="run-restart"]').attributes("disabled")).toBeUndefined();
+  it("does not expose Reset as a separate toolbar action", () => {
+    const wrapper = mountControls();
+    expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(false);
   });
 
   it("preserves command gating, progress, status and error presentation", () => {
