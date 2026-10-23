@@ -32,6 +32,7 @@ fn main() {
             commands::create_test_dataset,
             commands::get_current_test_dataset,
             commands::list_snapshots,
+            commands::get_snapshot_reference,
             commands::save_run_snapshot,
             commands::compare_snapshots,
             commands::start_run,
