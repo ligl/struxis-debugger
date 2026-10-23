@@ -95,6 +95,11 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
       shell: directTestIds(shell),
       chartWorkspace: directTestIds(chartWorkspace),
       chartPanels: directTestIds(chartPanels),
+      hasToastHostOutsideShell: Boolean(
+        document.querySelector("main[data-testid='debugger-shell']") &&
+        document.querySelector("main[data-testid='debugger-shell']")?.previousElementSibling?.tagName !== "APP-TOAST-HOST" &&
+        document.querySelector("main[data-testid='debugger-shell']")?.parentElement?.firstElementChild?.tagName === "APP-TOAST-HOST"
+      ),
       hasLegacyFooter: Boolean(document.querySelector(".footer-bar")),
       hasLegacyPrimaryWorkspace: Boolean(document.querySelector("[data-testid='primary-workspace']")),
     };
@@ -111,6 +116,7 @@ test("App Shell matches the approved ownership hierarchy", async ({ page }) => {
   expect(hierarchy.shell).toEqual(["topbar", "chart-workspace", "inspector-panel", "diagnostics-dock"]);
   expect(hierarchy.chartWorkspace).toEqual(["chart-toolbar", "chart-panels"]);
   expect(hierarchy.chartPanels).toEqual(["workspace-content"]);
+  expect(hierarchy.hasToastHostOutsideShell).toBe(true);
   expect(hierarchy.hasLegacyFooter).toBe(false);
   expect(hierarchy.hasLegacyPrimaryWorkspace).toBe(false);
 });
