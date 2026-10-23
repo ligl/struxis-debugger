@@ -32,6 +32,7 @@ const emit = defineEmits<{
   cancelRangeSelection: [];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
+const structureOverlayWidth = ref(0);
 const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 let chart: IChartApi | null = null;
@@ -128,6 +129,10 @@ function updateSbarCoordinates(): void {
     return;
   }
   const timeScale = chart.timeScale();
+  // Clip the SVG overlay to the plot area so it cannot cover the right price scale.
+  structureOverlayWidth.value = typeof timeScale.width === "function"
+    ? timeScale.width()
+    : chartHost.value?.clientWidth ?? 0;
   firstSbarX.value = firstSbarTime === null ? null : timeScale.timeToCoordinate(firstSbarTime);
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
   selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
@@ -857,6 +862,7 @@ onBeforeUnmount(() => {
       ></div>
       <svg
         class="origin-structure-overlay"
+        :style="{ width: `${structureOverlayWidth}px` }"
         data-testid="origin-structure-overlay"
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
