@@ -301,6 +301,9 @@ impl ReplayManager {
         // Clear the old owner only after Dispose and join both succeeded.
         self.active = None;
         let (worker, initial_state) = ReplayWorker::spawn(config, sink)?;
+        self.completed_result = None;
+        self.last_state = Some(initial_state.clone());
+        self.last_inspector = None;
         self.active = Some(worker);
         Ok(initial_state)
     }
