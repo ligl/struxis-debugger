@@ -1,4 +1,4 @@
-import { mount, type VueWrapper } from "@vue/test-utils";
+import { enableAutoUnmount, mount, type VueWrapper } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RunChart from "../../src/components/RunChart.vue";
@@ -150,6 +150,8 @@ function installChartMock(): void {
     remove: mocks.chartRemove,
   });
 }
+
+enableAutoUnmount(afterEach);
 
 describe("RunChart", () => {
   it("removes internal time and price axis borders", () => {
