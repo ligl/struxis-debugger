@@ -152,6 +152,26 @@ function installChartMock(): void {
 }
 
 describe("RunChart", () => {
+  it("removes internal time and price axis borders", () => {
+    installResizeObserverMock();
+    installChartMock();
+    mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+        active: true,
+      },
+    });
+
+    const chartOptions = mocks.createChart.mock.calls[0]?.[1] as {
+      timeScale?: { borderColor?: string };
+      rightPriceScale?: { borderColor?: string };
+    };
+    expect(chartOptions.timeScale?.borderColor).toBe("#121619");
+    expect(chartOptions.rightPriceScale?.borderColor).toBe("#121619");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     // clearAllMocks preserves mock implementations/return values. Reset the
