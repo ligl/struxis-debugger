@@ -676,6 +676,47 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("Ctrl+Left and Ctrl+Right locate the first and last Test Dataset candles", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+    });
+    await nextTick();
+
+    mocks.setCrosshairPosition.mockClear();
+    mocks.setVisibleLogicalRange.mockClear();
+
+    const startEvent = new KeyboardEvent("keydown", {
+      key: "ArrowLeft",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(startEvent);
+    expect(startEvent.defaultPrevented).toBe(true);
+    expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(
+      11,
+      1700000060,
+      expect.anything(),
+    );
+
+    mocks.setCrosshairPosition.mockClear();
+    const endEvent = new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(endEvent);
+    expect(endEvent.defaultPrevented).toBe(true);
+    expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(
+      11,
+      1700000120,
+      expect.anything(),
+    );
+
+    wrapper.unmount();
+  });
+
   it("zooms the visible logical range with up/down arrows", async () => {
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: runState() },
