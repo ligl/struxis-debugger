@@ -224,7 +224,10 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     );
     let snapshot_id = state.save_run_snapshot().expect("explicit Snapshot save should succeed");
     assert!(!snapshot_id.is_empty());
-    let state_after_save = state.replay_state().expect("save must leave Run state queryable");
+    let state_after_save = state
+        .replay_state()
+        .expect("save must leave Run state queryable")
+        .expect("completed Run remains owned after Snapshot save");
     assert_eq!(state_after_save.status, RunStatus::Completed);
     assert_eq!(state_after_save.processed_count, 2);
 
