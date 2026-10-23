@@ -233,6 +233,18 @@ describe("RunChart", () => {
     stage.element.dispatchEvent(contextEvent);
     expect(contextEvent.defaultPrevented).toBe(true);
     expect(wrapper.emitted("targetCancel")).toHaveLength(1);
+
+    // T toggles the pending target off, matching right-click cancellation,
+    // and does not depend on a currently valid crosshair position.
+    const targetToggleEvent = new KeyboardEvent("keydown", {
+      key: "t",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(targetToggleEvent);
+    expect(targetToggleEvent.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("targetCancel")).toHaveLength(2);
+    expect(wrapper.emitted("targetSelect")).toHaveLength(1);
     wrapper.unmount();
   });
 
