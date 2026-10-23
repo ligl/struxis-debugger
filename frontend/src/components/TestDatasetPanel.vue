@@ -15,7 +15,6 @@ const props = defineProps<{
   testLoading: boolean;
   canMutateTest: boolean;
   testError: string;
-  testStatus: string;
 }>();
 
 const emit = defineEmits<{ create: [] }>();
@@ -155,13 +154,6 @@ function displaySbarTime(sbarId: string): string {
       </section>
     </div>
 
-    <div v-if="!props.canMutateTest && props.origin || props.testError || props.testStatus" class="dataset-controls-feedback">
-      <p v-if="!props.canMutateTest && props.origin" class="dataset-feedback-note">
-        Stop or Reset the active Run before changing its Test Dataset.
-      </p>
-      <p v-if="props.testError" class="error-message" role="alert">{{ props.testError }}</p>
-      <p v-else-if="props.testStatus" class="success-message" role="status">{{ props.testStatus }}</p>
-    </div>
   </section>
 </template>
 
@@ -458,32 +450,6 @@ function displaySbarTime(sbarId: string): string {
   .details-range-values {
     flex-wrap: wrap;
   }
-}
-
-.dataset-controls-feedback {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 4px 9px 6px;
-  border-top: 1px solid #252c32;
-  color: #89949d;
-  font-size: 8px;
-}
-
-.dataset-controls-feedback p {
-  margin: 0;
-}
-
-.dataset-controls-feedback .error-message,
-.dataset-controls-feedback .success-message {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-size: 8px;
-}
-
-.dataset-feedback-note {
-  color: #d8b16b;
 }
 
 @media (max-width: 1180px) {
