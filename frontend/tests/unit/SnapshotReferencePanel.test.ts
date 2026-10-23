@@ -1,6 +1,11 @@
-import { flushPromises, mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.vue";
+
+// This suite tests Snapshot selection / loading orchestration, not Lightweight Charts internals.
+vi.mock("../../src/components/OriginChart.vue", () => ({
+  default: { template: '<div data-testid="snapshot-reference-chart-host"></div>' },
+}));
 import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../../src/origin-types";
 
 const { invokeMock } = vi.hoisted(() => ({ invokeMock: vi.fn() }));
@@ -38,6 +43,8 @@ const snapshots: SnapshotArtifactDto[] = [
     diagnostic: null,
   },
 ];
+
+enableAutoUnmount(afterEach);
 
 describe("SnapshotReferencePanel", () => {
   it("renders the verified historical chart for a selected completed Snapshot", async () => {
