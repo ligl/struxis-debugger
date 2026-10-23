@@ -150,7 +150,7 @@ pub(crate) async fn restart_run(state: State<'_, AppState>) -> Result<RunState, 
 }
 
 #[tauri::command]
-pub(crate) async fn get_run_state(state: State<'_, AppState>) -> Result<RunState, IpcError> {
+pub(crate) async fn get_run_state(state: State<'_, AppState>) -> Result<Option<RunState>, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_state())
         .await
