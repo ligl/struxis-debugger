@@ -46,8 +46,7 @@ export function useReplayKeyboardShortcut(
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (
       isInteractiveKeyboardTarget(event.target) ||
-      isInteractiveKeyboardTarget(document.activeElement) ||
-      (runBusy.value && playbackStatus.value !== "playing")
+      isInteractiveKeyboardTarget(document.activeElement)
     ) return;
 
     if (targetSbarId.value) {
@@ -55,6 +54,7 @@ export function useReplayKeyboardShortcut(
       void restartToTarget();
       return;
     }
+    if (runBusy.value && playbackStatus.value !== "playing") return;
 
     const command = playbackStatus.value === "playing"
       ? "pause"
