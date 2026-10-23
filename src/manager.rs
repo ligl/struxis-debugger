@@ -386,7 +386,11 @@ impl ReplayManager {
                     self.active = None;
                     return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
                 }
-                (Ok(_), Err(error)) => {
+                (Ok(data), Err(error)) => {
+                    // Trajectory completeness and runtime release are independent.
+                    // Keep the confirmed full trajectory available for Snapshot save,
+                    // while retaining the Worker because release is unconfirmed.
+                    self.completed_result = Some(data);
                     let mut state = result.run_state.clone();
                     state.status = crate::run::RunStatus::Failed;
                     state.failure_diagnostic = Some(format!(
