@@ -590,11 +590,13 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 function handleChartKeyboard(event: KeyboardEvent): void {
   const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
     event.key === "ArrowLeft" || event.key === "ArrowRight";
+  const isFitShortcut = event.ctrlKey && !event.altKey && !event.metaKey &&
+    !event.shiftKey && event.key === "0";
   const isBoundaryNavigation = event.ctrlKey && !event.altKey && !event.metaKey &&
     !event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight");
   if (
     (event.repeat && !isArrowKey) ||
-    event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation) ||
+    event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation && !isFitShortcut) ||
     (event.shiftKey && !isBoundaryNavigation) ||
     isInteractiveKeyboardTarget(event.target) ||
     isInteractiveKeyboardTarget(document.activeElement) ||
@@ -602,7 +604,8 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   ) return;
 
   let handled = false;
-  if (isBoundaryNavigation) {
+  if (isFitShortcut) handled = fitContentShortcut();
+  else if (isBoundaryNavigation) {
     handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : props.bars.length - 1, true);
   } else if (event.key === "ArrowUp") handled = zoomTimeScale("in");
   else if (event.key === "ArrowDown") handled = zoomTimeScale("out");
@@ -633,6 +636,14 @@ function fitContent(): void {
   if (!chart || props.bars.length === 0) return;
   chart.timeScale().fitContent();
   updateSbarCoordinates();
+}
+
+function fitContentShortcut(): boolean {
+  if (!chart || props.bars.length === 0) return false;
+  fitContent();
+  updateSbarCoordinates();
+  updateStructureOverlays();
+  return true;
 }
 
 function updateChart(): void {
