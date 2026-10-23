@@ -392,14 +392,14 @@ onMounted(() => {
 });
 
 watch(
-  () => [
-    bars.value,
-    props.testDataset?.testDatasetId,
-    props.origin?.originDatasetId,
-    props.runState?.testDatasetId,
-    props.runState?.runId,
-    replayProgressApplies.value,
-  ] as const,
+  [
+    () => bars.value,
+    () => props.testDataset?.testDatasetId,
+    () => props.origin?.originDatasetId,
+    () => props.runState?.testDatasetId,
+    () => props.runState?.runId,
+    () => replayProgressApplies.value,
+  ],
   updateChart,
 );
 
