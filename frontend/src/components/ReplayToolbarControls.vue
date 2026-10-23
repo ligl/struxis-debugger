@@ -51,7 +51,7 @@ const showStop = () =>
         :class="{ 'run-stop-toggle': showStop() }"
         data-testid="run-start-stop"
         :title="showStop() ? 'Stop the current Run and halt continuous playback' : 'Start a new replay Run'"
-        :disabled="runBusy || (showStop() ? !isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun) && playbackStatus !== 'playing' : playbackStatus === 'playing' || !isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun))"
+        :disabled="(runBusy && playbackStatus !== 'playing') || (showStop() ? !isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun) && playbackStatus !== 'playing' : playbackStatus === 'playing' || !isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun))"
         @click="emit('command', showStop() ? 'stop' : 'start')"
       >{{ showStop() ? 'STOP' : 'START' }}</button>
       <button class="subtle-button" data-testid="run-step" title="Process one SBar" :disabled="playbackStatus === 'playing' || !isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="emit('command', 'step')">STEP ▶|</button>
