@@ -78,8 +78,6 @@ describe("Run and Snapshot IPC bridge", () => {
     await expect(startRun()).resolves.toEqual(state);
     await expect(restartRun()).resolves.toEqual(state);
     await expect(getRunState()).resolves.toEqual(state);
-    invokeMock.mockResolvedValueOnce(null);
-    await expect(getRunState()).resolves.toBeNull();
     await expect(stepRun()).resolves.toEqual(state);
     await expect(stopRun()).resolves.toEqual(state);
     await expect(disposeRun()).resolves.toEqual(state);
@@ -92,6 +90,13 @@ describe("Run and Snapshot IPC bridge", () => {
       ["stop_run"],
       ["dispose_run"],
     ]);
+  });
+
+  it("maps an inactive Run lookup to null", async () => {
+    invokeMock.mockResolvedValue(null);
+
+    await expect(getRunState()).resolves.toBeNull();
+    expect(invokeMock).toHaveBeenCalledWith("get_run_state");
   });
 
   it("lists Snapshot artifacts using the read-only discovery command", async () => {
