@@ -58,6 +58,26 @@ describe("SnapshotReferencePanel", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_snapshot_reference", { snapshotId: "snapshot-complete-01" });
   });
 
+  it("shows an embedded loading animation while resolving a selected Snapshot", async () => {
+    let resolveReference!: (value: SnapshotReferenceDto) => void;
+    invokeMock.mockReturnValueOnce(new Promise<SnapshotReferenceDto>((resolve) => {
+      resolveReference = resolve;
+    }));
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: { instrumentId: "AUD/USD.SIM", snapshots },
+    });
+
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
+    expect(wrapper.get('[data-testid="snapshot-reference-loading"]').exists()).toBe(true);
+    expect(wrapper.get(".snapshot-reference-loading-spinner").attributes("aria-hidden")).toBe("true");
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(false);
+
+    resolveReference(reference);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="snapshot-reference-loading"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
+  });
+
   it("shows only completed Snapshots for the Live Replay instrument across timeframes", () => {
     const wrapper = mount(SnapshotReferencePanel, {
       props: {
