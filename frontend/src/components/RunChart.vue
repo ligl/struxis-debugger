@@ -353,7 +353,6 @@ onBeforeUnmount(() => {
           <span class="run-chart-name">LIVE REPLAY · {{ testDataset?.barType ?? origin?.barType ?? "NO TEST" }}</span>
           <span class="tag green">LIVE</span>
         </div>
-        <span class="run-chart-description">Test SBar sequence · backend-confirmed progress · authoritative checkpoint structure</span>
       </div>
       <div class="chart-heading-actions">
         <span class="chart-bar-count">{{ bars.length.toLocaleString() }} SBARS</span>
