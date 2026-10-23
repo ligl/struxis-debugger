@@ -70,6 +70,7 @@ function installChartMock() {
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData, applyOptions: chartMocks.volumeApplyOptions }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
+      width: () => 700,
       fitContent: chartMocks.fitContent,
       setVisibleLogicalRange: chartMocks.setVisibleLogicalRange,
       getVisibleLogicalRange: chartMocks.getVisibleLogicalRange,
@@ -190,6 +191,7 @@ describe("OriginChart", () => {
     await nextTick();
     expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-origin-dataset-id"))
       .toBe("origin-1");
+    expect(wrapper.get('[data-testid="origin-structure-overlay"]').attributes("style")).toContain("width: 700px");
     const chartPanel = wrapper.get('[data-testid="origin-chart-panel"]');
     expect(chartPanel.attributes("data-sbar-count")).toBe("2");
     expect(chartPanel.attributes("data-first-sbar-id")).toBe("1700000000000000000");
