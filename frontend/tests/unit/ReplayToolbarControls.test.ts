@@ -91,6 +91,10 @@ describe("ReplayToolbarControls", () => {
     const control = wrapper.get('[data-testid="replay-speed-control"]');
     expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("倍速");
     expect(wrapper.text()).not.toContain("SPEED");
+    expect(wrapper.find('[data-speed-delay="300"]').exists()).toBe(false);
+    expect(wrapper.find('[data-speed-delay="160"]').exists()).toBe(false);
+    expect(wrapper.find('[data-speed-delay="135"]').exists()).toBe(false);
+    expect(wrapper.find('[data-speed-delay="50"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
 
     await control.trigger("mouseenter");
@@ -101,6 +105,7 @@ describe("ReplayToolbarControls", () => {
 
     expect(wrapper.emitted("setPlaybackDelay")).toEqual([[100]]);
     expect(wrapper.emitted("command")).toBeUndefined();
+    expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("2x");
     expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
 
     await control.trigger("mouseenter");
@@ -115,10 +120,11 @@ describe("ReplayToolbarControls", () => {
     const control = wrapper.get('[data-testid="replay-speed-control"]');
     expect(trigger.attributes("disabled")).toBeUndefined();
     await control.trigger("mouseenter");
-    const fasterOption = wrapper.get('[data-speed-delay="50"]');
+    const fasterOption = wrapper.get('[data-speed-delay="65"]');
     expect(fasterOption.attributes("disabled")).toBeUndefined();
     await fasterOption.trigger("click");
-    expect(wrapper.emitted("setPlaybackDelay")).toEqual([[50]]);
+    expect(wrapper.emitted("setPlaybackDelay")).toEqual([[65]]);
+    expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("3x");
   });
 
   it("preserves command gating, progress, status and error presentation", () => {
