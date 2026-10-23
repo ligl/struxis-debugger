@@ -183,18 +183,17 @@ const emit = defineEmits<{
   height: 27px;
   padding: 0;
   place-items: center;
-  border: 1px solid #363d44;
+  border: 0;
   border-radius: 3px;
-  background: #1b2024;
+  background: transparent;
   color: #aeb7bf;
   cursor: pointer;
   font-size: 15px;
   line-height: 1;
-  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
 .catalog-icon-action:hover:not(:disabled) {
-  border-color: #80623d;
   background: #29241e;
   color: #c49a62;
 }
@@ -209,8 +208,7 @@ const emit = defineEmits<{
 }
 
 .catalog-icon-action:disabled:hover {
-  border-color: #363d44;
-  background: #1b2024;
+  background: transparent;
   color: #aeb7bf;
 }
 
