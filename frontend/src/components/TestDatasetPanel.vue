@@ -34,9 +34,9 @@ function displaySbarTime(sbarId: string): string {
       <div class="dataset-range-summary">
         <div v-if="props.rangeSelectionReady" class="dataset-range-selected" data-testid="selected-test-range">
           <span>INCLUSIVE INTERVAL</span>
-          <code data-testid="selected-test-range-start">{{ props.startSbarId }}</code>
+          <code data-testid="selected-test-range-start" :data-sbar-id="props.startSbarId">{{ displaySbarTime(props.startSbarId) }}</code>
           <span aria-hidden="true">→</span>
-          <code data-testid="selected-test-range-end">{{ props.endSbarId }}</code>
+          <code data-testid="selected-test-range-end" :data-sbar-id="props.endSbarId">{{ displaySbarTime(props.endSbarId) }}</code>
           <strong data-testid="selected-test-range-count">{{ props.selectedRangeCount.toLocaleString() }}</strong>
           <span>SBARS</span>
         </div>
@@ -49,7 +49,7 @@ function displaySbarTime(sbarId: string): string {
         <div v-else class="dataset-range-empty">
           Load Origin to select interval
         </div>
-        <span class="dataset-range-status" data-testid="props.origin-range-selection-status" aria-live="polite">
+        <span class="dataset-range-status" data-testid="origin-range-selection-status" aria-live="polite">
           {{ props.rangeSelectionStatus }}
         </span>
       </div>
