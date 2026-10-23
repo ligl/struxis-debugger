@@ -672,6 +672,7 @@ describe("RunChart", () => {
     const range = mocks.setVisibleLogicalRange.mock.calls[0]![0] as { from: number; to: number };
     expect(range.from).toBeLessThan(1);
     expect(range.to).toBeLessThan(4);
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: -0.5, to: 5.5 });
     wrapper.unmount();
   });
 
