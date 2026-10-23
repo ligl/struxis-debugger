@@ -31,7 +31,7 @@ function mountControls(overrides: Partial<{
       runError: "",
       snapshotSaveBusy: false,
       playbackStatus: "idle",
-      playbackDelayMs: 100,
+      playbackDelayMs: 200,
       canStartRun: false,
       canRestartRun: true,
       ...overrides,
@@ -86,11 +86,31 @@ describe("ReplayToolbarControls", () => {
     expect(saving.get('[data-testid="run-save-snapshot"]').text()).toContain("SAVING");
   });
 
-  it("emits playback speed changes without issuing Run commands", async () => {
+  it("defaults to 1× and exposes a Bilibili-style speed menu without a SPEED label", async () => {
     const wrapper = mountControls();
-    await wrapper.get('[data-testid="replay-speed"]').setValue("25");
-    expect(wrapper.emitted("setPlaybackDelay")).toEqual([[25]]);
+    expect(wrapper.get('[data-testid="replay-speed"]').text()).toContain("1×");
+    expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("SPEED");
+
+    await wrapper.get('[data-testid="replay-speed"]').trigger("click");
+    expect(wrapper.get('[data-testid="replay-speed-menu"]').attributes("role")).toBe("menu");
+    expect(wrapper.get('[data-speed-delay="200"]').attributes("aria-checked")).toBe("true");
+    await wrapper.get('[data-speed-delay="100"]').trigger("click");
+
+    expect(wrapper.emitted("setPlaybackDelay")).toEqual([[100]]);
     expect(wrapper.emitted("command")).toBeUndefined();
+    expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
+  });
+
+  it("keeps speed selection enabled while a Run command is busy and playback is active", async () => {
+    const wrapper = mountControls({ runBusy: true, playbackStatus: "playing" });
+    const trigger = wrapper.get('[data-testid="replay-speed"]');
+    expect(trigger.attributes("disabled")).toBeUndefined();
+    await trigger.trigger("click");
+    const fasterOption = wrapper.get('[data-speed-delay="50"]');
+    expect(fasterOption.attributes("disabled")).toBeUndefined();
+    await fasterOption.trigger("click");
+    expect(wrapper.emitted("setPlaybackDelay")).toEqual([[50]]);
   });
 
   it("preserves command gating, progress, status and error presentation", () => {
