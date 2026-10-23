@@ -493,4 +493,35 @@ mod tests {
         assert!(manager.snapshot_data().is_err());
     }
 
+
+    #[test]
+    fn stop_releases_runtime_and_allows_starting_a_new_run() {
+        let mut manager = ReplayManager::new();
+        manager.start_interactive(worker_config("manager-stop-old")).expect("first Run starts");
+        manager.step_checkpoint().expect("one checkpoint succeeds");
+
+        let stopped = manager.stop().expect("Stop ends and releases the Run");
+        assert_eq!(stopped.status, crate::run::RunStatus::Disposed);
+        assert!(!manager.has_owned_run());
+
+        let next = manager.start_interactive(worker_config("manager-stop-new"))
+            .expect("Start creates a new Run after Stop");
+        assert_eq!(next.status, crate::run::RunStatus::Ready);
+        assert_eq!(next.processed_count, 0);
+        manager.reset().expect("Reset cleans up the second Run");
+    }
+
+    #[test]
+    fn reset_releases_an_active_run_and_clears_its_state() {
+        let mut manager = ReplayManager::new();
+        manager.start_interactive(worker_config("manager-reset-active")).expect("Run starts");
+        manager.step_checkpoint().expect("one checkpoint succeeds");
+        assert!(manager.has_owned_run());
+
+        manager.reset().expect("Reset stops and releases the active Run");
+        assert!(!manager.has_owned_run());
+        assert!(manager.state().expect("state query").is_none());
+        assert!(manager.snapshot_data().is_err());
+    }
+
 }
