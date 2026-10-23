@@ -71,8 +71,8 @@ describe("SnapshotReferencePanel", () => {
     const selectedLabelLength = wrapper.get(".snapshot-reference-selected-label").text().length;
     expect(control.attributes("style")).toContain(`calc(${selectedLabelLength}ch + 23px)`);
     expect(selectedLabelLength).toBeGreaterThan(initialLabelLength);
-    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("run-01");
     expect(wrapper.get('[data-testid="snapshot-reference-metadata"]').text()).toContain("2026-05-28 20:26:40");
     expect(wrapper.text()).toContain("aaaaaaaaaaaa");
@@ -89,7 +89,7 @@ describe("SnapshotReferencePanel", () => {
     });
 
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
-    expect(wrapper.get('[data-testid="snapshot-reference-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="snapshot-reference-loading"]').exists()).toBe(true);
     expect(wrapper.get(".snapshot-reference-loading-spinner").attributes("aria-hidden")).toBe("true");
     expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(false);
 
