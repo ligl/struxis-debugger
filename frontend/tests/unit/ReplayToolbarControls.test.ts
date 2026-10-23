@@ -86,19 +86,26 @@ describe("ReplayToolbarControls", () => {
     expect(saving.get('[data-testid="run-save-snapshot"]').text()).toContain("SAVING");
   });
 
-  it("defaults to 1× and exposes a Bilibili-style speed menu without a SPEED label", async () => {
+  it("shows a downward speed menu on hover and closes it after selection or pointer exit", async () => {
     const wrapper = mountControls();
-    expect(wrapper.get('[data-testid="replay-speed"]').text()).toContain("1×");
-    expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
+    const control = wrapper.get('[data-testid="replay-speed-control"]');
+    expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("倍速");
     expect(wrapper.text()).not.toContain("SPEED");
+    expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
 
-    await wrapper.get('[data-testid="replay-speed"]').trigger("click");
-    expect(wrapper.get('[data-testid="replay-speed-menu"]').attributes("role")).toBe("menu");
+    await control.trigger("mouseenter");
+    const menu = wrapper.get('[data-testid="replay-speed-menu"]');
+    expect(menu.attributes("role")).toBe("menu");
     expect(wrapper.get('[data-speed-delay="200"]').attributes("aria-checked")).toBe("true");
     await wrapper.get('[data-speed-delay="100"]').trigger("click");
 
     expect(wrapper.emitted("setPlaybackDelay")).toEqual([[100]]);
     expect(wrapper.emitted("command")).toBeUndefined();
+    expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
+
+    await control.trigger("mouseenter");
+    expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(true);
+    await control.trigger("mouseleave");
     expect(wrapper.find('[data-testid="replay-speed-menu"]').exists()).toBe(false);
   });
 
@@ -106,7 +113,7 @@ describe("ReplayToolbarControls", () => {
     const wrapper = mountControls({ runBusy: true, playbackStatus: "playing" });
     const trigger = wrapper.get('[data-testid="replay-speed"]');
     expect(trigger.attributes("disabled")).toBeUndefined();
-    await trigger.trigger("click");
+    await trigger.trigger("mouseenter");
     const fasterOption = wrapper.get('[data-speed-delay="50"]');
     expect(fasterOption.attributes("disabled")).toBeUndefined();
     await fasterOption.trigger("click");
