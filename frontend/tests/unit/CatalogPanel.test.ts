@@ -3,6 +3,39 @@ import { describe, expect, it, vi } from "vitest";
 import CatalogPanel from "../../src/components/CatalogPanel.vue";
 
 describe("CatalogPanel", () => {
+  it("keeps Catalog refresh available when unrelated mutations are blocked", async () => {
+    const wrapper = mount(CatalogPanel, {
+      props: {
+        datasets: [],
+        selectedId: "",
+        selectedDataset: null,
+        instrumentGroups: [],
+        refreshing: false,
+        loading: false,
+        mutationBusy: true,
+        discoveryError: "",
+        enableStructure: true,
+        origin: null,
+        loadStatus: "idle",
+        loadError: "",
+        formatDomainTimestamp: (value: string | null) => value ?? "—",
+      },
+      global: { stubs: { OriginPanel: true } },
+    });
+
+    const refresh = wrapper.get('[data-testid="catalog-refresh"]');
+    expect((refresh.element as HTMLButtonElement).disabled).toBe(false);
+
+    await refresh.trigger("click");
+    expect(wrapper.emitted("refresh")).toHaveLength(1);
+
+    await wrapper.setProps({ refreshing: true });
+    expect((wrapper.get('[data-testid="catalog-refresh"]').element as HTMLButtonElement).disabled).toBe(true);
+
+    await wrapper.setProps({ refreshing: false, loading: true });
+    expect((wrapper.get('[data-testid="catalog-refresh"]').element as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("keeps popover interactions inside the Catalog and Origin status control", async () => {
     const onParentClick = vi.fn();
     const onParentPointerDown = vi.fn();
