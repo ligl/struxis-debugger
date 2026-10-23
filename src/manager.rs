@@ -19,6 +19,11 @@ use crate::worker::CheckpointSink;
 #[derive(Default)]
 pub(crate) struct ReplayManager {
     active: Option<ReplayWorker>,
+    /// Immutable completed trajectory retained independently of worker/runtime ownership.
+    completed_result: Option<ReplaySnapshotData>,
+    /// Last user-visible processing state; may outlive the worker that produced it.
+    last_state: Option<RunState>,
+    last_inspector: Option<ReplayInspectorProjection>,
     gate: ReplayCommandGate,
 }
 
@@ -40,7 +45,12 @@ impl ReplayManager {
                     .to_owned(),
             );
         }
+        // Start begins a new Run context and intentionally discards any unsaved result.
+        self.completed_result = None;
+        self.last_state = None;
+        self.last_inspector = None;
         let (worker, initial_state) = ReplayWorker::spawn_interactive(config)?;
+        self.last_state = Some(initial_state.clone());
         self.active = Some(worker);
         Ok(initial_state)
     }
@@ -63,32 +73,48 @@ impl ReplayManager {
             );
         }
 
+        self.completed_result = None;
+        self.last_state = None;
+        self.last_inspector = None;
         let (worker, initial_state) = ReplayWorker::spawn(config, sink)?;
+        self.last_state = Some(initial_state.clone());
         self.active = Some(worker);
         Ok(initial_state)
     }
 
     pub(crate) fn snapshot_data(&mut self) -> Result<ReplaySnapshotData, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
+        if let Some(result) = self.completed_result.as_ref() {
+            return Ok(result.clone());
+        }
         self.active
             .as_mut()
-            .ok_or_else(|| "Snapshot save rejected: ReplayManager has no active Run".to_owned())?
+            .ok_or_else(|| "Snapshot save rejected: no completed Run trajectory is available".to_owned())?
             .snapshot_data()
     }
 
     pub(crate) fn inspector(&mut self) -> Result<Option<ReplayInspectorProjection>, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetInspector)?;
         let Some(worker) = self.active.as_mut() else {
-            return Ok(None);
+            return Ok(self.last_inspector.clone());
         };
-        worker.inspector()
+        let projection = worker.inspector()?;
+        if projection.is_some() {
+            self.last_inspector = projection.clone();
+        }
+        Ok(projection)
     }
 
     /// Returns the authoritative Run state when a Run is owned, or `None`
     /// when Replay has not started a Run in this application session.
     pub(crate) fn state(&mut self) -> Result<Option<RunState>, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
-        self.active.as_mut().map(ReplayWorker::state).transpose()
+        if let Some(worker) = self.active.as_mut() {
+            let state = worker.state()?;
+            self.last_state = Some(state.clone());
+            return Ok(Some(state));
+        }
+        Ok(self.last_state.clone())
     }
 
     #[cfg(test)]
@@ -98,10 +124,33 @@ impl ReplayManager {
 
     pub(crate) fn step_checkpoint(&mut self) -> Result<ReplayStepResult, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Step)?;
-        self.active
+        let result = self.active
             .as_mut()
             .ok_or_else(|| "Step rejected: ReplayManager has no active Run".to_owned())?
-            .step_checkpoint()
+            .step_checkpoint()?;
+        self.last_state = Some(result.run_state.clone());
+        if result.inspector.is_some() {
+            self.last_inspector = result.inspector.clone();
+        }
+        if result.run_state.status == crate::run::RunStatus::Completed {
+            let worker = self.active.as_mut().expect("active worker remains owned during Step");
+            let trajectory = worker.snapshot_data();
+            // Release runtime ownership even if exporting the trajectory fails.
+            let release = worker.dispose();
+            match (trajectory, release) {
+                (Ok(data), Ok(_)) => self.completed_result = Some(data),
+                (Err(error), Ok(_)) => {
+                    self.last_state = Some(result.run_state.clone());
+                    self.active = None;
+                    return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
+                }
+                (_, Err(error)) => {
+                    return Err(format!("Run completed, but runtime release is unconfirmed: {error}"));
+                }
+            }
+            self.active = None;
+        }
+        Ok(result)
     }
 
     pub(crate) fn play(&mut self) -> Result<RunState, String> {
@@ -124,10 +173,15 @@ impl ReplayManager {
     /// terminal state can still be queried and so Restart can enforce cleanup.
     pub(crate) fn stop(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Stop)?;
-        self.active
-            .as_mut()
-            .ok_or_else(|| "Stop rejected: ReplayManager has no active Run".to_owned())?
-            .stop()
+        let worker = self.active.as_mut()
+            .ok_or_else(|| "Stop rejected: ReplayManager has no active Run".to_owned())?;
+        if let Ok(inspector) = worker.inspector() {
+            if inspector.is_some() { self.last_inspector = inspector; }
+        }
+        let state = worker.stop()?;
+        self.last_state = Some(state.clone());
+        self.active = None;
+        Ok(state)
     }
 
     /// Explicitly disposes and then releases the manager's ownership slot.
@@ -136,12 +190,26 @@ impl ReplayManager {
     /// succeeds. Any error leaves the worker owned and blocks a subsequent Start.
     pub(crate) fn dispose(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Dispose)?;
-        let worker = self
-            .active
-            .as_mut()
-            .ok_or_else(|| "Dispose rejected: ReplayManager has no active Run".to_owned())?;
-        let state = worker.dispose()?;
-        self.active = None;
+        let state = if let Some(worker) = self.active.as_mut() {
+            let state = worker.dispose()?;
+            self.active = None;
+            state
+        } else {
+            self.last_state.clone().unwrap_or_else(|| crate::run::RunState {
+                run_id: String::new(),
+                test_dataset_id: String::new(),
+                input_fingerprint: String::new(),
+                input_count: 0,
+                status: crate::run::RunStatus::Disposed,
+                processed_count: 0,
+                cursor_sbar_id: None,
+                failure_diagnostic: None,
+            })
+        };
+        // Reset semantics: clear all current Run context and any unsaved trajectory.
+        self.completed_result = None;
+        self.last_state = None;
+        self.last_inspector = None;
         Ok(state)
     }
 
@@ -157,7 +225,11 @@ impl ReplayManager {
             })?;
         }
         self.active = None;
+        self.completed_result = None;
+        self.last_state = None;
+        self.last_inspector = None;
         let (worker, initial_state) = ReplayWorker::spawn_interactive(config)?;
+        self.last_state = Some(initial_state.clone());
         self.active = Some(worker);
         Ok(initial_state)
     }
