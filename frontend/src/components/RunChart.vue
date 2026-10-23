@@ -128,11 +128,12 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
   const range = timeScale.getVisibleLogicalRange?.();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return false;
   const width = range.to - range.from;
+  const maximumWidth = bars.value.length + 8;
   if (width <= 0) return false;
-  const nextWidth = Math.max(
-    2,
-    Math.min(bars.value.length + 8, width * (direction === "in" ? 0.8 : 1.25)),
-  );
+  if ((direction === "in" && width <= 2) || (direction === "out" && width >= maximumWidth)) return false;
+  const nextWidth = direction === "in"
+    ? Math.max(2, width * 0.8)
+    : Math.min(maximumWidth, width * 1.25);
   if (Math.abs(nextWidth - width) < 0.01) return false;
   const anchor = crosshairLogicalIndex !== null &&
     crosshairLogicalIndex >= range.from && crosshairLogicalIndex <= range.to
