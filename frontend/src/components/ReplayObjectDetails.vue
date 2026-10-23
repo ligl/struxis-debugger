@@ -180,3 +180,57 @@ const rows = computed<InspectorRow[]>(() => {
     Object fields are from the currently backend-confirmed Replay checkpoint. The UI does not infer or mutate Struxis state.
   </p>
 </template>
+
+
+<style scoped>
+.inspector-related {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #252c32;
+}
+
+.inspector-related .section-index {
+  margin: 0 0 3px;
+}
+
+.inspector-related-item {
+  min-width: 0;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  background: #171c20;
+}
+
+.inspector-related-item > summary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px;
+  color: #aeb8bf;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.inspector-related-item > summary:hover {
+  background: #20272d;
+  color: #e3e8eb;
+}
+
+.inspector-related-item > summary code {
+  min-width: 0;
+  overflow: hidden;
+  color: #c5cdd2;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-related-fields {
+  margin: 0 6px 6px;
+  padding-top: 6px;
+  border-top: 1px solid #30383f;
+}
+</style>
