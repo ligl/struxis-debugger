@@ -325,6 +325,7 @@ watch(
     props.runState?.status,
     props.runState?.processedCount,
     props.structure,
+    props.selectedObject,
   ] as const,
   updateChart,
 );
