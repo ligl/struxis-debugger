@@ -521,6 +521,12 @@ const canControlPlaybackShortcut = computed(() =>
   (Boolean(targetSbarId.value) || playbackStatus.value === "playing" ||
     Boolean(runState.value && ["ready", "paused"].includes(runState.value.status))),
 );
+const canUseReplayKeyboardShortcuts = computed(() =>
+  workspaceMode.value === "replay" &&
+  (canStartRun.value || canRestartRun.value ||
+    Boolean(runState.value && ["ready", "running", "paused"].includes(runState.value.status)) ||
+    playbackStatus.value === "playing"),
+);
 watch(workspaceMode, (mode) => {
   if (mode !== "replay") void pausePlayback();
 });
@@ -532,6 +538,7 @@ useReplayKeyboardShortcut(
   targetSbarId,
   handleRestartToSBar,
   handleRunCommand,
+  canUseReplayKeyboardShortcuts,
 );
 
 async function startLoad(): Promise<void> {
