@@ -28,6 +28,11 @@ const selectedSnapshot = computed(
 );
 
 const displayInstrumentId = computed(() => props.instrumentId ?? "INSTRUMENT");
+const selectedSnapshotLabel = computed(() =>
+  selectedSnapshot.value
+    ? describeSnapshot(selectedSnapshot.value).replace(/ · [^·]*$/, "")
+    : "Choose completed Snapshot…",
+);
 
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
   if (left === right) return 0;
@@ -118,9 +123,9 @@ function handleSelection(event: Event): void {
       </div>
       <label class="snapshot-reference-select">
         <span class="snapshot-reference-instrument">{{ displayInstrumentId }}</span>
-        <span class="snapshot-reference-control">
+        <span class="snapshot-reference-control" :style="{ width: `min(calc(${selectedSnapshotLabel.length}ch + 28px), 32vw)` }">
           <span class="snapshot-reference-selected-label" aria-hidden="true">
-            {{ selectedSnapshot ? describeSnapshot(selectedSnapshot).replace(/ · [^·]*$/, '') : "Choose completed Snapshot…" }}
+            {{ selectedSnapshotLabel }}
           </span>
           <select
             data-testid="replay-reference-select"
