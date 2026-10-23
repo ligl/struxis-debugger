@@ -84,6 +84,7 @@ enum WorkerCommand {
     GetInspector(SyncSender<Option<ReplayInspectorProjection>>),
     SnapshotData(SyncSender<Result<ReplaySnapshotData, String>>),
     Step(SyncSender<Result<ReplayStepResult, String>>),
+    FastForwardToSBar(String, SyncSender<Result<ReplayStepResult, String>>),
     Stop(SyncSender<Result<RunState, String>>),
     Dispose(SyncSender<Result<RunState, String>>),
 }
@@ -251,6 +252,25 @@ impl ReplayWorker {
             Ok(result) => result,
             Err(error) => {
                 let detail = format!("Replay worker dropped Step response: {error}");
+                Err(self.join_after_transport_failure(detail))
+            }
+        }
+    }
+
+    /// Replays from the clean Run start through the requested Test Dataset SBar.
+    /// Intermediate calculations and owned checkpoints remain in the Worker;
+    /// only the final confirmed checkpoint crosses this boundary.
+    pub(crate) fn fast_forward_to_sbar(&mut self, target_sbar_id: String) -> Result<ReplayStepResult, String> {
+        let _permit = self.command_gate.try_enter(ReplayCommandKind::RestartToSBar)?;
+        let (reply_tx, reply_rx) = mpsc::sync_channel(0);
+        if let Err(error) = self.commands.send(WorkerCommand::FastForwardToSBar(target_sbar_id, reply_tx)) {
+            let detail = format!("Replay worker is unavailable during RestartToSBar: {error}");
+            return Err(self.join_after_transport_failure(detail));
+        }
+        match reply_rx.recv() {
+            Ok(result) => result,
+            Err(error) => {
+                let detail = format!("Replay worker dropped RestartToSBar response: {error}");
                 Err(self.join_after_transport_failure(detail))
             }
         }
@@ -658,6 +678,31 @@ impl WorkerSession {
         })
     }
 
+    /// Processes each SBar from the clean Run start through target_sbar_id.
+    /// The target is validated before any SBar is processed.
+    fn fast_forward_to_sbar(
+        &mut self,
+        target_sbar_id: &str,
+        sink: Option<&mut dyn CheckpointSink>,
+    ) -> Result<ReplayStepResult, String> {
+        let target_index = self.input.bars.iter().position(|bar| {
+            bar.ts_event.to_string() == target_sbar_id
+        }).ok_or_else(|| format!(
+            "Restart to SBar rejected: target {target_sbar_id} is not in Test Dataset {}",
+            self.input.test_dataset_id
+        ))?;
+
+        let mut sink = sink;
+        let mut final_result = None;
+        while self.next_index <= target_index {
+            let result = self.step(sink.as_deref_mut())?;
+            final_result = Some(result);
+        }
+        final_result.ok_or_else(|| format!(
+            "Restart to SBar did not process target {target_sbar_id}"
+        ))
+    }
+
     /// Nautilus exposes BacktestEngine::dispose as an infallible, void API.
     /// It performs synchronous teardown, but logs callback-cleanup failures
     /// internally instead of returning them. Therefore this confirms that the
@@ -714,6 +759,12 @@ fn worker_loop(
             }
             WorkerCommand::Step(reply) => {
                 let _ = reply.send(session.step(sink.as_deref_mut()));
+            }
+            WorkerCommand::FastForwardToSBar(target_sbar_id, reply) => {
+                let _ = reply.send(session.fast_forward_to_sbar(
+                    &target_sbar_id,
+                    sink.as_deref_mut(),
+                ));
             }
             WorkerCommand::Stop(reply) => {
                 let result = session.stop();
