@@ -1,7 +1,29 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { flushPromises } from "@vue/test-utils";
 import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.vue";
-import type { SnapshotArtifactDto } from "../../src/origin-types";
+import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../../src/origin-types";
+
+const { getSnapshotReferenceMock } = vi.hoisted(() => ({ getSnapshotReferenceMock: vi.fn() }));
+vi.mock("../../src/origin-bridge", () => ({
+  getSnapshotReference: getSnapshotReferenceMock,
+  describeIpcError: (error: unknown) => String(error),
+}));
+
+const reference = {
+  snapshotId: "snapshot-complete-01",
+  runId: "run-01",
+  instrumentId: "AUD/USD.SIM",
+  barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
+  timeframe: "5m",
+  snapshotGeneratedAt: "1780000000000000000",
+  sbarSequenceFingerprint: "a".repeat(64),
+  bars: [{
+    sbarId: "100", barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
+    tsEvent: "100", tsInit: "100", open: "10", high: "12", low: "9", close: "11", volume: "100",
+  }],
+  structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] },
+} as SnapshotReferenceDto;
 
 const snapshots: SnapshotArtifactDto[] = [
   {
@@ -18,14 +40,20 @@ const snapshots: SnapshotArtifactDto[] = [
 ];
 
 describe("SnapshotReferencePanel", () => {
-  it("shows a selected completed Snapshot without fabricating chart data", async () => {
-    const wrapper = mount(SnapshotReferencePanel, { props: { snapshots } });
+  it("renders the verified historical chart for a selected completed Snapshot", async () => {
+    getSnapshotReferenceMock.mockResolvedValueOnce(reference);
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: { snapshots },
+      global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
+    });
 
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
-    expect(wrapper.get('[data-testid="snapshot-reference-selected"]').text()).toContain("snapshot-complete-01");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("run-01");
-    expect(wrapper.text()).toContain("authoritative SBar OHLCV sequence");
-    expect(wrapper.find('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain("aaaaaaaaaaaa");
+    expect(getSnapshotReferenceMock).toHaveBeenCalledWith("snapshot-complete-01");
   });
 
   it("does not offer non-complete artifacts as Replay references", () => {
@@ -49,13 +77,15 @@ describe("SnapshotReferencePanel", () => {
     expect((select.element as HTMLSelectElement).disabled).toBe(true);
     expect(select.findAll("option")).toHaveLength(1);
     expect(wrapper.get('[data-testid="snapshot-reference-empty"]').text().toLowerCase()).toContain("no completed snapshot available");
-    expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(false);
   });
 
   it("clears the local selection when the referenced Snapshot disappears", async () => {
     const wrapper = mount(SnapshotReferencePanel, { props: { snapshots } });
+    getSnapshotReferenceMock.mockResolvedValueOnce(reference);
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
-    expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(true);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
 
     // Vue Test Utils' inferred public-instance type omits script-setup props here,
     // although setProps updates the component's runtime props correctly.
