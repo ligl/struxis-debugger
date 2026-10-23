@@ -43,11 +43,10 @@ describe("usePlaybackController", () => {
       };
       activeSteps -= 1;
     });
-    const refreshInspector = vi.fn(async () => undefined);
     let controller!: ReturnType<typeof usePlaybackController>;
     const wrapper = mount(defineComponent({
       setup() {
-        controller = usePlaybackController(state, busy, error, execute, refreshInspector);
+        controller = usePlaybackController(state, busy, error, execute);
         return () => h("div");
       },
     }));
@@ -57,7 +56,6 @@ describe("usePlaybackController", () => {
 
     expect(execute).toHaveBeenCalledTimes(3);
     expect(maxActiveSteps).toBe(1);
-    expect(refreshInspector).not.toHaveBeenCalled();
     expect(controller.playbackStatus.value).toBe("idle");
     wrapper.unmount();
   });
@@ -77,11 +75,10 @@ describe("usePlaybackController", () => {
         resolve();
       };
     }));
-    const refreshInspector = vi.fn(async () => undefined);
     let controller!: ReturnType<typeof usePlaybackController>;
     const wrapper = mount(defineComponent({
       setup() {
-        controller = usePlaybackController(state, busy, error, execute, refreshInspector);
+        controller = usePlaybackController(state, busy, error, execute);
         return () => h("div");
       },
     }));
