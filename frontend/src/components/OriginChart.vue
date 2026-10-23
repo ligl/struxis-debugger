@@ -74,6 +74,7 @@ const selectionStartX = ref<number | null>(null);
 const selectionEndX = ref<number | null>(null);
 const previewX = ref<number | null>(null);
 let draggingBoundary: "start" | "end" | null = null;
+let crosshairLogicalIndex: number | null = null;
 let lastEmittedBoundaryId: string | null = null;
 
 function coordinateForSbarId(sbarId: string | null | undefined): number | null {
@@ -479,6 +480,14 @@ function stopBoundaryDrag(): void {
 }
 
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
+  const x = param.point?.x;
+  if (typeof x === "number" && chart) {
+    const logical = chart.timeScale().coordinateToLogical(x);
+    if (logical !== null && logical !== undefined && Number.isFinite(logical)) {
+      const index = Math.round(logical);
+      if (index >= 0 && index < props.bars.length) crosshairLogicalIndex = index;
+    }
+  }
   updateHoveredObject(param.point);
   if (!props.selectionPending || selectionStartX.value === null) {
     previewX.value = null;
@@ -486,6 +495,121 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
   }
   const pointX = param.point?.x;
   previewX.value = typeof pointX === "number" && Number.isFinite(pointX) ? pointX : null;
+}
+
+function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return target.closest(
+    "input, textarea, select, button, a[href], summary, [contenteditable]:not([contenteditable='false']), [role='button'], [role='link'], [role='menuitem'], [role='slider'], [role='textbox'], [role='combobox'], [tabindex]:not([tabindex='-1'])",
+  ) !== null;
+}
+
+function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
+  if (!chart || !candleSeries || props.bars.length === 0) return false;
+  const nextIndex = Math.max(0, Math.min(props.bars.length - 1, index));
+  const bar = props.bars[nextIndex];
+  if (!bar) return false;
+  const time = timeBySbarId.get(bar.sbarId);
+  if (time === undefined) return false;
+  crosshairLogicalIndex = nextIndex;
+
+  const timeScale = chart.timeScale();
+  const range = timeScale.getVisibleLogicalRange();
+  if (range && Number.isFinite(range.from) && Number.isFinite(range.to)) {
+    const width = range.to - range.from;
+    if (width > 0) {
+      const lastIndex = props.bars.length - 1;
+      let from = range.from;
+      let to = range.to;
+      if (alignToBoundary && width < props.bars.length) {
+        from = nextIndex === 0 ? -0.5 : lastIndex + 0.5 - width;
+        to = from + width;
+      } else {
+        const margin = Math.min(2, width * 0.08);
+        if (nextIndex < from + margin) {
+          from = nextIndex - margin;
+          to = from + width;
+        } else if (nextIndex > to - margin) {
+          to = nextIndex + margin;
+          from = to - width;
+        }
+        if (width < props.bars.length) {
+          from = Math.max(-0.5, Math.min(from, props.bars.length - 0.5 - width));
+          to = from + width;
+        } else {
+          from = Math.min(from, -0.5);
+          to = from + width;
+        }
+      }
+      if (Math.abs(from - range.from) > 0.001 || Math.abs(to - range.to) > 0.001) {
+        timeScale.setVisibleLogicalRange({ from, to });
+      }
+    }
+  }
+
+  const selectedIndex = nextIndex;
+  const applySelectedCrosshair = () => {
+    if (!chart || !candleSeries || crosshairLogicalIndex !== selectedIndex) return;
+    chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
+  };
+  applySelectedCrosshair();
+  requestAnimationFrame(applySelectedCrosshair);
+  return true;
+}
+
+function moveCrosshairBy(delta: number): boolean {
+  const currentIndex = crosshairLogicalIndex ?? 0;
+  const targetIndex = currentIndex + delta;
+  if (targetIndex < 0 || targetIndex >= props.bars.length) return false;
+  return moveCrosshairTo(targetIndex);
+}
+
+function zoomTimeScale(direction: "in" | "out"): boolean {
+  if (!chart || props.bars.length === 0) return false;
+  const timeScale = chart.timeScale();
+  const range = timeScale.getVisibleLogicalRange();
+  if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return false;
+  const width = range.to - range.from;
+  const maximumWidth = props.bars.length + 8;
+  if (width <= 0) return false;
+  if ((direction === "in" && width <= 2) || (direction === "out" && width >= maximumWidth)) return false;
+  const nextWidth = direction === "in"
+    ? Math.max(2, width * 0.8)
+    : Math.min(maximumWidth, width * 1.25);
+  if (Math.abs(nextWidth - width) < 0.01) return false;
+  const anchor = crosshairLogicalIndex !== null &&
+    crosshairLogicalIndex >= range.from && crosshairLogicalIndex <= range.to
+    ? crosshairLogicalIndex
+    : (range.from + range.to) / 2;
+  const anchorRatio = (anchor - range.from) / width;
+  const from = anchor - nextWidth * anchorRatio;
+  timeScale.setVisibleLogicalRange({ from, to: from + nextWidth });
+  return true;
+}
+
+function handleChartKeyboard(event: KeyboardEvent): void {
+  const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
+    event.key === "ArrowLeft" || event.key === "ArrowRight";
+  const isBoundaryNavigation = event.ctrlKey && !event.altKey && !event.metaKey &&
+    !event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight");
+  if (
+    (event.repeat && !isArrowKey) ||
+    event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation) ||
+    (event.shiftKey && !isBoundaryNavigation) ||
+    isInteractiveKeyboardTarget(event.target) ||
+    isInteractiveKeyboardTarget(document.activeElement) ||
+    chartError.value || props.bars.length === 0
+  ) return;
+
+  let handled = false;
+  if (isBoundaryNavigation) {
+    handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : props.bars.length - 1, true);
+  } else if (event.key === "ArrowUp") handled = zoomTimeScale("in");
+  else if (event.key === "ArrowDown") handled = zoomTimeScale("out");
+  else if (event.key === "ArrowLeft") handled = moveCrosshairBy(-1);
+  else if (event.key === "ArrowRight") handled = moveCrosshairBy(1);
+
+  if (handled) event.preventDefault();
 }
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
@@ -556,6 +680,7 @@ function updateChart(): void {
 }
 
 onMounted(() => {
+  document.addEventListener("keydown", handleChartKeyboard);
   if (!chartHost.value) return;
   chart = createChart(chartHost.value, {
     width: chartHost.value.clientWidth,
@@ -642,6 +767,8 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  document.removeEventListener("keydown", handleChartKeyboard);
+  crosshairLogicalIndex = null;
   stopBoundaryDrag();
   resizeObserver?.disconnect();
   resizeObserver = null;
