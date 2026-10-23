@@ -202,8 +202,8 @@ describe("RunChart", () => {
     await nextTick();
     expect(wrapper.find('[data-testid="run-hover-sbar"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-object-hover-label"]').exists()).toBe(false);
-    expect(mocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
     wrapper.unmount();
+    expect(mocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
   });
 
   it("dims future input bars according to backend-confirmed cursor progress", async () => {
