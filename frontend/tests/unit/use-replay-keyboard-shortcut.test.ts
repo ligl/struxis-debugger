@@ -70,7 +70,7 @@ describe("useReplayKeyboardShortcut", () => {
   });
 
   it("prioritizes Restart to SBar over Play/Pause when a target exists", () => {
-    const state = mountShortcut("playing", true, true, "1735689660000000000");
+    const state = mountShortcut("idle", true, true, "1735689660000000000");
     const event = pressSpace();
     expect(event.defaultPrevented).toBe(true);
     expect(state.restartToTarget).toHaveBeenCalledTimes(1);
