@@ -79,6 +79,53 @@ describe("SnapshotReferencePanel", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_snapshot_reference", { snapshotId: "snapshot-complete-01" });
   });
 
+  it("dims a compatible Snapshot Reference during playback and brightens with confirmed progress", async () => {
+    invokeMock.mockResolvedValueOnce(reference);
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: {
+        instrumentId: "AUD/USD.SIM",
+        snapshots,
+        liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
+        liveSbarIds: ["100"],
+        isPlaying: true,
+        replayProgress: 0.5,
+      },
+    });
+
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
+    await flushPromises();
+    const chart = wrapper.get('[data-testid="snapshot-reference-chart"]');
+    expect(chart.attributes("data-sync-eligible")).toBe("true");
+    expect(chart.attributes("data-replay-playing")).toBe("true");
+    expect(chart.attributes("style")).toContain("brightness(0.775)");
+
+    await wrapper.setProps({ replayProgress: 1 });
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("brightness(1)");
+  });
+
+  it("keeps Snapshot Reference independent when timeframe or SBar coverage differs", async () => {
+    invokeMock.mockResolvedValueOnce(reference);
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: {
+        instrumentId: "AUD/USD.SIM",
+        snapshots,
+        liveBarType: "AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL",
+        liveSbarIds: ["100"],
+        isPlaying: true,
+        replayProgress: 0.2,
+      },
+    });
+
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("filter: none");
+
+    await wrapper.setProps({ liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", liveSbarIds: ["not-covered"] });
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("filter: none");
+  });
+
   it("shows an embedded loading animation while resolving a selected Snapshot", async () => {
     let resolveReference!: (value: SnapshotReferenceDto) => void;
     invokeMock.mockReturnValueOnce(new Promise<SnapshotReferenceDto>((resolve) => {
