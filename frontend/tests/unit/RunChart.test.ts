@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   setVisibleLogicalRange: vi.fn(),
   applyChartOptions: vi.fn(),
   applyPriceScaleOptions: vi.fn(),
+  coordinateToLogical: vi.fn(),
+  subscribeClick: vi.fn(),
+  unsubscribeClick: vi.fn(),
   observe: vi.fn(),
   disconnect: vi.fn(),
 }));
@@ -112,9 +115,12 @@ function installChartMock(): void {
       fitContent: mocks.fitContent,
       setVisibleLogicalRange: mocks.setVisibleLogicalRange,
       timeToCoordinate: (time: number) => time - 1700000000,
+      coordinateToLogical: mocks.coordinateToLogical,
       subscribeVisibleLogicalRangeChange: vi.fn(),
       unsubscribeVisibleLogicalRangeChange: vi.fn(),
     })),
+    subscribeClick: mocks.subscribeClick,
+    unsubscribeClick: mocks.unsubscribeClick,
     applyOptions: mocks.applyChartOptions,
     remove: mocks.chartRemove,
   });
@@ -123,6 +129,7 @@ function installChartMock(): void {
 describe("RunChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.coordinateToLogical.mockImplementation((x: number) => x < 90 ? 0 : 1);
     installResizeObserverMock();
     installChartMock();
   });
@@ -240,6 +247,62 @@ describe("RunChart", () => {
     await wrapper.get('[data-testid="run-chart-fit"]').trigger("click");
     expect(mocks.fitContent).toHaveBeenCalledTimes(2);
     wrapper.unmount();
+  });
+
+  it("emits the selected SBar and authoritative structure object from chart clicks", async () => {
+    const structure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-click",
+        high: "12",
+        low: "9",
+        sbarStartId: originBars[1]!.sbarId,
+        sbarEndId: originBars[2]!.sbarId,
+        spanSbars: 2,
+        fractalType: null,
+        createdAt: "2026-10-23T00:00:00Z",
+      }],
+      swingCount: 1,
+      swings: [{
+        swingId: "swing-click",
+        direction: "Up",
+        high: "12",
+        low: "9",
+        cbarStartId: "cbar-click",
+        cbarEndId: "cbar-click",
+        sbarStartId: originBars[1]!.sbarId,
+        sbarEndId: originBars[2]!.sbarId,
+        startOi: null,
+        endOi: null,
+        volume: "200",
+        spanSbars: 2,
+        state: "Confirmed",
+        createdAt: "2026-10-23T00:00:00Z",
+        updatedAt: "2026-10-23T00:00:00Z",
+      }],
+    };
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure },
+    });
+    await nextTick();
+    const clickHandler = mocks.subscribeClick.mock.calls[0]?.[0] as ((param: { point?: { x: number; y: number } }) => void);
+    expect(clickHandler).toBeTypeOf("function");
+
+    clickHandler({ point: { x: 90, y: 100 } });
+    expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toEqual({
+      kind: "sbar",
+      id: originBars[2]!.sbarId,
+      checkpointSbarId: originBars[1]!.sbarId,
+    });
+
+    clickHandler({ point: { x: 90, y: 189.5 } });
+    expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toEqual({
+      kind: "swing",
+      id: "swing-click",
+      checkpointSbarId: originBars[1]!.sbarId,
+    });
+    wrapper.unmount();
+    expect(mocks.unsubscribeClick).toHaveBeenCalledOnce();
   });
 
   it("does not display an Origin projection for a Test Dataset from another Origin", async () => {
