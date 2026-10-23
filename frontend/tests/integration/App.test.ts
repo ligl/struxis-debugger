@@ -35,24 +35,32 @@ function mountApp() {
 }
 
 async function expectTestDatasetAvailable(wrapper: ReturnType<typeof mountApp>): Promise<void> {
-  const detailsToggle = wrapper.find('[data-testid="test-dataset-details-toggle"]');
-  if (detailsToggle.exists()) {
-    await vi.waitFor(() => {
-      expect((wrapper.get('[data-testid="test-dataset-details-toggle"]').element as HTMLButtonElement).disabled).toBe(false);
-    });
-    if (!wrapper.find('[data-testid="test-dataset-details-popover"]').exists()) {
-      await wrapper.get('[data-testid="test-dataset-details-toggle"]').trigger("click");
-    }
-    await vi.waitFor(() => {
-      expect(wrapper.get('[data-testid="test-dataset-details-popover"]').text()).toContain("test-1");
-    });
-    return;
+  // The Test Dataset ID is intentionally hidden in the collapsed details popover.
+  // The action label is the stable page-level signal that one is already loaded.
+  await vi.waitFor(() => {
+    expect(wrapper.get('[data-testid="test-dataset-create"]').text()).toContain("REPLACE TEST DATASET");
+  });
+}
+
+async function expectTestDatasetId(
+  wrapper: ReturnType<typeof mountApp>,
+  expectedId: string,
+): Promise<void> {
+  const datasetTab = wrapper.get('[data-testid="workspace-dataset"]');
+  if (datasetTab.attributes("aria-current") !== "page") {
+    await datasetTab.trigger("click");
   }
 
-  // Replay intentionally does not keep the Dataset details popover mounted.
-  // An enabled Start control is the page-level signal that a Test Dataset is available.
   await vi.waitFor(() => {
-    expect((wrapper.get('[data-testid="run-start-stop"]').element as HTMLButtonElement).disabled).toBe(false);
+    expect((wrapper.get('[data-testid="test-dataset-details-toggle"]').element as HTMLButtonElement).disabled).toBe(false);
+  });
+  if (!wrapper.find('[data-testid="test-dataset-details-popover"]').exists()) {
+    await wrapper.get('[data-testid="test-dataset-details-toggle"]').trigger("click");
+    await flushPromises();
+  }
+  await vi.waitFor(() => {
+    expect(wrapper.find('[data-testid="test-dataset-details-popover"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="test-dataset-details-popover"]').text()).toContain(expectedId);
   });
 }
 
@@ -1397,7 +1405,7 @@ describe("startup and user-operation coordination", () => {
     expect(resetIndex).toBeLessThan(replaceIndex);
     expect(wrapper.get(`[data-testid="workspace-replay"]`).attributes("aria-current")).toBe("page");
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
+    await expectTestDatasetId(wrapper, "test-replaced");
     confirmSpy.mockRestore();
   });
 
@@ -1504,7 +1512,7 @@ describe("startup and user-operation coordination", () => {
     resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
     await vi.waitFor(() => expect(wrapper.get('[data-testid="workspace-replay"]').attributes("aria-current")).toBe("page"));
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
+    await expectTestDatasetId(wrapper, "test-replaced");
   });
 
   it("blocks Run start while Test Dataset replacement is pending", async () => {
@@ -1546,7 +1554,7 @@ describe("startup and user-operation coordination", () => {
     // back to Dataset to inspect the newly committed Test Dataset.
     await flushPromises();
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
+    await expectTestDatasetId(wrapper, "test-replaced");
   });
 });
 
