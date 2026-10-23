@@ -76,6 +76,9 @@ let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedTestDatasetId: string | null = null;
+let lastProcessedCount: number | null = null;
+let lastRunId: string | null = null;
+let lastProgressApplies: boolean | null = null;
 let visibleRangeListener: (() => void) | null = null;
 let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 
@@ -193,6 +196,10 @@ function updateChart(): void {
     if (projectionMessage.value) {
       candleSeries.setData([]);
       volumeSeries.setData([]);
+      timeBySbarId = new Map();
+      lastProcessedCount = null;
+      lastRunId = props.runState?.runId ?? null;
+      lastProgressApplies = replayProgressApplies.value;
       selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
@@ -223,6 +230,9 @@ function updateChart(): void {
     );
     candleSeries.setData(candles);
     volumeSeries.setData(volume);
+    lastProcessedCount = processedCount;
+    lastRunId = props.runState?.runId ?? null;
+    lastProgressApplies = replayProgressApplies.value;
     chartError.value = "";
     updateStructureOverlays();
     if (props.testDataset && fittedTestDatasetId !== props.testDataset.testDatasetId) {
@@ -236,11 +246,69 @@ function updateChart(): void {
   } catch (error) {
     candleSeries.setData([]);
     volumeSeries.setData([]);
+    lastProcessedCount = null;
+    lastRunId = props.runState?.runId ?? null;
+    lastProgressApplies = replayProgressApplies.value;
     selectedSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
   }
+}
+
+function updateProgressSeries(): void {
+  if (!chart || !candleSeries || !volumeSeries || projectionMessage.value) return;
+  const processedCount = replayProgressApplies.value
+    ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
+    : bars.value.length;
+  const runId = props.runState?.runId ?? null;
+
+  // Run identity and progress mode changes are reset boundaries, not a one-bar
+  // transition. The dataset watcher normally handles these first; this guard
+  // also makes the progress path safe if Vue batches multiple prop changes.
+  if (
+    lastProcessedCount === null ||
+    lastRunId !== runId ||
+    lastProgressApplies !== replayProgressApplies.value
+  ) {
+    updateChart();
+    return;
+  }
+  if (processedCount === lastProcessedCount) return;
+
+  if (
+    replayProgressApplies.value &&
+    processedCount === lastProcessedCount + 1 &&
+    processedCount > 0
+  ) {
+    const index = processedCount - 1;
+    const projection = mapOriginBarsToChart(bars.value);
+    const candle = projection.candles[index];
+    const volume = projection.volume[index];
+    if (!candle || !volume) {
+      updateChart();
+      return;
+    }
+    const candleUpdate = layerVisibility.value.sbar
+      ? candle
+      : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
+    const volumeUpdate = layerVisibility.value.volume
+      ? volume
+      : { ...volume, color: "rgba(0,0,0,0)" };
+
+    // lightweight-charts v5 supports historical updates. Future candles are
+    // already present as dimmed points, so promote only the newly confirmed
+    // SBar and volume bar instead of replacing the complete historical series.
+    candleSeries.update(candleUpdate, true);
+    volumeSeries.update(volumeUpdate, true);
+    lastProcessedCount = processedCount;
+    updateStructureOverlays();
+    return;
+  }
+
+  // Unexpected jumps/backtracking are uncommon (e.g. a restored Run state).
+  // Rebuild from the authoritative input projection rather than infer a delta.
+  updateChart();
 }
 
 onMounted(() => {
@@ -321,13 +389,18 @@ watch(
     props.testDataset?.testDatasetId,
     props.origin?.originDatasetId,
     props.runState?.testDatasetId,
-    props.runState?.status,
-    props.runState?.processedCount,
-    props.structure,
+    props.runState?.runId,
+    replayProgressApplies.value,
   ] as const,
   updateChart,
 );
 
+watch(
+  () => props.runState?.processedCount,
+  () => updateProgressSeries(),
+);
+
+watch(() => props.structure, updateStructureOverlays);
 watch(() => props.selectedObject, updateStructureOverlays);
 
 onBeforeUnmount(() => {
