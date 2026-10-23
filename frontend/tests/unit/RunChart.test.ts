@@ -333,7 +333,7 @@ describe("RunChart", () => {
     expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe("CBAR · cbar-1");
     expect(wrapper.emitted("objectSelect")).toBeUndefined();
 
-    moveHandler?.({ point: { x: 60, y: 188 } });
+    moveHandler?.({ point: { x: 90, y: 189.5 } });
     await nextTick();
     expect(wrapper.get('[data-testid="run-hover-swing"]').attributes("data-swing-id")).toBe("swing-1");
     expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe("SWING · swing-1");
