@@ -3,7 +3,7 @@ import type { RunStateDto } from "../origin-types";
 import type { RunCommand } from "../run-command-eligibility";
 import type { PlaybackStatus } from "../composables/usePlaybackController";
 import { ref, watch } from "vue";
-import { isRunCommandEligible } from "../run-command-eligibility";
+import { hasCompletedRunResult, isRunCommandEligible } from "../run-command-eligibility";
 
 const props = withDefaults(defineProps<{
   runState: RunStateDto | null;
@@ -94,7 +94,7 @@ const showStop = () =>
       class="subtle-button replay-save-snapshot"
       data-testid="run-save-snapshot"
       title="Persist the completed Run as a new Snapshot"
-      :disabled="snapshotSaveBusy || runBusy || playbackStatus === 'playing' || runState?.status !== 'completed'"
+      :disabled="snapshotSaveBusy || runBusy || playbackStatus === 'playing' || !hasCompletedRunResult(runState)"
       @click="emit('saveSnapshot')"
     >{{ snapshotSaveBusy ? 'SAVING…' : 'SAVE SNAPSHOT' }}</button>
     <span v-if="runError" class="error-message toolbar-error" role="alert">{{ runError }}</span>
