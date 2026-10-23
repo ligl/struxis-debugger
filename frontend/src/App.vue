@@ -413,7 +413,8 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
 
   // Stop scheduling and wait for an in-flight Step before any conflicting command.
   await stopPlayback();
-  await executeRunCommand(command);
+  const commandSucceeded = await executeRunCommand(command);
+  if (!commandSucceeded) return;
   if (command === "start" || command === "restart") {
     await refreshReplayInspector();
   } else if (command === "reset") {
