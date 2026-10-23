@@ -137,6 +137,21 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "snapshot-reference-01",
+        structure: null,
+        displayContext: "snapshot-reference",
+      },
+    });
+
+    expect(wrapper.find(".origin-chart-heading").exists()).toBe(false);
+    expect(wrapper.find('[data-testid="origin-chart-viewport"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-chart-legend"]').exists()).toBe(false);
+  });
+
   it("projects validated SBar data into candlestick and volume series without grid or branding", async () => {
     const wrapper = mount(OriginChart, {
       props: {
