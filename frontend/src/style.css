@@ -1560,6 +1560,7 @@ body,
 }
 
 .run-chart-legend .origin-chart-legend-item {
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;
