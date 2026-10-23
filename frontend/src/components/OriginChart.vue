@@ -1016,7 +1016,7 @@ onBeforeUnmount(() => {
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>
     </div>
-    <div class="origin-chart-foot">
+    <div v-if="props.displayContext !== \"snapshot-reference\"" class="origin-chart-foot">
       <span>SBARS <b>{{ bars.length.toLocaleString() }}</b></span>
       <span v-if="latestBar">VOL <b>{{ latestBar.volume }}</b></span>
       <span v-if="latestBar" class="origin-chart-last-id" :title="latestBar.sbarId">LAST ID <code>{{ latestBar.sbarId }}</code></span>
