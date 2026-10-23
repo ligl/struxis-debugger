@@ -91,6 +91,7 @@ impl ReplayManager {
         self.active.as_mut().map(ReplayWorker::state).transpose()
     }
 
+    #[cfg(test)]
     pub(crate) fn step(&mut self) -> Result<RunState, String> {
         self.step_checkpoint().map(|result| result.run_state)
     }
