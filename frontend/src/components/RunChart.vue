@@ -317,6 +317,7 @@ function updateChart(): void {
       selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
+      targetSbarX.value = null;
       chartError.value = "";
       return;
     }
@@ -368,6 +369,7 @@ function updateChart(): void {
     selectedSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
+    targetSbarX.value = null;
     chartError.value = error instanceof Error ? error.message : String(error);
   }
 }
