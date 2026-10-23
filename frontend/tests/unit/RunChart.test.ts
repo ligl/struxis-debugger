@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   applyPriceScaleOptions: vi.fn(),
   coordinateToLogical: vi.fn(),
   subscribeClick: vi.fn(),
+  clickListener: null as ((param: { point?: { x: number; y: number } | undefined }) => void) | null,
   unsubscribeClick: vi.fn(),
   subscribeCrosshairMove: vi.fn(),
   unsubscribeCrosshairMove: vi.fn(),
@@ -130,7 +131,10 @@ function installChartMock(): void {
       subscribeVisibleLogicalRangeChange: (listener: () => void) => { mocks.visibleRangeListener = listener; mocks.subscribeVisibleRangeChange(); },
       unsubscribeVisibleLogicalRangeChange: mocks.unsubscribeVisibleRangeChange,
     })),
-    subscribeClick: mocks.subscribeClick,
+    subscribeClick: (listener: (param: { point?: { x: number; y: number } | undefined }) => void) => {
+      mocks.clickListener = listener;
+      mocks.subscribeClick(listener);
+    },
     unsubscribeClick: mocks.unsubscribeClick,
     subscribeCrosshairMove: (listener: (param: { point?: { x: number; y: number } | undefined }) => void) => {
       mocks.crosshairMoveListener = listener;
@@ -147,6 +151,7 @@ describe("RunChart", () => {
     vi.clearAllMocks();
     mocks.visibleRangeListener = null;
     mocks.crosshairMoveListener = null;
+    mocks.clickListener = null;
     mocks.animationFrameCallback = null;
     mocks.coordinateOffset = 0;
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { mocks.animationFrameCallback = callback; return 1; });
@@ -181,6 +186,35 @@ describe("RunChart", () => {
     expect(wrapper.get('[data-testid="run-chart-panel"]').attributes("data-sbar-count")).toBe("2");
     expect(mocks.fitContent).toHaveBeenCalledOnce();
     expect(mocks.setVisibleLogicalRange).toHaveBeenCalledWith({ from: -0.5, to: 5.5 });
+    wrapper.unmount();
+  });
+
+  it("sets a separate Restart to SBar target when the SBar candle is clicked", async () => {
+    const targetId = originBars[1]!.sbarId;
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: null,
+        targetSbarId: targetId,
+      },
+    });
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="restart-to-sbar-target"]').attributes("data-target-sbar-id")).toBe(targetId);
+    mocks.clickListener?.({ point: { x: 60, y: 190 } });
+    await nextTick();
+
+    expect(wrapper.emitted("objectSelect")?.[0]?.[0]).toMatchObject({
+      kind: "sbar",
+      id: targetId,
+      checkpointSbarId: null,
+    });
+    expect(wrapper.emitted("targetSelect")?.[0]).toEqual([targetId]);
+
+    const contextEvent = await wrapper.get('[data-testid="run-chart-panel"]').trigger("contextmenu");
+    expect(contextEvent.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("targetCancel")).toHaveLength(1);
     wrapper.unmount();
   });
 
