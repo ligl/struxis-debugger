@@ -1222,7 +1222,7 @@ describe("startup and user-operation coordination", () => {
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "load_origin") return pendingLoad;
-      if (command === "dispose_run") return Promise.resolve(null);
+      if (command === "reset_run") return Promise.resolve(null);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
