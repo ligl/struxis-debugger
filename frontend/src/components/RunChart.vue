@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { OriginDatasetDto, ReplayChartSelection, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
+import type { OriginDatasetDto, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
   origin: OriginDatasetDto | null;
@@ -20,11 +20,14 @@ const props = defineProps<{
   structure?: ReplayInspectorStructureDto | null;
   selectedObject?: ReplayChartSelection | null;
   targetSbarId?: string | null;
+  syncEnabled?: boolean;
+  syncRequest?: ReplayChartViewportSync | null;
 }>();
 const emit = defineEmits<{
   objectSelect: [selection: ReplayChartSelection];
   targetSelect: [sbarId: string];
   targetCancel: [];
+  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision">];
 }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
@@ -94,6 +97,7 @@ let visibleRangeListener: (() => void) | null = null;
 let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
+let suppressSyncEmit = false;
 
 function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -374,6 +378,39 @@ function updateHoverMarker(): void {
   hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar"
     ? markerForSbar(hoveredObject.value.id)
     : null;
+}
+
+function handleVisibleRangeChange(): void {
+  scheduleOverlayUpdate();
+  if (!props.syncEnabled || suppressSyncEmit || !chart || bars.value.length === 0) return;
+  const range = chart.timeScale().getVisibleLogicalRange();
+  if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
+  const fromIndex = Math.max(0, Math.min(bars.value.length - 1, Math.round(range.from)));
+  const toIndex = Math.max(0, Math.min(bars.value.length - 1, Math.round(range.to)));
+  const fromBar = bars.value[fromIndex];
+  const toBar = bars.value[toIndex];
+  if (!fromBar || !toBar) return;
+  emit("viewportChange", {
+    source: "live",
+    fromSbarId: fromBar.sbarId,
+    fromOffset: range.from - fromIndex,
+    toSbarId: toBar.sbarId,
+    toOffset: range.to - toIndex,
+  });
+}
+
+function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
+  if (!request || request.source === "live" || !props.syncEnabled || !chart) return;
+  const fromIndex = bars.value.findIndex((bar) => bar.sbarId === request.fromSbarId);
+  const toIndex = bars.value.findIndex((bar) => bar.sbarId === request.toSbarId);
+  if (fromIndex < 0 || toIndex < 0 || toIndex < fromIndex) return;
+  const current = chart.timeScale().getVisibleLogicalRange();
+  const from = fromIndex + request.fromOffset;
+  const to = toIndex + request.toOffset;
+  if (current && Math.abs(current.from - from) < 0.01 && Math.abs(current.to - to) < 0.01) return;
+  suppressSyncEmit = true;
+  chart.timeScale().setVisibleLogicalRange({ from, to });
+  queueMicrotask(() => { suppressSyncEmit = false; });
 }
 
 function scheduleOverlayUpdate(): void {
@@ -709,8 +746,8 @@ onMounted(() => {
     chart.subscribeCrosshairMove(chartMoveListener);
   }
   if (typeof timeScale.subscribeVisibleLogicalRangeChange === "function") {
-    timeScale.subscribeVisibleLogicalRangeChange(scheduleOverlayUpdate);
-    visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(scheduleOverlayUpdate);
+    timeScale.subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+    visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(handleVisibleRangeChange);
   }
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
@@ -753,6 +790,10 @@ watch(() => props.structure, () => {
 watch(() => props.selectedObject, updateStructureOverlays);
 watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
+watch(() => props.syncRequest, applySyncRequest, { deep: true });
+watch(() => props.syncEnabled, (enabled) => {
+  if (enabled) handleVisibleRangeChange();
+});
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
 onBeforeUnmount(() => {
