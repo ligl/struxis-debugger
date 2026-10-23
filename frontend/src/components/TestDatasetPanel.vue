@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { OriginDatasetDto, TestDatasetDto } from "../origin-types";
+import { formatDomainTimestamp } from "../timestamp-format";
 
-defineProps<{
+const props = defineProps<{
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
   startSbarId: string;
@@ -17,6 +18,12 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{ create: [] }>();
+
+function displaySbarTime(sbarId: string): string {
+  const bar = props.origin?.bars.find((item) => item.sbarId === sbarId);
+  if (!bar || !props.origin) return sbarId;
+  return formatDomainTimestamp(bar.tsEvent, props.origin.timeframe);
+}
 </script>
 
 <template>
@@ -25,25 +32,25 @@ const emit = defineEmits<{ create: [] }>();
       <slot name="source" />
 
       <div class="dataset-range-summary">
-        <div v-if="rangeSelectionReady" class="dataset-range-selected" data-testid="selected-test-range">
+        <div v-if="props.rangeSelectionReady" class="dataset-range-selected" data-testid="selected-test-range">
           <span>INCLUSIVE INTERVAL</span>
-          <code data-testid="selected-test-range-start">{{ startSbarId }}</code>
+          <code data-testid="selected-test-range-start">{{ props.startSbarId }}</code>
           <span aria-hidden="true">→</span>
-          <code data-testid="selected-test-range-end">{{ endSbarId }}</code>
-          <strong data-testid="selected-test-range-count">{{ selectedRangeCount.toLocaleString() }}</strong>
+          <code data-testid="selected-test-range-end">{{ props.endSbarId }}</code>
+          <strong data-testid="selected-test-range-count">{{ props.selectedRangeCount.toLocaleString() }}</strong>
           <span>SBARS</span>
         </div>
-        <div v-else-if="rangeSelectionPending" class="dataset-range-pending" data-testid="test-range-awaiting-end">
-          START <code>{{ startSbarId }}</code> · Select end on chart
+        <div v-else-if="props.rangeSelectionPending" class="dataset-range-pending" data-testid="test-range-awaiting-end">
+          START <code>{{ displaySbarTime(props.startSbarId) }}</code> · Select end on chart
         </div>
-        <div v-else-if="origin" class="dataset-range-empty" data-testid="test-range-not-selected">
+        <div v-else-if="props.origin" class="dataset-range-empty" data-testid="test-range-not-selected">
           Select inclusive interval on chart
         </div>
         <div v-else class="dataset-range-empty">
           Load Origin to select interval
         </div>
-        <span class="dataset-range-status" data-testid="origin-range-selection-status" aria-live="polite">
-          {{ rangeSelectionStatus }}
+        <span class="dataset-range-status" data-testid="props.origin-range-selection-status" aria-live="polite">
+          {{ props.rangeSelectionStatus }}
         </span>
       </div>
 
@@ -52,30 +59,30 @@ const emit = defineEmits<{ create: [] }>();
       <button
         class="primary-button dataset-create-button"
         data-testid="test-dataset-create"
-        :disabled="testLoading || !canMutateTest || !rangeSelectionReady"
+        :disabled="props.testLoading || !props.canMutateTest || !props.rangeSelectionReady"
         @click="emit('create')"
       >
-        {{ testLoading ? "VALIDATING…" : testDataset ? "REPLACE TEST DATASET" : "CREATE TEST DATASET" }}
+        {{ props.testLoading ? "VALIDATING…" : props.testDataset ? "REPLACE TEST DATASET" : "CREATE TEST DATASET" }}
       </button>
 
-      <details v-if="testDataset" class="test-dataset-details">
+      <details v-if="props.testDataset" class="test-dataset-details">
         <summary data-testid="test-dataset-details-toggle">TEST DETAILS</summary>
         <div class="test-dataset-detail-list">
-          <div><span>TEST DATASET ID</span><code>{{ testDataset.testDatasetId }}</code></div>
-          <div><span>ORIGIN ID</span><code>{{ testDataset.originDatasetId }}</code></div>
-          <div><span>VALIDATED RANGE</span><code>{{ testDataset.startSbarId }} → {{ testDataset.endSbarId }}</code></div>
-          <div><span>SBAR COUNT</span><strong>{{ testDataset.sbarCount.toLocaleString() }}</strong></div>
-          <div><span>SEQUENCE FINGERPRINT</span><code>{{ testDataset.sbarSequenceFingerprint }}</code></div>
+          <div><span>TEST DATASET ID</span><code>{{ props.testDataset.testDatasetId }}</code></div>
+          <div><span>ORIGIN ID</span><code>{{ props.testDataset.originDatasetId }}</code></div>
+          <div><span>VALIDATED RANGE</span><code>{{ displaySbarTime(props.testDataset.startSbarId) }} → {{ displaySbarTime(props.testDataset.endSbarId) }}</code></div>
+          <div><span>SBAR COUNT</span><strong>{{ props.testDataset.sbarCount.toLocaleString() }}</strong></div>
+          <div><span>SEQUENCE FINGERPRINT</span><code>{{ props.testDataset.sbarSequenceFingerprint }}</code></div>
         </div>
       </details>
     </div>
 
-    <div v-if="!canMutateTest && origin || testError || testStatus" class="dataset-controls-feedback">
-      <p v-if="!canMutateTest && origin" class="dataset-feedback-note">
+    <div v-if="!props.canMutateTest && props.origin || props.testError || props.testStatus" class="dataset-controls-feedback">
+      <p v-if="!props.canMutateTest && props.origin" class="dataset-feedback-note">
         Stop or Reset the active Run before changing its Test Dataset.
       </p>
-      <p v-if="testError" class="error-message" role="alert">{{ testError }}</p>
-      <p v-else-if="testStatus" class="success-message" role="status">{{ testStatus }}</p>
+      <p v-if="props.testError" class="error-message" role="alert">{{ props.testError }}</p>
+      <p v-else-if="props.testStatus" class="success-message" role="status">{{ props.testStatus }}</p>
     </div>
   </section>
 </template>
