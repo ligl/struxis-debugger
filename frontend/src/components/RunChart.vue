@@ -106,7 +106,7 @@ function barAtLogicalIndex(logical: number): SBarDto | null {
   return bars.value[Math.round(logical)] ?? null;
 }
 
-function moveCrosshairTo(index: number): boolean {
+function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
   if (!chart || !candleSeries || bars.value.length === 0) return false;
   const nextIndex = Math.max(0, Math.min(bars.value.length - 1, index));
   const bar = bars.value[nextIndex];
@@ -124,27 +124,36 @@ function moveCrosshairTo(index: number): boolean {
   if (range && Number.isFinite(range.from) && Number.isFinite(range.to)) {
     const width = range.to - range.from;
     if (width > 0) {
-      const margin = Math.min(2, width * 0.08);
+      const lastIndex = bars.value.length - 1;
       let from = range.from;
       let to = range.to;
-      if (nextIndex < from + margin) {
-        from = nextIndex - margin;
-        to = from + width;
-      } else if (nextIndex > to - margin) {
-        to = nextIndex + margin;
-        from = to - width;
-      }
 
-      // When the viewport is narrower than the dataset, constrain it to
-      // the logical candle-center bounds [-0.5, count - 0.5]. If it is
-      // wider than the dataset, leave its width intact and keep all candles
-      // available rather than inventing a narrower zoom level.
-      if (width < bars.value.length) {
-        from = Math.max(-0.5, Math.min(from, bars.value.length - 0.5 - width));
+      if (alignToBoundary && width < bars.value.length) {
+        // Ctrl+Left / Ctrl+Right are absolute navigation commands. Align the
+        // viewport to the requested dataset edge instead of applying the
+        // ordinary arrow-key margin heuristic, which can leave the target
+        // candle visually at or beyond the edge after range clamping.
+        from = nextIndex === 0 ? -0.5 : lastIndex + 0.5 - width;
         to = from + width;
       } else {
-        from = Math.min(from, -0.5);
-        to = from + width;
+        const margin = Math.min(2, width * 0.08);
+        if (nextIndex < from + margin) {
+          from = nextIndex - margin;
+          to = from + width;
+        } else if (nextIndex > to - margin) {
+          to = nextIndex + margin;
+          from = to - width;
+        }
+
+        // Keep the viewport within the dataset candle-center bounds when it
+        // is narrower than the sequence. Wider viewports retain their zoom.
+        if (width < bars.value.length) {
+          from = Math.max(-0.5, Math.min(from, bars.value.length - 0.5 - width));
+          to = from + width;
+        } else {
+          from = Math.min(from, -0.5);
+          to = from + width;
+        }
       }
       if (Math.abs(from - range.from) > 0.001 || Math.abs(to - range.to) > 0.001) {
         timeScale.setVisibleLogicalRange({ from, to });
@@ -205,7 +214,7 @@ function handleChartKeyboard(event: KeyboardEvent): void {
 
   let handled = false;
   if (isBoundaryNavigation) {
-    handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : bars.value.length - 1);
+    handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : bars.value.length - 1, true);
   } else if (event.key === "ArrowUp") handled = zoomTimeScale("in");
   else if (event.key === "ArrowDown") handled = zoomTimeScale("out");
   else if (event.key === "ArrowLeft") handled = moveCrosshairBy(-1);
