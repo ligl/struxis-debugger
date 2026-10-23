@@ -23,6 +23,17 @@ export function useRunControl() {
   const runError = ref("");
   const lastStepResult = ref<ReplayStepResultDto | null>(null);
 
+  let idleWaiters: Array<() => void> = [];
+  function waitForIdle(): Promise<void> {
+    if (!runBusy.value) return Promise.resolve();
+    return new Promise((resolve) => idleWaiters.push(resolve));
+  }
+  function notifyIdle(): void {
+    const waiters = idleWaiters;
+    idleWaiters = [];
+    waiters.forEach((resolve) => resolve());
+  }
+
   async function refreshRunState(_silent = false): Promise<boolean> {
     if (runBusy.value) return false;
     runBusy.value = true;
@@ -35,6 +46,7 @@ export function useRunControl() {
       return false;
     } finally {
       runBusy.value = false;
+      notifyIdle();
     }
   }
 
@@ -117,5 +129,6 @@ export function useRunControl() {
     refreshRunState,
     executeRunCommand,
     executeRestartToSBar,
+    waitForIdle,
   };
 }
