@@ -291,6 +291,16 @@ impl ReplayManager {
         target_sbar_id: String,
     ) -> Result<ReplayStepResult, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::RestartToSBar)?;
+
+        // Reject an invalid target before releasing or replacing the current Run.
+        // This identity check uses the same immutable input lookup as Worker.
+        if config.input.index_of_sbar_id(&target_sbar_id).is_none() {
+            return Err(format!(
+                "Restart to SBar rejected: target {target_sbar_id} is not in Test Dataset {}",
+                config.input.test_dataset_id
+            ));
+        }
+
         if let Some(worker) = self.active.as_mut() {
             worker.dispose().map_err(|error| {
                 format!("Restart to SBar aborted: previous Run release is unconfirmed: {error}")
@@ -620,6 +630,34 @@ mod tests {
             .expect("completed fast-forward trajectory remains saveable");
         assert_eq!(snapshot.state.status, crate::run::RunStatus::Completed);
         assert_eq!(snapshot.checkpoints.len(), 3);
+    }
+
+    #[test]
+    fn invalid_restart_to_sbar_target_preserves_the_current_run() {
+        let mut manager = ReplayManager::new();
+        let initial = manager
+            .start_interactive(worker_config("manager-invalid-target-old"))
+            .expect("existing Run starts");
+        assert_eq!(initial.status, crate::run::RunStatus::Ready);
+
+        let error = manager
+            .restart_to_sbar(
+                worker_config("manager-invalid-target-replacement"),
+                "not-a-real-sbar".to_owned(),
+            )
+            .expect_err("invalid target must be rejected before replacing the current Run");
+
+        assert!(error.contains("not in Test Dataset"));
+        assert!(manager.has_owned_run(), "the old Worker must remain owned");
+        let current = manager
+            .state()
+            .expect("old Run remains queryable")
+            .expect("old Run state remains present");
+        assert_eq!(current.run_id, "manager-invalid-target-old");
+        assert_eq!(current.status, crate::run::RunStatus::Ready);
+        assert_eq!(current.processed_count, 0);
+
+        manager.dispose().expect("old Run can still be disposed");
     }
 
     #[test]
