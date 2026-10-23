@@ -424,16 +424,22 @@ describe("RunChart", () => {
 
     mocks.coordinateOffset = 100;
     mocks.visibleRangeListener?.();
+    const supersededFrame = mocks.animationFrameCallback;
 
-    // The canvas range event is coalesced; the previous SVG projection remains
-    // until the next frame samples the settled chart coordinate transforms.
+    // A second range event before paint cancels the stale frame and schedules
+    // one projection using the latest chart transforms.
+    mocks.coordinateOffset = 200;
+    mocks.visibleRangeListener?.();
+    expect(mocks.cancelAnimationFrame).toHaveBeenCalledWith(1);
+    expect(mocks.animationFrameCallback).not.toBeNull();
+    expect(mocks.animationFrameCallback).not.toBe(supersededFrame);
+
     await nextTick();
     expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX);
-    expect(mocks.animationFrameCallback).not.toBeNull();
 
     mocks.animationFrameCallback?.(0);
     await nextTick();
-    expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX + 100);
+    expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX + 200);
 
     wrapper.unmount();
     expect(mocks.unsubscribeVisibleRangeChange).toHaveBeenCalled();
