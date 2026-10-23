@@ -66,7 +66,7 @@ function describeSnapshot(snapshot: SnapshotArtifactDto): string {
   const timeframe = timeframeFromBarType(snapshot.barType);
   const start = formatEventTime(snapshot.inputStartTsEvent, snapshot.barType);
   const end = formatEventTime(snapshot.inputEndTsEvent, snapshot.barType);
-  return `${timeframe} · ${start} — ${end} · ${formatGeneratedAt(snapshot.generatedAt)}`;
+  return `${timeframe} · ${start} → ${end} · ${formatGeneratedAt(snapshot.generatedAt)}`;
 }
 
 watch(availableSnapshots, (available) => {
