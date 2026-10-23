@@ -247,11 +247,11 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   let handled = false;
   if (isFitShortcut) handled = fitContentShortcut();
   else if (isBoundaryNavigation) {
-    handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : bars.value.length - 1, true);
-  } else if (event.key === "ArrowUp") handled = zoomTimeScale("in");
-  else if (event.key === "ArrowDown") handled = zoomTimeScale("out");
-  else if (event.key === "ArrowLeft") handled = moveCrosshairBy(-1);
-  else if (event.key === "ArrowRight") handled = moveCrosshairBy(1);
+    handled = moveCrosshairTo(key === "ArrowLeft" ? 0 : bars.value.length - 1, true);
+  } else if (key === "ArrowUp") handled = zoomTimeScale("in");
+  else if (key === "ArrowDown") handled = zoomTimeScale("out");
+  else if (key === "ArrowLeft") handled = moveCrosshairBy(-1);
+  else if (key === "ArrowRight") handled = moveCrosshairBy(1);
   else if (event.key.toLowerCase() === "t") {
     const bar = crosshairLogicalIndex === null ? null : barAtLogicalIndex(crosshairLogicalIndex);
     if (bar) {
