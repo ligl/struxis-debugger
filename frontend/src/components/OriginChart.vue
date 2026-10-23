@@ -833,7 +833,7 @@ onBeforeUnmount(() => {
     <div class="origin-chart-heading">
       <div class="chart-title-block">
         <h3>{{ props.displayContext === "snapshot-reference" ? "SNAPSHOT · " : "ORIGIN · " }}{{ latestBar?.barType ?? originDatasetId }}</h3>
-        <span class="tag" :class="props.displayContext === "snapshot-reference" ? "amber" : "green"">{{ props.displayContext === "snapshot-reference" ? "IMMUTABLE REFERENCE" : "CATALOG SOURCE" }}</span>
+        <span class="tag" :class='props.displayContext === "snapshot-reference" ? "amber" : "green"'>{{ props.displayContext === "snapshot-reference" ? "IMMUTABLE REFERENCE" : "CATALOG SOURCE" }}</span>
         <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
