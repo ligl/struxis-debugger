@@ -108,7 +108,7 @@ function updateStructureOverlays(): void {
   const timeScale = chart.timeScale();
   const structure = props.structure;
   const selected = props.selectedObject;
-  if (selected?.kind === "sbar" && selected.checkpointSbarId === props.runState?.cursorSbarId) {
+  if (selected?.kind === "sbar" && ((selected.checkpointSbarId === null && !props.runState) || selected.checkpointSbarId === props.runState?.cursorSbarId)) {
     const selectedTime = timeBySbarId.get(selected.id);
     const selectedBar = bars.value.find((bar) => bar.sbarId === selected.id);
     const selectedX = selectedTime === undefined ? null : timeScale.timeToCoordinate(selectedTime);
@@ -186,8 +186,8 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   if (logical === null || logical === undefined || !Number.isFinite(logical)) return;
   const index = Math.round(logical);
   const bar = bars.value[index];
-  if (!bar || !checkpointSbarId) return;
-  emit("objectSelect", { kind: "sbar", id: bar.sbarId, checkpointSbarId });
+  if (!bar) return;
+  emit("objectSelect", { kind: "sbar", id: bar.sbarId, checkpointSbarId: checkpointSbarId ?? null });
 }
 
 function updateChart(): void {
