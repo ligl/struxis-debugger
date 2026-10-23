@@ -20,6 +20,15 @@ export function useDevtoolsContextMenu(options: { reloadPage?: () => void } = {}
   const devtoolsAvailable = import.meta.env.DEV;
 
   function handleContextMenu(event: MouseEvent): void {
+    // Preserve the native context menu for copyable Test Details values.
+    // Other areas retain the development-only DevTools / Refresh Page menu.
+    if (
+      event.target instanceof Element &&
+      event.target.closest("#test-dataset-details-popover code")
+    ) {
+      return;
+    }
+
     // Check Tauri at event time rather than module initialization. The native
     // bridge may not be detectable yet when this module is first evaluated.
     if (!devtoolsAvailable || !isTauri()) return;
