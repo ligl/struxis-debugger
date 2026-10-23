@@ -51,6 +51,7 @@ describe("SnapshotReferencePanel", () => {
     const control = wrapper.get(".snapshot-reference-control");
     const initialLabelLength = wrapper.get(".snapshot-reference-selected-label").text().length;
     expect(control.attributes("style")).toContain(`calc(${initialLabelLength}ch + 28px)`);
+    expect(control.attributes("style")).not.toContain("32vw");
     const select = wrapper.get('[data-testid="replay-reference-select"]');
     expect(select.find('option[value="snapshot-complete-01"]').text()).toContain("2026-10-20T10:00:00Z");
     await select.setValue("snapshot-complete-01");
