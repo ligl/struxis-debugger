@@ -830,7 +830,7 @@ onBeforeUnmount(() => {
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
     :data-last-sbar-id="bars[bars.length - 1]?.sbarId ?? ''"
   >
-    <div class="origin-chart-heading">
+    <div v-if="props.displayContext !== 'snapshot-reference'" class="origin-chart-heading">
       <div class="chart-title-block">
         <h3>{{ props.displayContext === "snapshot-reference" ? "SNAPSHOT · " : "ORIGIN · " }}{{ latestBar?.barType ?? originDatasetId }}</h3>
         <span class="tag" :class='props.displayContext === "snapshot-reference" ? "amber" : "green"'>{{ props.displayContext === "snapshot-reference" ? "IMMUTABLE REFERENCE" : "CATALOG SOURCE" }}</span>
