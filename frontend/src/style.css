@@ -3377,7 +3377,7 @@ th, td { padding: 6px 8px; }
   min-height: 0;
   flex-direction: column;
   gap: 0;
-  padding: 5px 6px;
+  padding: 5px 6px 0;
   overflow: auto;
 }
 
