@@ -587,6 +587,31 @@ mod tests {
     }
 
     #[test]
+    fn restart_to_last_sbar_retains_completed_trajectory_for_snapshot_save() {
+        let mut manager = ReplayManager::new();
+        let result = manager
+            .restart_to_sbar(
+                worker_config("manager-restart-to-last"),
+                "1735689720000000000".to_owned(),
+            )
+            .expect("Restart to final SBar succeeds");
+
+        assert_eq!(result.run_state.status, crate::run::RunStatus::Completed);
+        assert_eq!(result.run_state.processed_count, 3);
+        assert_eq!(
+            result.run_state.cursor_sbar_id.as_deref(),
+            Some("1735689720000000000")
+        );
+        assert!(!manager.has_owned_run(), "Completed fast-forward releases Worker");
+
+        let snapshot = manager
+            .snapshot_data()
+            .expect("completed fast-forward trajectory remains saveable");
+        assert_eq!(snapshot.state.status, crate::run::RunStatus::Completed);
+        assert_eq!(snapshot.checkpoints.len(), 3);
+    }
+
+    #[test]
     fn reset_clears_completed_result_and_run_state() {
         let mut manager = ReplayManager::new();
         manager.start_interactive(worker_config("manager-reset"),).expect("Run starts");
