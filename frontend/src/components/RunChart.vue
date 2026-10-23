@@ -665,11 +665,11 @@ onMounted(() => {
       attributionLogo: false,
     },
     rightPriceScale: {
-      borderColor: "#30383f",
+      borderColor: "#121619",
       scaleMargins: { top: 0.08, bottom: 0.22 },
     },
     timeScale: {
-      borderColor: "#30383f",
+      borderColor: "#121619",
       timeVisible: true,
       secondsVisible: false,
       rightOffset: 4,
