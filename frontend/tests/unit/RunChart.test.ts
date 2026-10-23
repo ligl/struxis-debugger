@@ -293,6 +293,79 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("reconciles each authoritative structure snapshot with add, update and delete semantics", async () => {
+    const initialStructure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-stable",
+        high: "12",
+        low: "9",
+        sbarStartId: originBars[1]!.sbarId,
+        sbarEndId: originBars[2]!.sbarId,
+        spanSbars: 2,
+        fractalType: null,
+        createdAt: "2026-10-23T00:00:00Z",
+      }],
+      swingCount: 1,
+      swings: [{
+        swingId: "swing-removed",
+        direction: "Up",
+        high: "12",
+        low: "9",
+        cbarStartId: "cbar-stable",
+        cbarEndId: "cbar-stable",
+        sbarStartId: originBars[1]!.sbarId,
+        sbarEndId: originBars[2]!.sbarId,
+        startOi: null,
+        endOi: null,
+        volume: "200",
+        spanSbars: 2,
+        state: "Confirmed",
+        createdAt: "2026-10-23T00:00:00Z",
+        updatedAt: "2026-10-23T00:00:00Z",
+      }],
+    };
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure: initialStructure },
+    });
+    await nextTick();
+    expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-removed"]').exists()).toBe(true);
+
+    await wrapper.setProps({
+      structure: {
+        cbarCount: 2,
+        cbars: [
+          { ...initialStructure.cbars[0]!, high: "13" },
+          {
+            cbarId: "cbar-added",
+            high: "11",
+            low: "8",
+            sbarStartId: originBars[1]!.sbarId,
+            sbarEndId: originBars[2]!.sbarId,
+            spanSbars: 2,
+            fractalType: null,
+            createdAt: "2026-10-23T00:00:00Z",
+          },
+        ],
+        swingCount: 0,
+        swings: [],
+      },
+    });
+    await nextTick();
+
+    expect(wrapper.findAll('[data-testid="run-cbar-rectangle"]')).toHaveLength(2);
+    expect(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').attributes("y")).toBe("187");
+    expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-added"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="run-swing-segment"]').exists()).toBe(false);
+
+    await wrapper.setProps({ structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] } });
+    await nextTick();
+    expect(wrapper.find('[data-testid="run-cbar-rectangle"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="run-swing-segment"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("emits the selected SBar and authoritative structure object from chart clicks", async () => {
     const structure = {
       cbarCount: 1,
