@@ -18,6 +18,9 @@ const mocks = vi.hoisted(() => ({
   coordinateToLogical: vi.fn(),
   subscribeClick: vi.fn(),
   unsubscribeClick: vi.fn(),
+  subscribeCrosshairMove: vi.fn(),
+  unsubscribeCrosshairMove: vi.fn(),
+  crosshairMoveListener: null as ((param: { point?: { x: number; y: number } | undefined }) => void) | null,
   observe: vi.fn(),
   disconnect: vi.fn(),
   subscribeVisibleRangeChange: vi.fn(),
@@ -129,6 +132,11 @@ function installChartMock(): void {
     })),
     subscribeClick: mocks.subscribeClick,
     unsubscribeClick: mocks.unsubscribeClick,
+    subscribeCrosshairMove: (listener: (param: { point?: { x: number; y: number } | undefined }) => void) => {
+      mocks.crosshairMoveListener = listener;
+      mocks.subscribeCrosshairMove();
+    },
+    unsubscribeCrosshairMove: mocks.unsubscribeCrosshairMove,
     applyOptions: mocks.applyChartOptions,
     remove: mocks.chartRemove,
   });
@@ -138,6 +146,7 @@ describe("RunChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.visibleRangeListener = null;
+    mocks.crosshairMoveListener = null;
     mocks.animationFrameCallback = null;
     mocks.coordinateOffset = 0;
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { mocks.animationFrameCallback = callback; return 1; });
@@ -172,6 +181,28 @@ describe("RunChart", () => {
     expect(wrapper.get('[data-testid="run-chart-panel"]').attributes("data-sbar-count")).toBe("2");
     expect(mocks.fitContent).toHaveBeenCalledOnce();
     expect(mocks.setVisibleLogicalRange).toHaveBeenCalledWith({ from: -0.5, to: 5.5 });
+    wrapper.unmount();
+  });
+
+  it("shows transient SBar hover feedback without changing Inspector selection", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: null },
+    });
+    await nextTick();
+
+    expect(mocks.crosshairMoveListener).not.toBeNull();
+    mocks.crosshairMoveListener?.({ point: { x: 60, y: 190 } });
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("data-sbar-id")).toBe(originBars[1]!.sbarId);
+    expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe(`SBAR · ${originBars[1]!.sbarId}`);
+    expect(wrapper.emitted("objectSelect")).toBeUndefined();
+
+    mocks.crosshairMoveListener?.({ point: undefined });
+    await nextTick();
+    expect(wrapper.find('[data-testid="run-hover-sbar"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="run-object-hover-label"]').exists()).toBe(false);
+    expect(mocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
     wrapper.unmount();
   });
 
