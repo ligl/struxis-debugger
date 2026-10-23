@@ -267,15 +267,10 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   const x = param.point?.x;
   const y = param.point?.y;
   if (!chart || chartError.value || typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) return;
-  const tolerance = 6;
-  const candidates: Array<{ kind: "swing" | "cbar"; id: string; distance: number; priority: number }> = [];
-  for (const segment of swingSegments.value) candidates.push({ kind: "swing", id: segment.id, distance: distanceToSegment(x, y, segment), priority: 0 });
-  for (const rectangle of cbarRectangles.value) candidates.push({ kind: "cbar", id: rectangle.id, distance: distanceToRectangleBorder(x, y, rectangle), priority: 1 });
-  candidates.sort((a, b) => a.distance - b.distance || a.priority - b.priority || a.id.localeCompare(b.id));
-  const structureHit = candidates[0];
+  const structureHit = hitTestStructureObject(x, y);
   const checkpointSbarId = props.runState?.cursorSbarId;
-  if (structureHit && structureHit.distance <= tolerance && checkpointSbarId) {
-    emit("objectSelect", { kind: structureHit.kind, id: structureHit.id, checkpointSbarId });
+  if (structureHit && checkpointSbarId) {
+    emit("objectSelect", { ...structureHit, checkpointSbarId });
     return;
   }
   if (!layerVisibility.value.sbar) return;
