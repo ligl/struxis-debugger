@@ -2804,22 +2804,22 @@ th, td { padding: 6px 8px; }
 .snapshot-reference-control {
   position: relative;
   display: block;
-  width: min(300px, 32vw);
-  min-width: 180px;
+  width: min(240px, 26vw);
+  min-width: 160px;
   flex: 0 1 auto;
 }
 
 .snapshot-reference-selected-label {
   position: absolute;
   z-index: 1;
-  right: 25px;
+  right: 23px;
   bottom: 0;
-  left: 7px;
+  left: 5px;
   display: block;
   overflow: hidden;
-  color: var(--dbg-text-primary);
+  color: var(--dbg-text-secondary);
   font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
-  line-height: 24px;
+  line-height: 22px;
   pointer-events: none;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2828,11 +2828,11 @@ th, td { padding: 6px 8px; }
 .snapshot-reference-select select {
   width: 100%;
   min-width: 0;
-  height: 24px;
-  padding: 2px 6px;
-  border: 1px solid #30353b;
-  border-radius: 3px;
-  background-color: #191e22;
+  height: 22px;
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background-color: transparent;
   color: transparent;
   font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
   color-scheme: dark;
@@ -2845,14 +2845,14 @@ th, td { padding: 6px 8px; }
 }
 
 .snapshot-reference-select select:hover:not(:disabled) {
-  border-color: #454c55;
+  border-color: #30353b;
   background-color: #1c2125;
 }
 
 .snapshot-reference-select select:focus-visible {
-  border-color: var(--dbg-accent);
-  outline: 1px solid rgb(217 154 69 / 22%);
-  outline-offset: 1px;
+  border-color: #454c55;
+  outline: 1px solid rgb(133 141 151 / 18%);
+  outline-offset: 0;
 }
 
 .snapshot-reference-select select:disabled {
