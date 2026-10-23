@@ -106,13 +106,9 @@ function barAtLogicalIndex(logical: number): SBarDto | null {
   return bars.value[Math.round(logical)] ?? null;
 }
 
-function moveCrosshairBy(delta: number): boolean {
+function moveCrosshairTo(index: number): boolean {
   if (!chart || !candleSeries || bars.value.length === 0) return false;
-  const currentIndex = crosshairLogicalIndex ??
-    (props.runState?.cursorSbarId
-      ? bars.value.findIndex((bar) => bar.sbarId === props.runState?.cursorSbarId)
-      : 0);
-  const nextIndex = Math.max(0, Math.min(bars.value.length - 1, currentIndex + delta));
+  const nextIndex = Math.max(0, Math.min(bars.value.length - 1, index));
   const bar = bars.value[nextIndex];
   if (!bar) return false;
   const time = timeBySbarId.get(bar.sbarId);
@@ -145,6 +141,14 @@ function moveCrosshairBy(delta: number): boolean {
   return true;
 }
 
+function moveCrosshairBy(delta: number): boolean {
+  const currentIndex = crosshairLogicalIndex ??
+    (props.runState?.cursorSbarId
+      ? bars.value.findIndex((bar) => bar.sbarId === props.runState?.cursorSbarId)
+      : 0);
+  return moveCrosshairTo(currentIndex + delta);
+}
+
 function zoomTimeScale(direction: "in" | "out"): boolean {
   if (!chart || bars.value.length === 0) return false;
   const timeScale = chart.timeScale();
@@ -171,16 +175,21 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 function handleChartKeyboard(event: KeyboardEvent): void {
   const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
     event.key === "ArrowLeft" || event.key === "ArrowRight";
+  const isBoundaryNavigation = event.ctrlKey && !event.altKey && !event.metaKey &&
+    !event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight");
   if (
     (event.repeat && !isArrowKey) ||
-    event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+    event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation) ||
+    (event.shiftKey && !isBoundaryNavigation) ||
     isInteractiveKeyboardTarget(event.target) ||
     isInteractiveKeyboardTarget(document.activeElement) ||
     chartError.value || projectionMessage.value || bars.value.length === 0
   ) return;
 
   let handled = false;
-  if (event.key === "ArrowUp") handled = zoomTimeScale("in");
+  if (isBoundaryNavigation) {
+    handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : bars.value.length - 1);
+  } else if (event.key === "ArrowUp") handled = zoomTimeScale("in");
   else if (event.key === "ArrowDown") handled = zoomTimeScale("out");
   else if (event.key === "ArrowLeft") handled = moveCrosshairBy(-1);
   else if (event.key === "ArrowRight") handled = moveCrosshairBy(1);
