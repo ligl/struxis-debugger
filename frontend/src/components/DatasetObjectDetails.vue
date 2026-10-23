@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
+import InspectorDomainId from "./InspectorDomainId.vue";
 import { formatInspectorValue } from "../inspector-format";
 
 const props = defineProps<{
@@ -109,7 +110,7 @@ function formatReplayField(field: string, value: unknown): string {
           class="inspector-related-item"
           :data-testid="'inspector-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
         >
-          <summary>{{ endpoint.label }} <code>{{ endpoint.id }}</code></summary>
+          <summary>{{ endpoint.label }} <InspectorDomainId :value="endpoint.id" /></summary>
           <dl class="inspector-fields inspector-related-fields">
             <InspectorPropertyField label="SBar ID" :value="endpoint.object.sbarId" wide />
             <InspectorPropertyField label="Bar Type" :value="endpoint.object.barType" wide />
@@ -232,10 +233,8 @@ function formatReplayField(field: string, value: unknown): string {
 
 .inspector-related-item > summary code {
   min-width: 0;
-  overflow: hidden;
-  color: #c5cdd2;
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  text-overflow: ellipsis;
+  max-width: 65%;
+  overflow-x: auto;
   white-space: nowrap;
 }
 
