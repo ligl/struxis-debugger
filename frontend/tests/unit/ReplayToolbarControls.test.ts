@@ -100,7 +100,7 @@ describe("ReplayToolbarControls", () => {
     expect(wrapper.emitted("command")).toEqual([["stop"]]);
   });
 
-  it("allows explicit Snapshot save only for a completed Run", async () => {
+  it("allows Snapshot save for a completed result after runtime release", async () => {
     const ready = mountControls();
     expect(ready.get('[data-testid="run-save-snapshot"]').attributes("disabled")).toBeDefined();
 
@@ -110,6 +110,13 @@ describe("ReplayToolbarControls", () => {
     expect(completed.get('[data-testid="run-save-snapshot"]').attributes("disabled")).toBeUndefined();
     await completed.get('[data-testid="run-save-snapshot"]').trigger("click");
     expect(completed.emitted("saveSnapshot")).toHaveLength(1);
+
+    const releasedCompleted = mountControls({
+      runState: { ...readyRun, status: "disposed", processedCount: 10 },
+    });
+    expect(releasedCompleted.get('[data-testid="run-save-snapshot"]').attributes("disabled")).toBeUndefined();
+    await releasedCompleted.get('[data-testid="run-save-snapshot"]').trigger("click");
+    expect(releasedCompleted.emitted("saveSnapshot")).toHaveLength(1);
 
     const saving = mountControls({
       runState: { ...readyRun, status: "completed", processedCount: 10 },
