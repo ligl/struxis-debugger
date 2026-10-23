@@ -1392,7 +1392,7 @@ describe("dual chart workspaces", () => {
     expect(wrapper.find('[data-testid="run-start-stop"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-step"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-play-pause"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="run-start-stop"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-start-stop"]').attributes("title")).toBe("Start a new replay Run");
     expect(wrapper.find('[data-testid="run-restart"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-toolbar-status"]').exists()).toBe(true);
     expect(wrapper.find('[role="progressbar"][aria-label="Replay progress"]').exists()).toBe(true);
