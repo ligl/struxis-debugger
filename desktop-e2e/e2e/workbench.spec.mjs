@@ -673,14 +673,14 @@ describe("Struxis Debugger native desktop", () => {
     // Repeat the exact same Test Dataset so Compare exercises two independent
     // SQLite Snapshots with an identical complete SBar sequence fingerprint.
     await domClick('[data-testid="workspace-replay"]');
-    await domClick('[data-testid="run-restart"]');
+    await domClick('[data-testid="run-start-stop"]');
     const secondRunStatus = $("[data-testid='run-toolbar-status'] b");
     await browser.waitUntil(
       async () => (await secondRunStatus.getText()).trim() === "READY",
       {
         timeout: 30_000,
         interval: 200,
-        timeoutMsg: "Restart did not prepare a second Run for Snapshot Compare.",
+        timeoutMsg: "Start did not prepare a second Run for Snapshot Compare.",
       },
     );
 
@@ -689,7 +689,7 @@ describe("Struxis Debugger native desktop", () => {
       {
         timeout: 30_000,
         interval: 200,
-        timeoutMsg: "Restarted Run did not become eligible for the first Step after Restart settled.",
+        timeoutMsg: "New Run did not become eligible for the first Step after Start settled.",
       },
     );
     await domClick('[data-testid="run-step"]');
