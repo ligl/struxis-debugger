@@ -17,7 +17,7 @@ use serde::Serialize;
 
 use crate::{
     checkpoint::{ReplayInspectorProjection, ReplayStepResult, StructureCheckpoint},
-    catalog::{load_bars, OriginLoad, load_origin as load_origin_candidate},
+    catalog::{OriginLoad, load_origin as load_origin_candidate},
     compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     dataset::{sequence_fingerprint, TestDataset},
     discovery::{CatalogDatasetEntry, configured_catalog_root, discover_catalog_datasets},
@@ -304,10 +304,15 @@ impl AppState {
         // fingerprint is only accepted after recomputing it over the exact
         // inclusive input slice; a current Origin or matching time range alone
         // is never treated as proof of market-data identity.
-        let catalog_bars = load_bars(&self.inner.catalog_path, &manifest.bar_type).map_err(|error| {
+        let catalog_projection = load_origin_candidate(
+            &self.inner.catalog_path,
+            &manifest.bar_type,
+            false,
+        ).map_err(|error| {
             IpcError::new(IpcErrorCode::Internal,
-                format!("Resolve Snapshot Catalog input failed: {error}"))
+                format!("Resolve and validate Snapshot Catalog input through Struxis failed: {error}"))
         })?;
+        let catalog_bars = &catalog_projection.bars;
         let start = catalog_bars.iter().position(|bar| bar.ts_event.to_string() == manifest.input_start_sbar_id)
             .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
                 format!("Snapshot input start SBar {} is absent from Catalog", manifest.input_start_sbar_id)))?;
@@ -326,7 +331,7 @@ impl AppState {
             return Err(IpcError::new(IpcErrorCode::InvalidState,
                 "Catalog Snapshot input count or boundary timestamps do not match the Manifest"));
         }
-        let state_key = capitus_struxis::StruxisStateKey::from_bar_type(&bars[0].bar_type);
+        let state_key = catalog_projection.state_key;
         if state_key.instrument_id.to_string() != manifest.instrument_id {
             return Err(IpcError::new(IpcErrorCode::InvalidState,
                 "Catalog instrument identity does not match the Snapshot Manifest"));
