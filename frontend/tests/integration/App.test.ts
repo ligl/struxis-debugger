@@ -1326,6 +1326,45 @@ describe("startup and user-operation coordination", () => {
     confirmSpy.mockRestore();
   });
 
+  it("does not Reset or replace Test Dataset when the user cancels discarding an unsaved Run", async () => {
+    let runStateReads = 0;
+    const completedRun = {
+      runId: "run-completed",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "completed",
+      processedCount: 2,
+      cursorSbarId: "200",
+      failureDiagnostic: null,
+    };
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") {
+        runStateReads += 1;
+        return Promise.resolve(runStateReads === 1 ? null : completedRun);
+      }
+      if (command === "reset_run") return Promise.resolve();
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await selectOriginRange(wrapper);
+    await wrapper.get('[data-testid="test-dataset-create"]').trigger("click");
+    await vi.waitFor(() => expect(confirmSpy).toHaveBeenCalledOnce());
+    await flushPromises();
+
+    expect(invokeMock.mock.calls.some(([command]) => command === "reset_run")).toBe(false);
+    expect(invokeMock.mock.calls.some(([command]) => command === "create_test_dataset")).toBe(false);
+    expect(wrapper.text()).toContain("test-1");
+    confirmSpy.mockRestore();
+  });
+
   it("does not replace Test Dataset when Replay Reset fails", async () => {
     let runStateReads = 0;
     const completedRun = {
