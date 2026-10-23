@@ -2640,8 +2640,8 @@ th, td { padding: 6px 8px; }
 .dual-chart-splitter span {
   width: 34px;
   height: 2px;
-  border-top: 1px solid var(--dbg-text-muted);
-  border-bottom: 1px solid var(--dbg-text-muted);
+  border-top: 1px solid var(--dbg-border-strong);
+  border-bottom: 1px solid var(--dbg-border-strong);
   opacity: .8;
 }
 
