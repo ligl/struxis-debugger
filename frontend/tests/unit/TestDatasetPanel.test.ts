@@ -1,4 +1,5 @@
 import { enableAutoUnmount, mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import { afterEach, describe, expect, it } from "vitest";
 import TestDatasetPanel from "../../src/components/TestDatasetPanel.vue";
 import type { OriginDatasetDto, TestDatasetDto } from "../../src/origin-types";
@@ -97,7 +98,8 @@ describe("TestDatasetPanel details popover", () => {
     await wrapper.get('[data-testid="test-dataset-details-toggle"]').trigger("click");
     expect(wrapper.get('[data-testid="test-dataset-details-popover"]').exists()).toBe(true);
 
-    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await nextTick();
 
     expect(wrapper.find('[data-testid="test-dataset-details-popover"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="test-dataset-details-toggle"]').exists()).toBe(true);
@@ -109,6 +111,7 @@ describe("TestDatasetPanel details popover", () => {
     await wrapper.get('[data-testid="test-dataset-details-toggle"]').trigger("click");
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await nextTick();
 
     expect(wrapper.find('[data-testid="test-dataset-details-popover"]').exists()).toBe(false);
   });
