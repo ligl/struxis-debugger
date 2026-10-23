@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import WorkbenchTopbar from "./components/WorkbenchTopbar.vue";
+import AppToastHost from "./components/AppToastHost.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
 import ReplayToolbarControls from "./components/ReplayToolbarControls.vue";
@@ -26,6 +27,7 @@ import { useReplayKeyboardShortcut } from "./composables/useReplayKeyboardShortc
 import { usePlaybackController } from "./composables/usePlaybackController";
 import { useDevtoolsContextMenu } from "./composables/useDevtoolsContextMenu";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
+import { notifyError, notifySuccess } from "./composables/useAppToast";
 
 const {
   datasets,
@@ -311,6 +313,7 @@ async function createSelectedTestDataset(): Promise<void> {
   const refreshed = await refreshRunState();
   if (!refreshed) {
     testError.value = runError.value || "Could not verify Replay state; Test Dataset was not replaced.";
+    notifyError("Test Dataset creation failed", testError.value);
     return;
   }
   if (!canMutateTest.value || !rangeSelectionReady.value) return;
@@ -326,6 +329,7 @@ async function createSelectedTestDataset(): Promise<void> {
     if (!resetSucceeded || runState.value !== null) {
       testError.value = runError.value ||
         "Replay Reset did not confirm an empty Run state; Test Dataset was not replaced.";
+      notifyError("Test Dataset creation failed", testError.value);
       return;
     }
 
@@ -337,7 +341,12 @@ async function createSelectedTestDataset(): Promise<void> {
   // If Reset fails or its authoritative empty state is not confirmed, never
   // proceed to Test Dataset creation.
   const created = await createTestDataset(startSbarId.value, endSbarId.value);
-  if (created) workspaceMode.value = "replay";
+  if (created) {
+    workspaceMode.value = "replay";
+    notifySuccess("Test Dataset created", "Replay is ready to start from the selected inclusive interval.");
+  } else if (testError.value) {
+    notifyError("Test Dataset creation failed", testError.value);
+  }
 }
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
@@ -499,12 +508,19 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   )) return;
 
   const commandSucceeded = await executeRunCommand(command);
-  if (!commandSucceeded) return;
+  if (!commandSucceeded) {
+    notifyError(`Replay ${command} failed`, runError.value || "The operation did not complete.");
+    return;
+  }
   if (command === "start" || command === "restart") {
     await refreshReplayInspector();
+    notifySuccess(command === "start" ? "Replay started" : "Replay restarted");
+  } else if (command === "stop") {
+    notifySuccess("Replay stopped");
   } else if (command === "reset") {
     replayInspector.value = null;
     replayInspectorError.value = "";
+    notifySuccess("Replay reset");
   }
 }
 
@@ -525,6 +541,36 @@ const {
 async function handleSaveSnapshot(): Promise<void> {
   if (playbackStatus.value === "playing" || !hasCompletedRunResult(runState.value)) return;
   await saveCompletedRunSnapshot();
+  if (snapshotsError.value) notifyError("Snapshot save failed", snapshotsError.value);
+  else notifySuccess("Snapshot saved");
+}
+
+async function handleRefreshCatalog(): Promise<void> {
+  await refreshDatasets();
+  if (discoveryError.value) notifyError("Catalog refresh failed", discoveryError.value);
+  else notifySuccess("Catalog refreshed", `${datasets.value.length} Dataset entries discovered.`);
+}
+
+async function handleLoadOrigin(): Promise<void> {
+  try {
+    await startLoad();
+    if (loadStatus.value === "failed") notifyError("Origin load failed", loadError.value);
+    else if (loadStatus.value === "loaded") notifySuccess("Origin loaded", selectedDataset.value?.name ?? "Origin Dataset is ready.");
+  } catch (error) {
+    notifyError("Origin load failed", error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function handleCompare(): Promise<void> {
+  await runCompare();
+  if (compareError.value) notifyError("Snapshot comparison failed", compareError.value);
+  else if (compareResult.value) notifySuccess("Snapshot comparison completed");
+}
+
+async function handleRefreshSnapshots(): Promise<void> {
+  await refreshSnapshots();
+  if (snapshotsError.value) notifyError("Snapshot list refresh failed", snapshotsError.value);
+  else notifySuccess("Snapshot list refreshed", `${snapshots.value.length} Snapshots available.`);
 }
 
 const canControlPlaybackShortcut = computed(() =>
@@ -588,6 +634,7 @@ onMounted(async () => {
     @dragover="allowDockDrop"
     @drop="dropDockPanel"
   >
+    <AppToastHost />
     <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
 
 
@@ -616,7 +663,7 @@ onMounted(async () => {
               v-show="workspaceMode === 'compare'"
               :snapshots="snapshots"
               :compare-loading="compareLoading"
-              @compare="runCompare"
+              @compare="handleCompare"
             />
           </template>
         </WorkspaceToolbar>
@@ -663,10 +710,10 @@ onMounted(async () => {
               :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
               :selection-pending="rangeSelectionPendingStart !== null"
               :selection-editable="canMutateTest && !testLoading"
-              @refresh-catalog="refreshDatasets"
+              @refresh-catalog="handleRefreshCatalog"
               @select-dataset="selectedId = $event"
               @update-enable-structure="enableStructure = $event"
-              @load-origin="startLoad"
+              @load-origin="handleLoadOrigin"
               @create-test-dataset="createSelectedTestDataset"
               @sbar-click="handleOriginSbarClick"
               @object-click="handleOriginObjectClick"
@@ -697,7 +744,7 @@ onMounted(async () => {
               :compare-loading="compareLoading"
               :compare-error="compareError"
               :format-lifecycle-timestamp="formatLifecycleTimestamp"
-              @refresh-snapshots="refreshSnapshots"
+              @refresh-snapshots="handleRefreshSnapshots"
               @select-difference="handleCompareDifferenceSelection"
 />
           </div>
