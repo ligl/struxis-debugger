@@ -5,7 +5,7 @@ import RunChart from "./RunChart.vue";
 import SnapshotReferencePanel from "./SnapshotReferencePanel.vue";
 import type { OriginDatasetDto, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SnapshotArtifactDto, TestDatasetDto } from "../origin-types";
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   active: boolean;
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
