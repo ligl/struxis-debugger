@@ -96,11 +96,11 @@ describe("Run Bridge Functions", () => {
         processedCount: 1,
         cursorSbarId: "100",
       };
-      invokeMock.mockResolvedValue(steppedState);
+      invokeMock.mockResolvedValue({ runState: steppedState, inspector: null });
 
       const result = await stepRun();
 
-      expect(result).toEqual(steppedState);
+      expect(result).toEqual({ runState: steppedState, inspector: null });
       expect(invokeMock).toHaveBeenCalledWith("step_run");
     });
 
@@ -111,12 +111,13 @@ describe("Run Bridge Functions", () => {
         processedCount: 100,
         cursorSbarId: "200",
       };
-      invokeMock.mockResolvedValue(completedState);
+      invokeMock.mockResolvedValue({ runState: completedState, inspector: null });
 
       const result = await stepRun();
 
-      expect(result.status).toBe("completed");
-      expect(result.processedCount).toBe(100);
+      expect(result.runState.status).toBe("completed");
+      expect(result.runState.processedCount).toBe(100);
+      expect(result.inspector).toBeNull();
     });
   });
 
