@@ -52,7 +52,7 @@ const showStop = () =>
         class="subtle-button"
         :class="{ 'run-stop-toggle': showStop() }"
         data-testid="run-start-stop"
-        :title="showStop() ? 'Stop the current Run and halt continuous playback' : 'Start a new replay Run'"
+        :title="showStop() ? 'Stop the current Run and halt continuous playback' : 'Start a new Run; clears the previous Run context and unsaved result'"
         :disabled="(runBusy && playbackStatus !== 'playing') || (showStop() ? !isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun) && playbackStatus !== 'playing' : playbackStatus === 'playing' || !isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun))"
         @click="emit('command', showStop() ? 'stop' : 'start')"
       >{{ showStop() ? 'STOP' : 'START' }}</button>
