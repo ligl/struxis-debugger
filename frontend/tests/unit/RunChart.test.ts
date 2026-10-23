@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
   setVisibleLogicalRange: vi.fn(),
+  getVisibleLogicalRange: vi.fn(() => ({ from: -0.5, to: 5.5 })),
+  setCrosshairPosition: vi.fn(),
   applyChartOptions: vi.fn(),
   applyPriceScaleOptions: vi.fn(),
   coordinateToLogical: vi.fn(),
@@ -126,6 +128,7 @@ function installChartMock(): void {
     timeScale: vi.fn(() => ({
       fitContent: mocks.fitContent,
       setVisibleLogicalRange: mocks.setVisibleLogicalRange,
+      getVisibleLogicalRange: mocks.getVisibleLogicalRange,
       timeToCoordinate: (time: number) => time - 1700000000 + mocks.coordinateOffset,
       coordinateToLogical: mocks.coordinateToLogical,
       subscribeVisibleLogicalRangeChange: (listener: () => void) => { mocks.visibleRangeListener = listener; mocks.subscribeVisibleRangeChange(); },
@@ -136,6 +139,7 @@ function installChartMock(): void {
       mocks.subscribeClick(listener);
     },
     unsubscribeClick: mocks.unsubscribeClick,
+    setCrosshairPosition: mocks.setCrosshairPosition,
     subscribeCrosshairMove: (listener: (param: { point?: { x: number; y: number } | undefined }) => void) => {
       mocks.crosshairMoveListener = listener;
       mocks.subscribeCrosshairMove();
@@ -614,6 +618,49 @@ describe("RunChart", () => {
     });
     wrapper.unmount();
     expect(mocks.unsubscribeClick).toHaveBeenCalledOnce();
+  });
+
+  it("moves the crosshair with left/right arrows and uses it as the Restart target with T", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+    });
+    await nextTick();
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+    expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(
+      11,
+      1700000120,
+      expect.anything(),
+    );
+
+    const targetEvent = new KeyboardEvent("keydown", { key: "t", bubbles: true, cancelable: true });
+    document.dispatchEvent(targetEvent);
+    expect(targetEvent.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("targetSelect")?.at(-1)?.[0]).toBe(originBars[2]!.sbarId);
+    wrapper.unmount();
+  });
+
+  it("zooms the visible logical range with up/down arrows", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+    });
+    await nextTick();
+    mocks.setVisibleLogicalRange.mockClear();
+
+    const zoomInEvent = new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true });
+    document.dispatchEvent(zoomInEvent);
+    expect(zoomInEvent.defaultPrevented).toBe(true);
+    expect(mocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+    const zoomedIn = mocks.setVisibleLogicalRange.mock.calls[0]?.[0];
+    expect(zoomedIn.to - zoomedIn.from).toBeLessThan(6);
+
+    const zoomOutEvent = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
+    document.dispatchEvent(zoomOutEvent);
+    expect(zoomOutEvent.defaultPrevented).toBe(true);
+    expect(mocks.setVisibleLogicalRange).toHaveBeenCalledTimes(2);
+    expect(mocks.setVisibleLogicalRange.mock.calls[1]![0].to - mocks.setVisibleLogicalRange.mock.calls[1]![0].from)
+      .toBeGreaterThan(zoomedIn.to - zoomedIn.from);
+    wrapper.unmount();
   });
 
   it("does not display an Origin projection for a Test Dataset from another Origin", async () => {
