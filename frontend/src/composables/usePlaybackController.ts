@@ -19,27 +19,45 @@ export function usePlaybackController(
   onRunCompleted: () => void = () => undefined,
 ) {
   const playbackStatus = ref<PlaybackStatus>("idle");
-  const playbackDelayMs = ref(100);
+  const playbackDelayMs = ref(200);
   let loopPromise: Promise<void> | null = null;
   let delayTimer: ReturnType<typeof setTimeout> | null = null;
   let cancelDelay: (() => void) | null = null;
+  let waitStartedAt: number | null = null;
   let disposed = false;
+
+  function scheduleDelay(milliseconds: number): void {
+    if (delayTimer !== null) clearTimeout(delayTimer);
+    delayTimer = null;
+    if (milliseconds <= 0) {
+      const resolve = cancelDelay;
+      cancelDelay = null;
+      waitStartedAt = null;
+      resolve?.();
+      return;
+    }
+    delayTimer = setTimeout(() => {
+      delayTimer = null;
+      waitStartedAt = null;
+      const resolve = cancelDelay;
+      cancelDelay = null;
+      resolve?.();
+    }, milliseconds);
+  }
 
   function waitBetweenSteps(): Promise<void> {
     if (playbackDelayMs.value <= 0) return Promise.resolve();
     return new Promise((resolve) => {
       cancelDelay = resolve;
-      delayTimer = setTimeout(() => {
-        delayTimer = null;
-        cancelDelay = null;
-        resolve();
-      }, playbackDelayMs.value);
+      waitStartedAt = Date.now();
+      scheduleDelay(playbackDelayMs.value);
     });
   }
 
   function clearDelay(): void {
     if (delayTimer !== null) clearTimeout(delayTimer);
     delayTimer = null;
+    waitStartedAt = null;
     const resolve = cancelDelay;
     cancelDelay = null;
     resolve?.();
@@ -103,8 +121,11 @@ export function usePlaybackController(
   }
 
   function setPlaybackDelay(milliseconds: number): void {
-    if (Number.isFinite(milliseconds)) {
-      playbackDelayMs.value = Math.max(0, Math.min(2000, milliseconds));
+    if (!Number.isFinite(milliseconds)) return;
+    playbackDelayMs.value = Math.max(0, Math.min(2000, milliseconds));
+    if (cancelDelay && waitStartedAt !== null) {
+      const elapsed = Date.now() - waitStartedAt;
+      scheduleDelay(playbackDelayMs.value - elapsed);
     }
   }
 
