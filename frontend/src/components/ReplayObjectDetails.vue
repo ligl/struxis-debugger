@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { InspectorWorkspaceContext } from "../origin-types";
+import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBarDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import { formatInspectorValue } from "../inspector-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
@@ -10,6 +10,8 @@ type ReplaySelectedObject = Extract<InspectorWorkspaceContext, { workspace: "rep
 const props = defineProps<{
   selectedObject: NonNullable<ReplaySelectedObject>;
   timeframe: string | null;
+  checkpoint: ReplayInspectorDto | null;
+  bars: SBarDto[];
 }>();
 
 type InspectorRow = { label: string; value: string; copyValue?: string };
@@ -20,6 +22,34 @@ const sourceLabel = computed(() => {
     return props.selectedObject.source === "checkpoint" ? "CONFIRMED CHECKPOINT" : "TEST INPUT";
   }
   return "CONFIRMED CHECKPOINT STRUCTURE";
+});
+
+const relatedObjects = computed(() => {
+  const selected = props.selectedObject;
+  const structure = props.checkpoint?.structure;
+  if (selected.kind === "cbar") {
+    return [
+      { kind: "sbar" as const, label: "Start SBar", id: selected.object.sbarStartId },
+      { kind: "sbar" as const, label: "End SBar", id: selected.object.sbarEndId },
+    ].flatMap((relation) => {
+      const object = props.bars.find((bar) => bar.sbarId === relation.id);
+      return object ? [{ ...relation, object }] : [];
+    });
+  }
+  if (selected.kind === "swing") {
+    return [
+      { kind: "cbar" as const, label: "Start CBar", id: selected.object.cbarStartId },
+      { kind: "cbar" as const, label: "End CBar", id: selected.object.cbarEndId },
+      { kind: "sbar" as const, label: "Start SBar", id: selected.object.sbarStartId },
+      { kind: "sbar" as const, label: "End SBar", id: selected.object.sbarEndId },
+    ].flatMap((relation) => {
+      const object = relation.kind === "cbar"
+        ? structure?.cbars.find((cbar) => cbar.cbarId === relation.id)
+        : props.bars.find((bar) => bar.sbarId === relation.id);
+      return object ? [{ ...relation, object }] : [];
+    });
+  }
+  return [];
 });
 
 const rows = computed<InspectorRow[]>(() => {
@@ -107,6 +137,42 @@ const rows = computed<InspectorRow[]>(() => {
       :wide="row.label.includes('ID') || row.label.includes('Time')"
     />
   </dl>
+  <section
+    v-if="relatedObjects.length > 0"
+    class="inspector-related"
+    data-testid="inspector-replay-related-objects"
+  >
+    <p class="section-index">RELATED OBJECTS</p>
+    <details
+      v-for="endpoint in relatedObjects"
+      :key="endpoint.label"
+      class="inspector-related-item"
+      :data-testid="'inspector-replay-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
+    >
+      <summary>{{ endpoint.label }} <code>{{ endpoint.id }}</code></summary>
+      <dl v-if="endpoint.kind === 'cbar'" class="inspector-fields inspector-related-fields">
+        <InspectorPropertyField label="CBar ID" :value="(endpoint.object as ReplayInspectorCBarDto).cbarId" wide />
+        <InspectorPropertyField label="High" :value="(endpoint.object as ReplayInspectorCBarDto).high" />
+        <InspectorPropertyField label="Low" :value="(endpoint.object as ReplayInspectorCBarDto).low" />
+        <InspectorPropertyField label="SBar Start ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarStartId" wide />
+        <InspectorPropertyField label="SBar End ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarEndId" wide />
+        <InspectorPropertyField label="Span SBars" :value="String((endpoint.object as ReplayInspectorCBarDto).spanSbars)" />
+        <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue((endpoint.object as ReplayInspectorCBarDto).fractalType)" />
+        <InspectorPropertyField label="Created At" :value="formatLifecycleTimestamp((endpoint.object as ReplayInspectorCBarDto).createdAt)" :copy-value="(endpoint.object as ReplayInspectorCBarDto).createdAt" wide />
+      </dl>
+      <dl v-else class="inspector-fields inspector-related-fields">
+        <InspectorPropertyField label="SBar ID" :value="(endpoint.object as SBarDto).sbarId" wide />
+        <InspectorPropertyField label="Bar Type" :value="(endpoint.object as SBarDto).barType" wide />
+        <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp((endpoint.object as SBarDto).tsEvent, timeframe)" :copy-value="(endpoint.object as SBarDto).tsEvent" wide />
+        <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp((endpoint.object as SBarDto).tsInit, timeframe)" :copy-value="(endpoint.object as SBarDto).tsInit" wide />
+        <InspectorPropertyField label="Open" :value="(endpoint.object as SBarDto).open" />
+        <InspectorPropertyField label="High" :value="(endpoint.object as SBarDto).high" />
+        <InspectorPropertyField label="Low" :value="(endpoint.object as SBarDto).low" />
+        <InspectorPropertyField label="Close" :value="(endpoint.object as SBarDto).close" />
+        <InspectorPropertyField label="Volume" :value="(endpoint.object as SBarDto).volume" />
+      </dl>
+    </details>
+  </section>
   <p v-if="selectedObject.kind === 'sbar' && selectedObject.source === 'input'" class="inspector-provenance">
     Market fields are from the validated Test Dataset input sequence. This historical input bar is not represented as a backend-confirmed checkpoint.
   </p>
