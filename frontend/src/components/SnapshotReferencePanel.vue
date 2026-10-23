@@ -117,11 +117,15 @@ function handleSelection(event: Event): void {
         <h3>SNAPSHOT REFERENCE</h3>
       </div>
       <label class="snapshot-reference-select">
-        <span>{{ displayInstrumentId }}</span>
+        <span class="snapshot-reference-instrument">{{ displayInstrumentId }}</span>
+        <span class="snapshot-reference-selected-label" aria-hidden="true">
+          {{ selectedSnapshot ? describeSnapshot(selectedSnapshot).replace(/ · [^·]*$/, '') : "Choose completed Snapshot…" }}
+        </span>
         <select
           data-testid="replay-reference-select"
           :value="selectedSnapshotId ?? ''"
           :disabled="availableSnapshots.length === 0"
+          :aria-label="`Snapshot Reference for ${displayInstrumentId}`"
           @change="handleSelection"
         >
           <option value="">Choose completed Snapshot…</option>
