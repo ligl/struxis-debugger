@@ -27,8 +27,9 @@ describe("DualChartStack", () => {
     await splitter.trigger("keydown", { key: "Home" });
     expect(splitter.attributes("aria-valuenow")).toBe("25");
 
+    // ArrowUp cannot reduce the upper share below its 25% minimum.
     await splitter.trigger("keydown", { key: "ArrowUp" });
-    expect(splitter.attributes("aria-valuenow")).toBe("27");
+    expect(splitter.attributes("aria-valuenow")).toBe("25");
 
     await splitter.trigger("keydown", { key: "End" });
     expect(splitter.attributes("aria-valuenow")).toBe("75");
