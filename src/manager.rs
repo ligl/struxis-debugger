@@ -207,33 +207,30 @@ impl ReplayManager {
         Ok(state)
     }
 
-    /// Explicitly disposes and then releases the manager's ownership slot.
-    ///
-    /// The slot is cleared only after worker Dispose returns a state and join
-    /// succeeds. Any error leaves the worker owned and blocks a subsequent Start.
+    /// Internal resource cleanup for an active Run. Processing results remain
+    /// independently queryable and completed trajectories remain saveable.
     pub(crate) fn dispose(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Dispose)?;
-        let state = if let Some(worker) = self.active.as_mut() {
-            let state = worker.dispose()?;
+        let worker = self.active
+            .as_mut()
+            .ok_or_else(|| "Dispose rejected: ReplayManager has no active Run".to_owned())?;
+        let state = worker.dispose()?;
+        self.active = None;
+        Ok(state)
+    }
+
+    /// User-facing Reset: release any active runtime, then clear the current Run
+    /// context and unsaved trajectory. No synthetic RunState is manufactured.
+    pub(crate) fn reset(&mut self) -> Result<(), String> {
+        let _permit = self.gate.try_enter(ReplayCommandKind::Dispose)?;
+        if let Some(worker) = self.active.as_mut() {
+            worker.dispose()?;
             self.active = None;
-            state
-        } else {
-            self.last_state.clone().unwrap_or_else(|| crate::run::RunState {
-                run_id: String::new(),
-                test_dataset_id: String::new(),
-                input_fingerprint: String::new(),
-                input_count: 0,
-                status: crate::run::RunStatus::Disposed,
-                processed_count: 0,
-                cursor_sbar_id: None,
-                failure_diagnostic: None,
-            })
-        };
-        // Reset semantics: clear all current Run context and any unsaved trajectory.
+        }
         self.completed_result = None;
         self.last_state = None;
         self.last_inspector = None;
-        Ok(state)
+        Ok(())
     }
 
     /// Restarts an interactive Run without coupling its lifetime to SnapshotWriter.
@@ -312,7 +309,7 @@ impl ReplayManager {
         }
         assert!(manager.snapshot_data().is_ok());
 
-        manager.dispose().expect("Reset clears the completed context");
+        manager.reset().expect("Reset clears the completed context");
         assert!(!manager.has_owned_run());
         assert!(manager.state().expect("state query").is_none());
         assert!(manager.snapshot_data().is_err());
