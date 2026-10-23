@@ -11,7 +11,7 @@ export type RunCommand =
 
 /**
  * Shared Run command eligibility for UI affordances and the App command boundary.
- * Start / Restart additionally depend on cross-domain prerequisites computed by App.
+ * Start additionally depends on cross-domain prerequisites computed by App.
  */
 export function isRunCommandEligible(
   command: RunCommand,
@@ -35,7 +35,8 @@ export function isRunCommandEligible(
       return false;
     case "stop":
       return status === "ready" || status === "running" || status === "paused";
+    // RESET is always available when no command is in flight; cleanup is internal.
     case "dispose":
-      return status !== null && status !== "running";
+      return true;
   }
 }
