@@ -21,7 +21,7 @@ defineProps<{
         <span class="inspector-object-kind" :class="'difference-kind-' + selectedDifference.kind">{{ selectedDifference.kind.toUpperCase() }}</span>
       </div>
       <dl class="inspector-fields">
-        <InspectorPropertyField label="Domain Object ID" :value="selectedDifference.objectId" :test-id="'inspector-difference-object-id'" wide />
+        <InspectorPropertyField label="Domain Object ID" :value="selectedDifference.objectId" domain-id :test-id="'inspector-difference-object-id'" wide />
         <InspectorPropertyField label="Baseline Snapshot" :value="compareBaselineSnapshotId ?? '—'" test-id="inspector-baseline-snapshot" wide />
         <InspectorPropertyField label="Candidate Snapshot" :value="compareCandidateSnapshotId ?? '—'" test-id="inspector-candidate-snapshot" wide />
         <InspectorPropertyField label="Object Type" :value="selectedDifference.objectType" />
