@@ -153,6 +153,10 @@ function installChartMock(): void {
 describe("RunChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks preserves mock implementations/return values. Reset the
+    // viewport to its default fitted range so one test cannot leak a narrow
+    // logical range into later keyboard tests.
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: -0.5, to: 5.5 });
     mocks.visibleRangeListener = null;
     mocks.crosshairMoveListener = null;
     mocks.clickListener = null;
@@ -737,7 +741,9 @@ describe("RunChart", () => {
     expect(startRange.to).toBeGreaterThan(0);
     expect(mocks.setCrosshairPosition).toHaveBeenLastCalledWith(11, 1700000060, expect.anything());
 
-    mocks.getVisibleLogicalRange.mockReturnValue({ from: 0.5, to: 1.5 });
+    // Put the viewport at the first-candle boundary so Ctrl+Right must
+    // scroll it to reveal the final candle.
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: -0.5, to: 0.5 });
     mocks.setVisibleLogicalRange.mockClear();
     const endEvent = new KeyboardEvent("keydown", {
       key: "ArrowRight", ctrlKey: true, bubbles: true, cancelable: true,
