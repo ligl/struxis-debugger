@@ -165,7 +165,7 @@ function handleSelection(event: Event): void {
           role="img"
           aria-label="Viewport synchronization available"
           title="Viewport synchronization available"
-        >↔</span>
+        >↕</span>
       </div>
       <label class="snapshot-reference-select">
         <span class="snapshot-reference-instrument">{{ displayInstrumentId }}</span>
