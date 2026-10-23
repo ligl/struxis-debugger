@@ -7,7 +7,7 @@ export type RunCommand =
   | "play"
   | "pause"
   | "stop"
-  | "dispose";
+  | "reset";
 
 /**
  * Shared Run command eligibility for UI affordances and the App command boundary.
@@ -36,7 +36,7 @@ export function isRunCommandEligible(
     case "stop":
       return status === "ready" || status === "running" || status === "paused";
     // RESET is always available when no command is in flight; cleanup is internal.
-    case "dispose":
+    case "reset":
       return true;
   }
 }
