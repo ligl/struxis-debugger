@@ -8,11 +8,11 @@ import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-fo
 const props = defineProps<{
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
-  liveBarType: string | null;
-  liveSbarIds: string[];
-  syncRequest: ReplayChartViewportSync | null;
-  isPlaying: boolean;
-  replayProgress: number;
+  liveBarType?: string | null;
+  liveSbarIds?: string[];
+  syncRequest?: ReplayChartViewportSync | null;
+  isPlaying?: boolean;
+  replayProgress?: number;
 }>();
 
 const emit = defineEmits<{
@@ -53,7 +53,7 @@ function timeframeKey(barType: string | null | undefined): string | null {
 const syncEligible = computed(() => {
   const snapshot = selectedSnapshot.value;
   const bars = reference.value?.bars;
-  const liveIds = props.liveSbarIds;
+  const liveIds = props.liveSbarIds ?? [];
   if (!snapshot || !bars || liveIds.length === 0) return false;
   const liveTimeframe = timeframeKey(props.liveBarType);
   const snapshotTimeframe = timeframeKey(snapshot.barType);
@@ -65,7 +65,7 @@ const syncEligible = computed(() => {
 });
 const syncBrightnessFilter = computed(() =>
   syncEligible.value && props.isPlaying
-    ? "brightness(" + (0.55 + 0.45 * Math.max(0, Math.min(1, props.replayProgress))) + ")"
+    ? "brightness(" + (0.55 + 0.45 * Math.max(0, Math.min(1, props.replayProgress ?? 0))) + ")"
     : "none",
 );
 
@@ -196,7 +196,7 @@ function handleSelection(event: Event): void {
         <p class="snapshot-reference-unavailable">{{ referenceError }}</p>
         <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
       </div>
-      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-replay-playing': syncEligible && isPlaying }" :style="{ filter: syncBrightnessFilter }" :data-sync-eligible="syncEligible" :data-replay-playing="syncEligible && isPlaying" data-testid="snapshot-reference-chart">
+      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-replay-playing': syncEligible && isPlaying }" :style="{ filter: syncBrightnessFilter, transition: 'filter 100ms linear' }" :data-sync-eligible="syncEligible" :data-replay-playing="syncEligible && isPlaying" data-testid="snapshot-reference-chart">
         <OriginChart
           :bars="reference.bars"
           :structure="reference.structure"
