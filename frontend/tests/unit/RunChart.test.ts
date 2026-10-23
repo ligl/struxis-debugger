@@ -20,6 +20,12 @@ const mocks = vi.hoisted(() => ({
   unsubscribeClick: vi.fn(),
   observe: vi.fn(),
   disconnect: vi.fn(),
+  subscribeVisibleRangeChange: vi.fn(),
+  unsubscribeVisibleRangeChange: vi.fn(),
+  visibleRangeListener: null as (() => void) | null,
+  animationFrameCallback: null as FrameRequestCallback | null,
+  coordinateOffset: 0,
+  cancelAnimationFrame: vi.fn(),
 }));
 
 vi.mock("lightweight-charts", () => ({
@@ -116,10 +122,10 @@ function installChartMock(): void {
     timeScale: vi.fn(() => ({
       fitContent: mocks.fitContent,
       setVisibleLogicalRange: mocks.setVisibleLogicalRange,
-      timeToCoordinate: (time: number) => time - 1700000000,
+      timeToCoordinate: (time: number) => time - 1700000000 + mocks.coordinateOffset,
       coordinateToLogical: mocks.coordinateToLogical,
-      subscribeVisibleLogicalRangeChange: vi.fn(),
-      unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      subscribeVisibleLogicalRangeChange: (listener: () => void) => { mocks.visibleRangeListener = listener; mocks.subscribeVisibleRangeChange(); },
+      unsubscribeVisibleLogicalRangeChange: mocks.unsubscribeVisibleRangeChange,
     })),
     subscribeClick: mocks.subscribeClick,
     unsubscribeClick: mocks.unsubscribeClick,
@@ -131,6 +137,11 @@ function installChartMock(): void {
 describe("RunChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.visibleRangeListener = null;
+    mocks.animationFrameCallback = null;
+    mocks.coordinateOffset = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { mocks.animationFrameCallback = callback; return 1; });
+    vi.stubGlobal("cancelAnimationFrame", mocks.cancelAnimationFrame);
     mocks.coordinateToLogical.mockImplementation((x: number) => x < 90 ? 0 : 1);
     installResizeObserverMock();
     installChartMock();
@@ -383,6 +394,49 @@ describe("RunChart", () => {
     expect(wrapper.find('[data-testid="run-cbar-rectangle"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-swing-segment"]').exists()).toBe(false);
     wrapper.unmount();
+  });
+
+
+  it("coalesces zoom-range changes and reprojects structure on the next animation frame", async () => {
+    const structure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-zoom",
+        high: "12",
+        low: "9",
+        sbarStartId: originBars[1]!.sbarId,
+        sbarEndId: originBars[2]!.sbarId,
+        spanSbars: 2,
+        fractalType: null,
+        createdAt: "2026-10-23T00:00:00Z",
+      }],
+      swingCount: 0,
+      swings: [],
+    };
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure },
+    });
+    await nextTick();
+
+    const rectangle = wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]');
+    const initialX = Number(rectangle.attributes("x"));
+    expect(mocks.visibleRangeListener).not.toBeNull();
+
+    mocks.coordinateOffset = 100;
+    mocks.visibleRangeListener?.();
+
+    // The canvas range event is coalesced; the previous SVG projection remains
+    // until the next frame samples the settled chart coordinate transforms.
+    await nextTick();
+    expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX);
+    expect(mocks.animationFrameCallback).not.toBeNull();
+
+    mocks.animationFrameCallback?.(0);
+    await nextTick();
+    expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX + 100);
+
+    wrapper.unmount();
+    expect(mocks.unsubscribeVisibleRangeChange).toHaveBeenCalled();
   });
 
   it("emits the selected SBar and authoritative structure object from chart clicks", async () => {
