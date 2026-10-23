@@ -11,7 +11,7 @@ import ReplayWorkspace from "./components/ReplayWorkspace.vue";
 import CompareWorkspace from "./components/CompareWorkspace.vue";
 import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayChartSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
-import { isRunCommandEligible } from "./run-command-eligibility";
+import { hasCompletedRunResult, isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
 import { useCompareWorkspace } from "./composables/useCompareWorkspace";
 import { useOriginLoad } from "./composables/useOriginLoad";
@@ -253,12 +253,7 @@ async function createSelectedTestDataset(): Promise<void> {
   testError.value = "";
   const currentRun = runState.value;
   if (currentRun) {
-    const hasCompletedResult =
-      currentRun.inputCount > 0 &&
-      currentRun.processedCount === currentRun.inputCount &&
-      currentRun.failureDiagnostic === null;
-
-    if (hasCompletedResult) {
+    if (hasCompletedRunResult(currentRun)) {
       // Only a published, complete Snapshot is evidence that this Run's
       // retained trajectory has been saved. Refresh before making that decision.
       await refreshSnapshots();
@@ -438,7 +433,7 @@ const {
 );
 
 async function handleSaveSnapshot(): Promise<void> {
-  if (playbackStatus.value === "playing" || runState.value?.status !== "completed") return;
+  if (playbackStatus.value === "playing" || !hasCompletedRunResult(runState.value)) return;
   await saveCompletedRunSnapshot();
 }
 
