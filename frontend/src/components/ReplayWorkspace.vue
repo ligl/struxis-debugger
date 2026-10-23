@@ -12,7 +12,6 @@ withDefaults(defineProps<{
   structure: ReplayInspectorStructureDto | null;
   selectedObject: ReplayChartSelection | null;
   targetSbarId: string | null;
-  fastForwarding: boolean;
   snapshots: SnapshotArtifactDto[];
 }>(), {
   runState: null,
@@ -28,7 +27,7 @@ const emit = defineEmits<{
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :fast-forwarding="fastForwarding" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel :snapshots="snapshots" />
