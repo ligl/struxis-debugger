@@ -161,9 +161,18 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
     }
   }
 
-  // Apply crosshair after viewport adjustment so its pixel position is
-  // computed against the final time scale.
-  chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
+  // Pin both axes of the crosshair to the selected candle: horizontal
+  // position uses that SBar's chart time, vertical position uses its close.
+  // Re-apply on the next frame as well because changing the visible logical
+  // range can trigger a chart layout pass; doing this only synchronously can
+  // leave the crosshair at its previous pointer-derived position.
+  const selectedIndex = nextIndex;
+  const applySelectedCrosshair = () => {
+    if (!chart || !candleSeries || crosshairLogicalIndex !== selectedIndex) return;
+    chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
+  };
+  applySelectedCrosshair();
+  requestAnimationFrame(applySelectedCrosshair);
   return true;
 }
 
