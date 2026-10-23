@@ -396,9 +396,15 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   // Reset is still a lifecycle operation, but no longer a separate toolbar action.
   if (command === "start" && runState.value) {
     const resetSucceeded = await executeRunCommand("reset");
-    if (!resetSucceeded || runState.value !== null) {
+    if (!resetSucceeded) {
       runError.value = runError.value ||
         "Replay could not clear the previous Run context; a new Run was not started.";
+      return;
+    }
+    const resetStateConfirmed = await refreshRunState();
+    if (!resetStateConfirmed || runState.value !== null) {
+      runError.value = runError.value ||
+        "Replay did not confirm an empty Run state; a new Run was not started.";
       return;
     }
     replayInspector.value = null;
