@@ -831,6 +831,7 @@ describe("Test, Run and Snapshot workbench", () => {
       if (command === "list_snapshots") return Promise.resolve([snapshot]);
       if (command === "create_test_dataset") return Promise.resolve(testDataset);
       if (command === "start_run") return Promise.resolve(runState);
+      if (command === "get_replay_inspector") return Promise.resolve(null);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
@@ -857,7 +858,7 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(startButton).toBeDefined();
     await startButton!.trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
-    await vi.waitFor(() => expect(wrapper.text()).toContain("COMPLETE / VERIFIED"));
+    await vi.waitFor(() => expect(wrapper.text()).toContain("COMPLETE / PUBLISHED"));
     expect(invokeMock).toHaveBeenCalledWith("start_run");
     expect(invokeMock).toHaveBeenCalledWith("list_snapshots");
     expect(wrapper.text()).toContain("0 / 2");
