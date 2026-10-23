@@ -162,6 +162,12 @@ export interface ReplayInspectorStructureDto {
   swings: ReplayInspectorSwingDto[];
 }
 
+export type ReplayChartSelection = {
+  kind: "sbar" | "cbar" | "swing";
+  id: string;
+  checkpointSbarId: string;
+};
+
 export interface ReplayInspectorDto {
   stateKey: string;
   checkpointIndex: number;
