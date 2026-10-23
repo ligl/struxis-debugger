@@ -137,6 +137,22 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("hides the internal time-axis bottom border in Snapshot Reference", () => {
+    mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "snapshot-reference-01",
+        structure: null,
+        displayContext: "snapshot-reference",
+      },
+    });
+
+    const chartOptions = chartMocks.createChart.mock.calls[0]?.[1] as {
+      timeScale?: { borderColor?: string };
+    };
+    expect(chartOptions.timeScale?.borderColor).toBe("#121619");
+  });
+
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
     const wrapper = mount(OriginChart, {
       props: {
@@ -181,6 +197,7 @@ describe("OriginChart", () => {
       };
       layout?: { attributionLogo?: boolean };
       crosshair?: { mode?: number };
+      timeScale?: { borderColor?: string };
     };
     expect(chartOptions.grid).toEqual({
       vertLines: { visible: false },
@@ -188,6 +205,7 @@ describe("OriginChart", () => {
     });
     expect(chartOptions.layout?.attributionLogo).toBe(false);
     expect(chartOptions.crosshair?.mode).toBe(0);
+    expect(chartOptions.timeScale?.borderColor).toBe("#30383f");
     expect(wrapper.find(".chart-attribution").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("TradingView");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([
