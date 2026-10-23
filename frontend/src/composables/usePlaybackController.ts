@@ -70,10 +70,10 @@ export function usePlaybackController(
         const before = runState.value;
         if (!before || !["ready", "paused"].includes(before.status)) break;
 
+        // STEP returns RunState and its matching Inspector projection atomically.
+        // Never issue a second IPC read that could observe another checkpoint.
         await executeRunCommand("step");
         if (disposed || runError.value) break;
-        await refreshReplayInspector();
-        if (runError.value) break;
 
         const after = runState.value;
         if (after?.status === "completed") onRunCompleted();
@@ -82,7 +82,7 @@ export function usePlaybackController(
         await waitBetweenSteps();
       }
     } catch {
-      // A failed projection refresh must stop scheduling; the owning workflow
+      // A failed Step must stop scheduling; the owning workflow
       // is responsible for exposing its diagnostic.
       playbackStatus.value = "idle";
     } finally {
