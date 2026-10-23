@@ -586,7 +586,7 @@ describe("Struxis Debugger native desktop", () => {
     await domClick('[data-testid="workspace-replay"]');
 
     await browser.waitUntil(
-      async () => await $('[data-testid="run-start"]').isEnabled(),
+      async () => await $('[data-testid="run-start-stop"]').isEnabled(),
       {
         timeout: 15_000,
         interval: 200,
@@ -594,7 +594,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    await domClick('[data-testid="run-start"]');
+    await domClick('[data-testid="run-start-stop"]');
     const runStatus = $("[data-testid='run-toolbar-status'] b");
     await browser.waitUntil(
       async () => (await runStatus.getText()).trim() === "READY",
