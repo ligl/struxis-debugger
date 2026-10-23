@@ -146,6 +146,11 @@ export type InspectorWorkspaceContext =
       workspace: "replay";
       timeframe: string | null;
       checkpoint: ReplayInspectorDto | null;
+      selectedObject:
+        | { kind: "sbar"; object: SBarDto | ReplayInspectorSBarDto; source: "input" | "checkpoint" }
+        | { kind: "cbar"; object: ReplayInspectorCBarDto }
+        | { kind: "swing"; object: ReplayInspectorSwingDto }
+        | null;
       error: string;
     }
   | {
