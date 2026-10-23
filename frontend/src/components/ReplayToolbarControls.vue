@@ -47,7 +47,7 @@ const selectedSpeed = () =>
       <button class="subtle-button replay-play-toggle" data-testid="run-play-pause" :title="playbackStatus === 'playing' ? 'Pause replay (Space)' : 'Play replay (Space)'" :disabled="(runBusy && playbackStatus !== 'playing') || (playbackStatus !== 'playing' && !['ready', 'paused'].includes(runState?.status ?? ''))" @click="emit('command', playbackStatus === 'playing' ? 'pause' : 'play')">{{ playbackStatus === 'playing' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
       <button class="subtle-button" data-testid="run-stop" title="Stop the current run" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun) && playbackStatus !== 'playing'" @click="emit('command', 'stop')">STOP</button>
       <button class="subtle-button" data-testid="run-restart" title="Reset by restarting the run" :disabled="playbackStatus === 'playing' || !isRunCommandEligible('restart', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="emit('command', 'restart')">RESET</button>
-      <div class="replay-speed-control" data-testid="replay-speed-control">
+      <div class="replay-speed-control" data-testid="replay-speed-control" @mouseenter="speedMenuOpen = true" @mouseleave="speedMenuOpen = false">
         <button
           type="button"
           class="replay-speed-trigger"
@@ -56,7 +56,7 @@ const selectedSpeed = () =>
           aria-haspopup="menu"
           title="Playback speed"
           @click="speedMenuOpen = !speedMenuOpen"
-        >{{ selectedSpeed() }} <span class="replay-speed-chevron">⌄</span></button>
+        >倍速</button>
         <div v-if="speedMenuOpen" class="replay-speed-menu" role="menu" aria-label="Playback speed options" data-testid="replay-speed-menu">
           <button
             v-for="option in speedOptions"
