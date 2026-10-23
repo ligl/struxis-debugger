@@ -78,6 +78,8 @@ describe("Run and Snapshot IPC bridge", () => {
     await expect(startRun()).resolves.toEqual(state);
     await expect(restartRun()).resolves.toEqual(state);
     await expect(getRunState()).resolves.toEqual(state);
+    invokeMock.mockResolvedValueOnce(null);
+    await expect(getRunState()).resolves.toBeNull();
     await expect(stepRun()).resolves.toEqual(state);
     await expect(stopRun()).resolves.toEqual(state);
     await expect(disposeRun()).resolves.toEqual(state);
