@@ -24,6 +24,13 @@ const selectedSnapshot = computed(
   () => availableSnapshots.value.find((snapshot) => snapshot.snapshotId === selectedSnapshotId.value) ?? null,
 );
 
+const displayInstrumentId = computed(
+  () => selectedSnapshot.value?.instrumentId
+    ?? reference.value?.instrumentId
+    ?? availableSnapshots.value[0]?.instrumentId
+    ?? "INSTRUMENT",
+);
+
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
   if (left === right) return 0;
   if (!left) return 1;
@@ -112,7 +119,7 @@ function handleSelection(event: Event): void {
         <h3>SNAPSHOT REFERENCE</h3>
       </div>
       <label class="snapshot-reference-select">
-        <span>{{ selectedSnapshot?.instrumentId ?? "INSTRUMENT" }}</span>
+        <span>{{ displayInstrumentId }}</span>
         <select
           data-testid="replay-reference-select"
           :value="selectedSnapshotId ?? ''"
