@@ -68,8 +68,8 @@ export function restartRun(): Promise<RunStateDto> {
   return invoke<RunStateDto>("restart_run");
 }
 
-export function getRunState(): Promise<RunStateDto> {
-  return invoke<RunStateDto>("get_run_state");
+export function getRunState(): Promise<RunStateDto | null> {
+  return invoke<RunStateDto | null>("get_run_state");
 }
 
 export function getReplayInspector(): Promise<ReplayInspectorDto | null> {
