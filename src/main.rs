@@ -43,6 +43,7 @@ fn main() {
             commands::pause_run,
             commands::stop_run,
             commands::dispose_run,
+            commands::reset_run,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Struxis Debugger");
