@@ -81,7 +81,10 @@ describe("SnapshotReferencePanel", () => {
   });
 
   it("clears the local selection when the referenced Snapshot disappears", async () => {
-    const wrapper = mount(SnapshotReferencePanel, { props: { snapshots } });
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: { snapshots },
+      global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
+    });
     getSnapshotReferenceMock.mockResolvedValueOnce(reference);
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
     await flushPromises();
