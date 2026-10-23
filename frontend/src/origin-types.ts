@@ -7,6 +7,15 @@ export interface CatalogDatasetEntry {
   diagnostic: string | null;
 }
 
+export interface ReplayChartViewportSync {
+  revision: number;
+  source: "live" | "reference";
+  fromSbarId: string;
+  fromOffset: number;
+  toSbarId: string;
+  toOffset: number;
+}
+
 export interface SBarDto {
   sbarId: string;
   barType: string;
