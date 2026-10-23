@@ -561,8 +561,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="run-chart-panel" aria-label="Live Replay SBar chart" data-testid="run-chart-panel"
-    :data-test-dataset-id="testDataset?.testDatasetId ?? ''" :data-sbar-count="bars.length"
-    @contextmenu="handleContextMenu">
+    :data-test-dataset-id="testDataset?.testDatasetId ?? ''" :data-sbar-count="bars.length">
     <header class="run-chart-heading">
       <div class="run-chart-title">
         <div class="run-chart-title-line">
@@ -578,7 +577,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div class="run-chart-stage">
+    <div class="run-chart-stage" @contextmenu="handleContextMenu">
       <p v-if="projectionMessage" class="run-chart-message" data-testid="run-chart-empty">{{ projectionMessage }}</p>
       <p v-else-if="replayProgressApplies && !displayedBar" class="run-chart-message" data-testid="run-chart-awaiting-checkpoint">
         Waiting for the first backend-confirmed checkpoint. Future input SBars are dimmed.
