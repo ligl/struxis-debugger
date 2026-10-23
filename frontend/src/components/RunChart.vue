@@ -494,7 +494,10 @@ watch(
     () => props.runState?.runId,
     () => replayProgressApplies.value,
   ],
-  updateChart,
+  () => {
+    updateChart();
+    updateHoveredObject(undefined);
+  },
 );
 
 watch(
