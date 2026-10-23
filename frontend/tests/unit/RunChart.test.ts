@@ -191,7 +191,7 @@ describe("RunChart", () => {
 
   it("sets Restart to SBar from the crosshair X on double-click anywhere in the chart area", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: null },
+      props: { origin: origin(), testDataset: testDataset(), runState: null, targetSbarId: null },
     });
     await nextTick();
 
