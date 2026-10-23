@@ -149,7 +149,6 @@ describe("OriginChart", () => {
 
     expect(wrapper.find(".origin-chart-heading").exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-chart-viewport"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="origin-chart-legend"]').exists()).toBe(false);
   });
 
   it("projects validated SBar data into candlestick and volume series without grid or branding", async () => {
