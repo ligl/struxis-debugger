@@ -40,7 +40,7 @@ function mountControls(overrides: Partial<{
 }
 
 describe("ReplayToolbarControls", () => {
-  it("forwards eligible Run commands without a manual refresh control", async () => {
+  it("forwards Step, Stop, and Reset without a manual refresh control", async () => {
     const wrapper = mountControls();
 
     await wrapper.get('[data-testid="run-step"]').trigger("click");
@@ -48,7 +48,7 @@ describe("ReplayToolbarControls", () => {
     await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
     await wrapper.get('[data-testid="run-restart"]').trigger("click");
 
-    expect(wrapper.emitted("command")).toEqual([["step"], ["stop"], ["restart"]]);
+    expect(wrapper.emitted("command")).toEqual([["step"], ["stop"], ["dispose"]]);
     expect(wrapper.find('[data-testid="run-refresh-state"]').exists()).toBe(false);
   });
 
