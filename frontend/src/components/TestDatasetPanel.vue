@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import type { OriginDatasetDto, TestDatasetDto } from "../origin-types";
 import { formatDomainTimestamp } from "../timestamp-format";
 
@@ -18,6 +19,29 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ create: [] }>();
+const detailsOpen = ref(false);
+const controlsRoot = ref<HTMLElement | null>(null);
+
+function handleDocumentPointerDown(event: PointerEvent): void {
+  const target = event.target;
+  if (target instanceof Node && !controlsRoot.value?.contains(target)) {
+    detailsOpen.value = false;
+  }
+}
+
+function handleDocumentKeyDown(event: KeyboardEvent): void {
+  if (event.key === "Escape") detailsOpen.value = false;
+}
+
+onMounted(() => {
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
+  document.addEventListener("keydown", handleDocumentKeyDown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", handleDocumentPointerDown);
+  document.removeEventListener("keydown", handleDocumentKeyDown);
+});
 
 function displaySbarTime(sbarId: string): string {
   const bar = props.origin?.bars.find((item) => item.sbarId === sbarId);
@@ -27,7 +51,7 @@ function displaySbarTime(sbarId: string): string {
 </script>
 
 <template>
-  <section class="dataset-controls-wrap" data-testid="test-dataset-controls">
+  <section ref="controlsRoot" class="dataset-controls-wrap" data-testid="test-dataset-controls">
     <div class="dataset-controls">
       <slot name="source" />
 
@@ -65,16 +89,64 @@ function displaySbarTime(sbarId: string): string {
         {{ props.testLoading ? "VALIDATING…" : props.testDataset ? "REPLACE TEST DATASET" : "CREATE TEST DATASET" }}
       </button>
 
-      <details v-if="props.testDataset" class="test-dataset-details">
-        <summary data-testid="test-dataset-details-toggle">TEST DETAILS</summary>
-        <div class="test-dataset-detail-list">
-          <div><span>TEST DATASET ID</span><code>{{ props.testDataset.testDatasetId }}</code></div>
-          <div><span>ORIGIN ID</span><code>{{ props.testDataset.originDatasetId }}</code></div>
-          <div><span>VALIDATED RANGE</span><code>{{ displaySbarTime(props.testDataset.startSbarId) }} → {{ displaySbarTime(props.testDataset.endSbarId) }}</code></div>
-          <div><span>SBAR COUNT</span><strong>{{ props.testDataset.sbarCount.toLocaleString() }}</strong></div>
-          <div><span>SEQUENCE FINGERPRINT</span><code>{{ props.testDataset.sbarSequenceFingerprint }}</code></div>
+      <button
+        v-if="props.testDataset"
+        class="test-dataset-details-toggle"
+        data-testid="test-dataset-details-toggle"
+        type="button"
+        :aria-expanded="detailsOpen"
+        aria-controls="test-dataset-details-popover"
+        @click.stop="detailsOpen = !detailsOpen"
+      >
+        <span class="details-toggle-indicator" aria-hidden="true">i</span>
+        TEST DETAILS
+        <span class="details-toggle-chevron" aria-hidden="true">{{ detailsOpen ? "▴" : "▾" }}</span>
+      </button>
+
+      <section
+        v-if="props.testDataset && detailsOpen"
+        id="test-dataset-details-popover"
+        class="test-dataset-details-popover"
+        data-testid="test-dataset-details-popover"
+        aria-label="Test Dataset details"
+        @pointerdown.stop
+      >
+        <header class="details-popover-header">
+          <div>
+            <span class="details-eyebrow">DATASET / VALIDATION</span>
+            <h3>Test Dataset</h3>
+          </div>
+          <span class="details-state"><span aria-hidden="true"></span> VALIDATED</span>
+        </header>
+
+        <div class="details-range-card">
+          <span class="details-field-label">INCLUSIVE INTERVAL</span>
+          <div class="details-range-values">
+            <code>{{ displaySbarTime(props.testDataset.startSbarId) }}</code>
+            <span aria-hidden="true">→</span>
+            <code>{{ displaySbarTime(props.testDataset.endSbarId) }}</code>
+          </div>
+          <div class="details-range-count">
+            <strong>{{ props.testDataset.sbarCount.toLocaleString() }}</strong>
+            <span>SBARS</span>
+          </div>
         </div>
-      </details>
+
+        <div class="test-dataset-detail-list">
+          <div class="details-id-row">
+            <span>TEST DATASET ID</span>
+            <code>{{ props.testDataset.testDatasetId }}</code>
+          </div>
+          <div class="details-id-row">
+            <span>ORIGIN DATASET ID</span>
+            <code>{{ props.testDataset.originDatasetId }}</code>
+          </div>
+          <div class="details-fingerprint">
+            <span class="details-field-label">SBar SEQUENCE FINGERPRINT</span>
+            <code>{{ props.testDataset.sbarSequenceFingerprint }}</code>
+          </div>
+        </div>
+      </section>
     </div>
 
     <div v-if="!props.canMutateTest && props.origin || props.testError || props.testStatus" class="dataset-controls-feedback">
@@ -180,63 +252,215 @@ function displaySbarTime(sbarId: string): string {
   white-space: nowrap;
 }
 
-.test-dataset-details {
-  position: relative;
+.test-dataset-details-toggle {
+  display: inline-flex;
   flex: 0 0 auto;
-  color: #aab4bb;
-  font-size: 9px;
-}
-
-.test-dataset-details > summary {
-  padding: 5px 6px;
-  border: 1px solid #30383f;
-  border-radius: 3px;
-  color: #89949d;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid #343d44;
+  border-radius: 4px;
+  background: #1a2025;
+  color: #c3cbd0;
   cursor: pointer;
-  font: 7px ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .04em;
-  list-style: none;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .045em;
   white-space: nowrap;
 }
 
-.test-dataset-details > summary::-webkit-details-marker {
-  display: none;
+.test-dataset-details-toggle:hover,
+.test-dataset-details-toggle[aria-expanded="true"] {
+  border-color: #8c6a3d;
+  background: #24221e;
+  color: #e5c18a;
 }
 
-.test-dataset-details[open] {
+.details-toggle-indicator {
+  display: inline-grid;
+  width: 13px;
+  height: 13px;
+  place-items: center;
+  border: 1px solid #766044;
+  border-radius: 50%;
+  color: #d6ad72;
+  font: 9px Georgia, serif;
+  letter-spacing: 0;
+}
+
+.details-toggle-chevron {
+  color: #8e989f;
+  font-size: 8px;
+}
+
+.test-dataset-details-popover {
   position: absolute;
-  z-index: 15;
-  top: calc(100% + 3px);
-  right: 6px;
-  width: min(460px, calc(100vw - 40px));
-  padding: 8px;
-  border: 1px solid #30383f;
-  background: #191e23;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 38%);
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 9px;
+  width: min(440px, calc(100vw - 28px));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #3a434a;
+  border-radius: 6px;
+  background: #191f24;
+  box-shadow: 0 16px 38px rgb(0 0 0 / 48%), 0 2px 8px rgb(0 0 0 / 24%);
+}
+
+.details-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 15px 12px;
+  border-bottom: 1px solid #2d353b;
+  background: linear-gradient(110deg, #22282d, #191f24 72%);
+}
+
+.details-popover-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.details-eyebrow,
+.details-field-label {
+  color: #8f9aa2;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .09em;
+}
+
+.details-popover-header h3 {
+  margin: 0;
+  color: #e2e7ea;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: .01em;
+}
+
+.details-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid #385344;
+  border-radius: 3px;
+  color: #9bc9ae;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.details-state > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #79b792;
+}
+
+.details-range-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px 12px;
+  margin: 12px;
+  padding: 11px 12px;
+  border: 1px solid #353c40;
+  border-radius: 4px;
+  background: #14191d;
+}
+
+.details-range-card > .details-field-label {
+  grid-column: 1 / -1;
+}
+
+.details-range-values {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: #7e8991;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.details-range-values code {
+  min-width: 0;
+  color: #e1e6e9;
+  overflow-wrap: anywhere;
+}
+
+.details-range-count {
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 1px solid #30383e;
+}
+
+.details-range-count strong {
+  color: #d6ad72;
+  font: 600 16px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.details-range-count span {
+  color: #87929a;
+  font: 7px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .08em;
 }
 
 .test-dataset-detail-list {
   display: grid;
-  gap: 6px;
+  gap: 0;
+  padding: 0 12px 12px;
 }
 
-.test-dataset-detail-list > div {
+.details-id-row {
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 125px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid #2b3339;
 }
 
-.test-dataset-detail-list span {
+.details-id-row > span {
   color: #89949d;
   font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .025em;
 }
 
-.test-dataset-detail-list code,
-.test-dataset-detail-list strong {
+.details-id-row code,
+.details-fingerprint code {
   min-width: 0;
+  color: #cbd3d8;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
   overflow-wrap: anywhere;
-  color: #e3e8eb;
-  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  user-select: text;
+}
+
+.details-fingerprint {
+  display: grid;
+  gap: 7px;
+  padding: 11px 2px 1px;
+}
+
+.details-fingerprint code {
+  color: #aeb8be;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+@media (max-width: 560px) {
+  .test-dataset-details-popover {
+    right: 5px;
+    width: calc(100vw - 20px);
+  }
+
+  .details-id-row {
+    grid-template-columns: 105px minmax(0, 1fr);
+  }
+
+  .details-range-values {
+    flex-wrap: wrap;
+  }
 }
 
 .dataset-controls-feedback {
