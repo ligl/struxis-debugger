@@ -215,12 +215,17 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
-  const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
-    event.key === "ArrowLeft" || event.key === "ArrowRight";
+  // Vim normal-mode navigation aliases: h/ j/ k/ l behave exactly like the
+  // corresponding arrow keys, without changing the existing chart commands.
+  const key = ({ h: "ArrowLeft", j: "ArrowDown", k: "ArrowUp", l: "ArrowRight" } as const)[
+    event.key as "h" | "j" | "k" | "l"
+  ] ?? event.key;
+  const isArrowKey = key === "ArrowUp" || key === "ArrowDown" ||
+    key === "ArrowLeft" || key === "ArrowRight";
   const isFitShortcut = event.ctrlKey && !event.altKey && !event.metaKey &&
-    !event.shiftKey && event.key === "0";
+    !event.shiftKey && key === "0";
   const isBoundaryNavigation = event.ctrlKey && !event.altKey && !event.metaKey &&
-    !event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight");
+    !event.shiftKey && (key === "ArrowLeft" || key === "ArrowRight");
   if (
     (event.repeat && !isArrowKey) ||
     event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation && !isFitShortcut) ||
