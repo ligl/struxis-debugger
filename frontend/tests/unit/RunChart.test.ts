@@ -153,14 +153,11 @@ function installChartMock(): void {
 
 describe("RunChart", () => {
   it("removes internal time and price axis borders", () => {
-    installResizeObserverMock();
-    installChartMock();
     mount(RunChart, {
       props: {
         origin: origin(),
         testDataset: testDataset(),
         runState: runState(),
-        active: true,
       },
     });
 
