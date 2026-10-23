@@ -1578,9 +1578,11 @@ body,
 .run-chart-message {
   position: absolute;
   z-index: 2;
-  top: 12px;
-  left: 12px;
-  max-width: min(540px, calc(100% - 24px));
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: min(540px, calc(100% - 32px));
   margin: 0;
   padding: 8px 10px;
   border: 1px solid var(--dbg-border);
@@ -1588,6 +1590,7 @@ body,
   color: var(--dbg-text-secondary);
   font-size: 10px;
   line-height: 1.5;
+  text-align: center;
   pointer-events: none;
 }
 
