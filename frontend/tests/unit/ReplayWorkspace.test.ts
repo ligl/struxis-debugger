@@ -31,6 +31,7 @@ describe("ReplayWorkspace", () => {
           :test-dataset="null"
           :run-state="null"
           :structure="null"
+          :selected-object="null"
           :snapshots="[]"
         />
       `,
