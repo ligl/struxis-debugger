@@ -58,6 +58,7 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("run-01");
+    expect(wrapper.get('[data-testid="snapshot-reference-metadata"]').text()).toContain("2026-05-28 20:26:40");
     expect(wrapper.text()).toContain("aaaaaaaaaaaa");
     expect(invokeMock).toHaveBeenCalledWith("get_snapshot_reference", { snapshotId: "snapshot-complete-01" });
   });
