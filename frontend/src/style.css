@@ -4403,3 +4403,33 @@ th, td { padding: 6px 8px; }
   color: var(--dbg-accent-hover);
   font-size: 10px;
 }
+
+
+/* Shared operation feedback (vue-sonner). Keep toasts above docked panels and menus. */
+[data-sonner-toaster] {
+  z-index: 10000 !important;
+}
+
+[data-sonner-toast] {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  border-color: var(--dbg-border-strong) !important;
+  background: var(--dbg-surface-2) !important;
+  color: var(--dbg-text-primary) !important;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 35%) !important;
+}
+
+[data-sonner-toast] [data-description] {
+  color: var(--dbg-text-secondary) !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  border-color: var(--dbg-success) !important;
+}
+
+[data-sonner-toast][data-type="warning"] {
+  border-color: var(--dbg-warning) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  border-color: var(--dbg-error) !important;
+}
