@@ -207,7 +207,7 @@ describe("OriginChart", () => {
     });
     expect(chartOptions.layout?.attributionLogo).toBe(false);
     expect(chartOptions.crosshair?.mode).toBe(0);
-    expect(chartOptions.timeScale?.borderColor).toBe("#30383f");
+    expect(chartOptions.timeScale?.borderColor).toBe("#121619");
     expect(wrapper.find(".chart-attribution").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("TradingView");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([
