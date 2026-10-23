@@ -46,7 +46,7 @@ const selectedSnapshotLabel = computed(() =>
 
 function timeframeKey(barType: string | null | undefined): string | null {
   if (!barType) return null;
-  const match = /-(\\d+)-(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)-/i.exec(barType);
+  const match = /-(\d+)-(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)-/i.exec(barType);
   return match ? match[1] + ":" + match[2]!.toUpperCase() : null;
 }
 
