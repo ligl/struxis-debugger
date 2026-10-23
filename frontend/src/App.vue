@@ -250,7 +250,7 @@ async function createSelectedTestDataset(): Promise<void> {
 }
 const canStartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
-    (!runState.value || ["completed", "failed", "disposed"].includes(runState.value.status)) && !runBusy.value,
+    (!runState.value || ["completed", "disposed"].includes(runState.value.status)) && !runBusy.value,
 );
 const canRestartRun = computed(
   () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
