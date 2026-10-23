@@ -797,6 +797,7 @@ describe("Test, Run and Snapshot workbench", () => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(origin);
       if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "get_run_state") return Promise.resolve(null);
       if (command === "list_snapshots") return Promise.resolve([snapshot]);
       if (command === "create_test_dataset") return Promise.resolve(testDataset);
       if (command === "start_run") return Promise.resolve(runState);
@@ -839,6 +840,7 @@ describe("Test, Run and Snapshot workbench", () => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(origin);
       if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "get_run_state") return Promise.resolve(null);
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "create_test_dataset") {
         createAttempts += 1;
@@ -1185,6 +1187,7 @@ describe("startup and user-operation coordination", () => {
       if (command === "list_snapshots") return pendingSnapshots;
       if (command === "load_origin") return Promise.resolve(loadedOrigin);
       if (command === "get_current_test_dataset") return Promise.resolve(null);
+      if (command === "get_run_state") return Promise.resolve(null);
       if (command === "create_test_dataset") return Promise.resolve(createdTestDataset);
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
@@ -1360,6 +1363,7 @@ describe("startup and user-operation coordination", () => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "get_run_state") return Promise.resolve(null);
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "create_test_dataset") return pendingCreate;
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
