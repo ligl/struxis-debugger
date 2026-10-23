@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { mount, type VueWrapper } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RunChart from "../../src/components/RunChart.vue";
@@ -207,7 +207,7 @@ describe("RunChart", () => {
         testDataset: testDataset(),
         runState: runState(),
       },
-    });
+    }) as VueWrapper;
     await nextTick();
     const candleSetCalls = mocks.candleSetData.mock.calls.length;
     const volumeSetCalls = mocks.volumeSetData.mock.calls.length;
@@ -327,7 +327,7 @@ describe("RunChart", () => {
     };
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure: initialStructure },
-    });
+    }) as VueWrapper;
     await nextTick();
     expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-removed"]').exists()).toBe(true);
