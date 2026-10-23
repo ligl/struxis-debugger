@@ -149,6 +149,7 @@ describe("OriginChart", () => {
 
     expect(wrapper.find(".origin-chart-heading").exists()).toBe(false);
     expect(wrapper.find(".origin-chart-foot").exists()).toBe(false);
+    expect(wrapper.find(".snapshot-reference-chart").exists()).toBe(true);
     expect(wrapper.find('[data-testid="origin-chart-viewport"]').exists()).toBe(true);
   });
 
