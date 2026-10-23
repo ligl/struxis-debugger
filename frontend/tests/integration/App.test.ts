@@ -1278,7 +1278,7 @@ describe("startup and user-operation coordination", () => {
     expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
   });
 
-  it("reconciles backend Run ownership before replacing Test Dataset when local Run state is stale", async () => {
+  it("allows Test Dataset replacement after a completed Run has released its runtime", async () => {
     let runStateReads = 0;
     const completedRun = {
       runId: "run-completed",
@@ -1312,10 +1312,11 @@ describe("startup and user-operation coordination", () => {
 
     await replaceButton.trigger("click");
     await vi.waitFor(() => expect(runStateReads).toBe(2));
-    await vi.waitFor(() => expect((replaceButton.element as HTMLButtonElement).disabled).toBe(true));
+    await vi.waitFor(() => expect(invokeMock.mock.calls.some(([command]) => command === "create_test_dataset")).toBe(true));
 
-    expect(invokeMock.mock.calls.filter(([command]) => command === "create_test_dataset")).toHaveLength(0);
-    expect(wrapper.text()).toContain("Dispose the current Run before replacing its Test Dataset.");
+    expect(invokeMock.mock.calls.filter(([command]) => command === "create_test_dataset")).toHaveLength(1);
+    expect(wrapper.text()).toContain("test-replaced");
+    expect(wrapper.text()).not.toContain("Dispose the current Run before replacing its Test Dataset.");
   });
 
   it("blocks Test Dataset replacement while a Run command is pending", async () => {
