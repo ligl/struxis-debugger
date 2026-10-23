@@ -119,6 +119,29 @@ function moveCrosshairBy(delta: number): boolean {
   if (time === undefined) return false;
   crosshairLogicalIndex = nextIndex;
   chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
+
+  // Keep the selected SBar and its candle visible when keyboard navigation
+  // crosses either edge of the current viewport. Preserve the current zoom.
+  const timeScale = chart.timeScale();
+  const range = timeScale.getVisibleLogicalRange?.();
+  if (range && Number.isFinite(range.from) && Number.isFinite(range.to)) {
+    const width = range.to - range.from;
+    if (width > 0) {
+      const margin = Math.min(2, width * 0.08);
+      let shift = 0;
+      if (nextIndex < range.from + margin) {
+        shift = nextIndex - (range.from + margin);
+      } else if (nextIndex > range.to - margin) {
+        shift = nextIndex - (range.to - margin);
+      }
+      if (shift !== 0) {
+        timeScale.setVisibleLogicalRange({
+          from: range.from + shift,
+          to: range.to + shift,
+        });
+      }
+    }
+  }
   return true;
 }
 
@@ -146,8 +169,10 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
+  const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
+    event.key === "ArrowLeft" || event.key === "ArrowRight";
   if (
-    event.repeat ||
+    (event.repeat && !isArrowKey) ||
     event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
     isInteractiveKeyboardTarget(event.target) ||
     isInteractiveKeyboardTarget(document.activeElement) ||
