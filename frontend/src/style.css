@@ -2825,7 +2825,7 @@ th, td { padding: 6px 8px; }
 .snapshot-reference-selected-label {
   position: absolute;
   z-index: 1;
-  right: 28px;
+  right: 15px;
   bottom: 0;
   left: 5px;
   display: block;
