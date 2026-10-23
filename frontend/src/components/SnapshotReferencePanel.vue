@@ -171,7 +171,7 @@ function handleSelection(event: Event): void {
     <footer v-if="reference" class="snapshot-reference-foot" data-testid="snapshot-reference-metadata">
       <span>RUN <b>{{ reference.runId }}</b></span>
       <span>SBARS <b>{{ reference.bars.length.toLocaleString() }}</b></span>
-      <span>GENERATED <b>{{ reference.snapshotGeneratedAt }}</b></span>
+      <span>GENERATED <b>{{ formatLifecycleTimestamp(reference.snapshotGeneratedAt) }}</b></span>
       <span class="snapshot-reference-state-key">FINGERPRINT <b>{{ reference.sbarSequenceFingerprint.slice(0, 12) }}</b></span>
     </footer>
   </section>
