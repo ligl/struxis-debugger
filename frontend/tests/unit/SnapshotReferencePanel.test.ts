@@ -43,7 +43,7 @@ describe("SnapshotReferencePanel", () => {
   it("renders the verified historical chart for a selected completed Snapshot", async () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
-      props: { snapshots },
+      props: { instrumentId: "AUD/USD.SIM", snapshots },
       global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
     });
 
@@ -58,9 +58,45 @@ describe("SnapshotReferencePanel", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_snapshot_reference", { snapshotId: "snapshot-complete-01" });
   });
 
+  it("shows only completed Snapshots for the Live Replay instrument across timeframes", () => {
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: {
+        instrumentId: "AUD/USD.SIM",
+        snapshots: [
+          ...snapshots,
+          {
+            ...snapshots[0]!,
+            fileName: "same-instrument-1m.snapshot",
+            path: "/snapshots/same-instrument-1m.snapshot",
+            snapshotId: "snapshot-same-instrument-1m",
+            barType: "AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL",
+            generatedAt: "2026-10-21T10:00:00Z",
+          },
+          {
+            ...snapshots[0]!,
+            fileName: "other-instrument.snapshot",
+            path: "/snapshots/other-instrument.snapshot",
+            snapshotId: "snapshot-other-instrument",
+            instrumentId: "BTCUSDT.BINANCE",
+            barType: "BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL",
+            generatedAt: "2026-10-22T10:00:00Z",
+          },
+        ],
+      },
+    });
+
+    const select = wrapper.get('[data-testid="replay-reference-select"]');
+    expect(wrapper.get(".snapshot-reference-select > span").text()).toBe("AUD/USD.SIM");
+    expect(select.findAll("option")).toHaveLength(3);
+    expect(select.text()).toContain("1m");
+    expect(select.text()).toContain("5m");
+    expect(select.find('option[value="snapshot-other-instrument"]').exists()).toBe(false);
+  });
+
   it("does not offer non-complete artifacts as Replay references", () => {
     const wrapper = mount(SnapshotReferencePanel, {
       props: {
+        instrumentId: "AUD/USD.SIM",
         snapshots: [{
           fileName: "failed.snapshot",
           path: "/snapshots/failed.snapshot",
