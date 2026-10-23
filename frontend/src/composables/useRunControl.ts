@@ -1,7 +1,6 @@
 import { ref } from "vue";
 import {
   describeIpcError,
-  disposeRun,
   getRunState,
   restartRun,
   resetRun,
