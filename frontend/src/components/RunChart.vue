@@ -75,6 +75,7 @@ let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let fittedTestDatasetId: string | null = null;
+let visibleRangeListener: (() => void) | null = null;
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
@@ -135,6 +136,8 @@ function updateChart(): void {
     if (projectionMessage.value) {
       candleSeries.setData([]);
       volumeSeries.setData([]);
+      cbarRectangles.value = [];
+      swingSegments.value = [];
       chartError.value = "";
       return;
     }
@@ -229,6 +232,12 @@ onMounted(() => {
     priceLineVisible: false,
   });
   chart.priceScale("").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  const timeScale = chart.timeScale();
+  if (typeof timeScale.subscribeVisibleLogicalRangeChange === "function") {
+    const refreshOverlays = () => updateStructureOverlays();
+    timeScale.subscribeVisibleLogicalRangeChange(refreshOverlays);
+    visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(refreshOverlays);
+  }
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
     if (!chart || !entry) return;
@@ -255,6 +264,8 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  visibleRangeListener?.();
+  visibleRangeListener = null;
   resizeObserver?.disconnect();
   resizeObserver = null;
   chart?.remove();
