@@ -64,7 +64,7 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = true;
     selectedRangeCount.value = result.count;
-    rangeSelectionStatus.value = `Selected ${result.count.toLocaleString()} SBars: ${displaySbarTime(currentOrigin, result.startSbarId)} → ${displaySbarTime(currentOrigin, result.endSbarId)} (inclusive).`;
+    rangeSelectionStatus.value = "";
   }
 
   function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void {
@@ -90,7 +90,7 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     selectedRangeCount.value = endIndex - startIndex + 1;
     rangeSelectionPendingStart.value = null;
     rangeSelectionReady.value = true;
-    rangeSelectionStatus.value = `Adjusted inclusive interval: ${displaySbarTime(currentOrigin, startSbarId.value)} → ${displaySbarTime(currentOrigin, endSbarId.value)} (${selectedRangeCount.value.toLocaleString()} SBars).`;
+    rangeSelectionStatus.value = "";
   }
 
   function handleRangeSelectionError(message: string): void { rangeSelectionStatus.value = message; }
