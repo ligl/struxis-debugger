@@ -10,7 +10,6 @@ const props = defineProps<{
   snapshots: SnapshotArtifactDto[];
   liveBarType: string | null;
   liveSbarIds: string[];
-  syncEnabled: boolean;
   syncRequest: ReplayChartViewportSync | null;
   isPlaying: boolean;
   replayProgress: number;
@@ -55,7 +54,7 @@ const syncEligible = computed(() => {
   const snapshot = selectedSnapshot.value;
   const bars = reference.value?.bars;
   const liveIds = props.liveSbarIds;
-  if (!props.syncEnabled || !snapshot || !bars || liveIds.length === 0) return false;
+  if (!snapshot || !bars || liveIds.length === 0) return false;
   const liveTimeframe = timeframeKey(props.liveBarType);
   const snapshotTimeframe = timeframeKey(snapshot.barType);
   if (!liveTimeframe || liveTimeframe !== snapshotTimeframe) return false;
