@@ -231,11 +231,12 @@ describe("RunChart", () => {
       }],
     };
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure },
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure, selectedObject: { kind: "cbar", id: "cbar-1", checkpointSbarId: originBars[1]!.sbarId } },
     });
     await nextTick();
 
     expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-1"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-1"]').attributes("stroke")).toBe("#D6A85D");
     expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-1"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("true");
 
