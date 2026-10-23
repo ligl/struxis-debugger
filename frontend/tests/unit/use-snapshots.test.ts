@@ -60,6 +60,35 @@ describe("useSnapshots", () => {
     expect(snapshotsLoading.value).toBe(false);
   });
 
+
+  it("refreshes the Snapshot catalog after a successful save", async () => {
+    const savedSnapshot = artifact("snapshot-saved");
+    invokeMock.mockImplementation((command: string) => {
+      if (command === "save_run_snapshot") return Promise.resolve(savedSnapshot.snapshotId);
+      if (command === "list_snapshots") return Promise.resolve([savedSnapshot]);
+      return Promise.reject(new Error(`unexpected command: ${command}`));
+    });
+
+    const {
+      snapshots,
+      snapshotSaveBusy,
+      snapshotsError,
+      saveCompletedRunSnapshot,
+    } = useSnapshots();
+
+    await saveCompletedRunSnapshot();
+
+    expect(invokeMock.mock.calls.map(([command]) => command)).toEqual([
+      "save_run_snapshot",
+      "list_snapshots",
+    ]);
+    expect(snapshots.value.map((item) => item.snapshotId)).toEqual([
+      "snapshot-saved",
+    ]);
+    expect(snapshotSaveBusy.value).toBe(false);
+    expect(snapshotsError.value).toBe("");
+  });
+
   it("preserves the last successful list when a refresh fails", async () => {
     invokeMock
       .mockResolvedValueOnce([artifact("snapshot-kept")])
