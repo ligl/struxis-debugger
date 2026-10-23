@@ -293,7 +293,7 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
-  it("reconciles each authoritative structure snapshot with add, update and delete semantics", async () => {
+  it("reconciles authoritative structure changes with the matching advancing Replay checkpoint", async () => {
     const initialStructure = {
       cbarCount: 1,
       cbars: [{
@@ -301,7 +301,7 @@ describe("RunChart", () => {
         high: "12",
         low: "9",
         sbarStartId: originBars[1]!.sbarId,
-        sbarEndId: originBars[2]!.sbarId,
+        sbarEndId: originBars[1]!.sbarId,
         spanSbars: 2,
         fractalType: null,
         createdAt: "2026-10-23T00:00:00Z",
@@ -332,11 +332,18 @@ describe("RunChart", () => {
     expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-removed"]').exists()).toBe(true);
 
+    const candleSetCalls = mocks.candleSetData.mock.calls.length;
+    const volumeSetCalls = mocks.volumeSetData.mock.calls.length;
     await wrapper.setProps({
+      runState: runState({
+        processedCount: 2,
+        cursorSbarId: originBars[2]!.sbarId,
+        status: "completed",
+      }),
       structure: {
         cbarCount: 2,
         cbars: [
-          { ...initialStructure.cbars[0]!, high: "13" },
+          { ...initialStructure.cbars[0]!, high: "13", sbarEndId: originBars[2]!.sbarId },
           {
             cbarId: "cbar-added",
             high: "11",
@@ -354,6 +361,18 @@ describe("RunChart", () => {
     });
     await nextTick();
 
+    expect(mocks.candleSetData).toHaveBeenCalledTimes(candleSetCalls);
+    expect(mocks.volumeSetData).toHaveBeenCalledTimes(volumeSetCalls);
+    expect(mocks.candleUpdate).toHaveBeenCalledWith({
+      time: 1700000120,
+      open: 10,
+      high: 12,
+      low: 9,
+      close: 11,
+      color: "#79B58B",
+      borderColor: "#79B58B",
+      wickColor: "#79B58B",
+    }, true);
     expect(wrapper.findAll('[data-testid="run-cbar-rectangle"]')).toHaveLength(2);
     expect(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').attributes("y")).toBe("187");
     expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-added"]').exists()).toBe(true);
