@@ -38,15 +38,25 @@ const speedOptions = [
 ];
 const selectedSpeed = () =>
   speedOptions.find((option) => option.delayMs === selectedPlaybackDelayMs.value)?.label ?? "1x";
+const activeRunStatuses = ["ready", "running", "paused"];
+const showStop = () =>
+  props.playbackStatus === "playing" ||
+  activeRunStatuses.includes(props.runState?.status ?? "");
 </script>
 
 <template>
   <div class="toolbar-actions replay-toolbar-actions" data-testid="replay-toolbar-controls">
     <div class="replay-transport" role="group" aria-label="Replay transport controls">
-      <button class="subtle-button" data-testid="run-start" title="Start a new replay run" :disabled="playbackStatus === 'playing' || !isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="emit('command', 'start')">START</button>
       <button class="subtle-button" data-testid="run-step" title="Process one SBar" :disabled="playbackStatus === 'playing' || !isRunCommandEligible('step', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="emit('command', 'step')">STEP ▶|</button>
       <button class="subtle-button replay-play-toggle" data-testid="run-play-pause" :title="playbackStatus === 'playing' ? 'Pause replay (Space)' : 'Play replay (Space)'" :disabled="(runBusy && playbackStatus !== 'playing') || (playbackStatus !== 'playing' && !['ready', 'paused'].includes(runState?.status ?? ''))" @click="emit('command', playbackStatus === 'playing' ? 'pause' : 'play')">{{ playbackStatus === 'playing' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
-      <button class="subtle-button" data-testid="run-stop" title="Stop the current run" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun) && playbackStatus !== 'playing'" @click="emit('command', 'stop')">STOP</button>
+      <button
+        class="subtle-button"
+        :class="{ 'run-stop-toggle': showStop() }"
+        data-testid="run-start-stop"
+        :title="showStop() ? 'Stop the current Run and halt continuous playback' : 'Start a new replay Run'"
+        :disabled="runBusy || (showStop() ? !isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun) && playbackStatus !== 'playing' : playbackStatus === 'playing' || !isRunCommandEligible('start', runState?.status ?? null, runBusy, canStartRun, canRestartRun))"
+        @click="emit('command', showStop() ? 'stop' : 'start')"
+      >{{ showStop() ? 'STOP' : 'START' }}</button>
       <button class="subtle-button" data-testid="run-restart" title="Reset by restarting the run" :disabled="playbackStatus === 'playing' || !isRunCommandEligible('restart', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="emit('command', 'restart')">RESET</button>
       <div class="replay-speed-control" data-testid="replay-speed-control" @mouseenter="speedMenuOpen = true" @mouseleave="speedMenuOpen = false">
         <button
