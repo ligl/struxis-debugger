@@ -32,6 +32,7 @@ const selectedSbarMarker = ref<SBarSelectionMarker | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
+let cachedProjection: ReturnType<typeof mapOriginBarsToChart> | null = null;
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -197,6 +198,7 @@ function updateChart(): void {
       candleSeries.setData([]);
       volumeSeries.setData([]);
       timeBySbarId = new Map();
+      cachedProjection = null;
       lastProcessedCount = null;
       lastRunId = props.runState?.runId ?? null;
       lastProgressApplies = replayProgressApplies.value;
@@ -207,6 +209,7 @@ function updateChart(): void {
       return;
     }
     const projection = mapOriginBarsToChart(bars.value);
+    cachedProjection = projection;
     const processedCount = replayProgressApplies.value
       ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
       : bars.value.length;
@@ -246,6 +249,7 @@ function updateChart(): void {
   } catch (error) {
     candleSeries.setData([]);
     volumeSeries.setData([]);
+    cachedProjection = null;
     lastProcessedCount = null;
     lastRunId = props.runState?.runId ?? null;
     lastProgressApplies = replayProgressApplies.value;
@@ -282,7 +286,11 @@ function updateProgressSeries(): void {
     processedCount > 0
   ) {
     const index = processedCount - 1;
-    const projection = mapOriginBarsToChart(bars.value);
+    const projection = cachedProjection;
+    if (!projection) {
+      updateChart();
+      return;
+    }
     const candle = projection.candles[index];
     const volume = projection.volume[index];
     if (!candle || !volume) {
