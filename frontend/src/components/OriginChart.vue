@@ -797,11 +797,15 @@ onMounted(() => {
     updateSbarCoordinates();
   });
   resizeObserver.observe(chartHost.value);
+  suppressSyncEmit = true;
   updateChart();
+  queueMicrotask(() => { suppressSyncEmit = false; });
 });
 
 watch(() => [props.bars, props.structure, props.originDatasetId] as const, () => {
+  suppressSyncEmit = true;
   updateChart();
+  queueMicrotask(() => { suppressSyncEmit = false; });
   updateHoveredObject(undefined);
 });
 watch(() => props.syncRequest, applySyncRequest, { deep: true });
