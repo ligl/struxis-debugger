@@ -163,6 +163,9 @@ async function handleRestartToSBar(): Promise<void> {
     if (succeeded) {
       replayInspector.value = lastStepResult.value?.inspector ?? null;
       replayInspectorError.value = "";
+      notifySuccess("Replay restored", `Replay restored to SBar ${target}.`);
+    } else {
+      notifyError("Replay restore failed", runError.value || "Replay could not restore the selected checkpoint.");
     }
   } finally {
     fastForwarding.value = false;
@@ -555,7 +558,7 @@ async function handleLoadOrigin(): Promise<void> {
   try {
     await startLoad();
     if (loadStatus.value === "failed") notifyError("Origin load failed", loadError.value);
-    else if (loadStatus.value === "loaded") notifySuccess("Origin loaded", selectedDataset.value?.name ?? "Origin Dataset is ready.");
+    else if (loadStatus.value === "loaded") notifySuccess("Origin loaded", selectedDataset.value?.id ?? "Origin Dataset is ready.");
   } catch (error) {
     notifyError("Origin load failed", error instanceof Error ? error.message : String(error));
   }
