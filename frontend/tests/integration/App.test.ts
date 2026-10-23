@@ -1519,6 +1519,7 @@ describe("startup and user-operation coordination", () => {
     )).toHaveLength(0);
 
     resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="workspace-replay"]').attributes("aria-current")).toBe("page"));
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
   });
