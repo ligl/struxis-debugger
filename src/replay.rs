@@ -119,6 +119,15 @@ impl LoadedInput {
             sbar_sequence_fingerprint: actual_fingerprint,
         })
     }
+
+    /// Resolves the stable SBar identity used by Replay against this immutable
+    /// Test input. Manager and Worker share this lookup so target validation
+    /// cannot drift between lifecycle admission and execution.
+    pub(crate) fn index_of_sbar_id(&self, sbar_id: &str) -> Option<usize> {
+        self.bars
+            .iter()
+            .position(|bar| bar.ts_event.to_string() == sbar_id)
+    }
 }
 
 #[cfg(test)]
