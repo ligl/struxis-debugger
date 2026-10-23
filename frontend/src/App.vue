@@ -63,6 +63,7 @@ const {
   runState,
   runBusy,
   runError,
+  lastStepResult,
   refreshRunState,
   executeRunCommand,
 } = useRunControl();
@@ -97,6 +98,13 @@ const {
   replayInspectorError,
   refresh: refreshReplayInspectorState,
 } = useReplayInspector();
+
+watch(lastStepResult, (result) => {
+  if (!result) return;
+  replayInspector.value = result.inspector;
+  replayInspectorError.value = "";
+});
+
 const selectedCompareDifference = ref<ObjectDifferenceDto | null>(null);
 const selectedReplayChartObject = ref<ReplayChartSelection | null>(null);
 
@@ -352,7 +360,7 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   // Stop scheduling and wait for an in-flight Step before any conflicting command.
   await stopPlayback();
   await executeRunCommand(command);
-  if (command === "step" || command === "start" || command === "restart") {
+  if (command === "start" || command === "restart") {
     await refreshReplayInspector();
   }
 }
