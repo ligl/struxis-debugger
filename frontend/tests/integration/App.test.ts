@@ -34,6 +34,28 @@ function mountApp() {
   });
 }
 
+async function expectTestDatasetAvailable(wrapper: ReturnType<typeof mountApp>): Promise<void> {
+  const detailsToggle = wrapper.find('[data-testid="test-dataset-details-toggle"]');
+  if (detailsToggle.exists()) {
+    await vi.waitFor(() => {
+      expect((wrapper.get('[data-testid="test-dataset-details-toggle"]').element as HTMLButtonElement).disabled).toBe(false);
+    });
+    if (!wrapper.find('[data-testid="test-dataset-details-popover"]').exists()) {
+      await wrapper.get('[data-testid="test-dataset-details-toggle"]').trigger("click");
+    }
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="test-dataset-details-popover"]').text()).toContain("test-1");
+    });
+    return;
+  }
+
+  // Replay intentionally does not keep the Dataset details popover mounted.
+  // An enabled Start control is the page-level signal that a Test Dataset is available.
+  await vi.waitFor(() => {
+    expect((wrapper.get('[data-testid="run-start-stop"]').element as HTMLButtonElement).disabled).toBe(false);
+  });
+}
+
 async function enterReplayWorkspace(wrapper: ReturnType<typeof mountApp>): Promise<void> {
   // Run controls are rendered only in Replay. Determine the active workspace from a stable DOM attribute.
   const replayTab = wrapper.get('[data-testid="workspace-replay"]');
@@ -393,7 +415,7 @@ describe("Origin Load workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
     await enterReplayWorkspace(wrapper);
     await vi.waitFor(() => expect(wrapper.text()).toContain("READY"));
@@ -807,7 +829,7 @@ describe("Test, Run and Snapshot workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
     await selectOriginRange(wrapper);
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Selected 2 SBars: 100 → 200 (inclusive)."));
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Selected inclusive interval: 2 SBars"));
 
     const createButton = wrapper.get('[data-testid="test-dataset-create"]');
     await vi.waitFor(() =>
@@ -820,7 +842,7 @@ describe("Test, Run and Snapshot workbench", () => {
         endSbarId: "200",
       }),
     );
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
 
     await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start-stop"]');
@@ -858,10 +880,10 @@ describe("Test, Run and Snapshot workbench", () => {
     await createButton()!.trigger("click");
     await vi.waitFor(() => expect(wrapper.get('[data-testid="workspace-replay"]').attributes("aria-current")).toBe("page"));
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await createButton()!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("replacement interval rejected"));
-    expect(wrapper.text()).toContain("test-1");
+    await expectTestDatasetAvailable(wrapper);
   });
 
   it("rejects Run commands at the page boundary when no Run exists", async () => {
@@ -874,7 +896,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     await wrapper.get('[data-testid="run-step"]').trigger("click");
     await wrapper.get('[data-testid="run-play-pause"]').trigger("click");
@@ -924,7 +946,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     expect(wrapper.get('[data-testid="run-start-stop"]').text()).toContain("START");
     await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
@@ -961,7 +983,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     const readySpaceEvent = new KeyboardEvent("keydown", {
@@ -1001,7 +1023,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     await vi.waitFor(() => expect(wrapper.text()).toContain("RUNNING"));
     await wrapper.get('[data-testid="run-step"]').trigger("click");
@@ -1039,7 +1061,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
 
@@ -1096,7 +1118,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
 
     const noRunEvent = new KeyboardEvent("keydown", {
       key: " ",
@@ -1172,7 +1194,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     await wrapper.get('[data-testid="run-step"]').trigger("click");
@@ -1204,7 +1226,7 @@ describe("Test, Run and Snapshot workbench", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start-stop"]')!;
     await startButton.trigger("click");
@@ -1259,7 +1281,7 @@ describe("startup and user-operation coordination", () => {
     await flushPromises();
 
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
-    expect(wrapper.text()).toContain("test-1");
+    await expectTestDatasetAvailable(wrapper);
     expect(
       invokeMock.mock.calls.filter(([command]) => command === "get_current_test_dataset"),
     ).toHaveLength(1);
@@ -1279,7 +1301,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("load_origin", {
       datasetId: dataset.id,
@@ -1321,7 +1343,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
@@ -1360,7 +1382,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await selectOriginRange(wrapper);
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     expect((replaceButton.element as HTMLButtonElement).disabled).toBe(false);
@@ -1404,7 +1426,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await selectOriginRange(wrapper);
     await wrapper.get('[data-testid="test-dataset-create"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("runtime cleanup was not confirmed"));
@@ -1426,7 +1448,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start-stop"]')!;
     await startButton.trigger("click");
@@ -1465,7 +1487,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     await selectOriginRange(wrapper);
     await replaceButton.trigger("click");
@@ -1499,7 +1521,7 @@ describe("startup and user-operation coordination", () => {
     });
 
     const wrapper = mountApp();
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await expectTestDatasetAvailable(wrapper);
     const replaceButton = wrapper.get('[data-testid="test-dataset-create"]');
     await selectOriginRange(wrapper);
     await replaceButton.trigger("click");
