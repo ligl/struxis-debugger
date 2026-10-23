@@ -325,6 +325,20 @@ describe("RunChart", () => {
     expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-1"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("true");
 
+    const moveHandler = mocks.crosshairMoveListener;
+    expect(moveHandler).not.toBeNull();
+    moveHandler?.({ point: { x: 90, y: 188 } });
+    await nextTick();
+    expect(wrapper.get('[data-testid="run-hover-cbar"]').attributes("data-cbar-id")).toBe("cbar-1");
+    expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe("CBAR · cbar-1");
+    expect(wrapper.emitted("objectSelect")).toBeUndefined();
+
+    moveHandler?.({ point: { x: 60, y: 188 } });
+    await nextTick();
+    expect(wrapper.get('[data-testid="run-hover-swing"]').attributes("data-swing-id")).toBe("swing-1");
+    expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe("SWING · swing-1");
+    expect(wrapper.emitted("objectSelect")).toBeUndefined();
+
     await wrapper.get('[data-testid="run-layer-toggle-cbar"]').trigger("click");
     await nextTick();
     expect(wrapper.find('[data-testid="run-cbar-rectangle"]').exists()).toBe(false);
