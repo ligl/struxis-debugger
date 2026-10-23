@@ -1466,6 +1466,11 @@ body,
   background: #191e22;
 }
 
+.run-chart-heading .chart-heading-actions {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
 .run-chart-title {
   display: flex;
   min-width: 0;
@@ -1493,39 +1498,6 @@ body,
   font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.run-chart-meta {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 13px;
-}
-
-.run-chart-meta > span {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-
-.run-chart-meta small {
-  color: var(--dbg-text-muted);
-  font-size: 8px;
-}
-
-.run-chart-meta strong {
-  color: var(--dbg-text-primary);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.run-chart-meta .run-chart-up {
-  color: var(--dbg-success);
-}
-
-.run-chart-meta .run-chart-down {
-  color: var(--dbg-error, #e17e79);
 }
 
 .run-chart-stage {
@@ -1704,10 +1676,6 @@ body,
     align-items: flex-start;
     flex-wrap: wrap;
     gap: 8px;
-  }
-
-  .run-chart-meta {
-    gap: 9px;
   }
 
   .run-chart-description {
