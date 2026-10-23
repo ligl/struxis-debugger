@@ -6,7 +6,7 @@
 
 use serde::Serialize;
 
-use crate::diagnostics::Diagnostic;
+use crate::{diagnostics::Diagnostic, run::RunState};
 
 use capitus_struxis::{
     StruxisStateView,
@@ -62,6 +62,13 @@ impl OwnedCheckpoint {
             diagnostics: projection.diagnostics.clone(),
         })
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ReplayStepResult {
+    pub(crate) run_state: RunState,
+    pub(crate) inspector: Option<ReplayInspectorProjection>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
