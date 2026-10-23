@@ -330,8 +330,8 @@ impl ReplayManager {
                     if let Ok(Some(inspector)) = worker.inspector() {
                         self.last_inspector = Some(inspector);
                     }
-                    if let Ok(state) = worker.state() {
-                        if state.status == crate::run::RunStatus::Failed {
+                    match worker.state() {
+                        Ok(state) if state.status == crate::run::RunStatus::Failed => {
                             match worker.dispose() {
                                 Ok(_released_state) => {
                                     // Release confirms resource cleanup; it must not
@@ -354,6 +354,19 @@ impl ReplayManager {
                                         "{error}; Run failed and runtime release is unconfirmed: {release_error}"
                                     ));
                                 }
+                            }
+                        }
+                        Ok(_) => {}
+                        Err(state_error) => {
+                            // If transport failed, Worker can no longer report its
+                            // authoritative cursor. Never keep the initial Ready
+                            // state visible as though fast-forward were healthy.
+                            if let Some(mut state) = self.last_state.clone() {
+                                state.status = crate::run::RunStatus::Failed;
+                                state.failure_diagnostic = Some(format!(
+                                    "{error}; latest Worker state unavailable: {state_error}; runtime release is unconfirmed"
+                                ));
+                                self.last_state = Some(state);
                             }
                         }
                     }
