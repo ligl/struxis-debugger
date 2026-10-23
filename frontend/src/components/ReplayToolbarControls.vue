@@ -2,9 +2,10 @@
 import type { RunStateDto } from "../origin-types";
 import type { RunCommand } from "../run-command-eligibility";
 import type { PlaybackStatus } from "../composables/usePlaybackController";
+import { ref } from "vue";
 import { isRunCommandEligible } from "../run-command-eligibility";
 
-defineProps<{
+const props = defineProps<{
   runState: RunStateDto | null;
   runBusy: boolean;
   runError: string;
@@ -22,12 +23,20 @@ const emit = defineEmits<{
   setPlaybackDelay: [milliseconds: number];
 }>();
 
-function onSpeedChange(event: Event): void {
-  const target = event.target;
-  if (target instanceof HTMLSelectElement) {
-    emit("setPlaybackDelay", Number(target.value));
-  }
-}
+const speedMenuOpen = ref(false);
+const speedOptions = [
+  { label: "0.5×", delayMs: 500 },
+  { label: "0.75×", delayMs: 300 },
+  { label: "1×", delayMs: 200 },
+  { label: "1.25×", delayMs: 160 },
+  { label: "1.5×", delayMs: 135 },
+  { label: "2×", delayMs: 100 },
+  { label: "3×", delayMs: 65 },
+  { label: "4×", delayMs: 50 },
+  { label: "MAX", delayMs: 0 },
+];
+const selectedSpeed = () =>
+  speedOptions.find((option) => option.delayMs === props.playbackDelayMs)?.label ?? "1×";
 </script>
 
 <template>
@@ -38,16 +47,30 @@ function onSpeedChange(event: Event): void {
       <button class="subtle-button replay-play-toggle" data-testid="run-play-pause" :title="playbackStatus === 'playing' ? 'Pause replay (Space)' : 'Play replay (Space)'" :disabled="(runBusy && playbackStatus !== 'playing') || (playbackStatus !== 'playing' && !['ready', 'paused'].includes(runState?.status ?? ''))" @click="emit('command', playbackStatus === 'playing' ? 'pause' : 'play')">{{ playbackStatus === 'playing' ? 'Ⅱ PAUSE' : '▶ PLAY' }}</button>
       <button class="subtle-button" data-testid="run-stop" title="Stop the current run" :disabled="!isRunCommandEligible('stop', runState?.status ?? null, runBusy, canStartRun, canRestartRun) && playbackStatus !== 'playing'" @click="emit('command', 'stop')">STOP</button>
       <button class="subtle-button" data-testid="run-restart" title="Reset by restarting the run" :disabled="playbackStatus === 'playing' || !isRunCommandEligible('restart', runState?.status ?? null, runBusy, canStartRun, canRestartRun)" @click="emit('command', 'restart')">RESET</button>
-      <label class="replay-speed-control" title="Delay between completed SBar steps">
-        <span>SPEED</span>
-        <select data-testid="replay-speed" :value="playbackDelayMs" :disabled="runBusy" @change="onSpeedChange">
-          <option :value="500">0.5×</option>
-          <option :value="200">1×</option>
-          <option :value="100">2×</option>
-          <option :value="25">4×</option>
-          <option :value="0">MAX</option>
-        </select>
-      </label>
+      <div class="replay-speed-control" data-testid="replay-speed-control">
+        <button
+          type="button"
+          class="replay-speed-trigger"
+          data-testid="replay-speed"
+          :aria-expanded="speedMenuOpen"
+          aria-haspopup="menu"
+          title="Playback speed"
+          @click="speedMenuOpen = !speedMenuOpen"
+        >{{ selectedSpeed() }} <span class="replay-speed-chevron">⌄</span></button>
+        <div v-if="speedMenuOpen" class="replay-speed-menu" role="menu" aria-label="Playback speed options" data-testid="replay-speed-menu">
+          <button
+            v-for="option in speedOptions"
+            :key="option.delayMs"
+            type="button"
+            role="menuitemradio"
+            class="replay-speed-option"
+            :class="{ selected: option.delayMs === playbackDelayMs }"
+            :aria-checked="option.delayMs === playbackDelayMs"
+            :data-speed-delay="option.delayMs"
+            @click="emit('setPlaybackDelay', option.delayMs); speedMenuOpen = false"
+          >{{ option.label }}<span v-if="option.delayMs === playbackDelayMs" class="replay-speed-check">✓</span></button>
+        </div>
+      </div>
     </div>
     <span class="run-state" data-testid="run-toolbar-status">
       <b :class="`run-status-${playbackStatus === 'playing' ? 'running' : (runState?.status ?? 'none')}`">{{ playbackStatus === 'playing' ? 'PLAYING' : (runState?.status ? runState.status.toUpperCase() : "NO RUN") }}</b>
