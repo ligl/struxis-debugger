@@ -73,12 +73,18 @@ describe("Run and Snapshot IPC bridge", () => {
       cursorSbarId: "100",
       failureDiagnostic: null,
     };
-    invokeMock.mockResolvedValue(state);
+    const stepResult = { runState: state, inspector: null };
+    invokeMock.mockResolvedValueOnce(state);
+    invokeMock.mockResolvedValueOnce(state);
+    invokeMock.mockResolvedValueOnce(state);
+    invokeMock.mockResolvedValueOnce(stepResult);
+    invokeMock.mockResolvedValueOnce(state);
+    invokeMock.mockResolvedValueOnce(state);
 
     await expect(startRun()).resolves.toEqual(state);
     await expect(restartRun()).resolves.toEqual(state);
     await expect(getRunState()).resolves.toEqual(state);
-    await expect(stepRun()).resolves.toEqual(state);
+    await expect(stepRun()).resolves.toEqual(stepResult);
     await expect(stopRun()).resolves.toEqual(state);
     await expect(disposeRun()).resolves.toEqual(state);
 
