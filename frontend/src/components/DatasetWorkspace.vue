@@ -153,11 +153,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
   justify-content: center;
   overflow: hidden;
   border: 1px solid #30383f;
-  background:
-    linear-gradient(rgb(214 168 93 / 2.5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(214 168 93 / 2.5%) 1px, transparent 1px),
-    #121619;
-  background-size: 32px 32px;
+  background: radial-gradient(ellipse at center, rgb(214 168 93 / 3%), transparent 68%), #121619;
 }
 
 .dataset-chart-empty-content {
