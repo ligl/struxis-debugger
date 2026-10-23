@@ -11,7 +11,7 @@ interface DevtoolsContextMenuState {
  * Owns the development-only Tauri context menu, its global event listeners,
  * and its two development actions. It does not participate in workspace state.
  */
-export function useDevtoolsContextMenu() {
+export function useDevtoolsContextMenu(options: { reloadPage?: () => void } = {}) {
   const devtoolsContextMenu = ref<DevtoolsContextMenuState>({
     visible: false,
     x: 0,
@@ -42,7 +42,7 @@ export function useDevtoolsContextMenu() {
 
   function refreshPageFromContextMenu(): void {
     dismissDevtoolsContextMenu();
-    window.location.reload();
+    (options.reloadPage ?? (() => window.location.reload()))();
   }
 
   onMounted(() => {
