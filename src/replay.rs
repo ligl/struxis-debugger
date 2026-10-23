@@ -26,6 +26,7 @@ pub(crate) enum ReplayCommandKind {
     Stop,
     Dispose,
     Restart,
+    RestartToSBar,
 }
 
 /// Shared non-queuing admission gate for state-changing Replay commands.
