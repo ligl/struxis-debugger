@@ -69,7 +69,7 @@ const {
 } = useRunControl();
 
 const canMutateTest = computed(
-  () => !loading.value && !runBusy.value &&
+  () => !loading.value && !runBusy.value && !snapshotSaveBusy.value &&
     (!runState.value || ["completed", "disposed"].includes(runState.value.status)),
 );
 
@@ -241,11 +241,50 @@ function handleOriginSbarClick(sbarId: string): void {
 async function createSelectedTestDataset(): Promise<void> {
   if (!rangeSelectionReady.value || !canMutateTest.value) return;
 
-  // Reconcile against backend ownership immediately before mutating Test Dataset.
-  // The local Run DTO can be stale (for example after returning from Replay).
+  // Reconcile against backend ownership immediately before coordinating the
+  // cross-workspace mutation. The local Run DTO may be stale.
   const refreshed = await refreshRunState();
   if (!refreshed || !canMutateTest.value || !rangeSelectionReady.value) return;
 
+  const currentRun = runState.value;
+  if (currentRun) {
+    const hasCompletedResult =
+      currentRun.inputCount > 0 &&
+      currentRun.processedCount === currentRun.inputCount &&
+      currentRun.failureDiagnostic === null;
+
+    if (hasCompletedResult) {
+      // Only a published, complete Snapshot is evidence that this Run's
+      // retained trajectory has been saved. Refresh before making that decision.
+      await refreshSnapshots();
+      const snapshotSaved = !snapshotsError.value &&
+        snapshots.value.some(
+          (snapshot) => snapshot.runId === currentRun.runId && snapshot.kind === "complete",
+        );
+      if (!snapshotSaved) {
+        const reason = snapshotsError.value
+          ? "The Snapshot catalog could not be checked. "
+          : "";
+        const discardConfirmed = window.confirm(
+          `${reason}This completed Run has no verified saved Snapshot. Replacing the Test Dataset will Reset Replay and discard its retained trajectory. Save a Snapshot first to preserve it. Continue and discard this Run result?`,
+        );
+        if (!discardConfirmed) return;
+      }
+    }
+
+    // Dataset owns the request; App coordinates Playback and Replay. Reset
+    // must finish successfully before the backend is asked to replace input.
+    await stopPlayback();
+    const resetSucceeded = await executeRunCommand("reset");
+    if (!resetSucceeded || runState.value !== null) return;
+
+    replayInspector.value = null;
+    replayInspectorError.value = "";
+    selectedReplayChartObject.value = null;
+  }
+
+  // If Reset fails or its authoritative empty state is not confirmed, never
+  // proceed to Test Dataset creation.
   await createTestDataset(startSbarId.value, endSbarId.value);
 }
 const canStartRun = computed(
