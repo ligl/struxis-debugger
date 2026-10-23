@@ -67,6 +67,7 @@ const {
   refreshRunState,
   executeRunCommand,
   executeRestartToSBar,
+  waitForIdle: waitForRunIdle,
 } = useRunControl();
 
 const canMutateTest = computed(
@@ -110,6 +111,7 @@ const selectedCompareDifference = ref<ObjectDifferenceDto | null>(null);
 const selectedReplayChartObject = ref<ReplayChartSelection | null>(null);
 const targetSbarId = ref<string | null>(null);
 const fastForwarding = ref(false);
+const restartToSBarPending = ref(false);
 
 function handleReplayTargetSelection(sbarId: string): void {
   const test = testDataset.value;
@@ -134,14 +136,26 @@ function cancelReplayTarget(): void {
 
 async function handleRestartToSBar(): Promise<void> {
   const target = targetSbarId.value;
-  if (!target || fastForwarding.value || workspaceMode.value !== "replay") return;
-  // A Play tick may own runBusy while its Step is in flight. Stop scheduling
-  // first, then wait for that Step to settle before acquiring the fast-forward path.
-  await stopPlayback();
-  if (runBusy.value) return;
+  if (
+    !target ||
+    fastForwarding.value ||
+    restartToSBarPending.value ||
+    workspaceMode.value !== "replay"
+  ) return;
 
-  fastForwarding.value = true;
+  restartToSBarPending.value = true;
   try {
+    // Stop frontend scheduling first, then wait for either a Play-owned or
+    // manually initiated Step to finish before acquiring the fast-forward path.
+    await stopPlayback();
+    await waitForRunIdle();
+    if (
+      targetSbarId.value !== target ||
+      workspaceMode.value !== "replay" ||
+      runBusy.value
+    ) return;
+
+    fastForwarding.value = true;
     const succeeded = await executeRestartToSBar(target);
     if (succeeded) {
       replayInspector.value = lastStepResult.value?.inspector ?? null;
@@ -149,6 +163,7 @@ async function handleRestartToSBar(): Promise<void> {
     }
   } finally {
     fastForwarding.value = false;
+    restartToSBarPending.value = false;
   }
 }
 
