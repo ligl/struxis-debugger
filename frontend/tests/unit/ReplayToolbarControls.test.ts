@@ -48,7 +48,7 @@ describe("ReplayToolbarControls", () => {
     await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
     await wrapper.get('[data-testid="run-restart"]').trigger("click");
 
-    expect(wrapper.emitted("command")).toEqual([["step"], ["stop"], ["dispose"]]);
+    expect(wrapper.emitted("command")).toEqual([["step"], ["stop"], ["reset"]]);
     expect(wrapper.find('[data-testid="run-refresh-state"]').exists()).toBe(false);
   });
 
