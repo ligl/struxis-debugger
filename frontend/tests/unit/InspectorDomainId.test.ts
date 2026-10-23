@@ -14,13 +14,13 @@ describe("InspectorDomainId", () => {
   });
 
   it("preserves short and non-numeric IDs without padding or conversion", () => {
-    const wrapper = mount(InspectorDomainId, {
-      props: { value: "ab-cd" },
-    });
+    const short = mount(InspectorDomainId, { props: { value: "abc" } });
+    expect(short.findAll(".inspector-domain-id-group").map((group) => group.text())).toEqual(["abc"]);
 
-    expect(wrapper.findAll(".inspector-domain-id-group").map((group) => group.text()))
+    const nonNumeric = mount(InspectorDomainId, { props: { value: "ab-cd" } });
+    expect(nonNumeric.findAll(".inspector-domain-id-group").map((group) => group.text()))
       .toEqual(["a", "b-cd"]);
-    expect(wrapper.get("code").attributes("data-copy-value")).toBe("ab-cd");
+    expect(nonNumeric.get("code").attributes("data-copy-value")).toBe("ab-cd");
   });
 
   it("keeps the raw copy value independent from the displayed ID", () => {
