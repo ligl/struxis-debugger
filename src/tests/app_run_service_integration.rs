@@ -167,7 +167,7 @@ fn active_run_rejects_origin_and_test_dataset_replacement() {
     assert_eq!(current_test.sbar_sequence_fingerprint, test.sbar_sequence_fingerprint);
 
     // An active Run remains owned until Stop or Reset releases its runtime.
-    state.replay_dispose().expect("Run resources should be disposed");
+    state.replay_reset().expect("Reset clears the retained Run context");
 }
 
 
@@ -332,7 +332,7 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
         "failed Snapshot save must not roll back the confirmed cursor"
     );
 
-    state.replay_dispose().expect("Run resources should be disposed");
+    state.replay_reset().expect("Reset clears the retained completed Run context");
     drop(state);
     std::fs::remove_file(snapshot_root).expect("blocking Snapshot root file should be removed");
 }
