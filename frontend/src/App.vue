@@ -567,8 +567,8 @@ async function handleLoadOrigin(): Promise<void> {
   }
 }
 
-async function handleCompare(): Promise<void> {
-  await runCompare();
+async function handleCompare(baselineSnapshotId: string, candidateSnapshotId: string): Promise<void> {
+  await runCompare(baselineSnapshotId, candidateSnapshotId);
   if (compareError.value) notifyError("Snapshot comparison failed", compareError.value);
   else if (compareResult.value) notifySuccess("Snapshot comparison completed");
 }
