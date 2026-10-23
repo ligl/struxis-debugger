@@ -70,6 +70,7 @@ export function useRunControl() {
       return false;
     } finally {
       runBusy.value = false;
+      notifyIdle();
     }
   }
 
@@ -118,6 +119,7 @@ export function useRunControl() {
       return false;
     } finally {
       runBusy.value = false;
+      notifyIdle();
     }
   }
 
