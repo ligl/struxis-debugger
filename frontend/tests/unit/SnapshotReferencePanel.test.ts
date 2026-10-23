@@ -1,11 +1,14 @@
-import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
+import { config, enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.vue";
 
 // This suite tests Snapshot selection / loading orchestration, not Lightweight Charts internals.
-vi.mock("../../src/components/OriginChart.vue", () => ({
-  default: { template: '<div data-testid="snapshot-reference-chart-host"></div>' },
-}));
+// Stub at the Vue Test Utils global level so every mount (including async loading tests)
+// avoids creating real canvas observers and animation-frame callbacks in jsdom.
+config.global.stubs = {
+  ...config.global.stubs,
+  OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' },
+};
 import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../../src/origin-types";
 
 const { invokeMock } = vi.hoisted(() => ({ invokeMock: vi.fn() }));
@@ -51,7 +54,6 @@ describe("SnapshotReferencePanel", () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
       props: { instrumentId: "AUD/USD.SIM", snapshots },
-      global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
     });
 
     expect(wrapper.get(".snapshot-reference-instrument").text()).toBe("AUD/USD.SIM");
