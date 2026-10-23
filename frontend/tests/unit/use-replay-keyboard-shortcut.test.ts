@@ -152,6 +152,13 @@ describe("useReplayKeyboardShortcut", () => {
     expect(state.executeCommand.mock.calls).toEqual([["stop"], ["start"]]);
   });
 
+  it("allows Stop to interrupt active playback while a Step is in flight", () => {
+    const state = mountShortcut("playing", true, true, null, true);
+    const event = pressKey("S");
+    expect(event.defaultPrevented).toBe(true);
+    expect(state.executeCommand).toHaveBeenCalledWith("stop");
+  });
+
   it("does not run transport shortcuts outside Replay or from interactive controls", () => {
     const outsideReplay = mountShortcut("idle", false, false, null, false);
     const ignored = pressKey("n");
