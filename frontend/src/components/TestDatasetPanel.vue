@@ -90,17 +90,15 @@ function displaySbarTime(sbarId: string): string {
       </button>
 
       <button
-        v-if="props.testDataset"
         class="test-dataset-details-toggle"
         data-testid="test-dataset-details-toggle"
         type="button"
+        :disabled="!props.testDataset"
         :aria-expanded="detailsOpen"
         aria-controls="test-dataset-details-popover"
         @click.stop="detailsOpen = !detailsOpen"
       >
-        <span class="details-toggle-indicator" aria-hidden="true">i</span>
         TEST DETAILS
-        <span class="details-toggle-chevron" aria-hidden="true">{{ detailsOpen ? "▴" : "▾" }}</span>
       </button>
 
       <section
@@ -133,6 +131,14 @@ function displaySbarTime(sbarId: string): string {
         </div>
 
         <div class="test-dataset-detail-list">
+          <div class="details-id-row">
+            <span>INSTRUMENT</span>
+            <code>{{ props.testDataset.instrumentId }}</code>
+          </div>
+          <div class="details-id-row">
+            <span>TIMEFRAME</span>
+            <code>{{ props.testDataset.timeframe }}</code>
+          </div>
           <div class="details-id-row">
             <span>TEST DATASET ID</span>
             <code>{{ props.testDataset.testDatasetId }}</code>
@@ -269,28 +275,18 @@ function displaySbarTime(sbarId: string): string {
   white-space: nowrap;
 }
 
-.test-dataset-details-toggle:hover,
+.test-dataset-details-toggle:hover:not(:disabled),
 .test-dataset-details-toggle[aria-expanded="true"] {
   border-color: #8c6a3d;
   background: #24221e;
   color: #e5c18a;
 }
 
-.details-toggle-indicator {
-  display: inline-grid;
-  width: 13px;
-  height: 13px;
-  place-items: center;
-  border: 1px solid #766044;
-  border-radius: 50%;
-  color: #d6ad72;
-  font: 9px Georgia, serif;
-  letter-spacing: 0;
-}
-
-.details-toggle-chevron {
-  color: #8e989f;
-  font-size: 8px;
+.test-dataset-details-toggle:disabled {
+  border-color: #2a3136;
+  background: #171c20;
+  color: #626d75;
+  cursor: not-allowed;
 }
 
 .test-dataset-details-popover {
