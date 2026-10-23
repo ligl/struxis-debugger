@@ -174,10 +174,12 @@ impl ReplayManager {
                     self.last_state = Some(result.run_state.clone());
                     debug_assert_eq!(released_state.status, crate::run::RunStatus::Disposed);
                 }
-                (Some(Err(error)), Ok(released_state)) => {
-                    self.last_state = Some(result.run_state.clone());
+                (Some(Err(error)), Ok(mut released_state)) => {
+                    released_state.failure_diagnostic = Some(format!(
+                        "Run processing completed, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"
+                    ));
+                    self.last_state = Some(released_state);
                     self.active = None;
-                    let _ = released_state;
                     return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
                 }
                 (None, Ok(released_state)) => {
