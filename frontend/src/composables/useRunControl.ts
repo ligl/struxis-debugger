@@ -4,6 +4,7 @@ import {
   disposeRun,
   getRunState,
   restartRun,
+  resetRun,
   startRun,
   stepRun,
   stopRun,
@@ -61,7 +62,7 @@ export function useRunControl() {
           next = await stopRun();
           break;
         case "reset":
-          await disposeRun();
+          await resetRun();
           next = null;
           break;
         case "play":
