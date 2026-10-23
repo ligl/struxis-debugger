@@ -421,6 +421,7 @@ function displaySbarTime(sbarId: string): string {
   color: #89949d;
   font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: .025em;
+  text-align: right;
 }
 
 .details-id-row code,
