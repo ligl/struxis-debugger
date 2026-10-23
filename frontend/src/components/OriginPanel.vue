@@ -58,6 +58,10 @@ function formatStateKeyTimeframe(timeframe: string): string {
           <strong data-testid="origin-struxis-state-key">{{ origin.instrumentId }} {{ formatStateKeyTimeframe(origin.timeframe) }}</strong>
         </div>
         <div class="metric">
+          <span>BAR TYPE</span>
+          <strong data-testid="origin-bar-type">{{ origin.barType }}</strong>
+        </div>
+        <div class="metric">
           <span>STRUCTURE</span>
           <strong data-testid="origin-structure-status">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</strong>
         </div>
