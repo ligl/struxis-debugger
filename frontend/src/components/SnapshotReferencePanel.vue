@@ -123,7 +123,7 @@ function handleSelection(event: Event): void {
       </div>
       <label class="snapshot-reference-select">
         <span class="snapshot-reference-instrument">{{ displayInstrumentId }}</span>
-        <span class="snapshot-reference-control" :style="{ width: `calc(${selectedSnapshotLabel.length}ch + 20px)` }">
+        <span class="snapshot-reference-control" :style="{ width: `calc(${selectedSnapshotLabel.length}ch + 23px)` }">
           <span class="snapshot-reference-selected-label" aria-hidden="true">
             {{ selectedSnapshotLabel }}
           </span>
