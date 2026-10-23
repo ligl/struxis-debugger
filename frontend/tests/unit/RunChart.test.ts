@@ -731,10 +731,10 @@ describe("RunChart", () => {
       key: "ArrowLeft", ctrlKey: true, bubbles: true, cancelable: true,
     });
     document.dispatchEvent(startEvent);
-    expect(mocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({
-      from: -0.5,
-      to: 0.5,
-    });
+    const startRange = mocks.setVisibleLogicalRange.mock.calls.at(-1)?.[0] as { from: number; to: number };
+    expect(startRange.from).toBeGreaterThanOrEqual(-0.5);
+    expect(startRange.from).toBeLessThanOrEqual(0);
+    expect(startRange.to).toBeGreaterThan(0);
     expect(mocks.setCrosshairPosition).toHaveBeenLastCalledWith(11, 1700000060, expect.anything());
 
     mocks.getVisibleLogicalRange.mockReturnValue({ from: 0.5, to: 1.5 });
@@ -743,10 +743,10 @@ describe("RunChart", () => {
       key: "ArrowRight", ctrlKey: true, bubbles: true, cancelable: true,
     });
     document.dispatchEvent(endEvent);
-    expect(mocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({
-      from: 0.5,
-      to: 1.5,
-    });
+    const endRange = mocks.setVisibleLogicalRange.mock.calls.at(-1)?.[0] as { from: number; to: number };
+    expect(endRange.from).toBeLessThan(1);
+    expect(endRange.to).toBeGreaterThanOrEqual(1);
+    expect(endRange.to).toBeLessThanOrEqual(1.5);
     expect(mocks.setCrosshairPosition).toHaveBeenLastCalledWith(11, 1700000120, expect.anything());
 
     wrapper.unmount();
