@@ -120,7 +120,7 @@ describe("SnapshotReferencePanel", () => {
 
   it("clears the local selection when the referenced Snapshot disappears", async () => {
     const wrapper = mount(SnapshotReferencePanel, {
-      props: { snapshots },
+      props: { instrumentId: "AUD/USD.SIM", snapshots },
       global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
     });
     invokeMock.mockResolvedValueOnce(reference);
