@@ -22,14 +22,16 @@ export function useRunControl() {
   const runError = ref("");
   const lastStepResult = ref<ReplayStepResultDto | null>(null);
 
-  async function refreshRunState(_silent = false): Promise<void> {
-    if (runBusy.value) return;
+  async function refreshRunState(_silent = false): Promise<boolean> {
+    if (runBusy.value) return false;
     runBusy.value = true;
     runError.value = "";
     try {
       runState.value = await getRunState();
+      return true;
     } catch (error) {
       runError.value = describeIpcError(error);
+      return false;
     } finally {
       runBusy.value = false;
     }
