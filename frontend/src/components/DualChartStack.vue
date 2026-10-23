@@ -81,7 +81,6 @@ onBeforeUnmount(stopPointerResize);
       @pointerdown="startPointerResize"
       @keydown="handleSplitterKey"
     >
-      <span aria-hidden="true"></span>
     </div>
     <div class="dual-chart-track" :data-testid="`${props.workspace}-lower-chart-track`">
       <slot name="lower" />
