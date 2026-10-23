@@ -556,8 +556,10 @@ describe("Struxis Debugger native desktop", () => {
     // Read the actual DOM text contract directly; this is still the rendered
     // component state, without depending on WebDriver's text normalization.
     const rangeText = await browser.execute(() => ({
-      start: document.querySelector('[data-testid="selected-test-range-start"]')?.textContent?.trim() ?? "",
-      end: document.querySelector('[data-testid="selected-test-range-end"]')?.textContent?.trim() ?? "",
+      start: document.querySelector('[data-testid="selected-test-range-start"]')?.getAttribute("data-sbar-id") ?? "",
+      end: document.querySelector('[data-testid="selected-test-range-end"]')?.getAttribute("data-sbar-id") ?? "",
+      startTime: document.querySelector('[data-testid="selected-test-range-start"]')?.textContent?.trim() ?? "",
+      endTime: document.querySelector('[data-testid="selected-test-range-end"]')?.textContent?.trim() ?? "",
       count: document.querySelector('[data-testid="selected-test-range-count"]')?.textContent?.trim() ?? "",
       status: document.querySelector('[data-testid="origin-range-selection-status"]')?.textContent?.trim() ?? "",
     }));
