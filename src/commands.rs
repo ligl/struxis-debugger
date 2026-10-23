@@ -3,7 +3,7 @@
 use tauri::State;
 
 use crate::{
-    app::{AppState, OriginDatasetDto, TestDatasetDto},
+    app::{AppState, OriginDatasetDto, SnapshotReferenceDto, TestDatasetDto},
     checkpoint::{ReplayInspectorProjection, ReplayStepResult},
     compare::{CompareRejectCategory, CompareRejection, SnapshotCompareResult},
     discovery::CatalogDatasetEntry,
@@ -101,6 +101,20 @@ pub(crate) async fn list_snapshots(state: State<'_, AppState>) -> Result<Vec<Sna
     tauri::async_runtime::spawn_blocking(move || state.discover_snapshots())
         .await
         .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery worker failed: {error}")))?
+}
+
+#[tauri::command]
+pub(crate) async fn get_snapshot_reference(
+    snapshot_id: String,
+    state: State<'_, AppState>,
+) -> Result<SnapshotReferenceDto, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.snapshot_reference(&snapshot_id))
+        .await
+        .map_err(|error| IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Snapshot Reference worker failed: {error}"),
+        ))?
 }
 
 #[tauri::command]
