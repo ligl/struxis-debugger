@@ -1096,6 +1096,51 @@ mod tests {
     }
 
     #[test]
+    fn restart_to_sbar_processes_target_then_ordinary_step_advances_once() {
+        let test = fixture_test();
+        let input = LoadedInput::from_test(&test).expect("LoadedInput");
+        let instrument = InstrumentAny::CurrencyPair(audusd_sim());
+        let (mut worker, initial) = ReplayWorker::spawn_interactive(ReplayWorkerConfig {
+            run_id: "worker-restart-to-sbar-contract".into(),
+            input,
+            instrument,
+        }).expect("worker should initialize");
+        assert_eq!(initial.processed_count, 0);
+
+        let target = worker.fast_forward_to_sbar("1735689660000000000".into())
+            .expect("target SBar should be processed");
+        assert_eq!(target.run_state.processed_count, 2);
+        assert_eq!(target.run_state.cursor_sbar_id.as_deref(), Some("1735689660000000000"));
+        assert_eq!(target.inspector.as_ref().map(|item| item.sbar_id.as_str()), Some("1735689660000000000"));
+
+        let next = worker.step_checkpoint().expect("ordinary Step after target");
+        assert_eq!(next.run_state.processed_count, 3);
+        assert_eq!(next.run_state.cursor_sbar_id.as_deref(), Some("1735689720000000000"));
+        assert_eq!(next.run_state.status, RunStatus::Completed);
+        worker.dispose().expect("worker Dispose");
+    }
+
+    #[test]
+    fn restart_to_sbar_rejects_unknown_target_without_processing() {
+        let test = fixture_test();
+        let input = LoadedInput::from_test(&test).expect("LoadedInput");
+        let instrument = InstrumentAny::CurrencyPair(audusd_sim());
+        let (mut worker, _) = ReplayWorker::spawn_interactive(ReplayWorkerConfig {
+            run_id: "worker-restart-to-sbar-invalid-target".into(),
+            input,
+            instrument,
+        }).expect("worker should initialize");
+
+        let error = worker.fast_forward_to_sbar("not-a-test-sbar".into())
+            .expect_err("unknown target must be rejected");
+        assert!(error.contains("is not in Test Dataset"));
+        let state = worker.state().expect("RunState remains queryable");
+        assert_eq!(state.processed_count, 0);
+        assert_eq!(state.cursor_sbar_id, None);
+        worker.dispose().expect("worker Dispose");
+    }
+
+    #[test]
     fn failed_checkpoint_dispose_preserves_diagnostic() {
         let test = fixture_test();
         let input = LoadedInput::from_test(&test).expect("LoadedInput");
