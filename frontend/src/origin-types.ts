@@ -202,10 +202,10 @@ export interface SnapshotArtifactDto {
   snapshotId: string | null;
   runId: string | null;
   stateKey: string | null;
-  instrumentId: string | null;
-  barType: string | null;
-  inputStartTsEvent: string | null;
-  inputEndTsEvent: string | null;
+  instrumentId?: string | null;
+  barType?: string | null;
+  inputStartTsEvent?: string | null;
+  inputEndTsEvent?: string | null;
   generatedAt: string | null;
   checkpointCount: number | null;
   diagnostic: string | null;
