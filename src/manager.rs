@@ -6,7 +6,7 @@
 //! previous worker's terminal response and thread join both confirm release.
 
 use crate::{
-    checkpoint::ReplayInspectorProjection,
+    checkpoint::{ReplayInspectorProjection, ReplayStepResult},
     replay::{ReplayCommandGate, ReplayCommandKind},
     run::RunState,
     worker::{ReplaySnapshotData, ReplayWorker, ReplayWorkerConfig},
@@ -92,11 +92,15 @@ impl ReplayManager {
     }
 
     pub(crate) fn step(&mut self) -> Result<RunState, String> {
+        self.step_checkpoint().map(|result| result.run_state)
+    }
+
+    pub(crate) fn step_checkpoint(&mut self) -> Result<ReplayStepResult, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Step)?;
         self.active
             .as_mut()
             .ok_or_else(|| "Step rejected: ReplayManager has no active Run".to_owned())?
-            .step()
+            .step_checkpoint()
     }
 
     pub(crate) fn play(&mut self) -> Result<RunState, String> {
