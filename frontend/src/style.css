@@ -1456,12 +1456,12 @@ body,
 .run-chart-heading {
   display: flex;
   min-width: 0;
-  min-height: 43px;
+  min-height: 32px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 6px 10px;
+  gap: 10px;
+  padding: 3px 10px;
   border-bottom: 1px solid var(--dbg-border);
   background: #191e22;
 }
@@ -1474,8 +1474,7 @@ body,
 .run-chart-title {
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
 }
 
 .run-chart-title-line {
@@ -1489,14 +1488,6 @@ body,
   color: var(--dbg-text-primary);
   font: 700 10px ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: .06em;
-  white-space: nowrap;
-}
-
-.run-chart-description {
-  overflow: hidden;
-  color: var(--dbg-text-secondary);
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1637,10 +1628,6 @@ body,
     align-items: flex-start;
     flex-wrap: wrap;
     gap: 8px;
-  }
-
-  .run-chart-description {
-    white-space: normal;
   }
 
 }
