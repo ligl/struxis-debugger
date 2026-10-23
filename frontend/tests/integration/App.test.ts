@@ -887,6 +887,54 @@ describe("Test, Run and Snapshot workbench", () => {
     )).toHaveLength(0);
   });
 
+  it("clears a retained Run through Reset before starting the next Run", async () => {
+    const completedRun = {
+      runId: "run-completed",
+      testDatasetId: "test-1",
+      inputFingerprint: "test-fingerprint",
+      inputCount: 2,
+      status: "completed",
+      processedCount: 2,
+      cursorSbarId: "200",
+      failureDiagnostic: null,
+    };
+    const nextRun = {
+      ...completedRun,
+      runId: "run-next",
+      status: "ready",
+      processedCount: 0,
+      cursorSbarId: null,
+    };
+    let resetDone = false;
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_run_state") return Promise.resolve(resetDone ? null : completedRun);
+      if (command === "reset_run") {
+        resetDone = true;
+        return Promise.resolve();
+      }
+      if (command === "start_run") return Promise.resolve(nextRun);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await enterReplayWorkspace(wrapper);
+    expect(wrapper.get('[data-testid="run-start-stop"]').text()).toContain("START");
+    await wrapper.get('[data-testid="run-start-stop"]').trigger("click");
+
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("start_run"));
+    const resetIndex = invokeMock.mock.calls.findIndex(([command]) => command === "reset_run");
+    const startIndex = invokeMock.mock.calls.findIndex(([command]) => command === "start_run");
+    expect(resetIndex).toBeGreaterThan(-1);
+    expect(startIndex).toBeGreaterThan(resetIndex);
+    expect(invokeMock).toHaveBeenCalledWith("get_run_state");
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="run-toolbar-status"]').text()).toContain("READY"));
+  });
+
   it("uses frontend playback controls for a confirmed ready Run", async () => {
     const readyRun = {
       runId: "run-1",
