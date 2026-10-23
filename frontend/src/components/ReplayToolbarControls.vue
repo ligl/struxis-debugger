@@ -2,7 +2,7 @@
 import type { RunStateDto } from "../origin-types";
 import type { RunCommand } from "../run-command-eligibility";
 import type { PlaybackStatus } from "../composables/usePlaybackController";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { isRunCommandEligible } from "../run-command-eligibility";
 
 const props = defineProps<{
@@ -25,6 +25,10 @@ const emit = defineEmits<{
 
 const speedMenuOpen = ref(false);
 const hasSelectedSpeed = ref(false);
+const selectedPlaybackDelayMs = ref(props.playbackDelayMs);
+watch(() => props.playbackDelayMs, (delayMs) => {
+  selectedPlaybackDelayMs.value = delayMs;
+});
 const speedOptions = [
   { label: "0.5x", delayMs: 500 },
   { label: "1x", delayMs: 200 },
@@ -33,7 +37,7 @@ const speedOptions = [
   { label: "MAX", delayMs: 0 },
 ];
 const selectedSpeed = () =>
-  speedOptions.find((option) => option.delayMs === props.playbackDelayMs)?.label ?? "1×";
+  speedOptions.find((option) => option.delayMs === selectedPlaybackDelayMs.value)?.label ?? "1x";
 </script>
 
 <template>
@@ -60,11 +64,11 @@ const selectedSpeed = () =>
             type="button"
             role="menuitemradio"
             class="replay-speed-option"
-            :class="{ selected: option.delayMs === playbackDelayMs }"
-            :aria-checked="option.delayMs === playbackDelayMs"
+            :class="{ selected: option.delayMs === selectedPlaybackDelayMs }"
+            :aria-checked="option.delayMs === selectedPlaybackDelayMs"
             :data-speed-delay="option.delayMs"
-            @click="emit('setPlaybackDelay', option.delayMs); hasSelectedSpeed = true; speedMenuOpen = false"
-          >{{ option.label }}<span v-if="option.delayMs === playbackDelayMs" class="replay-speed-check">✓</span></button>
+            @click="selectedPlaybackDelayMs = option.delayMs; emit('setPlaybackDelay', option.delayMs); hasSelectedSpeed = true; speedMenuOpen = false"
+          >{{ option.label }}<span v-if="option.delayMs === selectedPlaybackDelayMs" class="replay-speed-check">✓</span></button>
         </div>
       </div>
     </div>
