@@ -911,6 +911,7 @@ describe("Test, Run and Snapshot workbench", () => {
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
       if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
       if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_replay_inspector") return Promise.resolve(null);
       if (command === "get_run_state") return Promise.resolve(resetDone ? null : completedRun);
       if (command === "reset_run") {
         resetDone = true;
