@@ -202,7 +202,11 @@ const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
 });
 
 watch(
-  () => [runState.value?.runId, runState.value?.cursorSbarId, testDataset.value?.testDatasetId] as const,
+  [
+    () => runState.value?.runId,
+    () => runState.value?.cursorSbarId,
+    () => testDataset.value?.testDatasetId,
+  ],
   () => { selectedReplayChartObject.value = null; },
 );
 
