@@ -183,10 +183,10 @@ const emit = defineEmits<{
   height: 27px;
   padding: 0;
   place-items: center;
-  border: 1px solid #454c55;
+  border: 1px solid #363d44;
   border-radius: 3px;
-  background: #202429;
-  color: #d5d9de;
+  background: #1b2024;
+  color: #aeb7bf;
   cursor: pointer;
   font-size: 15px;
   line-height: 1;
@@ -194,13 +194,13 @@ const emit = defineEmits<{
 }
 
 .catalog-icon-action:hover:not(:disabled) {
-  border-color: #d99a45;
-  background: #3a2b1b;
-  color: #e6ad5c;
+  border-color: #80623d;
+  background: #29241e;
+  color: #c49a62;
 }
 
 .catalog-icon-action:active:not(:disabled) {
-  background: #4a3520;
+  background: #33291f;
   transform: translateY(1px);
 }
 
@@ -209,9 +209,9 @@ const emit = defineEmits<{
 }
 
 .catalog-icon-action:disabled:hover {
-  border-color: #454c55;
-  background: #202429;
-  color: #d5d9de;
+  border-color: #363d44;
+  background: #1b2024;
+  color: #aeb7bf;
 }
 
 .catalog-structure-toggle {
