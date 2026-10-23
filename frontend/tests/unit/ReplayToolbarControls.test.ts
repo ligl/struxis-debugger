@@ -70,6 +70,9 @@ describe("ReplayToolbarControls", () => {
 
     const noRun = mountControls({ runState: null, canStartRun: true });
     expect(noRun.get('[data-testid="run-start-stop"]').text()).toBe("START");
+
+    const stopped = mountControls({ runState: { ...readyRun, status: "disposed", processedCount: 3 }, canStartRun: true });
+    expect(stopped.get('[data-testid="run-toolbar-status"] b').text()).toBe("STOPPED");
   });
 
   it("maps Play/Pause to frontend playback state, independent of RunState", async () => {
