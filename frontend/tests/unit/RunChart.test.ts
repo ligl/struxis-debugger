@@ -212,7 +212,8 @@ describe("RunChart", () => {
     });
     expect(wrapper.emitted("targetSelect")?.[0]).toEqual([targetId]);
 
-    const contextEvent = await wrapper.get('[data-testid="run-chart-panel"]').trigger("contextmenu");
+    const contextEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    wrapper.get('[data-testid="run-chart-panel"]').element.dispatchEvent(contextEvent);
     expect(contextEvent.defaultPrevented).toBe(true);
     expect(wrapper.emitted("targetCancel")).toHaveLength(1);
     wrapper.unmount();
