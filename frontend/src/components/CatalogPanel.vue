@@ -177,15 +177,41 @@ const emit = defineEmits<{
 }
 
 .catalog-icon-action {
+  display: inline-grid;
   width: 27px;
   min-width: 27px;
   height: 27px;
   padding: 0;
-  border: 1px solid #30383f;
+  place-items: center;
+  border: 1px solid #454c55;
   border-radius: 3px;
-  background: transparent;
-  color: #a5afb6;
-  font-size: 14px;
+  background: #202429;
+  color: #d5d9de;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.catalog-icon-action:hover:not(:disabled) {
+  border-color: #d99a45;
+  background: #3a2b1b;
+  color: #e6ad5c;
+}
+
+.catalog-icon-action:active:not(:disabled) {
+  background: #4a3520;
+  transform: translateY(1px);
+}
+
+.catalog-icon-action:disabled {
+  cursor: not-allowed;
+}
+
+.catalog-icon-action:disabled:hover {
+  border-color: #454c55;
+  background: #202429;
+  color: #d5d9de;
 }
 
 .catalog-structure-toggle {
