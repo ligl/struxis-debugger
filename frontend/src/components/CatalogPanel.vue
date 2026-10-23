@@ -198,19 +198,73 @@ const emit = defineEmits<{
 }
 
 .catalog-structure-toggle {
-  display: flex;
+  display: inline-flex;
+  min-height: 25px;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 3px;
   color: #89949d;
   font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .045em;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.catalog-structure-toggle:hover {
+  border-color: #343d44;
+  background: #1a2024;
+  color: #b8c1c7;
+}
+
+.catalog-structure-toggle:focus-within {
+  outline: 1px solid #8b6b3f;
+  outline-offset: 1px;
 }
 
 .catalog-structure-toggle input {
+  position: relative;
+  display: inline-grid;
   width: 12px;
   height: 12px;
+  flex: 0 0 12px;
+  place-items: center;
   margin: 0;
-  accent-color: #75c6a1;
+  appearance: none;
+  border: 1px solid #4a535a;
+  border-radius: 2px;
+  background: #14191d;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.catalog-structure-toggle input::after {
+  width: 5px;
+  height: 3px;
+  content: "";
+  transform: translateY(-1px) rotate(-45deg);
+  border-bottom: 1.5px solid transparent;
+  border-left: 1.5px solid transparent;
+}
+
+.catalog-structure-toggle input:checked {
+  border-color: #9a7848;
+  background: #8d6a3b;
+}
+
+.catalog-structure-toggle input:checked::after {
+  border-color: #f0e5d4;
+}
+
+.catalog-structure-toggle input:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.catalog-structure-toggle:has(input:checked) {
+  color: #b5a184;
 }
 
 .catalog-load-action {
