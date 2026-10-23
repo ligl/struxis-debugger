@@ -170,7 +170,7 @@ export interface ReplayInspectorStructureDto {
 export type ReplayChartSelection = {
   kind: "sbar" | "cbar" | "swing";
   id: string;
-  checkpointSbarId: string;
+  checkpointSbarId: string | null;
 };
 
 export interface ReplayInspectorDto {
