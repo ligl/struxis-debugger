@@ -2771,7 +2771,24 @@ th, td { padding: 6px 8px; }
 }
 
 .snapshot-reference-title {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.snapshot-reference-sync-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #477b66;
+  border-radius: 3px;
+  color: #a8d7bf;
+  font: 13px/1 ui-sans-serif, system-ui, sans-serif;
+  cursor: help;
 }
 
 .snapshot-reference-heading h3 {
