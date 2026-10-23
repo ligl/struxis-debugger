@@ -856,6 +856,8 @@ describe("Test, Run and Snapshot workbench", () => {
     const createButton = () => wrapper.get('[data-testid="test-dataset-create"]');
     await selectOriginRange(wrapper);
     await createButton()!.trigger("click");
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="workspace-replay"]').attributes("aria-current")).toBe("page"));
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
     await createButton()!.trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("replacement interval rejected"));
@@ -1250,12 +1252,13 @@ describe("startup and user-operation coordination", () => {
     const createButton = wrapper.get('[data-testid="test-dataset-create"]');
     await vi.waitFor(() => expect((createButton!.element as HTMLButtonElement).disabled).toBe(false));
     await createButton!.trigger("click");
-    await vi.waitFor(() => expect(wrapper.text()).toContain("test-1"));
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="workspace-replay"]').attributes("aria-current")).toBe("page"));
 
     // Let startup's slower Snapshot read finish only after the user mutation.
     resolveSnapshots([]);
     await flushPromises();
 
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     expect(wrapper.text()).toContain("test-1");
     expect(
       invokeMock.mock.calls.filter(([command]) => command === "get_current_test_dataset"),
@@ -1370,8 +1373,9 @@ describe("startup and user-operation coordination", () => {
     const replaceIndex = invokeMock.mock.calls.findIndex(([command]) => command === "create_test_dataset");
     expect(resetIndex).toBeGreaterThanOrEqual(0);
     expect(resetIndex).toBeLessThan(replaceIndex);
-    expect(wrapper.text()).toContain("test-replaced");
     expect(wrapper.get(`[data-testid="workspace-replay"]`).attributes("aria-current")).toBe("page");
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
     confirmSpy.mockRestore();
   });
 
@@ -1476,6 +1480,8 @@ describe("startup and user-operation coordination", () => {
     expect(invokeMock.mock.calls.filter(([command]) => command === "load_origin")).toHaveLength(0);
 
     resolveCreate({ ...testDataset, testDatasetId: "test-replaced" });
+    await vi.waitFor(() => expect(wrapper.get('[data-testid="workspace-replay"]').attributes("aria-current")).toBe("page"));
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("test-replaced"));
   });
 
