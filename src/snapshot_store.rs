@@ -60,6 +60,10 @@ pub(crate) struct SnapshotArtifact {
     pub(crate) snapshot_id: Option<String>,
     pub(crate) run_id: Option<String>,
     pub(crate) state_key: Option<String>,
+    pub(crate) instrument_id: Option<String>,
+    pub(crate) bar_type: Option<String>,
+    pub(crate) input_start_ts_event: Option<String>,
+    pub(crate) input_end_ts_event: Option<String>,
     pub(crate) generated_at: Option<String>,
     pub(crate) checkpoint_count: Option<usize>,
     pub(crate) diagnostic: Option<String>,
@@ -134,17 +138,15 @@ pub(crate) fn read_complete_snapshot_typed(
 }
 
 fn classify_published(file_name: String, path: PathBuf) -> SnapshotArtifact {
-    match read_database(&path) {
-        Ok((manifest, checkpoints)) => {
-            let verification = verify_complete_snapshot(&manifest, &checkpoints);
-            if manifest.status == STATUS_COMPLETE && verification.is_ok() {
-                artifact(file_name, path, SnapshotArtifactKind::Complete, Some(&manifest), Some(checkpoints.len()), None)
-            } else {
-                let diagnostic = verification.err().unwrap_or_else(|| {
-                    format!("Published Snapshot must have Complete status, got {}", manifest.status)
-                });
-                artifact(file_name, path, SnapshotArtifactKind::InvalidPublished, Some(&manifest), Some(checkpoints.len()), Some(diagnostic))
-            }
+    // Discovery is intentionally metadata-only: do not scan checkpoints or
+    // verify the content checksum until the user selects this Snapshot.
+    match read_manifest(&path) {
+        Ok(manifest) if manifest.status == STATUS_COMPLETE => {
+            artifact(file_name, path, SnapshotArtifactKind::Complete, Some(&manifest), None, None)
+        }
+        Ok(manifest) => {
+            let diagnostic = format!("Published Snapshot Manifest is not Complete (status={})", manifest.status);
+            artifact(file_name, path, SnapshotArtifactKind::InvalidPublished, Some(&manifest), None, Some(diagnostic))
         }
         Err(error) => artifact(file_name, path, SnapshotArtifactKind::InvalidPublished, None, None, Some(error)),
     }
@@ -185,6 +187,10 @@ fn artifact(
         snapshot_id: manifest.map(|value| value.snapshot_id.clone()),
         run_id: manifest.map(|value| value.run_id.clone()),
         state_key: manifest.map(|value| value.state_key.clone()),
+        instrument_id: manifest.map(|value| value.instrument_id.clone()),
+        bar_type: manifest.map(|value| value.bar_type.clone()),
+        input_start_ts_event: manifest.map(|value| value.input_start_ts_event.clone()),
+        input_end_ts_event: manifest.map(|value| value.input_end_ts_event.clone()),
         generated_at: manifest.map(|value| value.snapshot_generated_at.clone()),
         checkpoint_count: checkpoint_count.or_else(|| manifest.map(|value| value.checkpoint_count)),
         diagnostic,
