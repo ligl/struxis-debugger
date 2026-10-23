@@ -73,13 +73,20 @@ export function useReplayKeyboardShortcut(
       return;
     }
 
-    if (!canUseReplayShortcuts.value || runBusy.value) return;
+    if (!canUseReplayShortcuts.value) return;
+
+    const isStopShortcut = event.key.toLowerCase() === "s" && event.shiftKey;
+    const isStopStartShortcut = !event.shiftKey && event.key.toLowerCase() === "r";
+    if (runBusy.value && (
+      playbackStatus.value !== "playing" ||
+      (!isStopShortcut && !isStopStartShortcut)
+    )) return;
 
     let command: RunCommand | null = null;
     if (!event.shiftKey && event.key.toLowerCase() === "n") command = "step";
-    else if (event.key.toLowerCase() === "s" && event.shiftKey) command = "stop";
+    else if (isStopShortcut) command = "stop";
     else if (event.key.toLowerCase() === "s" && !event.shiftKey) command = "start";
-    else if (!event.shiftKey && event.key.toLowerCase() === "r") {
+    else if (isStopStartShortcut) {
       // The R shortcut is deliberately the same lifecycle sequence as Stop,
       // then Start, rather than a separate backend Restart command.
       event.preventDefault();
