@@ -799,6 +799,12 @@ onMounted(() => {
   resizeObserver.observe(chartHost.value);
   suppressSyncEmit = true;
   updateChart();
+  // Snapshot Reference can mount after Live Replay has already published its
+  // current viewport. Its prop watcher is not immediate, so apply that
+  // existing request after the SBar-ID index has been built and initial fit
+  // has completed; otherwise the two charts remain on independent ranges
+  // until the next Live viewport event.
+  applySyncRequest(props.syncRequest);
   queueMicrotask(() => { suppressSyncEmit = false; });
 });
 
