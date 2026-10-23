@@ -288,6 +288,13 @@ describe("RunChart", () => {
     const clickHandler = mocks.subscribeClick.mock.calls[0]?.[0] as ((param: { point?: { x: number; y: number } }) => void);
     expect(clickHandler).toBeTypeOf("function");
 
+    clickHandler({ point: { x: 60, y: 188 } });
+    expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toEqual({
+      kind: "cbar",
+      id: "cbar-click",
+      checkpointSbarId: originBars[1]!.sbarId,
+    });
+
     clickHandler({ point: { x: 90, y: 100 } });
     expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toEqual({
       kind: "sbar",
