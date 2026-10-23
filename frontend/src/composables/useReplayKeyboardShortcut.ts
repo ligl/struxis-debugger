@@ -77,8 +77,8 @@ export function useReplayKeyboardShortcut(
 
     let command: RunCommand | null = null;
     if (!event.shiftKey && event.key.toLowerCase() === "n") command = "step";
-    else if (event.key === "s" && event.shiftKey) command = "stop";
-    else if (event.key === "s" && !event.shiftKey) command = "start";
+    else if (event.key.toLowerCase() === "s" && event.shiftKey) command = "stop";
+    else if (event.key.toLowerCase() === "s" && !event.shiftKey) command = "start";
     else if (!event.shiftKey && event.key.toLowerCase() === "r") {
       // The R shortcut is deliberately the same lifecycle sequence as Stop,
       // then Start, rather than a separate backend Restart command.
