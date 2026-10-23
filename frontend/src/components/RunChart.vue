@@ -225,9 +225,18 @@ function handleChartKeyboard(event: KeyboardEvent): void {
     event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation && !isFitShortcut) ||
     (event.shiftKey && !isBoundaryNavigation) ||
     isInteractiveKeyboardTarget(event.target) ||
-    isInteractiveKeyboardTarget(document.activeElement) ||
-    chartError.value || projectionMessage.value || bars.value.length === 0
+    isInteractiveKeyboardTarget(document.activeElement)
   ) return;
+
+  // T is a toggle for the pending target: while a target exists, cancellation
+  // must remain available even if the chart projection is temporarily invalid.
+  if (event.key.toLowerCase() === "t" && props.targetSbarId) {
+    emit("targetCancel");
+    event.preventDefault();
+    return;
+  }
+
+  if (chartError.value || projectionMessage.value || bars.value.length === 0) return;
 
   let handled = false;
   if (isFitShortcut) handled = fitContentShortcut();
