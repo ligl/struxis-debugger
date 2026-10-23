@@ -47,10 +47,14 @@ describe("SnapshotReferencePanel", () => {
       global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
     });
 
-    expect(wrapper.get(".snapshot-reference-select > span").text()).toBe("AUD/USD.SIM");
-    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
+    expect(wrapper.get(".snapshot-reference-instrument").text()).toBe("AUD/USD.SIM");
+    const select = wrapper.get('[data-testid="replay-reference-select"]');
+    expect(select.find('option[value="snapshot-complete-01"]').text()).toContain("2026-10-20T10:00:00Z");
+    await select.setValue("snapshot-complete-01");
     await flushPromises();
-    expect(wrapper.get(".snapshot-reference-select > span").text()).toBe("AUD/USD.SIM");
+    expect(wrapper.get(".snapshot-reference-instrument").text()).toBe("AUD/USD.SIM");
+    expect(wrapper.get(".snapshot-reference-selected-label").text()).not.toContain("2026-10-20T10:00:00Z");
+    expect(wrapper.get(".snapshot-reference-selected-label").text()).toContain("5m");
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("run-01");
