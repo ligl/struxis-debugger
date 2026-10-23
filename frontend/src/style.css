@@ -2807,6 +2807,7 @@ th, td { padding: 6px 8px; }
   min-width: 160px;
   flex: 0 0 auto;
   font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  cursor: pointer;
 }
 
 .snapshot-reference-control::after {
