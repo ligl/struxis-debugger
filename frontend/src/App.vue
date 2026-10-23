@@ -114,6 +114,7 @@ const fastForwarding = ref(false);
 const restartToSBarPending = ref(false);
 
 function handleReplayTargetSelection(sbarId: string): void {
+  if (fastForwarding.value || restartToSBarPending.value) return;
   const test = testDataset.value;
   const currentOrigin = origin.value;
   if (
