@@ -37,8 +37,8 @@ export function useRunControl() {
     }
   }
 
-  async function executeRunCommand(command: RunCommand): Promise<void> {
-    if (runBusy.value) return;
+  async function executeRunCommand(command: RunCommand): Promise<boolean> {
+    if (runBusy.value) return false;
     runBusy.value = true;
     runError.value = "";
     try {
@@ -69,6 +69,7 @@ export function useRunControl() {
           throw new Error("Play and Pause are frontend Playback controls, not backend Run commands.");
       }
       runState.value = next;
+      return true;
     } catch (error) {
       runError.value = describeIpcError(error);
       // A failed Step may still have produced a terminal backend outcome and
@@ -78,6 +79,7 @@ export function useRunControl() {
       } catch {
         // Keep the last confirmed UI state if the authoritative read also fails.
       }
+      return false;
     } finally {
       runBusy.value = false;
     }
