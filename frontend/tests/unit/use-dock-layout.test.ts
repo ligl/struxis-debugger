@@ -28,9 +28,9 @@ describe("useDockLayout", () => {
 
     expect(layout.inspectorDock.value).toBe("right");
     expect(layout.diagnosticsDock.value).toBe("bottom");
-    expect(layout.inspectorWidth.value).toBe(282);
+    expect(layout.inspectorWidth.value).toBe(300);
     expect(layout.diagnosticsHeight.value).toBe(164);
-    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("282px");
+    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("300px");
     expect(layout.shellStyle.value["--diagnostics-reserve-bottom"]).toBe("36px");
   });
 
@@ -41,7 +41,7 @@ describe("useDockLayout", () => {
     layout.setDock("diagnostics", "top");
     layout.toggleCollapsed("diagnostics");
 
-    expect(layout.shellStyle.value["--inspector-reserve-left"]).toBe("282px");
+    expect(layout.shellStyle.value["--inspector-reserve-left"]).toBe("300px");
     expect(layout.shellStyle.value["--diagnostics-reserve-top"]).toBe("164px");
     expect(layout.shellStyle.value["--inspector-offset-top"]).toBe("164px");
 
@@ -56,7 +56,7 @@ describe("useDockLayout", () => {
     expect(layout.inspectorCollapsed.value).toBe(true);
     layout.handleInspectorHeadingClick();
     expect(layout.inspectorCollapsed.value).toBe(false);
-    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("282px");
+    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("300px");
   });
 
   it("does not collapse an already expanded Inspector when its heading is clicked", () => {
@@ -65,7 +65,7 @@ describe("useDockLayout", () => {
     layout.handleInspectorHeadingClick();
 
     expect(layout.inspectorCollapsed.value).toBe(false);
-    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("282px");
+    expect(layout.shellStyle.value["--inspector-reserve-right"]).toBe("300px");
   });
 
   it("expands a collapsed side-docked Diagnostics panel when its heading is clicked", () => {
