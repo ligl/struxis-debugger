@@ -112,8 +112,9 @@ describe("ReplayToolbarControls", () => {
   it("keeps speed selection enabled while a Run command is busy and playback is active", async () => {
     const wrapper = mountControls({ runBusy: true, playbackStatus: "playing" });
     const trigger = wrapper.get('[data-testid="replay-speed"]');
+    const control = wrapper.get('[data-testid="replay-speed-control"]');
     expect(trigger.attributes("disabled")).toBeUndefined();
-    await trigger.trigger("mouseenter");
+    await control.trigger("mouseenter");
     const fasterOption = wrapper.get('[data-speed-delay="50"]');
     expect(fasterOption.attributes("disabled")).toBeUndefined();
     await fasterOption.trigger("click");
