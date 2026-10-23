@@ -107,12 +107,10 @@ function handleReplayObjectSelection(selection: ReplayChartSelection): void {
   const currentOrigin = origin.value;
   if (
     workspaceMode.value !== "replay" ||
-    !currentRun ||
     !currentTest ||
     !currentOrigin ||
-    currentRun.testDatasetId !== currentTest.testDatasetId ||
-    selection.checkpointSbarId !== currentRun.cursorSbarId ||
-    currentCheckpoint?.sbarId !== currentRun.cursorSbarId
+    currentOrigin.originDatasetId !== currentTest.originDatasetId ||
+    (currentRun && currentRun.testDatasetId !== currentTest.testDatasetId)
   ) return;
 
   const start = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.startSbarId);
@@ -122,7 +120,23 @@ function handleReplayObjectSelection(selection: ReplayChartSelection): void {
 
   if (selection.kind === "sbar") {
     if (selectedIndex < start || selectedIndex > end) return;
+    if (selection.checkpointSbarId === null) {
+      if (currentRun?.cursorSbarId) return;
+      selectedReplayChartObject.value = selection;
+      return;
+    }
+    if (
+      !currentRun ||
+      selection.checkpointSbarId !== currentRun.cursorSbarId ||
+      currentCheckpoint?.sbarId !== currentRun.cursorSbarId
+    ) return;
   } else {
+    if (
+      !currentRun ||
+      !currentRun.cursorSbarId ||
+      selection.checkpointSbarId !== currentRun.cursorSbarId ||
+      currentCheckpoint?.sbarId !== currentRun.cursorSbarId
+    ) return;
     const structure = currentCheckpoint.structure;
     const exists = selection.kind === "cbar"
       ? structure?.cbars.some((item) => item.cbarId === selection.id)
@@ -141,27 +155,44 @@ const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
   const currentOrigin = origin.value;
   if (
     !selection ||
-    !checkpoint ||
-    !currentRun ||
     !currentTest ||
     !currentOrigin ||
-    selection.checkpointSbarId !== currentRun.cursorSbarId ||
-    checkpoint.sbarId !== currentRun.cursorSbarId ||
-    currentRun.testDatasetId !== currentTest.testDatasetId
+    currentOrigin.originDatasetId !== currentTest.originDatasetId
   ) return null;
 
+  const start = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.startSbarId);
+  const end = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.endSbarId);
+  const index = currentOrigin.bars.findIndex((bar) => bar.sbarId === selection.id);
+  if (start < 0 || end < start) return null;
+
   if (selection.kind === "sbar") {
+    if (index < start || index > end) return null;
+    if (selection.checkpointSbarId === null) {
+      if (currentRun?.cursorSbarId) return null;
+      const inputBar = currentOrigin.bars[index];
+      return inputBar ? { kind: "sbar", object: inputBar, source: "input" } : null;
+    }
+    if (
+      !currentRun ||
+      !checkpoint ||
+      currentRun.testDatasetId !== currentTest.testDatasetId ||
+      selection.checkpointSbarId !== currentRun.cursorSbarId ||
+      checkpoint.sbarId !== currentRun.cursorSbarId
+    ) return null;
     if (selection.id === checkpoint.sbarId) {
       return { kind: "sbar", object: checkpoint.sbar, source: "checkpoint" };
     }
-    const start = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.startSbarId);
-    const end = currentOrigin.bars.findIndex((bar) => bar.sbarId === currentTest.endSbarId);
-    const index = currentOrigin.bars.findIndex((bar) => bar.sbarId === selection.id);
     const inputBar = currentOrigin.bars[index];
-    return start >= 0 && end >= start && index >= start && index <= end && inputBar
-      ? { kind: "sbar", object: inputBar, source: "input" }
-      : null;
+    return inputBar ? { kind: "sbar", object: inputBar, source: "input" } : null;
   }
+
+  if (
+    !currentRun ||
+    !checkpoint ||
+    currentRun.testDatasetId !== currentTest.testDatasetId ||
+    selection.checkpointSbarId !== currentRun.cursorSbarId ||
+    checkpoint.sbarId !== currentRun.cursorSbarId
+  ) return null;
   if (selection.kind === "cbar") {
     const object = checkpoint.structure?.cbars.find((item) => item.cbarId === selection.id);
     return object ? { kind: "cbar", object } : null;
