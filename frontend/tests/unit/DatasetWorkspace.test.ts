@@ -37,7 +37,7 @@ const OriginChartStub = defineComponent({
   template: "<div data-testid=\"origin-chart-stub\" />",
 });
 
-function mountDatasetWorkspace() {
+function mountDatasetWorkspace(originValue: OriginDatasetDto | null = origin, loadStatus: "idle" | "loading" | "loaded" | "failed" = "loaded") {
   return mount(DatasetWorkspace, {
     props: {
       active: true,
@@ -50,8 +50,8 @@ function mountDatasetWorkspace() {
       mutationBusy: false,
       discoveryError: "",
       enableStructure: true,
-      origin,
-      loadStatus: "loaded",
+      origin: originValue,
+      loadStatus,
       loadError: "",
       formatDomainTimestamp: (value: string | null) => value ?? "—",
       testDataset: null,
@@ -82,6 +82,30 @@ function mountDatasetWorkspace() {
 }
 
 describe("DatasetWorkspace", () => {
+  it("shows a designed default chart state before Origin data is loaded", () => {
+    const wrapper = mountDatasetWorkspace(null, "idle");
+
+    expect(wrapper.get('[data-testid="dataset-chart-empty"]').text()).toContain("ORIGIN DATA NOT LOADED");
+    expect(wrapper.text()).toContain("Select a dataset in Catalog");
+    expect(wrapper.text()).toContain("LOAD");
+    expect(wrapper.find('[data-testid="origin-chart-stub"]').exists()).toBe(false);
+  });
+
+  it("shows a loading state instead of the idle prompt while Origin is loading", () => {
+    const wrapper = mountDatasetWorkspace(null, "loading");
+
+    expect(wrapper.get('[data-testid="dataset-chart-empty"]').attributes("data-load-status")).toBe("loading");
+    expect(wrapper.text()).toContain("LOADING ORIGIN DATA");
+    expect(wrapper.text()).toContain("validating the selected SBar sequence");
+  });
+
+  it("renders the real chart after Origin data is available", () => {
+    const wrapper = mountDatasetWorkspace(origin, "loaded");
+
+    expect(wrapper.find('[data-testid="dataset-chart-empty"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="origin-chart-stub"]').exists()).toBe(true);
+  });
+
   it("forwards catalog and Test Dataset actions to the composition root", () => {
     const wrapper = mountDatasetWorkspace();
 
