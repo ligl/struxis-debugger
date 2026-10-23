@@ -350,7 +350,7 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   // Lifecycle commands must wait for an in-flight playback Step before
   // validating against the resulting authoritative RunState.
   if (
-    ["stop", "restart", "dispose"].includes(command) &&
+    ["stop", "restart", "reset"].includes(command) &&
     playbackStatus.value === "playing"
   ) {
     await stopPlayback();
@@ -368,7 +368,7 @@ async function handleRunCommand(command: RunCommand): Promise<void> {
   await executeRunCommand(command);
   if (command === "start" || command === "restart") {
     await refreshReplayInspector();
-  } else if (command === "dispose") {
+  } else if (command === "reset") {
     replayInspector.value = null;
     replayInspectorError.value = "";
   }
