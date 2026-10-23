@@ -87,6 +87,16 @@ describe("ReplayToolbarControls", () => {
     expect(playing.get('[data-testid="run-play-pause"]').text()).toContain("PAUSE");
   });
 
+  it("keeps STOP enabled while each playback Step is busy", async () => {
+    const wrapper = mountControls({ runBusy: true, playbackStatus: "playing" });
+    const stop = wrapper.get('[data-testid="run-start-stop"]');
+
+    expect(stop.text()).toBe("STOP");
+    expect(stop.attributes("disabled")).toBeUndefined();
+    await stop.trigger("click");
+    expect(wrapper.emitted("command")).toEqual([["stop"]]);
+  });
+
   it("allows explicit Snapshot save only for a completed Run", async () => {
     const ready = mountControls();
     expect(ready.get('[data-testid="run-save-snapshot"]').attributes("disabled")).toBeDefined();
