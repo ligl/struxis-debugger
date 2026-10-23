@@ -1,6 +1,5 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { flushPromises } from "@vue/test-utils";
 import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.vue";
 import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../../src/origin-types";
 
@@ -93,7 +92,7 @@ describe("SnapshotReferencePanel", () => {
     // Vue Test Utils' inferred public-instance type omits script-setup props here,
     // although setProps updates the component's runtime props correctly.
     await wrapper.setProps({ snapshots: [] } as never);
-    expect(wrapper.find('[data-testid="snapshot-reference-selected"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(false);
     expect((wrapper.get('[data-testid="replay-reference-select"]').element as HTMLSelectElement).value).toBe("");
   });
 });
