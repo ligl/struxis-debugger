@@ -30,6 +30,7 @@ describe("ReplayWorkspace", () => {
           :origin="null"
           :test-dataset="null"
           :run-state="null"
+          :structure="null"
           :snapshots="[]"
         />
       `,
