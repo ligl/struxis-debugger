@@ -302,7 +302,7 @@ describe("RunChart", () => {
         low: "9",
         sbarStartId: originBars[1]!.sbarId,
         sbarEndId: originBars[1]!.sbarId,
-        spanSbars: 2,
+        spanSbars: 1,
         fractalType: null,
         createdAt: "2026-10-23T00:00:00Z",
       }],
@@ -319,7 +319,7 @@ describe("RunChart", () => {
         startOi: null,
         endOi: null,
         volume: "200",
-        spanSbars: 2,
+        spanSbars: 1,
         state: "Confirmed",
         createdAt: "2026-10-23T00:00:00Z",
         updatedAt: "2026-10-23T00:00:00Z",
@@ -343,7 +343,7 @@ describe("RunChart", () => {
       structure: {
         cbarCount: 2,
         cbars: [
-          { ...initialStructure.cbars[0]!, high: "13", sbarEndId: originBars[2]!.sbarId },
+          { ...initialStructure.cbars[0]!, high: "13", sbarEndId: originBars[2]!.sbarId, spanSbars: 2 },
           {
             cbarId: "cbar-added",
             high: "11",
