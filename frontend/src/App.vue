@@ -351,7 +351,18 @@ const canRestartRun = computed(
 const replayToolbarContext = computed(() => {
   const test = testDataset.value;
   if (!test) return "NO TEST DATASET · CREATE AN INCLUSIVE INTERVAL";
-  return `${test.instrumentId} · ${test.timeframe} · ${test.sbarCount.toLocaleString()} SBARS · ${test.startSbarId} → ${test.endSbarId}`;
+
+  const bars = origin.value?.bars ?? [];
+  const startBar = bars.find((bar) => bar.sbarId === test.startSbarId);
+  const endBar = bars.find((bar) => bar.sbarId === test.endSbarId);
+  const startTime = startBar
+    ? formatDomainTimestamp(startBar.tsEvent, test.timeframe)
+    : "—";
+  const endTime = endBar
+    ? formatDomainTimestamp(endBar.tsEvent, test.timeframe)
+    : "—";
+
+  return `${test.instrumentId} · ${test.timeframe} · ${test.sbarCount.toLocaleString()} SBARS · ${startTime} → ${endTime}`;
 });
 
 const {
