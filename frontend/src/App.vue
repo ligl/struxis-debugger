@@ -625,6 +625,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <AppToastHost />
   <main
     class="debugger-shell"
     data-testid="debugger-shell"
@@ -633,7 +634,6 @@ onMounted(async () => {
     @dragover="allowDockDrop"
     @drop="dropDockPanel"
   >
-    <AppToastHost />
     <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
 
 
