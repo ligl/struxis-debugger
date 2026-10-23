@@ -200,6 +200,14 @@ pub(crate) async fn stop_run(state: State<'_, AppState>) -> Result<RunState, Ipc
 }
 
 #[tauri::command]
+pub(crate) async fn reset_run(state: State<'_, AppState>) -> Result<(), IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.replay_reset())
+        .await
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Run Reset worker failed: {error}")))?
+}
+
+#[tauri::command]
 pub(crate) async fn dispose_run(state: State<'_, AppState>) -> Result<RunState, IpcError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || state.replay_dispose())
