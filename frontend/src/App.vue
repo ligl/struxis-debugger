@@ -424,7 +424,7 @@ const {
   runState,
   runBusy,
   runError,
-  executeRunCommand,
+  async (command) => { await executeRunCommand(command); },
 );
 
 async function handleSaveSnapshot(): Promise<void> {
