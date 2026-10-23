@@ -28,6 +28,7 @@ const emit = defineEmits<{
 }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
+const structureOverlayWidth = ref(0);
 const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
@@ -289,6 +290,10 @@ function updateStructureOverlays(): void {
     return;
   }
   const timeScale = chart.timeScale();
+  // Clip the SVG overlay to the plot area so it cannot cover the right price scale.
+  structureOverlayWidth.value = typeof timeScale.width === "function"
+    ? timeScale.width()
+    : chartHost.value?.clientWidth ?? 0;
   const structure = props.structure;
   const selected = props.selectedObject;
   if (layerVisibility.value.sbar && selected?.kind === "sbar" && ((selected.checkpointSbarId === null && !props.runState) || selected.checkpointSbarId === props.runState?.cursorSbarId)) {
@@ -794,7 +799,7 @@ onBeforeUnmount(() => {
       </div>
       <div ref="chartHost" class="run-chart-host" data-testid="run-chart-canvas"
         :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
-      <svg class="run-structure-overlay" data-testid="run-structure-overlay" aria-hidden="true">
+      <svg class="run-structure-overlay" :style="{ width: `${structureOverlayWidth}px` }" data-testid="run-structure-overlay" aria-hidden="true">
         <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
           <line :x1="targetSbarX" y1="0" :x2="targetSbarX" y2="100%" stroke="#C6A06B" stroke-width="1.25" stroke-dasharray="5 4" />
           <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
