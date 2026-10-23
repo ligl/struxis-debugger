@@ -47,15 +47,6 @@ const props = defineProps<{
   formatDomainTimestamp: (value: string | null, timeframe: string | null) => string;
 }>();
 
-watch(
-  () => [props.discoveryError, props.loadError],
-  ([discoveryError, loadError]) => {
-    if (discoveryError || loadError) {
-      if (sourceDetails.value) sourceDetails.value.open = true;
-    }
-  },
-);
-
 const emit = defineEmits<{
   refresh: [];
   selectDataset: [id: string];
@@ -91,7 +82,7 @@ const emit = defineEmits<{
       class="catalog-icon-action"
       data-testid="catalog-refresh"
       type="button"
-      :disabled="refreshing || loading || mutationBusy"
+      :disabled="refreshing || loading"
       :aria-label="refreshing ? 'Refreshing Catalog' : 'Refresh Catalog'"
       :title="refreshing ? 'Refreshing Catalog' : 'Refresh Catalog'"
       @click="emit('refresh')"
