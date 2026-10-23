@@ -222,7 +222,7 @@ describe("RunChart", () => {
     // The existing right-click cancellation remains target-only.
     await wrapper.setProps({ targetSbarId: originBars[2]!.sbarId });
     const contextEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
-    stage.dispatchEvent(contextEvent);
+    stage.element.dispatchEvent(contextEvent);
     expect(contextEvent.defaultPrevented).toBe(true);
     expect(wrapper.emitted("targetCancel")).toHaveLength(1);
     wrapper.unmount();
