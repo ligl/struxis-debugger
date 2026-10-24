@@ -574,8 +574,8 @@ let applyingSyncedCrosshair = false;
 let hasSyncedCrosshair = false;
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
-  hasSyncedCrosshair = false;
   if (props.displayContext !== "snapshot-reference" || !props.syncEnabled || applyingSyncedCrosshair) return;
+  hasSyncedCrosshair = false;
   const point = param.point;
   if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
     emit("crosshairChange", { source: "reference", sbarId: null, price: null });
