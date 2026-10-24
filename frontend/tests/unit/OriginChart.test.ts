@@ -413,11 +413,11 @@ describe("OriginChart", () => {
     expect(chartOptions.rightPriceScale?.borderColor).toBe("#121619");
   });
 
-  it("hides the crosshair in Snapshot Reference without changing Origin chart behavior", () => {
+  it("keeps the Snapshot Reference crosshair locally visible when synchronization is ineligible", () => {
     mount(OriginChart, {
       props: {
         bars: [bar()],
-        originDatasetId: "snapshot-reference-no-crosshair",
+        originDatasetId: "snapshot-reference-local-crosshair",
         structure: null,
         displayContext: "snapshot-reference",
       },
@@ -430,9 +430,9 @@ describe("OriginChart", () => {
         horzLine?: { visible?: boolean };
       };
     };
-    expect(chartOptions.crosshair?.mode).toBe(2);
-    expect(chartOptions.crosshair?.vertLine?.visible).toBe(false);
-    expect(chartOptions.crosshair?.horzLine?.visible).toBe(false);
+    expect(chartOptions.crosshair?.mode).toBe(0);
+    expect(chartOptions.crosshair?.vertLine?.visible).toBe(true);
+    expect(chartOptions.crosshair?.horzLine?.visible).toBe(true);
   });
 
   it("projects a Live crosshair onto the matching Snapshot SBar", async () => {
@@ -460,7 +460,7 @@ describe("OriginChart", () => {
     );
   });
 
-  it("shows the crosshair in Snapshot Reference only while synchronization is eligible", async () => {
+  it("keeps Snapshot crosshair visible while sync eligibility changes", async () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [bar()],
@@ -483,11 +483,12 @@ describe("OriginChart", () => {
     await nextTick();
     expect(chartMocks.applyChartOptions).toHaveBeenCalledWith(expect.objectContaining({
       crosshair: expect.objectContaining({
-        mode: 2,
-        vertLine: expect.objectContaining({ visible: false }),
-        horzLine: expect.objectContaining({ visible: false }),
+        mode: 0,
+        vertLine: expect.objectContaining({ visible: true }),
+        horzLine: expect.objectContaining({ visible: true }),
       }),
     }));
+    expect(chartMocks.clearCrosshairPosition).toHaveBeenCalled();
   });
 
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
