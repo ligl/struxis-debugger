@@ -7,7 +7,7 @@ import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.
 // avoids creating real canvas observers and animation-frame callbacks in jsdom.
 config.global.stubs = {
   ...config.global.stubs,
-  OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' },
+  SnapshotReferenceChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' },
 };
 import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../../src/origin-types";
 
@@ -223,7 +223,7 @@ describe("SnapshotReferencePanel", () => {
   it("clears the local selection when the referenced Snapshot disappears", async () => {
     const wrapper = mount(SnapshotReferencePanel, {
       props: { instrumentId: "AUD/USD.SIM", snapshots },
-      global: { stubs: { OriginChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
+      global: { stubs: { SnapshotReferenceChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' } } },
     });
     invokeMock.mockResolvedValueOnce(reference);
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
