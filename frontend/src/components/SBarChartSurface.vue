@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -59,9 +59,8 @@ let indexBySbarId: ReadonlyMap<string, number> = new Map();
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
-let suppressSyncEmit = false;
+const viewportSyncGate = new ReplayViewportSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
-let expectedSyncedRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
 type SnapshotBrightCandle = { id: string; x: number; y: number; width: number; height: number };
@@ -761,12 +760,8 @@ function handleVisibleRangeChange(): void {
 
   // Ignore the asynchronous echo of a range applied from Live. A microtask-only
   // guard is insufficient if Lightweight Charts publishes its range callback later.
-  if (expectedSyncedRange) {
-    const expected = expectedSyncedRange;
-    expectedSyncedRange = null;
-    if (isSameLogicalRange(range, expected)) return;
-  }
-  if (suppressSyncEmit) return;
+  const observation = viewportSyncGate.observeRange(range);
+  if (observation !== "publish") return;
 
   // Zoom/pan can produce many range events in one frame. Keep only the latest
   // raw fractional range; scheduleOverlayUpdate publishes it in the same frame
@@ -783,10 +778,10 @@ function applySyncRequest(request: ReplayChartViewportSync | null | undefined): 
   if (!target) return;
   if (current && isSameLogicalRange(current, target)) return;
   const { from, to } = target;
-  expectedSyncedRange = target;
-  suppressSyncEmit = true;
+  viewportSyncGate.expectPeerRange(target);
+  const suppressionRevision = viewportSyncGate.beginSuppression();
   chart.timeScale().setVisibleLogicalRange({ from, to });
-  queueMicrotask(() => { suppressSyncEmit = false; });
+  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
 }
 
 function fitContent(): void {
@@ -1032,7 +1027,7 @@ onMounted(() => {
     updateSbarCoordinates();
   });
   resizeObserver.observe(chartHost.value);
-  suppressSyncEmit = true;
+  const suppressionRevision = viewportSyncGate.beginSuppression();
   updateChart();
   // Snapshot Reference can mount after Live Replay has already published its
   // current viewport. Apply the latest viewport and crosshair after the
@@ -1040,13 +1035,13 @@ onMounted(() => {
   applyCrosshairOptions();
   applySyncRequest(props.syncRequest);
   applyCrosshairSync(props.crosshairSync);
-  queueMicrotask(() => { suppressSyncEmit = false; });
+  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
 });
 
 watch(() => [props.bars, props.originDatasetId] as const, () => {
-  suppressSyncEmit = true;
+  const suppressionRevision = viewportSyncGate.beginSuppression();
   updateChart();
-  queueMicrotask(() => { suppressSyncEmit = false; });
+  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
   updateHoveredObject(undefined);
 });
 watch(() => props.structure, () => {
@@ -1090,8 +1085,7 @@ watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, ([enabled]) =>
     // Eligibility loss is a hard boundary: no queued Snapshot viewport may
     // leak back to Live, and no old echo guard may affect local navigation.
     pendingViewportRange = null;
-    expectedSyncedRange = null;
-    suppressSyncEmit = false;
+    viewportSyncGate.clear();
     syncBoundaryXs.value = null;
   }
   updateSbarCoordinates();
@@ -1130,7 +1124,7 @@ onBeforeUnmount(() => {
     overlayUpdateFrame = null;
   }
   pendingViewportRange = null;
-  expectedSyncedRange = null;
+  viewportSyncGate.clear();
   chart?.remove();
   chart = null;
   candleSeries = null;
