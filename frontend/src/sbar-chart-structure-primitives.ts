@@ -5,8 +5,8 @@ import type {
   IPrimitivePaneView,
   Time,
 } from "lightweight-charts";
-import type { ChartPrimitiveHost } from "./sbar-chart-primitive-host";
-import type { ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
+import type { ChartPrimitiveHost, ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
+import { projectCBarRectangles, projectSwingSegments } from "./sbar-chart-structure-geometry";
 
 export interface CBarPrimitiveDto {
   cbarId: string;
@@ -51,7 +51,6 @@ const SWING_STYLE_BY_STATE: Readonly<Record<string, { color: string; dash: reado
   Extending: { color: "#8FA9C4", dash: [2, 3] },
 };
 const FALLBACK_SWING_STYLE = { color: "#A0A7B0", dash: [4, 3] };
-const VIEWPORT_OVERSCAN = 2;
 
 interface CBarRectangle {
   id: string;
@@ -73,20 +72,6 @@ interface SwingSegment {
 
 function finite(value: number | null | undefined): value is number {
   return value !== null && value !== undefined && Number.isFinite(value);
-}
-
-function isVisibleByIndex(
-  startId: string,
-  endId: string,
-  indexBySbarId: ReadonlyMap<string, number>,
-  range: { from: number; to: number } | null,
-): boolean {
-  if (!range) return true;
-  const start = indexBySbarId.get(startId);
-  const end = indexBySbarId.get(endId);
-  if (start === undefined || end === undefined) return false;
-  return Math.max(start, end) >= range.from - VIEWPORT_OVERSCAN &&
-    Math.min(start, end) <= range.to + VIEWPORT_OVERSCAN;
 }
 
 abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Time> {
@@ -230,24 +215,13 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
       this.rectangles = [];
       return;
     }
-    const range = this.getVisibleLogicalRange();
-    const rectangles: CBarRectangle[] = [];
-    for (const cbar of this.objects) {
-      if (!isVisibleByIndex(cbar.sbarStartId, cbar.sbarEndId, this.projection.indexBySbarId, range)) continue;
-      const startX = this.coordinateForSbarId(cbar.sbarStartId);
-      const endX = this.coordinateForSbarId(cbar.sbarEndId);
-      const highY = this.priceToCoordinate(cbar.high);
-      const lowY = this.priceToCoordinate(cbar.low);
-      if (!finite(startX) || !finite(endX) || !finite(highY) || !finite(lowY)) continue;
-      rectangles.push({
-        id: cbar.cbarId,
-        x: Math.min(startX, endX),
-        y: Math.min(highY, lowY),
-        width: Math.abs(endX - startX),
-        height: Math.abs(lowY - highY),
-      });
-    }
-    this.rectangles = rectangles;
+    this.rectangles = projectCBarRectangles({
+      cbars: this.objects,
+      indexBySbarId: this.projection.indexBySbarId,
+      visibleRange: this.getVisibleLogicalRange(),
+      coordinateForSbarId: (sbarId) => this.coordinateForSbarId(sbarId),
+      priceToCoordinate: (price) => this.priceToCoordinate(String(price)),
+    });
   }
 
   protected clearGeometry(): void {
@@ -299,20 +273,24 @@ class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
       this.segments = [];
       return;
     }
-    const range = this.getVisibleLogicalRange();
-    const segments: SwingSegment[] = [];
-    for (const swing of this.objects) {
-      if (!isVisibleByIndex(swing.sbarStartId, swing.sbarEndId, this.projection.indexBySbarId, range)) continue;
-      const x1 = this.coordinateForSbarId(swing.sbarStartId);
-      const x2 = this.coordinateForSbarId(swing.sbarEndId);
-      const startsAtLow = swing.direction === "Up";
-      const y1 = this.priceToCoordinate(startsAtLow ? swing.low : swing.high);
-      const y2 = this.priceToCoordinate(startsAtLow ? swing.high : swing.low);
-      if (!finite(x1) || !finite(x2) || !finite(y1) || !finite(y2)) continue;
-      const style = SWING_STYLE_BY_STATE[swing.state] ?? FALLBACK_SWING_STYLE;
-      segments.push({ id: swing.swingId, x1, y1, x2, y2, color: style.color, dash: style.dash });
-    }
-    this.segments = segments;
+    this.segments = projectSwingSegments({
+      swings: this.objects,
+      indexBySbarId: this.projection.indexBySbarId,
+      visibleRange: this.getVisibleLogicalRange(),
+      coordinateForSbarId: (sbarId) => this.coordinateForSbarId(sbarId),
+      priceToCoordinate: (price) => this.priceToCoordinate(String(price)),
+    }).map((segment) => {
+      const style = SWING_STYLE_BY_STATE[segment.state] ?? FALLBACK_SWING_STYLE;
+      return {
+        id: segment.id,
+        x1: segment.x1,
+        y1: segment.y1,
+        x2: segment.x2,
+        y2: segment.y2,
+        color: style.color,
+        dash: style.dash,
+      };
+    });
   }
 
   protected clearGeometry(): void {
