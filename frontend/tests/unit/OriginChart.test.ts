@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SBarChartSurface from "../../src/components/SBarChartSurface.vue";
+import OriginChart from "../../src/components/OriginChart.vue";
 import type { SBarDto } from "../../src/origin-types";
 
 const chartMocks = vi.hoisted(() => ({
@@ -223,7 +224,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("cancels range selection and prevents chart right-click menus from propagating", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       attachTo: document.body,
       props: {
         bars: [bar()],
@@ -926,14 +927,13 @@ describe("SBarChartSurface", () => {
     clickHandler?.({ point: { x: 200, y: 12 } });
     clickHandler?.({ point: { x: 200, y: 410 } });
     await nextTick();
-    expect(wrapper.find('[data-testid="origin-selection-start-line"]').exists()).toBe(true);
     expect(wrapper.emitted("sbarClick")).toEqual([
       ["1700000060000000000"],
       ["1700000060000000000"],
     ]);
 
     clickHandler?.({});
-    expect(wrapper.emitted("selectionError")).toEqual([
+    expect(wrapper.emitted("chartInteractionError")).toEqual([
       ["The click did not resolve to a horizontal position inside the chart plot."],
     ]);
 
@@ -985,7 +985,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("accepts an exact SBar ID through the component selection command and emits the normal selection event", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars: [
           bar(),
@@ -1009,8 +1009,8 @@ describe("SBarChartSurface", () => {
     await nextTick();
 
     expect(wrapper.emitted("sbarClick")).toEqual([["1700000060000000000"]]);
-    expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-selection-start-x"))
-      .toBe("200");
+    expect(wrapper.get('[data-testid="origin-selection-start-line"]').attributes("style"))
+      .toContain("left: 200px");
     wrapper.get('[data-testid="origin-chart-panel"]').element.dispatchEvent(
       new CustomEvent("struxis-select-sbar", {
         bubbles: true,
@@ -1026,7 +1026,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("previews a full-height range overlay and fixes both boundary lines on completion", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars: [
           bar(),
@@ -1088,7 +1088,7 @@ describe("SBarChartSurface", () => {
       }),
     ];
     chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : x < 250 ? 1 : 2);
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars,
         originDatasetId: "origin-boundary-drag",
@@ -1129,7 +1129,7 @@ describe("SBarChartSurface", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars,
         originDatasetId: "origin-boundary-edit",
