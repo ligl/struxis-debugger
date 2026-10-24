@@ -1,6 +1,6 @@
 import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import OriginChart from "../../src/components/OriginChart.vue";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
 import SnapshotPlaybackOverlay from "../../src/components/SnapshotPlaybackOverlay.vue";
@@ -19,6 +19,12 @@ const bars: SBarDto[] = [{
   volume: "100",
 }];
 
+const surfacePortCalls = {
+  viewportRanges: [] as Array<{ from: number; to: number }>,
+  crosshairs: [] as Array<{ sbarId: string; price: number }>,
+  clears: 0,
+};
+
 const SurfaceStub = defineComponent({
   name: "SBarChartSurface",
   props: [
@@ -29,10 +35,24 @@ const SurfaceStub = defineComponent({
   ],
   emits: ["sbarClick", "objectClick", "rangeBoundaryChange", "selectionError",
     "cancelRangeSelection", "logicalRangeChange", "crosshairAnchorChange"],
+  setup(_props, { expose }) {
+    expose({
+      getVisibleLogicalRange: () => null,
+      applyViewportRange: (range: { from: number; to: number }) => { surfacePortCalls.viewportRanges.push(range); return true; },
+      applyCrosshairPosition: (sbarId: string, price: number) => { surfacePortCalls.crosshairs.push({ sbarId, price }); return true; },
+      clearCrosshairPosition: () => { surfacePortCalls.clears += 1; },
+    });
+    return {};
+  },
   template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :enabled="true" :bright-candles="[]" :cbar-rectangles="[]" :swing-segments="[]" :boundaries="null" /></div>',
 });
 
 describe("chart entry adapters", () => {
+  function clearSurfaceCalls(): void {
+    surfacePortCalls.viewportRanges.length = 0;
+    surfacePortCalls.crosshairs.length = 0;
+    surfacePortCalls.clears = 0;
+  }
   it("keeps the Dataset Origin entry limited to Dataset selection props", () => {
     const wrapper = mount(OriginChart, {
       props: {
@@ -53,6 +73,7 @@ describe("chart entry adapters", () => {
   });
 
   it("maps Snapshot Reference semantics through its own entry", () => {
+    clearSurfaceCalls();
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         bars,
@@ -81,5 +102,49 @@ describe("chart entry adapters", () => {
     expect(surface.props("snapshotProcessedCount")).toBe(0);
     expect(wrapper.findComponent(SnapshotPlaybackOverlay).exists()).toBe(true);
     expect(wrapper.findComponent(SnapshotLiveRangeMarkers).exists()).toBe(true);
+  });
+
+  it("applies Live viewport requests through the adapter port", async () => {
+    clearSurfaceCalls();
+    mount(SnapshotReferenceChart, {
+      props: {
+        bars,
+        structure: null,
+        snapshotId: "snapshot-1",
+        syncEnabled: true,
+        syncRequest: { source: "live", from: 10, to: 20, offset: 2, revision: 1 },
+        crosshairSync: null,
+        liveBarCount: 1,
+        playbackEnabled: true,
+        playbackOffset: 2,
+        processedCount: 0,
+      },
+      global: { stubs: { SBarChartSurface: SurfaceStub } },
+    });
+
+    await Promise.resolve();
+    expect(surfacePortCalls.viewportRanges).toEqual([{ from: 12, to: 22 }]);
+  });
+
+  it("maps peer Crosshair positions by exact SBar ID", async () => {
+    clearSurfaceCalls();
+    mount(SnapshotReferenceChart, {
+      props: {
+        bars,
+        structure: null,
+        snapshotId: "snapshot-1",
+        syncEnabled: true,
+        syncRequest: null,
+        crosshairSync: { source: "live", sbarId: "sbar-1", price: 11, revision: 1 },
+        liveBarCount: 1,
+        playbackEnabled: true,
+        playbackOffset: 0,
+        processedCount: 0,
+      },
+      global: { stubs: { SBarChartSurface: SurfaceStub } },
+    });
+
+    await Promise.resolve();
+    expect(surfacePortCalls.crosshairs).toEqual([{ sbarId: "sbar-1", price: 11 }]);
   });
 });
