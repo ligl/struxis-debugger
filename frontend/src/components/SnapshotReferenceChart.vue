@@ -68,7 +68,10 @@ function applyViewportRequest(request: ReplayChartViewportSync | null | undefine
 
   viewportGate.expectPeerRange(target);
   const revision = viewportGate.beginSuppression();
-  surface.value.applyViewportRange(target);
+  if (!surface.value.applyViewportRange(target)) {
+    viewportGate.clear();
+    return;
+  }
   // The expected-range check remains active beyond this microtask to catch
   // Lightweight Charts' potentially asynchronous visible-range callback.
   queueMicrotask(() => viewportGate.endSuppression(revision));
