@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import OriginChart from "../../src/components/SBarChartSurface.vue";
+import SBarChartSurface from "../../src/components/SBarChartSurface.vue";
 import type { SBarDto } from "../../src/origin-types";
 
 const chartMocks = vi.hoisted(() => ({
@@ -97,7 +97,7 @@ function installChartMock() {
   return chart;
 }
 
-describe("OriginChart", () => {
+describe("SBarChartSurface", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     chartMocks.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 1 });
@@ -125,7 +125,7 @@ describe("OriginChart", () => {
       bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001", open: "10", close: "11" }),
       bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001", open: "11", close: "10" }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "snapshot-playback-brightness",
