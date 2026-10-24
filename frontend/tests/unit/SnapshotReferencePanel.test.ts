@@ -162,6 +162,39 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style") ?? "").not.toContain("brightness(");
   });
 
+  it("ignores a stale async result when Snapshot selection changes rapidly", async () => {
+    let resolveFirst!: (value: SnapshotReferenceDto) => void;
+    let resolveSecond!: (value: SnapshotReferenceDto) => void;
+    invokeMock
+      .mockReturnValueOnce(new Promise<SnapshotReferenceDto>((resolve) => { resolveFirst = resolve; }))
+      .mockReturnValueOnce(new Promise<SnapshotReferenceDto>((resolve) => { resolveSecond = resolve; }));
+    const secondSnapshotId = "snapshot-complete-02";
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: {
+        instrumentId: "AUD/USD.SIM",
+        snapshots: [
+          ...snapshots,
+          { ...snapshots[0]!, fileName: "second.snapshot", path: "/snapshots/second.snapshot", snapshotId: secondSnapshotId, runId: "run-02" },
+        ],
+      },
+    });
+
+    const select = wrapper.get('[data-testid="replay-reference-select"]');
+    await select.setValue("snapshot-complete-01");
+    await select.setValue(secondSnapshotId);
+
+    resolveFirst({ ...reference, snapshotId: "snapshot-complete-01" });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(false);
+    expect(wrapper.emitted("syncSequence")?.flat()).not.toContainEqual(expect.objectContaining({ snapshotId: "snapshot-complete-01" }));
+
+    resolveSecond({ ...reference, snapshotId: secondSnapshotId, runId: "run-02" });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="snapshot-reference-metadata"]').text()).toContain("run-02");
+    expect(wrapper.emitted("syncSequence")?.flat()).toContainEqual(expect.objectContaining({ snapshotId: secondSnapshotId }));
+  });
+
   it("shows an embedded loading animation while resolving a selected Snapshot", async () => {
     let resolveReference!: (value: SnapshotReferenceDto) => void;
     invokeMock.mockReturnValueOnce(new Promise<SnapshotReferenceDto>((resolve) => {
