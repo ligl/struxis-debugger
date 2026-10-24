@@ -26,6 +26,7 @@ const emit = defineEmits<{
 const syncEligible = ref(false);
 const syncOffset = ref<number | null>(null);
 const syncRequest = ref<ReplayChartViewportSync | null>(null);
+const activeSyncRequest = computed(() => syncEligible.value ? syncRequest.value : null);
 let viewportRevision = 0;
 
 const liveBars = computed(() => {
@@ -68,7 +69,7 @@ watch(() => props.testDataset?.testDatasetId, () => {
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="syncRequest" @viewport-change="handleViewportChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" @viewport-change="handleViewportChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel
@@ -76,7 +77,7 @@ watch(() => props.testDataset?.testDatasetId, () => {
           :snapshots="snapshots"
           :live-bar-type="testDataset?.barType ?? null"
           :live-sbar-ids="liveBars.map((bar) => bar.sbarId)"
-          :sync-request="syncRequest"
+          :sync-request="activeSyncRequest"
           :progress-applies="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId && runState.status !== 'disposed'"
           :processed-count="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId ? runState.processedCount : 0"
           @sync-eligibility="handleSyncEligibility"
