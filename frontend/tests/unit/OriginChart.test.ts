@@ -333,7 +333,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
         low: "10",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars,
         originDatasetId: "origin-object-hit-test",
@@ -579,7 +579,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   });
 
   it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars: [
           bar(),
@@ -607,8 +607,8 @@ describe("SBarChartSurface and chart entry adapters", () => {
     ]);
 
     clickHandler?.({});
-    expect(wrapper.emitted("chartInteractionError")).toEqual([
-      ["The click did not resolve to a horizontal position inside the chart plot."],
+    expect(wrapper.emitted("selectionError")).toEqual([
+      ["The click did not resolve to a chart coordinate."],
     ]);
 
     wrapper.unmount();
