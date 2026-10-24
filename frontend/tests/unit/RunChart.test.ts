@@ -659,6 +659,23 @@ describe("RunChart", () => {
   });
 
 
+  it("cancels the pending selected-crosshair frame when the chart unmounts", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+    });
+    await nextTick();
+
+    const event = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    expect(mocks.setCrosshairPosition).toHaveBeenCalled();
+    expect(mocks.animationFrameCallback).not.toBeNull();
+
+    wrapper.unmount();
+
+    expect(mocks.cancelAnimationFrame).toHaveBeenCalledWith(1);
+    expect(mocks.chartRemove).toHaveBeenCalled();
+  });
+
   it("coalesces zoom-range changes and reprojects structure on the next animation frame", async () => {
     const structure = {
       cbarCount: 1,
