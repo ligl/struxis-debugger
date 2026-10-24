@@ -92,7 +92,7 @@ describe("SnapshotReferencePanel", () => {
         liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
         liveSbarIds: ["100"],
         progressApplies: true,
-        processedCount: 6,
+        processedCount: 0,
       },
     });
 
@@ -107,10 +107,10 @@ describe("SnapshotReferencePanel", () => {
     const chartStub = wrapper.get('[data-testid="snapshot-reference-chart-host"]');
     expect(chartStub.attributes("snapshot-playback-enabled")).toBe("true");
     expect(chartStub.attributes("snapshot-playback-offset")).toBe("0");
-    expect(chartStub.attributes("snapshot-processed-count")).toBe("6");
+    expect(chartStub.attributes("snapshot-processed-count")).toBe("0");
 
-    await wrapper.setProps({ processedCount: 7 } as never);
-    expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').attributes("snapshot-processed-count")).toBe("7");
+    await wrapper.setProps({ processedCount: 1 } as never);
+    expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').attributes("snapshot-processed-count")).toBe("1");
     expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').attributes("snapshot-playback-enabled")).toBe("false");
     expect(chart.attributes("data-progress-active")).toBe("false");
   });
