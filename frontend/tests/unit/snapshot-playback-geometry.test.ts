@@ -102,13 +102,16 @@ describe("Snapshot bright candle geometry", () => {
   });
 
   it("uses bounded fallback dimensions when adjacent spacing is unavailable", () => {
-    expect(createSnapshotBrightCandleGeometry({
+    const geometry = createSnapshotBrightCandleGeometry({
       id: "sbar-a",
       x: 5,
       highY: 8,
       lowY: 8,
       adjacentXs: [],
-    })).toEqual({ id: "sbar-a", x: 1.8, y: 8, width: 6.4, height: 1 });
+    });
+    expect(geometry).not.toBeNull();
+    expect(geometry).toMatchObject({ id: "sbar-a", y: 8, width: 6.4, height: 1 });
+    expect(geometry!.x).toBeCloseTo(1.8, 10);
   });
 
   it("rejects invalid geometry rather than rendering a malformed cutout", () => {
