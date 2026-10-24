@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { createSnapshotBrightCandleGeometry, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
+import { createSnapshotBrightCandleGeometry, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
@@ -186,31 +186,16 @@ function updateSyncBoundaryCoordinates(): void {
     return;
   }
 
-  // Domain identity is resolved independently from viewport coordinates.
-  const anchors = resolveSnapshotLiveRangeIndices(request.offset, liveCount, props.bars.length);
-  if (!anchors) {
-    syncBoundaryXs.value = null;
-    return;
-  }
-  const { start: startSnapshotIndex, end: endSnapshotIndex } = anchors;
-
   const timeScale = chart.timeScale();
-  const anchorToX = (snapshotIndex: number): number | null => {
-    const bar = props.bars[snapshotIndex];
-    const byTime = bar ? coordinateForSbarId(bar.sbarId) : null;
-    if (byTime !== null && Number.isFinite(byTime)) return byTime;
-    const byLogical = timeScale.logicalToCoordinate(snapshotIndex);
-    return byLogical !== null && byLogical !== undefined && Number.isFinite(byLogical)
-      ? byLogical
-      : null;
-  };
-
   // Re-project the same domain anchors after every zoom, pan, or resize.
-  // If an anchor leaves the viewport, its coordinate leaves the plot too;
-  // never clamp it to the viewport or substitute a currently visible candle.
-  const start = anchorToX(startSnapshotIndex);
-  const end = anchorToX(endSnapshotIndex);
-  syncBoundaryXs.value = start === null || end === null ? null : { start, end };
+  // Coordinate projection never clamps an anchor to the visible viewport.
+  syncBoundaryXs.value = resolveSnapshotLiveRangeCoordinates({
+    offset: request.offset,
+    liveCount,
+    barIds: props.bars.map((bar) => bar.sbarId),
+    coordinateForSbarId,
+    logicalToCoordinate: (index) => timeScale.logicalToCoordinate(index),
+  });
 }
 function updateSwingSegments(): void {
   if (!chart || !candleSeries) {
