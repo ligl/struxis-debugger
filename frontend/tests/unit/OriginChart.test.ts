@@ -98,7 +98,7 @@ function installChartMock() {
   return chart;
 }
 
-describe("SBarChartSurface", () => {
+describe("SBarChartSurface and OriginChart adapters", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     chartMocks.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 1 });
@@ -981,6 +981,29 @@ describe("SBarChartSurface", () => {
     await nextTick();
 
     expect(chartMocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 1.5, to: 2.5 });
+    wrapper.unmount();
+  });
+
+  it("resolves a client X coordinate through the chart host origin", () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+      }),
+    ];
+    const wrapper = mount(SBarChartSurface, {
+      props: { bars, originDatasetId: "surface-client-coordinate", structure: null },
+    });
+    const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
+    Object.defineProperty(chartHost, "getBoundingClientRect", {
+      value: () => ({ left: 50 }) as DOMRect,
+    });
+
+    expect(wrapper.vm.getSbarIdAtClientX(250)).toBe("1700000060000000000");
+    expect(wrapper.vm.getSbarIdAtClientX(250, true)).toBe("1700000060000000000");
+
     wrapper.unmount();
   });
 
