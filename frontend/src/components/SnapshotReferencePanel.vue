@@ -12,7 +12,7 @@ const props = defineProps<{
   liveSbarIds?: string[];
   syncRequest?: ReplayChartViewportSync | null;
   isPlaying?: boolean;
-  replayProgress?: number;
+  processedCount?: number;
 }>();
 
 const emit = defineEmits<{
@@ -65,11 +65,6 @@ const syncOffset = computed<number | null>(() => {
   return coversLiveSequence ? first : null;
 });
 const syncEligible = computed(() => syncOffset.value !== null);
-const syncBrightnessFilter = computed(() =>
-  syncEligible.value && props.isPlaying
-    ? "brightness(" + (0.55 + 0.45 * Math.max(0, Math.min(1, props.replayProgress ?? 0))) + ")"
-    : "none",
-);
 
 watch([syncEligible, syncOffset], ([eligible, offset]) => emit("syncEligibility", eligible, offset), { immediate: true });
 
@@ -206,7 +201,7 @@ function handleSelection(event: Event): void {
         <p class="snapshot-reference-unavailable">{{ referenceError }}</p>
         <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
       </div>
-      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-replay-playing': syncEligible && isPlaying }" :style="{ filter: syncBrightnessFilter, transition: 'filter 100ms linear' }" :data-sync-eligible="syncEligible" :data-replay-playing="syncEligible && isPlaying" data-testid="snapshot-reference-chart">
+      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-replay-playing': syncEligible && isPlaying }" :data-sync-eligible="syncEligible" :data-replay-playing="syncEligible && isPlaying" data-testid="snapshot-reference-chart">
         <OriginChart
           :bars="reference.bars"
           :structure="reference.structure"
@@ -216,6 +211,9 @@ function handleSelection(event: Event): void {
           :sync-enabled="syncEligible"
           :sync-request="syncRequest"
           :sync-live-bar-count="liveSbarIds?.length ?? 0"
+          :snapshot-playback-enabled="syncEligible && isPlaying === true"
+          :snapshot-playback-offset="syncOffset"
+          :snapshot-processed-count="processedCount ?? 0"
           @viewport-change="emit('viewportChange', $event)"
         />
       </div>
