@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { OriginObjectSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
   bars: SBarDto[];
@@ -25,6 +25,7 @@ const props = defineProps<{
   displayContext?: "origin" | "snapshot-reference";
   syncEnabled?: boolean;
   syncRequest?: ReplayChartViewportSync | null;
+  crosshairSync?: ReplayChartCrosshairSync | null;
   syncLiveBarCount?: number;
   snapshotPlaybackEnabled?: boolean;
   snapshotPlaybackOffset?: number | null;
@@ -38,6 +39,7 @@ const emit = defineEmits<{
   selectionError: [message: string];
   cancelRangeSelection: [];
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
+  crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const structureOverlayWidth = ref(0);
@@ -568,7 +570,28 @@ function stopBoundaryDrag(): void {
   window.removeEventListener("pointercancel", stopBoundaryDrag);
 }
 
+let applyingSyncedCrosshair = false;
+
+function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
+  if (props.displayContext !== "snapshot-reference" || !props.syncEnabled || applyingSyncedCrosshair) return;
+  const point = param.point;
+  if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    emit("crosshairChange", { source: "reference", sbarId: null, price: null });
+    return;
+  }
+  const logical = chart.timeScale().coordinateToLogical(point.x);
+  const index = logical === null || logical === undefined || !Number.isFinite(logical) ? -1 : Math.round(logical);
+  const bar = props.bars[index];
+  const price = candleSeries.coordinateToPrice(point.y);
+  emit("crosshairChange", {
+    source: "reference",
+    sbarId: bar?.sbarId ?? null,
+    price: price !== null && price !== undefined && Number.isFinite(price) ? price : null,
+  });
+}
+
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
+  publishCrosshair(param);
   const x = param.point?.x;
   if (typeof x === "number" && chart) {
     const logical = chart.timeScale().coordinateToLogical(x);
@@ -842,6 +865,50 @@ function updateSnapshotCandleDimming(): void {
   snapshotBrightCandles.value = overlays;
 }
 
+function applyCrosshairOptions(): void {
+  if (!chart) return;
+  const visible = props.displayContext !== "snapshot-reference" || props.syncEnabled === true;
+  chart.applyOptions({
+    crosshair: {
+      mode: visible ? CrosshairMode.Normal : CrosshairMode.Hidden,
+      vertLine: {
+        visible,
+        color: "#89949d",
+        labelBackgroundColor: "#30383f",
+      },
+      horzLine: {
+        visible,
+        color: "#89949d",
+        labelBackgroundColor: "#30383f",
+      },
+    },
+  });
+}
+
+function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
+  if (!chart || !candleSeries || props.displayContext !== "snapshot-reference" || !props.syncEnabled || !sync || sync.source === "reference") return;
+  if (!sync.sbarId) {
+    applyingSyncedCrosshair = true;
+    chart.clearCrosshairPosition?.();
+    queueMicrotask(() => { applyingSyncedCrosshair = false; });
+    return;
+  }
+  const index = indexBySbarId.get(sync.sbarId);
+  const bar = index === undefined ? undefined : props.bars[index];
+  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
+  if (!bar || time === undefined) {
+    chart.clearCrosshairPosition?.();
+    return;
+  }
+  applyingSyncedCrosshair = true;
+  chart.setCrosshairPosition?.(
+    sync.price !== null && Number.isFinite(sync.price) ? sync.price : Number(bar.close),
+    time,
+    candleSeries,
+  );
+  queueMicrotask(() => { applyingSyncedCrosshair = false; });
+}
+
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
@@ -912,16 +979,14 @@ onMounted(() => {
       rightOffset: 4,
     },
     crosshair: {
-      // Snapshot Reference is a static comparison surface: clicking it must not
-      // leave a crosshair line behind. Chart click/object selection remains active.
-      mode: props.displayContext === "snapshot-reference" ? CrosshairMode.Hidden : CrosshairMode.Normal,
+      mode: props.displayContext === "snapshot-reference" && !props.syncEnabled ? CrosshairMode.Hidden : CrosshairMode.Normal,
       vertLine: {
-        visible: props.displayContext !== "snapshot-reference",
+        visible: props.displayContext !== "snapshot-reference" || props.syncEnabled === true,
         color: "#89949d",
         labelBackgroundColor: "#30383f",
       },
       horzLine: {
-        visible: props.displayContext !== "snapshot-reference",
+        visible: props.displayContext !== "snapshot-reference" || props.syncEnabled === true,
         color: "#89949d",
         labelBackgroundColor: "#30383f",
       },
@@ -962,11 +1027,11 @@ onMounted(() => {
   suppressSyncEmit = true;
   updateChart();
   // Snapshot Reference can mount after Live Replay has already published its
-  // current viewport. Its prop watcher is not immediate, so apply that
-  // existing request after the SBar-ID index has been built and initial fit
-  // has completed; otherwise the two charts remain on independent ranges
-  // until the next Live viewport event.
+  // current viewport. Apply the latest viewport and crosshair after the
+  // SBar-ID index has been built and initial fit has completed.
+  applyCrosshairOptions();
   applySyncRequest(props.syncRequest);
+  applyCrosshairSync(props.crosshairSync);
   queueMicrotask(() => { suppressSyncEmit = false; });
 });
 
@@ -982,6 +1047,21 @@ watch(() => props.structure, () => {
   updateSbarCoordinates();
   updateHoveredObject(undefined);
 }, { deep: true });
+watch(() => props.crosshairSync, (sync) => {
+  if (!props.syncEnabled || !sync) {
+    chart?.clearCrosshairPosition?.();
+    return;
+  }
+  applyCrosshairSync(sync);
+}, { deep: true });
+watch(() => props.syncEnabled, (enabled) => {
+  applyCrosshairOptions();
+  if (!enabled) {
+    applyingSyncedCrosshair = true;
+    chart?.clearCrosshairPosition?.();
+    queueMicrotask(() => { applyingSyncedCrosshair = false; });
+  }
+});
 watch(() => props.syncRequest, (request) => {
   applySyncRequest(request);
   // The source chart already scheduled its own overlay refresh from the native
