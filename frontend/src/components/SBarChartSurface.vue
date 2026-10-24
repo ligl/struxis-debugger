@@ -11,6 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
+import { createSbarChartIndex } from "../sbar-chart-index";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
@@ -849,14 +850,10 @@ function updateChart(): void {
     const projection = mapOriginBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
-    sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
-    indexBySbarId = new Map(sbarIdByLogicalIndex.map((sbarId, index) => [sbarId, index] as const));
-    timeBySbarId = new Map(
-      props.bars.flatMap((bar, index) => {
-        const time = projection.candles[index]?.time;
-        return time === undefined ? [] : [[bar.sbarId, time] as const];
-      }),
-    );
+    const sbarIndex = createSbarChartIndex(props.bars, projection.candles.map((candle) => candle.time));
+    sbarIdByLogicalIndex = sbarIndex.sbarIdByLogicalIndex;
+    indexBySbarId = sbarIndex.indexBySbarId;
+    timeBySbarId = sbarIndex.timeBySbarId;
     firstSbarTime = projection.candles[0]?.time ?? null;
     secondSbarTime = projection.candles[1]?.time ?? null;
     chartError.value = "";
