@@ -11,6 +11,9 @@ const chartMocks = vi.hoisted(() => ({
   candleApplyOptions: vi.fn(),
   volumeApplyOptions: vi.fn(),
   priceToCoordinate: vi.fn(),
+  coordinateToPrice: vi.fn(),
+  setCrosshairPosition: vi.fn(),
+  clearCrosshairPosition: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
   setVisibleLogicalRange: vi.fn(),
@@ -67,7 +70,7 @@ function installResizeObserverMock() {
 function installChartMock() {
   const chart = {
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: chartMocks.candleSetData, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate })
+      .mockReturnValueOnce({ setData: chartMocks.candleSetData, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate, coordinateToPrice: chartMocks.coordinateToPrice })
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData, applyOptions: chartMocks.volumeApplyOptions }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
@@ -85,6 +88,8 @@ function installChartMock() {
     unsubscribeClick: chartMocks.unsubscribeClick,
     subscribeCrosshairMove: chartMocks.subscribeCrosshairMove,
     unsubscribeCrosshairMove: chartMocks.unsubscribeCrosshairMove,
+    setCrosshairPosition: chartMocks.setCrosshairPosition,
+    clearCrosshairPosition: chartMocks.clearCrosshairPosition,
     applyOptions: chartMocks.applyChartOptions,
     remove: chartMocks.chartRemove,
   };
@@ -428,6 +433,36 @@ describe("OriginChart", () => {
     expect(chartOptions.crosshair?.mode).toBe(2);
     expect(chartOptions.crosshair?.vertLine?.visible).toBe(false);
     expect(chartOptions.crosshair?.horzLine?.visible).toBe(false);
+  });
+
+  it("shows the crosshair in Snapshot Reference only while synchronization is eligible", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "snapshot-reference-crosshair-sync",
+        structure: null,
+        displayContext: "snapshot-reference",
+        syncEnabled: true,
+      },
+    });
+    await nextTick();
+
+    const initialOptions = chartMocks.createChart.mock.calls[0]?.[1] as {
+      crosshair?: { mode?: number; vertLine?: { visible?: boolean }; horzLine?: { visible?: boolean } };
+    };
+    expect(initialOptions.crosshair?.mode).toBe(0);
+    expect(initialOptions.crosshair?.vertLine?.visible).toBe(true);
+    expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
+
+    await wrapper.setProps({ syncEnabled: false });
+    await nextTick();
+    expect(chartMocks.applyChartOptions).toHaveBeenCalledWith(expect.objectContaining({
+      crosshair: expect.objectContaining({
+        mode: 2,
+        vertLine: expect.objectContaining({ visible: false }),
+        horzLine: expect.objectContaining({ visible: false }),
+      }),
+    }));
   });
 
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
