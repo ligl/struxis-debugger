@@ -5,7 +5,7 @@ import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex } from "../sbar-chart-index";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
+import { resolveReplayCrosshairAnchor } from "../replay-chart-sync";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
