@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hitTestStructureObject } from "../../src/sbar-chart-structure-hit-test";
-import type { SwingSegmentGeometry } from "../../src/sbar-chart-structure-geometry";
+import type { CBarRectangleGeometry, SwingSegmentGeometry } from "../../src/sbar-chart-structure-geometry";
 
 const swings: SwingSegmentGeometry[] = [
   { id: "swing-2", x1: 10, y1: 10, x2: 90, y2: 90, state: "Confirmed" },
