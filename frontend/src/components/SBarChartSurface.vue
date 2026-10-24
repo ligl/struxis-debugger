@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
@@ -17,10 +16,6 @@ const props = defineProps<{
   selectionPending?: boolean;
   selectionEditable?: boolean;
   displayContext?: "origin" | "snapshot-reference";
-  snapshotLiveBarCount?: number;
-  snapshotPlaybackEnabled?: boolean;
-  snapshotPlaybackOffset?: number | null;
-  snapshotProcessedCount?: number;
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -31,6 +26,7 @@ const emit = defineEmits<{
   cancelRangeSelection: [];
   logicalRangeChange: [range: { from: number; to: number }];
   crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
+  projectionFrame: [];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const structureOverlayWidth = ref(0);
@@ -65,8 +61,6 @@ const swingSegments = ref<SwingSegment[]>([]);
 const hoveredObject = ref<OriginObjectSelection | null>(null);
 const hoveredSbarMarker = ref<SBarMarker | null>(null);
 const selectedSbarMarker = ref<SBarMarker | null>(null);
-const syncBoundaryXs = ref<{ start: number; end: number } | null>(null);
-const snapshotBrightCandles = ref<SnapshotBrightCandleGeometry[]>([]);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -86,6 +80,21 @@ function coordinateForSbarId(sbarId: string | null | undefined): number | null {
   if (!chart || !sbarId) return null;
   const time = timeBySbarId.get(sbarId);
   return time === undefined ? null : chart.timeScale().timeToCoordinate(time);
+}
+
+function getSbarCoordinate(sbarId: string): number | null {
+  const value = coordinateForSbarId(sbarId);
+  return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
+}
+
+function getLogicalCoordinate(index: number): number | null {
+  const value = chart?.timeScale().logicalToCoordinate(index);
+  return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
+}
+
+function getPriceCoordinate(price: number): number | null {
+  const value = candleSeries?.priceToCoordinate(price);
+  return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
 }
 
 function updateCBarRectangles(): void {
@@ -131,6 +140,7 @@ function scheduleOverlayUpdate(): void {
   overlayUpdateFrame = requestAnimationFrame(() => {
     overlayUpdateFrame = null;
     updateSbarCoordinates();
+    emit("projectionFrame");
     const latest = pendingViewportRange;
     pendingViewportRange = null;
     if (latest && chart) {
@@ -156,32 +166,11 @@ function updateSbarCoordinates(): void {
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
   selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
   selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
-  updateSyncBoundaryCoordinates();
-  updateSnapshotCandleDimming();
   updateCBarRectangles();
   updateSwingSegments();
   updateSbarMarkers();
 }
 
-function updateSyncBoundaryCoordinates(): void {
-  const offset = props.snapshotPlaybackOffset;
-  const liveCount = props.snapshotLiveBarCount ?? 0;
-  if (!chart || props.displayContext !== "snapshot-reference" || offset === null || offset === undefined || liveCount <= 0) {
-    syncBoundaryXs.value = null;
-    return;
-  }
-
-  const timeScale = chart.timeScale();
-  // Re-project the same domain anchors after every zoom, pan, or resize.
-  // Coordinate projection never clamps an anchor to the visible viewport.
-  syncBoundaryXs.value = resolveSnapshotLiveRangeCoordinates({
-    offset,
-    liveCount,
-    barIds: sbarIdByLogicalIndex,
-    coordinateForSbarId,
-    logicalToCoordinate: (index) => timeScale.logicalToCoordinate(index),
-  });
-}
 function updateSwingSegments(): void {
   if (!chart || !candleSeries) {
     swingSegments.value = [];
@@ -728,44 +717,6 @@ function fitContentShortcut(): boolean {
 }
 
 
-/**
- * Shade only unprocessed candles inside the Live/Snapshot overlap. This is an
- * SVG presentation overlay: the Snapshot candle series and OHLC data are never
- * re-submitted or rebuilt when Replay advances.
- */
-function updateSnapshotCandleDimming(): void {
-  const offset = props.snapshotPlaybackOffset;
-  const liveCount = props.snapshotLiveBarCount ?? 0;
-  if (
-    !chart ||
-    !candleSeries ||
-    props.displayContext !== "snapshot-reference" ||
-    props.snapshotPlaybackEnabled !== true ||
-    offset === null ||
-    offset === undefined ||
-    liveCount <= 0
-  ) {
-    snapshotBrightCandles.value = [];
-    return;
-  }
-
-  const timeScale = chart.timeScale();
-  const visible = timeScale.getVisibleLogicalRange();
-  snapshotBrightCandles.value = projectSnapshotBrightCandles({
-    offset,
-    liveCount,
-    processedCount: props.snapshotProcessedCount ?? 0,
-    bars: props.bars,
-    visibleFrom: visible && Number.isFinite(visible.from) ? visible.from - 1 : Number.NEGATIVE_INFINITY,
-    visibleTo: visible && Number.isFinite(visible.to) ? visible.to + 1 : Number.POSITIVE_INFINITY,
-    coordinateForSbarId: (sbarId) => {
-      const time = timeBySbarId.get(sbarId);
-      return time === undefined ? null : timeScale.timeToCoordinate(time);
-    },
-    priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
-  });
-}
-
 function applyCrosshairOptions(): void {
   if (!chart) return;
   // Crosshair rendering is always local to this chart. Sync eligibility only
@@ -853,7 +804,7 @@ function clearCrosshairPosition(): void {
   chart?.clearCrosshairPosition?.();
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition });
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
@@ -893,11 +844,6 @@ watch(() => props.structure, () => {
   updateSbarCoordinates();
   updateHoveredObject(undefined);
 }, { deep: true });
-watch(
-  () => [props.snapshotPlaybackEnabled, props.snapshotPlaybackOffset, props.snapshotProcessedCount, props.snapshotLiveBarCount] as const,
-  updateSnapshotCandleDimming,
-);
-watch(() => [props.snapshotPlaybackOffset, props.snapshotLiveBarCount] as const, updateSbarCoordinates);
 watch(() => props.selectedObject, () => {
   updateSbarMarkers();
   revealSelectedObject();
@@ -932,13 +878,11 @@ onBeforeUnmount(() => {
   chart = null;
   candleSeries = null;
   volumeSeries = null;
-  snapshotBrightCandles.value = [];
   cbarRectangles.value = [];
   swingSegments.value = [];
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
   selectedSbarMarker.value = null;
-  syncBoundaryXs.value = null;
   sbarIdByLogicalIndex = [];
   indexBySbarId = new Map();
   timeBySbarId = new Map();
@@ -1003,14 +947,7 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
-        <slot
-          name="snapshot-overlays"
-          :enabled="props.snapshotPlaybackEnabled === true && props.snapshotPlaybackOffset !== null && props.snapshotPlaybackOffset !== undefined"
-          :bright-candles="snapshotBrightCandles"
-          :cbar-rectangles="cbarRectangles"
-          :swing-segments="swingSegments"
-          :boundaries="syncBoundaryXs"
-        />
+        <slot name="snapshot-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
         <rect
           v-if="hoveredSbarMarker"
           class="origin-object-hover-sbar"
