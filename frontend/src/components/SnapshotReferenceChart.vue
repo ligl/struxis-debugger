@@ -213,7 +213,7 @@ onMounted(() => {
     @projection-frame="refreshSnapshotGeometry"
     @crosshair-anchor-change="handleCrosshairChange"
   >
-    <template #snapshot-overlays="{ cbarRectangles, swingSegments }">
+    <template #chart-structure-overlays="{ cbarRectangles, swingSegments }">
       <SnapshotPlaybackOverlay
         :enabled="playbackOverlayEnabled"
         :bright-candles="brightCandles"
