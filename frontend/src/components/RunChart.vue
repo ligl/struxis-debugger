@@ -636,6 +636,8 @@ function updateChart(): void {
       selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
+      cbarPrimitive?.setData([], { timeBySbarId, indexBySbarId });
+      swingPrimitive?.setData([], { timeBySbarId, indexBySbarId });
       targetSbarX.value = null;
       chartError.value = "";
       return;
