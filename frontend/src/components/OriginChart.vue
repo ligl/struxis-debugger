@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import SBarChartSurface from "./SBarChartSurface.vue";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
@@ -140,9 +140,10 @@ function stopBoundaryDrag(): void {
 watch(
   () => [props.bars, props.selectionStartSbarId, props.selectionEndSbarId, props.selectionPending] as const,
   updateSelectionCoordinates,
-  { deep: false, immediate: true },
+  { deep: false, immediate: true, flush: "post" },
 );
 
+onMounted(updateSelectionCoordinates);
 onBeforeUnmount(stopBoundaryDrag);
 </script>
 
