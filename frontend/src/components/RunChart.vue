@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
+import { registerCBarPrimitive, registerSwingPrimitive, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
@@ -90,6 +91,8 @@ let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let primitiveHost: ChartPrimitiveHost | null = null;
+let cbarPrimitive: StructurePrimitiveController | null = null;
+let swingPrimitive: StructurePrimitiveController | null = null;
 let stopObservingResize: (() => void) | null = null;
 
 let fittedTestDatasetId: string | null = null;
@@ -361,6 +364,11 @@ function updateStructureOverlays(): void {
       return { ...segment, color: style.color, dasharray: style.dasharray };
     })
     : [];
+  const primitiveProjection = { timeBySbarId, indexBySbarId };
+  cbarPrimitive?.setData(structure?.cbars ?? [], primitiveProjection);
+  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
+  swingPrimitive?.setData(structure?.swings ?? [], primitiveProjection);
+  swingPrimitive?.setVisible(layerVisibility.value.swing);
   const targetTime = props.targetSbarId ? timeBySbarId.get(props.targetSbarId) : undefined;
   const targetX = targetTime === undefined ? null : timeScale.timeToCoordinate(targetTime);
   targetSbarX.value = targetX !== null && targetX !== undefined && Number.isFinite(targetX)
@@ -874,6 +882,8 @@ onBeforeUnmount(() => {
   crosshairSyncGate.clear();
   primitiveHost?.dispose();
   primitiveHost = null;
+  cbarPrimitive = null;
+  swingPrimitive = null;
   chart?.remove();
   chart = null;
   candleSeries = null;
