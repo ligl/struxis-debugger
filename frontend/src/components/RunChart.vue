@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
-import { mapOriginBarsToChart } from "../origin-chart-data";
+import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
@@ -41,7 +41,7 @@ const hoveredObject = ref<ReplayChartSelection | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
-let cachedProjection: ReturnType<typeof mapOriginBarsToChart> | null = null;
+let cachedProjection: ReturnType<typeof mapSBarsToChart> | null = null;
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -616,7 +616,7 @@ function updateChart(): void {
       chartError.value = "";
       return;
     }
-    const projection = mapOriginBarsToChart(bars.value);
+    const projection = mapSBarsToChart(bars.value);
     cachedProjection = projection;
     const processedCount = replayProgressApplies.value
       ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
