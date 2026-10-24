@@ -61,7 +61,7 @@ function createHarness() {
     ]),
     indexBySbarId: new Map<string, number>([["s1", 0], ["s2", 1], ["s3", 2]]),
   };
-  return { host, series, attached, projection, context, target };
+  return { host, series, attached, projection, context, target, times };
 }
 
 describe("CBar and Swing Series Primitives", () => {
@@ -82,6 +82,21 @@ describe("CBar and Swing Series Primitives", () => {
     expect(renderer).not.toBeNull();
     renderer!.draw(h.target as never);
     expect(h.context.strokeRect).toHaveBeenCalledWith(10, 80, 20, 10);
+
+    // Replacing the authoritative snapshot with a revised object of the same
+    // stable ID must reproject its new anchors/prices, not append or retain old geometry.
+    h.context.strokeRect.mockClear();
+    h.times.set("2026-01-02", 40);
+    controller.setData([{
+      cbarId: "cbar-1",
+      sbarStartId: "s1",
+      sbarEndId: "s2",
+      high: "30",
+      low: "10",
+    }], h.projection);
+    primitive.updateAllViews?.();
+    view?.renderer()?.draw(h.target as never);
+    expect(h.context.strokeRect).toHaveBeenCalledWith(10, 70, 30, 20);
 
     controller.setData([], h.projection);
     primitive.updateAllViews?.();
