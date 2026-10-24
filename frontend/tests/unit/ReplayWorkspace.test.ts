@@ -30,7 +30,7 @@ describe("ReplayWorkspace", () => {
           origin: { originDatasetId: "origin-1", bars: [{ sbarId: "1" }, { sbarId: "2" }, { sbarId: "3" }, { sbarId: "4" }] },
           testDataset: { testDatasetId: "test-1", originDatasetId: "origin-1", instrumentId: "AUD/USD.SIM", barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", startSbarId: "1", endSbarId: "4", sbarCount: 4 },
           runState: { runId: "run-1", testDatasetId: "test-1", inputCount: 8, processedCount: 2, status: "paused" },
-          playbackStatus: "playing",
+          playbackStatus: "paused",
         };
       },
       template: '<ReplayWorkspace :active="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :playback-status="playbackStatus" :structure="null" :selected-object="null" :snapshots="[]" />',
