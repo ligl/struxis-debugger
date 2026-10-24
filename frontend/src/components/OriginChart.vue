@@ -999,7 +999,17 @@ watch(() => props.syncRequest, (request) => {
   // range callback. Only the receiving chart needs this extra projection.
   if (request?.source !== "reference") scheduleOverlayUpdate();
 }, { deep: true });
-watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, updateSbarCoordinates);
+watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, ([enabled]) => {
+  if (!enabled) {
+    // Eligibility loss is a hard boundary: no queued Snapshot viewport may
+    // leak back to Live, and no old echo guard may affect local navigation.
+    pendingViewportRange = null;
+    expectedSyncedRange = null;
+    suppressSyncEmit = false;
+    syncBoundaryXs.value = null;
+  }
+  updateSbarCoordinates();
+});
 watch(
   () => [props.snapshotPlaybackEnabled, props.snapshotPlaybackOffset, props.snapshotProcessedCount, props.syncLiveBarCount, props.syncEnabled] as const,
   updateSnapshotCandleDimming,
