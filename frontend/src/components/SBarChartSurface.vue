@@ -59,7 +59,6 @@ const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 const hoveredObject = ref<OriginObjectSelection | null>(null);
 const hoveredSbarMarker = ref<SBarMarker | null>(null);
-const selectedSbarMarker = ref<SBarMarker | null>(null);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -250,10 +249,6 @@ function markerForSbar(sbarId: string | null | undefined): SBarMarker | null {
 }
 
 function updateSbarMarkers(): void {
-  const selected = props.selectedObject;
-  selectedSbarMarker.value = selected?.kind === "sbar" && selected.originDatasetId === props.originDatasetId
-    ? markerForSbar(selected.id)
-    : null;
   hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar" &&
     hoveredObject.value.originDatasetId === props.originDatasetId
     ? markerForSbar(hoveredObject.value.id)
@@ -721,7 +716,7 @@ function clearCrosshairPosition(): void {
   chart?.clearCrosshairPosition?.();
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId });
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
@@ -792,7 +787,6 @@ onBeforeUnmount(() => {
   swingSegments.value = [];
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
-  selectedSbarMarker.value = null;
   sbarIdByLogicalIndex = [];
   indexBySbarId = new Map();
   timeBySbarId = new Map();
@@ -860,16 +854,6 @@ onBeforeUnmount(() => {
           data-testid="origin-hover-sbar"
           :data-sbar-id="hoveredSbarMarker.id"
         />
-        <rect
-          v-if="selectedSbarMarker"
-          class="origin-object-selected-sbar"
-          :x="selectedSbarMarker.x"
-          :y="selectedSbarMarker.y"
-          :width="selectedSbarMarker.width"
-          :height="selectedSbarMarker.height"
-          data-testid="origin-selected-sbar"
-          :data-sbar-id="selectedSbarMarker.id"
-        />
         <line
           v-for="segment in swingSegments"
           :key="segment.id"
@@ -898,19 +882,6 @@ onBeforeUnmount(() => {
           data-testid="origin-hover-swing"
           :data-swing-id="segment.id"
         />
-        <line
-          v-for="segment in swingSegments.filter((item) => props.selectedObject?.kind === 'swing' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
-          :key="`selected-${segment.id}`"
-          :x1="segment.x1"
-          :y1="segment.y1"
-          :x2="segment.x2"
-          :y2="segment.y2"
-          stroke="#D99A45"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          data-testid="origin-selected-swing"
-          :data-swing-id="segment.id"
-        />
         <rect
           v-for="rectangle in cbarRectangles"
           :key="rectangle.id"
@@ -935,19 +906,6 @@ onBeforeUnmount(() => {
           stroke="#C3CBD1"
           stroke-width="1.75"
           data-testid="origin-hover-cbar"
-          :data-cbar-id="rectangle.id"
-        />
-        <rect
-          v-for="rectangle in cbarRectangles.filter((item) => props.selectedObject?.kind === 'cbar' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
-          :key="`selected-${rectangle.id}`"
-          :x="rectangle.x"
-          :y="rectangle.y"
-          :width="rectangle.width"
-          :height="rectangle.height"
-          fill="none"
-          stroke="#D99A45"
-          stroke-width="2"
-          data-testid="origin-selected-cbar"
           :data-cbar-id="rectangle.id"
         />
 
