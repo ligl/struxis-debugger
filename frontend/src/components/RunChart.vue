@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
@@ -409,26 +409,20 @@ function handleVisibleRangeChange(): void {
 }
 
 function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
-  if (!chart || !candleSeries || !props.syncEnabled || !sync || sync.source === "live") return;
-  if (!sync.sbarId || sync.price === null || !Number.isFinite(sync.price)) {
+  if (!chart || !candleSeries || !props.syncEnabled) return;
+  const command = resolveReplayCrosshairCommand(sync, bars.value, timeBySbarId, "live");
+  if (command.kind === "ignore") return;
+  if (command.kind === "clear") {
     crosshairSyncGate.setPeerPositionActive(false);
     crosshairSyncGate.beginApply();
     chart.clearCrosshairPosition?.();
     return;
   }
-  const bar = bars.value.find((item) => item.sbarId === sync.sbarId);
-  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
-  if (!bar || time === undefined) {
-    crosshairSyncGate.setPeerPositionActive(false);
-    crosshairSyncGate.beginApply();
-    chart.clearCrosshairPosition?.();
-    return;
-  }
+
   crosshairSyncGate.setPeerPositionActive(true);
   crosshairSyncGate.beginApply();
-  chart.setCrosshairPosition?.(sync.price, time, candleSeries);
+  chart.setCrosshairPosition?.(command.price, command.time, candleSeries);
 }
-
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
   if (!request || request.source === "live" || !props.syncEnabled || !chart) return;
   const current = chart.timeScale().getVisibleLogicalRange();
