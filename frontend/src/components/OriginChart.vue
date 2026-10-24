@@ -1064,7 +1064,10 @@ watch(() => props.crosshairSync, (sync) => {
 }, { deep: true });
 watch(() => props.syncEnabled, (enabled) => {
   applyCrosshairOptions();
-  if (!enabled && hasSyncedCrosshair) {
+  if (!enabled && props.displayContext === "snapshot-reference") {
+    // Snapshot Reference has no independent visible crosshair while ineligible.
+    // Clear even a locally positioned crosshair so it cannot reappear stale
+    // if eligibility returns before the pointer moves again.
     hasSyncedCrosshair = false;
     applyingSyncedCrosshair = true;
     chart?.clearCrosshairPosition?.();
