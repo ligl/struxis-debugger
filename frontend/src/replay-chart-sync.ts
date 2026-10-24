@@ -109,23 +109,6 @@ export class ReplayCrosshairSyncGate {
   }
 }
 
-export interface ReplayCrosshairAnchor {
-  index: number;
-  sbarId: string;
-}
-
-/** Resolve a chart's fractional logical coordinate to an exact SBar identity. */
-export function resolveReplayCrosshairAnchor(
-  bars: readonly { sbarId: string }[],
-  logical: number | null | undefined,
-): ReplayCrosshairAnchor | null {
-  if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
-  const index = Math.round(logical);
-  if (index < 0 || index >= bars.length) return null;
-  const sbarId = bars[index]?.sbarId;
-  return sbarId ? { index, sbarId } : null;
-}
-
 export type ReplayCrosshairCommand<TTime> =
   | { kind: "ignore" }
   | { kind: "clear" }
