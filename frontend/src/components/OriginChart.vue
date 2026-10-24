@@ -122,7 +122,7 @@ function stopBoundaryDrag(): void {
 }
 
 watch(
-  () => [props.bars, props.selectionStartSbarId, props.selectionEndSbarId, props.selectionPending] as const,
+  () => [props.bars, props.originDatasetId, props.selectionStartSbarId, props.selectionEndSbarId, props.selectionPending] as const,
   updateSelectionCoordinates,
   { deep: false, immediate: true, flush: "post" },
 );
