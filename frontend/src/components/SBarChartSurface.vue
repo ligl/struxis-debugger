@@ -6,8 +6,6 @@ import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex } from "../sbar-chart-index";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
-import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
-import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
@@ -1073,14 +1071,14 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
-        <SnapshotPlaybackOverlay
+        <slot
+          name="snapshot-overlays"
           :enabled="props.snapshotPlaybackEnabled === true && props.syncEnabled === true"
           :bright-candles="snapshotBrightCandles"
           :cbar-rectangles="cbarRectangles"
           :swing-segments="swingSegments"
+          :boundaries="syncBoundaryXs"
         />
-
-        <SnapshotLiveRangeMarkers :boundaries="syncBoundaryXs" />
         <rect
           v-if="hoveredSbarMarker"
           class="origin-object-hover-sbar"
