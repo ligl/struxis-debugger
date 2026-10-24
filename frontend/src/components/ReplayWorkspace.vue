@@ -71,7 +71,7 @@ watch(
   () => [
     props.testDataset?.testDatasetId,
     props.testDataset?.barType,
-    liveBars.value.map((bar) => bar.sbarId).join("\\u0000"),
+    JSON.stringify(liveBars.value.map((bar) => bar.sbarId)),
   ] as const,
   () => {
     // Re-evaluate qualification from the new Live identity, but never carry a
