@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSameLogicalRange, ReplayCrosshairSyncGate, ReplayViewportSyncGate, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../../src/replay-chart-sync";
+import { isSameLogicalRange, ReplayCrosshairSyncGate, ReplayViewportSyncGate, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../../src/replay-chart-sync";
 
 describe("Replay chart viewport protocol", () => {
   it("translates Live ranges into Snapshot logical coordinates by adding Offset", () => {
@@ -92,6 +92,38 @@ describe("Replay Crosshair sync gate", () => {
     await Promise.resolve();
     expect(gate.isApplying).toBe(false);
     expect(gate.hasPeerPosition).toBe(false);
+  });
+});
+
+describe("Replay Crosshair command resolution", () => {
+  const bars = [{ sbarId: "sbar-a" }, { sbarId: "sbar-b" }];
+  const times = new Map([["sbar-a", 100], ["sbar-b", 200]]);
+
+  it("ignores missing messages and messages originating from Snapshot Reference", () => {
+    expect(resolveReplayCrosshairCommand(null, bars, times)).toEqual({ kind: "ignore" });
+    expect(resolveReplayCrosshairCommand({
+      source: "reference", sbarId: "sbar-a", price: 12,
+    }, bars, times)).toEqual({ kind: "ignore" });
+  });
+
+  it("clears stale peer positions when the incoming position is invalid or unmappable", () => {
+    expect(resolveReplayCrosshairCommand({
+      source: "live", sbarId: null, price: 12,
+    }, bars, times)).toEqual({ kind: "clear" });
+    expect(resolveReplayCrosshairCommand({
+      source: "live", sbarId: "sbar-a", price: Number.NaN,
+    }, bars, times)).toEqual({ kind: "clear" });
+    expect(resolveReplayCrosshairCommand({
+      source: "live", sbarId: "missing", price: 12,
+    }, bars, times)).toEqual({ kind: "clear" });
+  });
+
+  it("resolves a valid peer message to an exact SBar time and price", () => {
+    expect(resolveReplayCrosshairCommand({
+      source: "live", sbarId: "sbar-b", price: 18.5,
+    }, bars, times)).toEqual({
+      kind: "position", sbarId: "sbar-b", price: 18.5, time: 200,
+    });
   });
 });
 
