@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -583,8 +583,8 @@ function publishCrosshair(param: { point?: { x: number; y: number } | undefined 
     return;
   }
   const logical = chart.timeScale().coordinateToLogical(point.x);
-  const index = logical === null || logical === undefined || !Number.isFinite(logical) ? -1 : Math.round(logical);
-  const bar = props.bars[index];
+  const anchor = resolveReplayCrosshairAnchor(props.bars, logical);
+  const bar = anchor ? props.bars[anchor.index] : undefined;
   const price = candleSeries.coordinateToPrice(point.y);
   emit("crosshairChange", {
     source: "reference",
@@ -598,10 +598,8 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
   const x = param.point?.x;
   if (typeof x === "number" && chart) {
     const logical = chart.timeScale().coordinateToLogical(x);
-    if (logical !== null && logical !== undefined && Number.isFinite(logical)) {
-      const index = Math.round(logical);
-      if (index >= 0 && index < props.bars.length) crosshairLogicalIndex = index;
-    }
+    const anchor = resolveReplayCrosshairAnchor(props.bars, logical);
+    if (anchor) crosshairLogicalIndex = anchor.index;
   }
   updateHoveredObject(param.point);
   if (!props.selectionPending || selectionStartX.value === null) {
