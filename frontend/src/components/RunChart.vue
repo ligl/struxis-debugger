@@ -44,6 +44,7 @@ const hoveredObject = ref<ReplayChartSelection | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
+let indexBySbarId: ReadonlyMap<string, number> = new Map();
 let cachedProjection: ReturnType<typeof mapSBarsToChart> | null = null;
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
@@ -327,9 +328,15 @@ function updateStructureOverlays(): void {
       selectedSbarMarker.value = { id: selected.id, x: selectedX - 6, y: Math.min(selectedHigh, selectedLow), width: 12, height: Math.max(4, Math.abs(selectedLow - selectedHigh)) };
     } else selectedSbarMarker.value = null;
   } else selectedSbarMarker.value = null;
+  const visibleRange = timeScale.getVisibleLogicalRange?.();
+  const projectionRange = visibleRange && Number.isFinite(visibleRange.from) && Number.isFinite(visibleRange.to)
+    ? { from: visibleRange.from, to: visibleRange.to }
+    : null;
   cbarRectangles.value = layerVisibility.value.cbar
     ? projectCBarRectangles({
       cbars: structure?.cbars ?? [],
+      indexBySbarId,
+      visibleRange: projectionRange,
       coordinateForSbarId: (sbarId) => {
         const time = timeBySbarId.get(sbarId);
         return time === undefined ? null : timeScale.timeToCoordinate(time);
@@ -340,6 +347,8 @@ function updateStructureOverlays(): void {
   swingSegments.value = layerVisibility.value.swing
     ? projectSwingSegments({
       swings: structure?.swings ?? [],
+      indexBySbarId,
+      visibleRange: projectionRange,
       coordinateForSbarId: (sbarId) => {
         const time = timeBySbarId.get(sbarId);
         return time === undefined ? null : timeScale.timeToCoordinate(time);
@@ -602,6 +611,7 @@ function updateChart(): void {
       candleSeries.setData([]);
       volumeSeries.setData([]);
       timeBySbarId = new Map();
+      indexBySbarId = new Map();
       cachedProjection = null;
       lastProcessedCount = null;
       lastRunId = props.runState?.runId ?? null;
@@ -618,10 +628,12 @@ function updateChart(): void {
     const processedCount = replayProgressApplies.value
       ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
       : bars.value.length;
-    timeBySbarId = createSbarChartIndex(
+    const chartIndex = createSbarChartIndex(
       bars.value,
       projection.candles.map((candle) => candle.time),
-    ).timeBySbarId;
+    );
+    timeBySbarId = chartIndex.timeBySbarId;
+    indexBySbarId = chartIndex.indexBySbarId;
     const candles = projection.candles.map((candle, index) => {
       const base = layerVisibility.value.sbar ? candle : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
       if (!replayProgressApplies.value || index < processedCount) return base;
