@@ -99,6 +99,9 @@ let chartClickListener: ((param: { point?: { x: number; y: number } | undefined 
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
 let suppressSyncEmit = false;
+let viewportEmitFrame: number | null = null;
+let pendingViewportRange: { from: number; to: number } | null = null;
+let expectedSyncedRange: { from: number; to: number } | null = null;
 
 function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -383,15 +386,29 @@ function updateHoverMarker(): void {
 
 function handleVisibleRangeChange(): void {
   scheduleOverlayUpdate();
-  if (!props.syncEnabled || suppressSyncEmit || !chart || bars.value.length === 0) return;
+  if (!props.syncEnabled || !chart || bars.value.length === 0) return;
   const range = chart.timeScale().getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
-  // Preserve the complete fractional logical range, including space outside
-  // the first/last candle. Clamping to SBar IDs corrupts the fixed-offset map.
-  emit("viewportChange", {
-    source: "live",
-    from: range.from,
-    to: range.to,
+
+  // Ignore the asynchronous echo of a range applied from Snapshot Reference.
+  // A microtask-only guard can expire before Lightweight Charts publishes it.
+  if (expectedSyncedRange) {
+    const expected = expectedSyncedRange;
+    expectedSyncedRange = null;
+    if (Math.abs(range.from - expected.from) < 0.01 && Math.abs(range.to - expected.to) < 0.01) return;
+  }
+  if (suppressSyncEmit) return;
+
+  // Coalesce high-frequency wheel/pan events; the peer chart receives only the
+  // latest fractional viewport once per frame, instead of redrawing per event.
+  pendingViewportRange = { from: range.from, to: range.to };
+  if (viewportEmitFrame !== null) return;
+  viewportEmitFrame = requestAnimationFrame(() => {
+    viewportEmitFrame = null;
+    const latest = pendingViewportRange;
+    pendingViewportRange = null;
+    if (!latest || !props.syncEnabled || !chart) return;
+    emit("viewportChange", { source: "live", from: latest.from, to: latest.to });
   });
 }
 
@@ -403,6 +420,7 @@ function applySyncRequest(request: ReplayChartViewportSync | null | undefined): 
   const to = request.to - request.offset;
   if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return;
   if (current && Math.abs(current.from - from) < 0.01 && Math.abs(current.to - to) < 0.01) return;
+  expectedSyncedRange = { from, to };
   suppressSyncEmit = true;
   chart.timeScale().setVisibleLogicalRange({ from, to });
   queueMicrotask(() => { suppressSyncEmit = false; });
@@ -786,7 +804,12 @@ watch(() => props.structure, () => {
 watch(() => props.selectedObject, updateStructureOverlays);
 watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
-watch(() => props.syncRequest, applySyncRequest, { deep: true });
+watch(() => props.syncRequest, (request) => {
+  applySyncRequest(request);
+  // The source chart already scheduled its overlay refresh from its own range
+  // callback. Only reproject here when applying the peer chart's viewport.
+  if (request?.source !== "live") scheduleOverlayUpdate();
+}, { deep: true });
 watch([() => props.syncEnabled, () => props.syncOffset], ([enabled]) => {
   if (enabled) handleVisibleRangeChange();
 });
@@ -809,6 +832,12 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(overlayUpdateFrame);
     overlayUpdateFrame = null;
   }
+  if (viewportEmitFrame !== null) {
+    cancelAnimationFrame(viewportEmitFrame);
+    viewportEmitFrame = null;
+  }
+  pendingViewportRange = null;
+  expectedSyncedRange = null;
   chart?.remove();
   chart = null;
   candleSeries = null;
