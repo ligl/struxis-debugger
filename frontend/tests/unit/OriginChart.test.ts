@@ -16,6 +16,7 @@ const chartMocks = vi.hoisted(() => ({
   setVisibleLogicalRange: vi.fn(),
   getVisibleLogicalRange: vi.fn(),
   timeToCoordinate: vi.fn(),
+  logicalToCoordinate: vi.fn(),
   coordinateToLogical: vi.fn(),
   subscribeCrosshairMove: vi.fn(),
   unsubscribeCrosshairMove: vi.fn(),
@@ -75,6 +76,7 @@ function installChartMock() {
       setVisibleLogicalRange: chartMocks.setVisibleLogicalRange,
       getVisibleLogicalRange: chartMocks.getVisibleLogicalRange,
       timeToCoordinate: chartMocks.timeToCoordinate,
+      logicalToCoordinate: chartMocks.logicalToCoordinate,
       coordinateToLogical: chartMocks.coordinateToLogical,
       subscribeVisibleLogicalRangeChange: chartMocks.subscribeVisibleLogicalRangeChange,
       unsubscribeVisibleLogicalRangeChange: chartMocks.unsubscribeVisibleLogicalRangeChange,
@@ -100,6 +102,7 @@ describe("OriginChart", () => {
       if (time === 1700000120) return 300;
       return null;
     });
+    chartMocks.logicalToCoordinate.mockImplementation((logical: number) => 100 + logical * 100);
     chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : 1);
     chartMocks.priceToCoordinate.mockImplementation((price: number) => price === 13 || price === 12 ? 30 : price === 9 ? 70 : null);
     installResizeObserverMock();
@@ -253,6 +256,44 @@ describe("OriginChart", () => {
     await nextTick();
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("keeps Snapshot Live-range guides visible when zoomed between candle centers", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+      }),
+      bar({
+        sbarId: "1700000120000000000",
+        tsEvent: "1700000120000000000",
+        tsInit: "1700000120000000001",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "snapshot-reference-live-range-subcandle-zoom",
+        structure: null,
+        displayContext: "snapshot-reference",
+        syncEnabled: true,
+        syncLiveBarCount: 2,
+        syncRequest: {
+          revision: 1,
+          source: "live",
+          from: 0.2,
+          to: 0.4,
+          offset: 1,
+        },
+      },
+    });
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="snapshot-live-range-start"]').attributes("x1")).toBe("220");
+    expect(wrapper.get('[data-testid="snapshot-live-range-end"]').attributes("x1")).toBe("240");
     wrapper.unmount();
   });
 
