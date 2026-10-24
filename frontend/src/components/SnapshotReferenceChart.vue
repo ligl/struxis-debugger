@@ -46,17 +46,17 @@ const surface = ref<ChartSurfacePort | null>(null);
 const viewportGate = new ReplayViewportSyncGate();
 const crosshairGate = new ReplayCrosshairSyncGate();
 
-function handleViewportChange(change: Omit<ReplayChartViewportSync, "revision" | "offset">): void {
+function handleViewportChange(range: { from: number; to: number }): void {
   if (!props.syncEnabled) return;
-  const observation = viewportGate.observeRange({ from: change.from, to: change.to });
+  const observation = viewportGate.observeRange(range);
   if (observation !== "publish") return;
-  emit("viewportChange", change);
+  emit("viewportChange", { source: "reference", ...range });
 }
 
-function handleCrosshairChange(change: Omit<ReplayChartCrosshairSync, "revision">): void {
+function handleCrosshairChange(anchor: { sbarId: string | null; price: number | null }): void {
   if (!props.syncEnabled || crosshairGate.isApplying) return;
   crosshairGate.setPeerPositionActive(false);
-  emit("crosshairChange", change);
+  emit("crosshairChange", { source: "reference", ...anchor });
 }
 
 function applyViewportRequest(request: ReplayChartViewportSync | null | undefined): void {
@@ -153,8 +153,8 @@ onMounted(() => {
     :snapshot-playback-enabled="playbackEnabled"
     :snapshot-playback-offset="playbackOffset"
     :snapshot-processed-count="processedCount"
-    @viewport-change="handleViewportChange"
-    @crosshair-change="handleCrosshairChange"
+    @logical-range-change="handleViewportChange"
+    @crosshair-anchor-change="handleCrosshairChange"
   >
     <template #snapshot-overlays="{ enabled, brightCandles, cbarRectangles, swingSegments, boundaries }">
       <SnapshotPlaybackOverlay
