@@ -96,8 +96,15 @@ function updateCBarRectangles(): void {
     cbarRectangles.value = [];
     return;
   }
+  const visible = chart.timeScale().getVisibleLogicalRange();
+  const from = visible && Number.isFinite(visible.from) ? visible.from - 2 : Number.NEGATIVE_INFINITY;
+  const to = visible && Number.isFinite(visible.to) ? visible.to + 2 : Number.POSITIVE_INFINITY;
   const timeScale = chart.timeScale();
   cbarRectangles.value = layerVisibility.value.cbar ? (props.structure?.cbars ?? []).flatMap((cbar) => {
+    const startIndex = indexBySbarId.get(cbar.sbarStartId);
+    const endIndex = indexBySbarId.get(cbar.sbarEndId);
+    if (startIndex === undefined || endIndex === undefined ||
+        Math.max(startIndex, endIndex) < from || Math.min(startIndex, endIndex) > to) return [];
     const startTime = timeBySbarId.get(cbar.sbarStartId);
     const endTime = timeBySbarId.get(cbar.sbarEndId);
     const high = Number(cbar.high);
@@ -194,8 +201,15 @@ function updateSwingSegments(): void {
     swingSegments.value = [];
     return;
   }
+  const visible = chart.timeScale().getVisibleLogicalRange();
+  const from = visible && Number.isFinite(visible.from) ? visible.from - 2 : Number.NEGATIVE_INFINITY;
+  const to = visible && Number.isFinite(visible.to) ? visible.to + 2 : Number.POSITIVE_INFINITY;
   const timeScale = chart.timeScale();
   swingSegments.value = layerVisibility.value.swing ? (props.structure?.swings ?? []).flatMap((swing) => {
+    const startIndex = indexBySbarId.get(swing.sbarStartId);
+    const endIndex = indexBySbarId.get(swing.sbarEndId);
+    if (startIndex === undefined || endIndex === undefined ||
+        Math.max(startIndex, endIndex) < from || Math.min(startIndex, endIndex) > to) return [];
     const startTime = timeBySbarId.get(swing.sbarStartId);
     const endTime = timeBySbarId.get(swing.sbarEndId);
     const high = Number(swing.high);
@@ -208,11 +222,9 @@ function updateSwingSegments(): void {
     const endY = candleSeries.priceToCoordinate(startsAtLow ? high : low);
     if ([startX, endX, startY, endY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return [];
     const style = swingStyleByState[swing.state];
-    if (!style) {
-      if (!unknownSwingStates.has(swing.state)) {
-        unknownSwingStates.add(swing.state);
-        console.warn(`Unknown Struxis SwingState received by OriginChart: ${swing.state}`);
-      }
+    if (!style && !unknownSwingStates.has(swing.state)) {
+      unknownSwingStates.add(swing.state);
+      console.warn(`Unknown Struxis SwingState received by OriginChart: ${swing.state}`);
     }
     const resolvedStyle = style ?? { color: "#A0A7B0", dasharray: "4 3" };
     return [{
@@ -852,7 +864,10 @@ watch(() => [props.bars, props.structure, props.originDatasetId] as const, () =>
 });
 watch(() => props.syncRequest, (request) => {
   applySyncRequest(request);
-  updateSbarCoordinates();
+  // Viewport requests can arrive rapidly during wheel zoom/pan. Defer overlay
+  // reprojection to the shared animation frame instead of doing it synchronously
+  // here and again from Lightweight Charts' visible-range callback.
+  scheduleOverlayUpdate();
 }, { deep: true });
 watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, updateSbarCoordinates);
 watch(() => props.selectedObject, () => {
