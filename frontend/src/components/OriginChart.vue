@@ -169,6 +169,9 @@ onBeforeUnmount(stopBoundaryDrag);
       @pointer-position="handlePointerPosition"
       @projection-frame="handleProjectionFrame"
     >
+      <template #origin-selection-status>
+        <span class="origin-chart-selection-status" data-testid="origin-chart-selection-status">{{ selectionStatus }}</span>
+      </template>
       <template #origin-selection-overlay>
         <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
           <div
@@ -210,7 +213,6 @@ onBeforeUnmount(stopBoundaryDrag);
         </div>
       </template>
     </SBarChartSurface>
-    <div class="origin-chart-selection-status" data-testid="origin-chart-selection-status">{{ selectionStatus }}</div>
   </section>
 </template>
 
@@ -222,5 +224,5 @@ onBeforeUnmount(stopBoundaryDrag);
 .origin-selection-line::before { position: absolute; top: -6px; bottom: -6px; left: -8px; width: 17px; content: ""; background: transparent; cursor: ew-resize; }
 .origin-selection-line-start, .origin-selection-line-end, .origin-selection-line-preview { border-left: 1px dashed #C6A06B; background: transparent; }
 .origin-selection-line-preview { pointer-events: none; }
-.origin-chart-selection-status { display: none; }
+.origin-chart-selection-status { min-width: 0; margin-left: auto; overflow: hidden; color: #a5b0b7; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
 </style>
