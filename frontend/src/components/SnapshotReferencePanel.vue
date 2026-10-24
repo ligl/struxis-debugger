@@ -11,7 +11,7 @@ const props = defineProps<{
   liveBarType?: string | null;
   liveSbarIds?: string[];
   syncRequest?: ReplayChartViewportSync | null;
-  isPlaying?: boolean;
+  progressApplies?: boolean;
   processedCount?: number;
 }>();
 
@@ -65,13 +65,21 @@ const syncOffset = computed<number | null>(() => {
   return coversLiveSequence ? first : null;
 });
 const syncEligible = computed(() => syncOffset.value !== null);
+const processedCount = computed(() =>
+  Math.max(0, Math.min(props.liveSbarIds?.length ?? 0, props.processedCount ?? 0)),
+);
+const snapshotPlaybackEnabled = computed(() =>
+  props.progressApplies === true &&
+  syncEligible.value &&
+  (props.liveSbarIds?.length ?? 0) > 0 &&
+  processedCount.value < (props.liveSbarIds?.length ?? 0),
+);
 const playbackStructure = computed(() => {
   const current = reference.value;
   if (!current) return null;
-  if (props.isPlaying !== true || !syncEligible.value) return current.structure;
-  const processed = Math.max(0, Math.min(props.liveSbarIds?.length ?? 0, props.processedCount ?? 0));
-  if (processed === 0) return null;
-  const snapshotIndex = (syncOffset.value ?? 0) + processed - 1;
+  if (!snapshotPlaybackEnabled.value) return current.structure;
+  if (processedCount.value === 0) return null;
+  const snapshotIndex = (syncOffset.value ?? 0) + processedCount.value - 1;
   const checkpointSbarId = current.bars[snapshotIndex]?.sbarId;
   if (!checkpointSbarId) return null;
   return current.structureTimeline.find((checkpoint) => checkpoint.sbarId === checkpointSbarId)?.structure ?? null;
@@ -212,7 +220,7 @@ function handleSelection(event: Event): void {
         <p class="snapshot-reference-unavailable">{{ referenceError }}</p>
         <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
       </div>
-      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-replay-playing': syncEligible && isPlaying }" :data-sync-eligible="syncEligible" :data-replay-playing="syncEligible && isPlaying" data-testid="snapshot-reference-chart">
+      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
         <OriginChart
           :bars="reference.bars"
           :structure="playbackStructure"
@@ -222,7 +230,7 @@ function handleSelection(event: Event): void {
           :sync-enabled="syncEligible"
           :sync-request="syncRequest"
           :sync-live-bar-count="liveSbarIds?.length ?? 0"
-          :snapshot-playback-enabled="syncEligible && isPlaying === true"
+          :snapshot-playback-enabled="snapshotPlaybackEnabled"
           :snapshot-playback-offset="syncOffset"
           :snapshot-processed-count="processedCount ?? 0"
           @viewport-change="emit('viewportChange', $event)"
