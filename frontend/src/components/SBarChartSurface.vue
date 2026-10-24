@@ -15,7 +15,11 @@ const props = defineProps<{
   selectionEndSbarId?: string | null;
   selectionPending?: boolean;
   selectionEditable?: boolean;
-  displayContext?: "origin" | "snapshot-reference";
+  showHeader?: boolean;
+  showFooter?: boolean;
+  panelClass?: string;
+  panelLabel: string;
+  chartLabel: string;
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -899,8 +903,8 @@ onBeforeUnmount(() => {
 <template>
   <section
     class="origin-chart-panel"
-    :class="{ 'snapshot-reference-chart': props.displayContext === 'snapshot-reference' }"
-    :aria-label="props.displayContext === 'snapshot-reference' ? 'Snapshot Reference chart' : 'Origin SBar chart'"
+    :class="panelClass"
+    :aria-label="panelLabel"
     data-testid="origin-chart-panel"
     @struxis-select-sbar="handleSbarSelectionRequest"
     @contextmenu.prevent.stop="handleChartContextMenu"
@@ -909,10 +913,10 @@ onBeforeUnmount(() => {
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
     :data-last-sbar-id="bars[bars.length - 1]?.sbarId ?? ''"
   >
-    <div v-if="props.displayContext !== 'snapshot-reference'" class="origin-chart-heading">
+    <div v-if="showHeader !== false" class="origin-chart-heading">
       <div class="chart-title-block">
-        <h3>{{ props.displayContext === "snapshot-reference" ? "SNAPSHOT · " : "ORIGIN · " }}{{ latestBar?.barType ?? originDatasetId }}</h3>
-        <span class="tag" :class='props.displayContext === "snapshot-reference" ? "amber" : "green"'>{{ props.displayContext === "snapshot-reference" ? "IMMUTABLE REFERENCE" : "CATALOG SOURCE" }}</span>
+        <h3>ORIGIN · {{ latestBar?.barType ?? originDatasetId }}</h3>
+        <span class="tag green">CATALOG SOURCE</span>
         <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
@@ -938,7 +942,7 @@ onBeforeUnmount(() => {
         :data-selection-start-x="selectionStartX ?? ''"
         :data-selection-end-x="selectionEndX ?? ''"
         :data-selection-preview-x="previewX ?? ''"
-        :aria-label="`Candlestick and volume chart for ${props.displayContext === 'snapshot-reference' ? 'Snapshot' : 'Origin'} ${originDatasetId}`"
+        :aria-label="chartLabel"
       ></div>
       <svg
         class="origin-structure-overlay"
@@ -1097,7 +1101,7 @@ onBeforeUnmount(() => {
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>
     </div>
-    <div v-if="props.displayContext !== 'snapshot-reference'" class="origin-chart-foot">
+    <div v-if="showFooter !== false" class="origin-chart-foot">
       <span>SBARS <b>{{ bars.length.toLocaleString() }}</b></span>
       <span v-if="latestBar">VOL <b>{{ latestBar.volume }}</b></span>
       <span v-if="latestBar" class="origin-chart-last-id" :title="latestBar.sbarId">LAST ID <code>{{ latestBar.sbarId }}</code></span>
