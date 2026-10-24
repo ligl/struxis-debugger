@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { createSnapshotBrightCandleGeometry, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, resolveSnapshotProcessedRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
+import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
@@ -791,50 +791,19 @@ function updateSnapshotCandleDimming(): void {
 
   const timeScale = chart.timeScale();
   const visible = timeScale.getVisibleLogicalRange();
-  const visibleFrom = visible && Number.isFinite(visible.from) ? visible.from - 1 : Number.NEGATIVE_INFINITY;
-  const visibleTo = visible && Number.isFinite(visible.to) ? visible.to + 1 : Number.POSITIVE_INFINITY;
-  const processedRange = resolveSnapshotProcessedRangeIndices({
+  snapshotBrightCandles.value = projectSnapshotBrightCandles({
     offset,
     liveCount,
     processedCount: props.snapshotProcessedCount ?? 0,
-    snapshotCount: props.bars.length,
+    bars: props.bars,
+    visibleFrom: visible && Number.isFinite(visible.from) ? visible.from - 1 : Number.NEGATIVE_INFINITY,
+    visibleTo: visible && Number.isFinite(visible.to) ? visible.to + 1 : Number.POSITIVE_INFINITY,
+    coordinateForSbarId: (sbarId) => {
+      const time = timeBySbarId.get(sbarId);
+      return time === undefined ? null : timeScale.timeToCoordinate(time);
+    },
+    priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
   });
-  if (!processedRange) {
-    snapshotBrightCandles.value = [];
-    return;
-  }
-  const { start: firstBright, endExclusive: lastBright } = processedRange;
-  const overlays: SnapshotBrightCandleGeometry[] = [];
-
-  // Brightness progresses candle-by-candle through the processed Live prefix.
-  // The global dim layer below still covers the entire Snapshot plot, including
-  // history outside the Live overlap; mask cutouts reveal only processed candles.
-  for (let index = firstBright; index < lastBright; index += 1) {
-    if (index < visibleFrom || index > visibleTo) continue;
-    const bar = props.bars[index];
-    if (!bar) continue;
-    const time = timeBySbarId.get(bar.sbarId);
-    if (time === undefined) continue;
-    const x = timeScale.timeToCoordinate(time);
-    const highY = candleSeries.priceToCoordinate(Number(bar.high));
-    const lowY = candleSeries.priceToCoordinate(Number(bar.low));
-    if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) continue;
-
-    const adjacentXs = [
-      index > 0 ? timeScale.timeToCoordinate(timeBySbarId.get(props.bars[index - 1]!.sbarId)!) : null,
-      index + 1 < props.bars.length ? timeScale.timeToCoordinate(timeBySbarId.get(props.bars[index + 1]!.sbarId)!) : null,
-    ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
-    const geometry = createSnapshotBrightCandleGeometry({
-      id: bar.sbarId,
-      x: x as number,
-      highY: highY as number,
-      lowY: lowY as number,
-      adjacentXs,
-    });
-    if (geometry) overlays.push(geometry);
-  }
-
-  snapshotBrightCandles.value = overlays;
 }
 
 function applyCrosshairOptions(): void {
