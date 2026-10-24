@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSameLogicalRange, ReplayViewportSyncGate, translateReplayViewportRange } from "../../src/replay-chart-sync";
+import { isSameLogicalRange, ReplayCrosshairSyncGate, ReplayViewportSyncGate, translateReplayViewportRange } from "../../src/replay-chart-sync";
 
 describe("Replay chart viewport protocol", () => {
   it("translates Live ranges into Snapshot logical coordinates by adding Offset", () => {
@@ -62,5 +62,26 @@ describe("Replay viewport sync gate", () => {
     gate.clear();
     gate.endSuppression(revision);
     expect(gate.observeRange({ from: 10, to: 20 })).toBe("publish");
+  });
+});
+
+
+describe("Replay Crosshair sync gate", () => {
+  it("tracks peer position independently from apply suppression", () => {
+    const gate = new ReplayCrosshairSyncGate();
+    gate.setPeerPositionActive(true);
+    gate.beginApply();
+    expect(gate.hasPeerPosition).toBe(true);
+    expect(gate.isApplying).toBe(true);
+    gate.setPeerPositionActive(false);
+    expect(gate.hasPeerPosition).toBe(false);
+  });
+  it("clear invalidates pending releases and peer position state", () => {
+    const gate = new ReplayCrosshairSyncGate();
+    gate.setPeerPositionActive(true);
+    gate.beginApply();
+    gate.clear();
+    expect(gate.isApplying).toBe(false);
+    expect(gate.hasPeerPosition).toBe(false);
   });
 });
