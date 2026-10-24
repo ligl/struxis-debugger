@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import OriginChart from "./OriginChart.vue";
+import SnapshotReferenceChart from "./SnapshotReferenceChart.vue";
 import { describeIpcError, getSnapshotReference } from "../origin-bridge";
 import type { ReplayChartCrosshairSync, ReplayChartViewportSync, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
@@ -223,19 +223,17 @@ function handleSelection(event: Event): void {
         <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
       </div>
       <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
-        <OriginChart
+        <SnapshotReferenceChart
           :bars="reference.bars"
           :structure="playbackStructure"
-          :origin-dataset-id="reference.snapshotId"
-          :selection-editable="false"
-          display-context="snapshot-reference"
+          :snapshot-id="reference.snapshotId"
           :sync-enabled="syncEligible"
           :sync-request="syncRequest"
           :crosshair-sync="crosshairSync"
-          :sync-live-bar-count="liveSbarIds?.length ?? 0"
-          :snapshot-playback-enabled="snapshotPlaybackEnabled"
-          :snapshot-playback-offset="syncOffset"
-          :snapshot-processed-count="processedCount ?? 0"
+          :live-bar-count="liveSbarIds?.length ?? 0"
+          :playback-enabled="snapshotPlaybackEnabled"
+          :playback-offset="syncOffset"
+          :processed-count="processedCount ?? 0"
           @viewport-change="emit('viewportChange', $event)"
           @crosshair-change="emit('crosshairChange', $event)"
         />
