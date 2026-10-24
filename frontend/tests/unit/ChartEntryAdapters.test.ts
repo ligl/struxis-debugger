@@ -28,7 +28,7 @@ const SurfaceStub = defineComponent({
     "snapshotPlaybackOffset", "snapshotProcessedCount",
   ],
   emits: ["sbarClick", "objectClick", "rangeBoundaryChange", "selectionError",
-    "cancelRangeSelection", "viewportChange", "crosshairChange"],
+    "cancelRangeSelection", "logicalRangeChange", "crosshairAnchorChange"],
   template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :enabled="true" :bright-candles="[]" :cbar-rectangles="[]" :swing-segments="[]" :boundaries="null" /></div>',
 });
 
