@@ -301,6 +301,9 @@ onBeforeUnmount(stopBoundaryDrag);
           :height="selectedSbarMarker.height"
           data-testid="origin-selected-sbar"
           :data-sbar-id="selectedSbarMarker.id"
+          fill="rgb(217 154 69 / 10%)"
+          stroke="#D99A45"
+          stroke-width="1.25"
         />
         <line
           v-for="segment in swingSegments.filter((item) => props.selectedObject?.kind === 'swing' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
