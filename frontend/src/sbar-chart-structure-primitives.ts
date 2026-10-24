@@ -139,9 +139,9 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     objects: readonly TObject[],
     projection: StructurePrimitiveProjection,
   ): void {
-    if (this.objects === objects &&
-        this.projection.timeBySbarId === projection.timeBySbarId &&
-        this.projection.indexBySbarId === projection.indexBySbarId) return;
+    // setData is called only at explicit snapshot / sequence boundaries, not
+    // during pan/zoom frames. Always re-read the full snapshot so in-place
+    // reactive updates cannot leave same-reference objects stale.
     this.objects = objects;
     this.projection = projection;
     this.refresh();
