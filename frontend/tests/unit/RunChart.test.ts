@@ -609,13 +609,12 @@ describe("RunChart", () => {
     mocks.visibleRangeListener?.();
     const supersededFrame = mocks.animationFrameCallback;
 
-    // A second range event before paint cancels the stale frame and schedules
-    // one projection using the latest chart transforms.
+    // A second range event reuses the pending frame. The callback samples the
+    // latest chart transforms instead of cancelling/restarting and risking starvation.
     mocks.coordinateOffset = 200;
     mocks.visibleRangeListener?.();
-    expect(mocks.cancelAnimationFrame).toHaveBeenCalledWith(1);
-    expect(mocks.animationFrameCallback).not.toBeNull();
-    expect(mocks.animationFrameCallback).not.toBe(supersededFrame);
+    expect(mocks.cancelAnimationFrame).not.toHaveBeenCalled();
+    expect(mocks.animationFrameCallback).toBe(supersededFrame);
 
     await nextTick();
     expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX);
