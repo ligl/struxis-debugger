@@ -653,7 +653,6 @@ function updateChart(): void {
     );
     timeBySbarId = chartIndex.timeBySbarId;
     indexBySbarId = chartIndex.indexBySbarId;
-    syncStructurePrimitives();
     const candles = projection.candles.map((candle, index) => {
       const base = layerVisibility.value.sbar ? candle : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
       if (!replayProgressApplies.value || index < processedCount) return base;
@@ -673,6 +672,7 @@ function updateChart(): void {
     );
     candleSeries.setData(candles);
     volumeSeries.setData(volume);
+    syncStructurePrimitives();
     lastProcessedCount = processedCount;
     lastRunId = props.runState?.runId ?? null;
     lastProgressApplies = replayProgressApplies.value;
