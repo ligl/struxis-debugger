@@ -550,8 +550,8 @@ onMounted(() => {
   candleSeries = runtime.candleSeries;
   volumeSeries = runtime.volumeSeries;
   primitiveHost = runtime.primitiveHost;
-  cbarPrimitive = registerCBarPrimitive(primitiveHost, candleSeries);
-  swingPrimitive = registerSwingPrimitive(primitiveHost, candleSeries);
+  cbarPrimitive = registerCBarPrimitive(runtime.primitiveHost, runtime.candleSeries);
+  swingPrimitive = registerSwingPrimitive(runtime.primitiveHost, runtime.candleSeries);
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
