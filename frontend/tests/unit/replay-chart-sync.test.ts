@@ -100,16 +100,22 @@ describe("Replay Crosshair command resolution", () => {
   const times = new Map([["sbar-a", 100], ["sbar-b", 200]]);
 
   it("ignores missing messages and messages originating from Snapshot Reference", () => {
-    expect(resolveReplayCrosshairCommand(null, bars, times)).toEqual({ kind: "ignore" });
+    expect(resolveReplayCrosshairCommand(null, bars, times, "reference")).toEqual({ kind: "ignore" });
     expect(resolveReplayCrosshairCommand({
       source: "reference", sbarId: "sbar-a", price: 12,
-    }, bars, times)).toEqual({ kind: "ignore" });
+    }, bars, times, "reference")).toEqual({ kind: "ignore" });
+  });
+
+  it("ignores messages emitted by the receiving chart in either direction", () => {
+    expect(resolveReplayCrosshairCommand({
+      source: "live", sbarId: "sbar-a", price: 12,
+    }, bars, times, "live")).toEqual({ kind: "ignore" });
   });
 
   it("clears stale peer positions when the incoming position is invalid or unmappable", () => {
     expect(resolveReplayCrosshairCommand({
       source: "live", sbarId: null, price: 12,
-    }, bars, times)).toEqual({ kind: "clear" });
+    }, bars, times, "reference")).toEqual({ kind: "clear" });
     expect(resolveReplayCrosshairCommand({
       source: "live", sbarId: "sbar-a", price: Number.NaN,
     }, bars, times)).toEqual({ kind: "clear" });
@@ -121,7 +127,7 @@ describe("Replay Crosshair command resolution", () => {
   it("resolves a valid peer message to an exact SBar time and price", () => {
     expect(resolveReplayCrosshairCommand({
       source: "live", sbarId: "sbar-b", price: 18.5,
-    }, bars, times)).toEqual({
+    }, bars, times, "reference")).toEqual({
       kind: "position", sbarId: "sbar-b", price: 18.5, time: 200,
     });
   });
