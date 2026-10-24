@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import {
-  CandlestickSeries,
-  ColorType,
-  CrosshairMode,
-  HistogramSeries,
-  createChart,
-  type IChartApi,
-  type ISeriesApi,
-  type Time,
-} from "lightweight-charts";
+import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
+import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex } from "../sbar-chart-index";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
@@ -743,53 +735,14 @@ function updateProgressSeries(): void {
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
   if (!chartHost.value) return;
-  chart = createChart(chartHost.value, {
-    width: Math.max(1, chartHost.value.clientWidth),
-    height: Math.max(1, chartHost.value.clientHeight),
-    grid: {
-      vertLines: { visible: false },
-      horzLines: { visible: false },
-    },
-    layout: {
-      background: { type: ColorType.Solid, color: "#121619" },
-      textColor: "#a8b2b9",
-      attributionLogo: false,
-    },
-    rightPriceScale: {
-      borderColor: "#121619",
-      scaleMargins: { top: 0.08, bottom: 0.22 },
-    },
-    timeScale: {
-      borderColor: "#121619",
-      timeVisible: true,
-      secondsVisible: false,
-      rightOffset: 4,
-    },
-    crosshair: {
-      mode: CrosshairMode.Normal,
-      vertLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
-      horzLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
-    },
+  const runtime = createSbarChartRuntime(chartHost.value, {
+    width: Math.max(1, Math.floor(chartHost.value.clientWidth)),
+    height: Math.max(1, Math.floor(chartHost.value.clientHeight)),
+    candleLastValueVisible: false,
   });
-  candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: "#79B58B",
-    downColor: "#D98282",
-    borderUpColor: "#79B58B",
-    borderDownColor: "#D98282",
-    wickUpColor: "#79B58B",
-    wickDownColor: "#D98282",
-    priceLineVisible: false,
-    // The last input candle may still be in the future during replay; the
-    // cursor strip, not the final input price label, reports confirmed progress.
-    lastValueVisible: false,
-  });
-  volumeSeries = chart.addSeries(HistogramSeries, {
-    priceScaleId: "",
-    priceFormat: { type: "volume" },
-    lastValueVisible: false,
-    priceLineVisible: false,
-  });
-  chart.priceScale("").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  chart = runtime.chart;
+  candleSeries = runtime.candleSeries;
+  volumeSeries = runtime.volumeSeries;
   const timeScale = chart.timeScale();
   if (typeof chart.subscribeClick === "function") {
     chartClickListener = handleChartClick;
