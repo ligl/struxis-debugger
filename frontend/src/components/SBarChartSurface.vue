@@ -883,30 +883,6 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.origin-object-hover-label {
-  position: absolute;
-  z-index: 3;
-  top: 7px;
-  right: 10px;
-  max-width: 42%;
-  overflow: hidden;
-  padding: 3px 5px;
-  border: 1px solid #394149;
-  border-radius: 2px;
-  background: rgb(18 22 25 / 92%);
-  color: #b9c2c8;
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.origin-structure-overlay .origin-object-hover-sbar {
-  fill: rgb(195 203 209 / 8%);
-  stroke: rgb(195 203 209 / 48%);
-  stroke-width: 1;
-}
-
 .origin-structure-overlay .origin-object-selected-sbar {
   fill: rgb(217 154 69 / 10%);
   stroke: #D99A45;
