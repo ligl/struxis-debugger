@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { resolveReplaySyncOffset, type ReplaySyncSequenceDescriptor } from "../replay-sync";
 import DualChartStack from "./DualChartStack.vue";
 import RunChart from "./RunChart.vue";
 import SnapshotReferencePanel from "./SnapshotReferencePanel.vue";
@@ -23,8 +24,13 @@ const emit = defineEmits<{
   targetSelect: [sbarId: string];
   targetCancel: [];
 }>();
-const syncEligible = ref(false);
-const syncOffset = ref<number | null>(null);
+const referenceSequence = ref<ReplaySyncSequenceDescriptor | null>(null);
+const syncOffset = computed(() => resolveReplaySyncOffset(
+  props.testDataset?.barType ?? null,
+  liveBars.value.map((bar) => bar.sbarId),
+  referenceSequence.value,
+));
+const syncEligible = computed(() => syncOffset.value !== null);
 const syncRequest = ref<ReplayChartViewportSync | null>(null);
 const crosshairSync = ref<ReplayChartCrosshairSync | null>(null);
 const activeSyncRequest = computed(() => syncEligible.value ? syncRequest.value : null);
@@ -42,22 +48,18 @@ const liveBars = computed(() => {
   return selected.length === test.sbarCount ? selected : [];
 });
 
-function handleSyncEligibility(eligible: boolean, offset: number | null): void {
-  const nextEligible = eligible && offset !== null;
-  const nextOffset = nextEligible ? offset : null;
-  const offsetChanged = syncOffset.value !== nextOffset;
-  syncEligible.value = nextEligible;
-  syncOffset.value = nextOffset;
-  if (!nextEligible || offsetChanged) {
-    // If the coordinate origin changes, discard old cross-chart state.
-    syncRequest.value = null;
-    crosshairSync.value = null;
-  }
+function handleSyncSequence(sequence: ReplaySyncSequenceDescriptor | null): void {
+  // Every descriptor transition invalidates peer commands, even when a new
+  // Snapshot happens to resolve to the same numeric Offset.
+  referenceSequence.value = sequence;
+  syncRequest.value = null;
+  crosshairSync.value = null;
 }
 
 function handleViewportChange(change: Omit<ReplayChartViewportSync, "revision" | "offset">): void {
-  if (!syncEligible.value || syncOffset.value === null) return;
-  syncRequest.value = { ...change, offset: syncOffset.value, revision: ++viewportRevision };
+  const offset = syncOffset.value;
+  if (offset === null) return;
+  syncRequest.value = { ...change, offset, revision: ++viewportRevision };
 }
 
 function handleCrosshairChange(change: Omit<ReplayChartCrosshairSync, "revision">): void {
@@ -69,8 +71,7 @@ watch(() => props.testDataset?.testDatasetId, () => {
   // A new Test Dataset invalidates the previous coordinate transform
   // immediately; never let the old pair synchronize while Snapshot rechecks
   // its SBar coverage against the new Live sequence.
-  syncEligible.value = false;
-  syncOffset.value = null;
+  referenceSequence.value = null;
   syncRequest.value = null;
   crosshairSync.value = null;
 });
@@ -87,13 +88,14 @@ watch(() => props.testDataset?.testDatasetId, () => {
         <SnapshotReferencePanel
           :instrument-id="testDataset?.instrumentId ?? null"
           :snapshots="snapshots"
-          :live-bar-type="testDataset?.barType ?? null"
           :live-sbar-ids="liveBars.map((bar) => bar.sbarId)"
+          :sync-eligible="syncEligible"
+          :sync-offset="syncOffset"
           :sync-request="activeSyncRequest"
           :crosshair-sync="activeCrosshairSync"
           :progress-applies="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId && runState.status !== 'disposed'"
           :processed-count="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId ? runState.processedCount : 0"
-          @sync-eligibility="handleSyncEligibility"
+          @sync-sequence="handleSyncSequence"
           @viewport-change="handleViewportChange"
           @crosshair-change="handleCrosshairChange"
         />
