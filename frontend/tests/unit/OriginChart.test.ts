@@ -430,7 +430,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
         updatedAt: "1700000000000000000",
       }],
     };
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars,
         originDatasetId: "origin-hover-state",
