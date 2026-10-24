@@ -140,8 +140,9 @@ export function resolveReplayCrosshairCommand<TTime>(
   sync: Pick<NonNullable<import("./origin-types").ReplayChartCrosshairSync>, "source" | "sbarId" | "price"> | null | undefined,
   bars: readonly { sbarId: string }[],
   timeBySbarId: ReadonlyMap<string, TTime>,
+  receiverSource: "live" | "reference",
 ): ReplayCrosshairCommand<TTime> {
-  if (!sync || sync.source === "reference") return { kind: "ignore" };
+  if (!sync || sync.source === receiverSource) return { kind: "ignore" };
   if (!sync.sbarId || sync.price === null || !Number.isFinite(sync.price)) {
     return { kind: "clear" };
   }
