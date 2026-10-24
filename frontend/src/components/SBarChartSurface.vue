@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { observeSbarChartResize } from "../sbar-chart-resize";
+import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
@@ -37,7 +38,7 @@ let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let stopObservingResize: (() => void) | null = null;
-let overlayUpdateFrame: number | null = null;
+
 let crosshairUpdateFrame: number | null = null;
 let fittedSequenceId: string | null = null;
 let sbarIdByLogicalIndex: readonly string[] = [];
@@ -131,25 +132,15 @@ function updateCBarRectangles(): void {
     : [];
 }
 
-function scheduleOverlayUpdate(): void {
-  // Lightweight Charts updates its internal canvases during wheel zoom/pan.
-  // Read the final public coordinate transforms on the next paint so SVG
-  // overlays never lag one interaction frame behind the SBar series.
-  // Keep the already scheduled frame. Its callback reads the latest chart
-  // transforms and pending viewport, so cancelling/restarting it only adds churn
-  // and can starve projection during a continuous stream of input events.
-  if (overlayUpdateFrame !== null) return;
-  overlayUpdateFrame = requestAnimationFrame(() => {
-    overlayUpdateFrame = null;
-    updateSbarCoordinates();
-    emit("projectionFrame");
-    const latest = pendingViewportRange;
-    pendingViewportRange = null;
-    if (latest && chart) {
-      emit("logicalRangeChange", { from: latest.from, to: latest.to });
-    }
-  });
-}
+const scheduleOverlayUpdate = createAnimationFrameCoalescer(() => {
+  updateSbarCoordinates();
+  emit("projectionFrame");
+  const latest = pendingViewportRange;
+  pendingViewportRange = null;
+  if (latest && chart) {
+    emit("logicalRangeChange", { from: latest.from, to: latest.to });
+  }
+});
 
 function updateSbarCoordinates(): void {
   if (!chart) {
@@ -577,10 +568,7 @@ onBeforeUnmount(() => {
   chart?.unsubscribeClick(handleChartClick);
   chart?.unsubscribeCrosshairMove(handleChartMove);
   chart?.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
-  if (overlayUpdateFrame !== null) {
-    cancelAnimationFrame(overlayUpdateFrame);
-    overlayUpdateFrame = null;
-  }
+  scheduleOverlayUpdate.cancel();
   if (crosshairUpdateFrame !== null) {
     cancelAnimationFrame(crosshairUpdateFrame);
     crosshairUpdateFrame = null;
