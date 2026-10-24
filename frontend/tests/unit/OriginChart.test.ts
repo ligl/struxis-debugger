@@ -630,7 +630,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(OriginChart, {
       props: {
         bars,
         originDatasetId: "origin-related-navigation",
