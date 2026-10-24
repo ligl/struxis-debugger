@@ -372,6 +372,30 @@ describe("RunChart", () => {
     expect(mocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
   });
 
+  it("projects a Snapshot crosshair onto the matching Live SBar", async () => {
+    mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: null,
+        syncEnabled: true,
+        crosshairSync: {
+          revision: 1,
+          source: "reference",
+          sbarId: originBars[1]!.sbarId,
+          price: 10.5,
+        },
+      },
+    });
+    await nextTick();
+
+    expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(
+      10.5,
+      1700000060,
+      expect.anything(),
+    );
+  });
+
   it("publishes the hovered SBar identity and price for eligible crosshair synchronization", async () => {
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: null, syncEnabled: true },
