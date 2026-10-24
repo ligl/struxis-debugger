@@ -30,7 +30,7 @@ const SurfaceStub = defineComponent({
   props: [
     "bars", "structure", "originDatasetId", "selectedObject",
     "selectionStartSbarId", "selectionEndSbarId", "selectionPending",
-    "selectionEditable", "displayContext", "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
+    "selectionEditable", "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
   ],
   emits: ["sbarClick", "objectClick", "rangeBoundaryChange", "selectionError",
     "cancelRangeSelection", "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
