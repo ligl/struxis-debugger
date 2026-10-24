@@ -67,15 +67,13 @@ function refreshSnapshotGeometry(): void {
     return;
   }
 
-  boundaries.value = props.syncEnabled
-    ? resolveSnapshotLiveRangeCoordinates({
-      offset,
-      liveCount: props.liveBarCount,
-      barIds: props.bars.map((bar) => bar.sbarId),
-      coordinateForSbarId: (sbarId) => port.getSbarCoordinate(sbarId),
-      logicalToCoordinate: (index) => port.getLogicalCoordinate(index),
-    })
-    : null;
+  boundaries.value = resolveSnapshotLiveRangeCoordinates({
+    offset,
+    liveCount: props.liveBarCount,
+    barIds: props.bars.map((bar) => bar.sbarId),
+    coordinateForSbarId: (sbarId) => port.getSbarCoordinate(sbarId),
+    logicalToCoordinate: (index) => port.getLogicalCoordinate(index),
+  });
 
   if (!props.playbackEnabled) {
     brightCandles.value = [];
