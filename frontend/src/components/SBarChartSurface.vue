@@ -11,10 +11,6 @@ const props = defineProps<{
   structure: ReplayInspectorStructureDto | null;
   originDatasetId: string;
   selectedObject?: OriginObjectSelection | null;
-  selectionStartSbarId?: string | null;
-  selectionEndSbarId?: string | null;
-  selectionPending?: boolean;
-  selectionEditable?: boolean;
   showHeader?: boolean;
   showFooter?: boolean;
   panelClass?: string;
@@ -25,9 +21,8 @@ const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
   objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>];
-  rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
-  selectionError: [message: string];
-  cancelRangeSelection: [];
+  chartInteractionError: [message: string];
+  pointerPosition: [point: { x: number; y: number } | null];
   logicalRangeChange: [range: { from: number; to: number }];
   crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
   projectionFrame: [];
@@ -73,10 +68,6 @@ const swingStyleByState: Record<string, { color: string; dasharray: string }> = 
 const unknownSwingStates = new Set<string>();
 const firstSbarX = ref<number | null>(null);
 const secondSbarX = ref<number | null>(null);
-const selectionStartX = ref<number | null>(null);
-const selectionEndX = ref<number | null>(null);
-const previewX = ref<number | null>(null);
-let draggingBoundary: "start" | "end" | null = null;
 let crosshairLogicalIndex: number | null = null;
 let lastEmittedBoundaryId: string | null = null;
 
@@ -99,6 +90,19 @@ function getLogicalCoordinate(index: number): number | null {
 function getPriceCoordinate(price: number): number | null {
   const value = candleSeries?.priceToCoordinate(price);
   return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
+}
+
+function getSbarIdAtCoordinate(x: number, clampToSequence = false): string | null {
+  if (!chart || !Number.isFinite(x) || sbarIdByLogicalIndex.length === 0) return null;
+  const logical = chart.timeScale().coordinateToLogical(x);
+  if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
+  const index = Math.round(logical);
+  if (!clampToSequence && (index < 0 || index >= sbarIdByLogicalIndex.length)) return null;
+  return sbarIdByLogicalIndex[Math.max(0, Math.min(sbarIdByLogicalIndex.length - 1, index))] ?? null;
+}
+
+function hasSbarId(sbarId: string): boolean {
+  return sbarIdByLogicalIndex.includes(sbarId);
 }
 
 function updateCBarRectangles(): void {
@@ -157,8 +161,6 @@ function updateSbarCoordinates(): void {
   if (!chart) {
     firstSbarX.value = null;
     secondSbarX.value = null;
-    selectionStartX.value = null;
-    selectionEndX.value = null;
     return;
   }
   const timeScale = chart.timeScale();
@@ -168,8 +170,6 @@ function updateSbarCoordinates(): void {
     : chartHost.value?.clientWidth ?? 0;
   firstSbarX.value = firstSbarTime === null ? null : timeScale.timeToCoordinate(firstSbarTime);
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
-  selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
-  selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
   updateCBarRectangles();
   updateSwingSegments();
   updateSbarMarkers();
@@ -328,34 +328,8 @@ function updateHoveredObject(point: { x: number; y: number } | undefined): void 
 }
 
 function selectSbarById(sbarId: string): void {
-  if (chartError.value || props.bars.length === 0) return;
-  if (!sbarIdByLogicalIndex.includes(sbarId)) {
-    emit("selectionError", "The selected SBar is not part of the current Origin chart.");
-    return;
-  }
-
-  // This is the shared selection path for pointer input and programmatic
-  // component commands. The parent still owns the range state and validates
-  // the exact ID against the authoritative Origin sequence.
-  if (!props.selectionStartSbarId) {
-    selectionStartX.value = coordinateForSbarId(sbarId);
-  }
+  if (chartError.value || props.bars.length === 0 || !sbarIdByLogicalIndex.includes(sbarId)) return;
   emit("sbarClick", sbarId);
-}
-
-function handleChartContextMenu(): void {
-  // Right-click cancels the current in-progress or completed range selection.
-  // The parent owns the authoritative selection state and clears it atomically.
-  emit("cancelRangeSelection");
-}
-
-function handleSbarSelectionRequest(event: Event): void {
-  const detail = (event as CustomEvent<{ sbarId?: unknown }>).detail;
-  if (typeof detail?.sbarId !== "string" || detail.sbarId.length === 0) {
-    emit("selectionError", "A programmatic Origin selection requires an exact SBar ID.");
-    return;
-  }
-  selectSbarById(detail.sbarId);
 }
 
 function distanceToSegment(
@@ -425,7 +399,7 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   if (chartError.value || props.bars.length === 0) return;
   const pointX = param.point?.x;
   if (typeof pointX !== "number" || !Number.isFinite(pointX)) {
-    emit("selectionError", "The click did not resolve to a horizontal position inside the chart plot.");
+    emit("chartInteractionError", "The click did not resolve to a horizontal position inside the chart plot.");
     return;
   }
 
@@ -442,86 +416,22 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   // selection. It never picks the nearest structure object.
   const logical = chart?.timeScale().coordinateToLogical(pointX);
   if (logical === null || logical === undefined || !Number.isFinite(logical)) {
-    emit("selectionError", "The clicked horizontal position does not map to the Origin time axis.");
+    emit("chartInteractionError", "The clicked horizontal position does not map to the Origin time axis.");
     return;
   }
   const index = Math.round(logical);
   if (index < 0 || index >= sbarIdByLogicalIndex.length) {
-    emit("selectionError", "The clicked horizontal position is outside the loaded Origin SBar sequence.");
+    emit("chartInteractionError", "The clicked horizontal position is outside the loaded Origin SBar sequence.");
     return;
   }
   const sbarId = sbarIdByLogicalIndex[index];
   if (sbarId === undefined) {
-    emit("selectionError", "The clicked horizontal position does not map to an Origin SBar.");
+    emit("chartInteractionError", "The clicked horizontal position does not map to an Origin SBar.");
     return;
   }
 
   selectSbarById(sbarId);
 }
-
-function resolveBoundaryDragSbar(clientX: number): string | null {
-  if (!chartHost.value || !Number.isFinite(clientX) || sbarIdByLogicalIndex.length === 0) return null;
-  const bounds = chartHost.value.getBoundingClientRect();
-  const logical = chart?.timeScale().coordinateToLogical(clientX - bounds.left);
-  if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
-
-  let index = Math.round(logical);
-  const currentStart = sbarIdByLogicalIndex.indexOf(props.selectionStartSbarId ?? "");
-  const currentEnd = sbarIdByLogicalIndex.indexOf(props.selectionEndSbarId ?? "");
-  if (currentStart < 0 || currentEnd < 0) return null;
-
-  // Keep a valid inclusive interval throughout the drag. The handles cannot
-  // cross; moving either edge is clamped to the other edge's SBar.
-  index = Math.max(0, Math.min(sbarIdByLogicalIndex.length - 1, index));
-  index = draggingBoundary === "start"
-    ? Math.min(index, currentEnd)
-    : Math.max(index, currentStart);
-  return sbarIdByLogicalIndex[index] ?? null;
-}
-
-function handleBoundaryKey(edge: "start" | "end", event: KeyboardEvent): void {
-  if (props.selectionEditable === false || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
-  const delta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
-  if (delta === 0) return;
-  event.preventDefault();
-  const currentId = edge === "start" ? props.selectionStartSbarId : props.selectionEndSbarId;
-  const currentIndex = sbarIdByLogicalIndex.indexOf(currentId);
-  if (currentIndex < 0) return;
-  const otherIndex = sbarIdByLogicalIndex.indexOf(
-    edge === "start" ? props.selectionEndSbarId : props.selectionStartSbarId,
-  );
-  const nextIndex = Math.max(0, Math.min(sbarIdByLogicalIndex.length - 1, currentIndex + delta));
-  if (edge === "start" ? nextIndex > otherIndex : nextIndex < otherIndex) return;
-  const nextId = sbarIdByLogicalIndex[nextIndex];
-  if (nextId && nextId !== currentId) emit("rangeBoundaryChange", edge, nextId);
-}
-
-function startBoundaryDrag(edge: "start" | "end", event: PointerEvent): void {
-  if (event.button !== 0 || props.selectionEditable === false || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
-  draggingBoundary = edge;
-  lastEmittedBoundaryId = edge === "start" ? props.selectionStartSbarId : props.selectionEndSbarId;
-  event.preventDefault();
-  window.addEventListener("pointermove", handleBoundaryPointerMove);
-  window.addEventListener("pointerup", stopBoundaryDrag);
-  window.addEventListener("pointercancel", stopBoundaryDrag);
-}
-
-function handleBoundaryPointerMove(event: PointerEvent): void {
-  if (!draggingBoundary) return;
-  const sbarId = resolveBoundaryDragSbar(event.clientX);
-  if (!sbarId || sbarId === lastEmittedBoundaryId) return;
-  lastEmittedBoundaryId = sbarId;
-  emit("rangeBoundaryChange", draggingBoundary, sbarId);
-}
-
-function stopBoundaryDrag(): void {
-  draggingBoundary = null;
-  lastEmittedBoundaryId = null;
-  window.removeEventListener("pointermove", handleBoundaryPointerMove);
-  window.removeEventListener("pointerup", stopBoundaryDrag);
-  window.removeEventListener("pointercancel", stopBoundaryDrag);
-}
-
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
   const point = param.point;
@@ -548,12 +458,10 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
     if (anchor) crosshairLogicalIndex = anchor.index;
   }
   updateHoveredObject(param.point);
-  if (!props.selectionPending || selectionStartX.value === null) {
-    previewX.value = null;
-    return;
-  }
-  const pointX = param.point?.x;
-  previewX.value = typeof pointX === "number" && Number.isFinite(pointX) ? pointX : null;
+  const point = param.point && Number.isFinite(param.point.x) && Number.isFinite(param.point.y)
+    ? { x: param.point.x, y: param.point.y }
+    : null;
+  emit("pointerPosition", point);
 }
 
 function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
@@ -808,7 +716,7 @@ function clearCrosshairPosition(): void {
   chart?.clearCrosshairPosition?.();
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate });
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, hasSbarId });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
@@ -857,18 +765,10 @@ watch(() => layerVisibility.value.sbar, () => {
   if (!layerVisibility.value.sbar && hoveredObject.value?.kind === "sbar") hoveredObject.value = null;
   updateSbarMarkers();
 });
-watch(
-  () => [props.selectionStartSbarId, props.selectionEndSbarId, props.selectionPending] as const,
-  () => {
-    updateSbarCoordinates();
-    if (!props.selectionPending) previewX.value = null;
-  },
-);
 
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleChartKeyboard);
   crosshairLogicalIndex = null;
-  stopBoundaryDrag();
   resizeObserver?.disconnect();
   resizeObserver = null;
   chart?.unsubscribeClick(handleChartClick);
@@ -895,9 +795,6 @@ onBeforeUnmount(() => {
   secondSbarTime = null;
   firstSbarX.value = null;
   secondSbarX.value = null;
-  selectionStartX.value = null;
-  selectionEndX.value = null;
-  previewX.value = null;
 });
 </script>
 
@@ -907,8 +804,6 @@ onBeforeUnmount(() => {
     :class="panelClass"
     :aria-label="panelLabel ?? 'SBar chart'"
     data-testid="origin-chart-panel"
-    @struxis-select-sbar="handleSbarSelectionRequest"
-    @contextmenu.prevent.stop="handleChartContextMenu"
     :data-sbar-count="bars.length"
     :data-first-sbar-id="bars[0]?.sbarId ?? ''"
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
@@ -940,9 +835,6 @@ onBeforeUnmount(() => {
         :data-origin-dataset-id="originDatasetId"
         :data-first-sbar-x="firstSbarX ?? ''"
         :data-second-sbar-x="secondSbarX ?? ''"
-        :data-selection-start-x="selectionStartX ?? ''"
-        :data-selection-end-x="selectionEndX ?? ''"
-        :data-selection-preview-x="previewX ?? ''"
         :aria-label="chartLabel"
       ></div>
       <svg
@@ -1061,40 +953,7 @@ onBeforeUnmount(() => {
         data-testid="origin-object-hover-label"
         aria-live="off"
       >{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
-      <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
-        <div
-          v-if="selectionPending && selectionStartX !== null && previewX !== null"
-          class="origin-selection-shade"
-          data-testid="origin-selection-preview"
-          :style="{ left: `${Math.min(selectionStartX, previewX)}px`, width: `${Math.abs(previewX - selectionStartX)}px` }"
-        ></div>
-        <div
-          v-if="selectionStartX !== null"
-          class="origin-selection-line origin-selection-line-start"
-          data-testid="origin-selection-start-line"
-          :style="{ left: `${selectionStartX}px`, pointerEvents: selectionEditable !== false && !selectionPending && selectionEndX !== null ? 'auto' : 'none', cursor: selectionEditable !== false && !selectionPending && selectionEndX !== null ? 'ew-resize' : 'default' }"
-          @pointerdown.stop="startBoundaryDrag('start', $event)"
-        ></div>
-        <div
-          v-if="selectionPending && selectionStartX !== null && previewX !== null"
-          class="origin-selection-line origin-selection-line-preview"
-          data-testid="origin-selection-preview-line"
-          :style="{ left: `${previewX}px` }"
-        ></div>
-        <template v-else-if="selectionEndX !== null">
-          <div
-            class="origin-selection-shade"
-            data-testid="origin-selection-completed"
-            :style="{ left: `${Math.min(selectionStartX ?? selectionEndX, selectionEndX)}px`, width: `${Math.abs(selectionEndX - (selectionStartX ?? selectionEndX))}px` }"
-          ></div>
-          <div
-            class="origin-selection-line origin-selection-line-end"
-            data-testid="origin-selection-end-line"
-            :style="{ left: `${selectionEndX}px`, pointerEvents: selectionEditable !== false ? 'auto' : 'none', cursor: selectionEditable !== false ? 'ew-resize' : 'default' }"
-            @pointerdown.stop="startBoundaryDrag('end', $event)"
-          ></div>
-        </template>
-      </div>
+      <slot name="origin-selection-overlay" />
       <div class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
@@ -1106,9 +965,6 @@ onBeforeUnmount(() => {
       <span>SBARS <b>{{ bars.length.toLocaleString() }}</b></span>
       <span v-if="latestBar">VOL <b>{{ latestBar.volume }}</b></span>
       <span v-if="latestBar" class="origin-chart-last-id" :title="latestBar.sbarId">LAST ID <code>{{ latestBar.sbarId }}</code></span>
-      <span class="origin-chart-selection-status">
-        {{ selectionPending ? "SELECT END · MOVE TO PREVIEW" : selectionStartSbarId && selectionEndSbarId ? (selectionEditable !== false ? "DRAG EDGES · ADJUST INTERVAL" : "INCLUSIVE INTERVAL FIXED") : selectionStartSbarId ? "SELECT END ON CHART" : "CLICK CHART TO SELECT START" }}
-      </span>
     </div>
   </section>
 </template>
@@ -1402,21 +1258,6 @@ onBeforeUnmount(() => {
   font-size: 9px;
 }
 
-/* Keep the visible boundary line thin while providing a forgiving drag target. */
-.origin-selection-line {
-  position: absolute;
-}
-
-.origin-selection-line::before {
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  left: -8px;
-  width: 17px;
-  content: "";
-  background: transparent;
-  cursor: ew-resize;
-}
  
 @media (max-width: 1180px) {
   .chart-desc {
