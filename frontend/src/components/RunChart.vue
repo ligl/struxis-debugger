@@ -21,6 +21,7 @@ const props = defineProps<{
   selectedObject?: ReplayChartSelection | null;
   targetSbarId?: string | null;
   syncEnabled?: boolean;
+  syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
 }>();
 const emit = defineEmits<{
@@ -788,6 +789,9 @@ watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => props.syncRequest, applySyncRequest, { deep: true });
 watch(() => props.syncEnabled, (enabled) => {
   if (enabled) handleVisibleRangeChange();
+});
+watch(() => props.syncOffset, () => {
+  if (props.syncEnabled) handleVisibleRangeChange();
 });
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
