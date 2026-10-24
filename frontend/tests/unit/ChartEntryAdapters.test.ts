@@ -75,7 +75,7 @@ describe("chart entry adapters", () => {
     expect(((surface.props() as Record<string, unknown>)["showFooter"])).toBe(true);
     expect(((surface.props() as Record<string, unknown>)["originDatasetId"])).toBe("origin-1");
     expect(((surface.props() as Record<string, unknown>)["selectedObject"])).toBeUndefined();
-    expect(wrapper.props("selectionEditable")).toBe(true);
+    expect((wrapper.props() as Record<string, unknown>)["selectionEditable"]).toBe(true);
     expect(((surface.props() as Record<string, unknown>)["selectionEditable"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["selectionStartSbarId"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["syncEnabled"])).toBeUndefined();
