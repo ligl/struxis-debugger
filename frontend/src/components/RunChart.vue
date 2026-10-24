@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
+import { observeSbarChartResize } from "../sbar-chart-resize";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
@@ -85,7 +86,7 @@ const displayedBar = computed(() => {
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
-let resizeObserver: ResizeObserver | null = null;
+let stopObservingResize: (() => void) | null = null;
 let overlayUpdateFrame: number | null = null;
 let fittedTestDatasetId: string | null = null;
 let lastProcessedCount: number | null = null;
@@ -752,16 +753,9 @@ onMounted(() => {
     timeScale.subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
     visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(handleVisibleRangeChange);
   }
-  resizeObserver = new ResizeObserver((entries) => {
-    const entry = entries[0];
-    if (!chart || !entry) return;
-    chart.applyOptions({
-      width: Math.max(1, Math.floor(entry.contentRect.width)),
-      height: Math.max(1, Math.floor(entry.contentRect.height)),
-    });
+  stopObservingResize = observeSbarChartResize(chartHost.value, chart, () => {
     scheduleOverlayUpdate();
   });
-  resizeObserver.observe(chartHost.value);
   updateChart();
   if (props.syncEnabled) handleVisibleRangeChange();
 });
@@ -842,8 +836,8 @@ onBeforeUnmount(() => {
   chartMoveListener = null;
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
-  resizeObserver?.disconnect();
-  resizeObserver = null;
+  stopObservingResize?.();
+  stopObservingResize = null;
   if (overlayUpdateFrame !== null) {
     cancelAnimationFrame(overlayUpdateFrame);
     overlayUpdateFrame = null;
