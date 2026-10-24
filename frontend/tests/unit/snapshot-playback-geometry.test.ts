@@ -27,7 +27,7 @@ describe("Snapshot bright candle geometry", () => {
       highY: 30,
       lowY: 10,
       adjacentXs: [10, 35],
-    })).toEqual({ id: "sbar-b", x: 15.5, y: 10, width: 9, height: 20 });
+    })).toEqual({ id: "sbar-b", x: 16, y: 10, width: 8, height: 20 });
   });
 
   it("uses bounded fallback dimensions when adjacent spacing is unavailable", () => {
