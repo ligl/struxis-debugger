@@ -122,6 +122,47 @@ describe("ReplayWorkspace", () => {
     expect(live.attributes("data-crosshair-revision")).toBe("2");
   });
 
+  it("invalidates both peer commands when the Live Test Dataset identity changes", async () => {
+    const Host = defineComponent({
+      components: { ReplayWorkspace },
+      setup() {
+        const testDataset = ref({
+          testDatasetId: "test-1",
+          originDatasetId: "origin-1",
+          instrumentId: "AUD/USD.SIM",
+          barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
+          startSbarId: "1",
+          endSbarId: "4",
+          sbarCount: 4,
+        });
+        return {
+          active: true,
+          origin: { originDatasetId: "origin-1", bars: [{ sbarId: "1" }, { sbarId: "2" }, { sbarId: "3" }, { sbarId: "4" }] },
+          testDataset,
+          runState: null,
+        };
+      },
+      template: '<ReplayWorkspace :active="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="null" :selected-object="null" :snapshots="[]" />',
+    });
+    const wrapper = mount(Host, {
+      global: { stubs: { DualChartStack: DualChartStackStub, RunChart: RunChartStub, SnapshotReferencePanel: SnapshotReferencePanelStub } },
+    });
+    const live = wrapper.get('[data-testid="run-chart-stub"]');
+    const snapshot = wrapper.get('[data-testid="snapshot-reference-panel-stub"]');
+
+    await snapshot.get('[data-testid="sync-enable"]').trigger("click");
+    await snapshot.get('[data-testid="snapshot-viewport-change"]').trigger("click");
+    await snapshot.get('[data-testid="snapshot-crosshair-change"]').trigger("click");
+    expect(live.attributes("data-has-sync-request")).toBe("true");
+    expect(live.attributes("data-crosshair-revision")).toBe("1");
+
+    wrapper.vm.$.setupState.testDataset.testDatasetId = "test-2";
+    await nextTick();
+    expect(live.attributes("data-has-sync-request")).toBe("false");
+    expect(live.attributes("data-crosshair-revision")).toBe("");
+    wrapper.unmount();
+  });
+
   it("keeps the workspace composition mounted while gating the live chart by active mode", async () => {
     const active = ref(false);
     const Host = defineComponent({
