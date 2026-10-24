@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
+import { observeSbarChartResize } from "../sbar-chart-resize";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
@@ -35,7 +36,7 @@ const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true 
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
-let resizeObserver: ResizeObserver | null = null;
+let stopObservingResize: (() => void) | null = null;
 let overlayUpdateFrame: number | null = null;
 let crosshairUpdateFrame: number | null = null;
 let fittedSequenceId: string | null = null;
@@ -551,17 +552,10 @@ onMounted(() => {
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
-  resizeObserver = new ResizeObserver((entries) => {
-    const entry = entries[0];
-    if (!chart || !entry) return;
-    chart.applyOptions({
-      width: Math.max(1, Math.floor(entry.contentRect.width)),
-      height: Math.max(1, Math.floor(entry.contentRect.height)),
-    });
+  stopObservingResize = observeSbarChartResize(chartHost.value, chart, () => {
     updateSbarCoordinates();
     emit("projectionFrame");
   });
-  resizeObserver.observe(chartHost.value);
   updateChart();
   applyCrosshairOptions();
 });
@@ -578,8 +572,8 @@ watch(() => props.structure, () => {
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleChartKeyboard);
   crosshairLogicalIndex = null;
-  resizeObserver?.disconnect();
-  resizeObserver = null;
+  stopObservingResize?.();
+  stopObservingResize = null;
   chart?.unsubscribeClick(handleChartClick);
   chart?.unsubscribeCrosshairMove(handleChartMove);
   chart?.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
