@@ -11,6 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
+import { isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
@@ -401,7 +402,7 @@ function handleVisibleRangeChange(): void {
   if (expectedSyncedRange) {
     const expected = expectedSyncedRange;
     expectedSyncedRange = null;
-    if (Math.abs(range.from - expected.from) < 0.01 && Math.abs(range.to - expected.to) < 0.01) return;
+    if (isSameLogicalRange(range, expected)) return;
   }
   if (suppressSyncEmit) return;
 
@@ -435,12 +436,12 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
   if (!request || request.source === "live" || !props.syncEnabled || !chart) return;
   const current = chart.timeScale().getVisibleLogicalRange();
-  // Snapshot = Live + offset, therefore the reverse transform subtracts it.
-  const from = request.from - request.offset;
-  const to = request.to - request.offset;
-  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return;
-  if (current && Math.abs(current.from - from) < 0.01 && Math.abs(current.to - to) < 0.01) return;
-  expectedSyncedRange = { from, to };
+  // Snapshot = Live + offset: the shared protocol owns the inverse transform.
+  const target = translateReplayViewportRange(request, "reference-to-live");
+  if (!target) return;
+  if (current && isSameLogicalRange(current, target)) return;
+  const { from, to } = target;
+  expectedSyncedRange = target;
   suppressSyncEmit = true;
   chart.timeScale().setVisibleLogicalRange({ from, to });
   queueMicrotask(() => { suppressSyncEmit = false; });
