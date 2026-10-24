@@ -786,6 +786,46 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("suppresses the applied Snapshot viewport echo but publishes the next local Live range", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+        syncEnabled: true,
+        syncOffset: 10,
+        syncRequest: {
+          revision: 1,
+          source: "reference",
+          from: 10.25,
+          to: 14.75,
+          offset: 10,
+        },
+      },
+    });
+    await nextTick();
+
+    expect(mocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 0.25, to: 4.75 });
+
+    // Lightweight Charts reports the peer-applied range back through the same
+    // listener. It must be consumed as an echo, not sent back to the workspace.
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 0.25, to: 4.75 });
+    mocks.visibleRangeListener?.();
+    mocks.animationFrameCallback?.(0);
+    await nextTick();
+    expect(wrapper.emitted("viewportChange")).toBeUndefined();
+
+    // A subsequent real Live gesture must still publish normally.
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 1.5, to: 5.25 });
+    mocks.visibleRangeListener?.();
+    mocks.animationFrameCallback?.(0);
+    await nextTick();
+    expect(wrapper.emitted("viewportChange")).toEqual([[
+      { source: "live", from: 1.5, to: 5.25 },
+    ]]);
+    wrapper.unmount();
+  });
+
   it("coalesces Live viewport sync to the latest range in the pending render frame", async () => {
     const wrapper = mount(RunChart, {
       props: {
