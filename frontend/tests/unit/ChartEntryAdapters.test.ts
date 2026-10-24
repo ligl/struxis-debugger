@@ -29,11 +29,10 @@ const SurfaceStub = defineComponent({
   name: "SBarChartSurface",
   props: [
     "bars", "structure", "originDatasetId", "selectedObject",
-    "selectionStartSbarId", "selectionEndSbarId", "selectionPending",
-    "selectionEditable", "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
+    "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
   ],
-  emits: ["sbarClick", "objectClick", "rangeBoundaryChange", "selectionError",
-    "cancelRangeSelection", "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
+  emits: ["sbarClick", "objectClick", "chartInteractionError", "pointerPosition",
+    "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
   setup(_props, { expose }) {
     expose({
       getVisibleLogicalRange: () => ({ from: 0, to: 1 }),
@@ -43,10 +42,12 @@ const SurfaceStub = defineComponent({
       getSbarCoordinate: (sbarId: string) => sbarId === "sbar-1" ? 10 : null,
       getLogicalCoordinate: (index: number) => index * 10,
       getPriceCoordinate: (price: number) => price * 2,
+      getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "sbar-1" : null,
+      hasSbarId: (sbarId: string) => sbarId === "sbar-1",
     });
     return {};
   },
-  template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :cbar-rectangles="[]" :swing-segments="[]" /></div>',
+  template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :cbar-rectangles="[]" :swing-segments="[]" /><slot name="origin-selection-overlay" /><slot name="origin-selection-status" /></div>',
 });
 
 describe("chart entry adapters", () => {
@@ -55,7 +56,7 @@ describe("chart entry adapters", () => {
     surfacePortCalls.crosshairs.length = 0;
     surfacePortCalls.clears = 0;
   }
-  it("keeps the Dataset Origin entry limited to Dataset selection props", () => {
+  it("keeps Dataset range-selection props and presentation at the Origin adapter boundary", () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars,
@@ -71,7 +72,9 @@ describe("chart entry adapters", () => {
     expect(surface.props("showHeader")).toBe(true);
     expect(surface.props("showFooter")).toBe(true);
     expect(surface.props("originDatasetId")).toBe("origin-1");
-    expect(surface.props("selectionEditable")).toBe(true);
+    expect(wrapper.props("selectionEditable")).toBe(true);
+    expect(surface.props("selectionEditable")).toBeUndefined();
+    expect(surface.props("selectionStartSbarId")).toBeUndefined();
     expect(surface.props("syncEnabled")).toBeUndefined();
     expect(surface.props("snapshotPlaybackEnabled")).toBeUndefined();
   });
