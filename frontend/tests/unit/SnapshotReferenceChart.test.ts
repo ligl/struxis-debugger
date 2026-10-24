@@ -315,7 +315,8 @@ describe("SnapshotReferenceChart", () => {
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start-arrow"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end-arrow"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(true);
+    // Run-progress brightness is a peer projection and must be invalidated with the Offset.
+    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -423,7 +424,7 @@ describe("SnapshotReferenceChart", () => {
     );
   });
 
-  it("keeps Snapshot crosshair visible while sync eligibility changes", async () => {
+  it("clears the stale peer Crosshair without changing local Crosshair options when sync becomes ineligible", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         ...snapshotDefaults,
