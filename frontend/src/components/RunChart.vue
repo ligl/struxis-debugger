@@ -3,8 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { createSbarChartIndex } from "../sbar-chart-index";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
+import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
@@ -524,7 +524,7 @@ function publishCrosshair(param: { point?: { x: number; y: number } | undefined 
     return;
   }
   const logical = chart.timeScale().coordinateToLogical?.(point.x);
-  const anchor = resolveReplayCrosshairAnchor(bars.value, logical);
+  const anchor = resolveSbarChartAnchor(bars.value, logical);
   const bar = anchor ? bars.value[anchor.index] : undefined;
   const price = candleSeries.coordinateToPrice(point.y);
   emit("crosshairChange", {
@@ -545,7 +545,7 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
     // is outside the Test Dataset, retain the last valid navigation anchor;
     // clearing it makes the next keypress fall back to the backend cursor and
     // can appear to jump back to the beginning after boundary navigation.
-    const anchor = resolveReplayCrosshairAnchor(bars.value, logical);
+    const anchor = resolveSbarChartAnchor(bars.value, logical);
     if (anchor) crosshairLogicalIndex = anchor.index;
   }
   updateHoveredObject(param.point);
