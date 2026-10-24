@@ -6,7 +6,7 @@ import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex } from "../sbar-chart-index";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { resolveReplayCrosshairAnchor } from "../replay-chart-sync";
-import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
   bars: SBarDto[];
@@ -30,8 +30,8 @@ const emit = defineEmits<{
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
-  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
-  crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
+  logicalRangeChange: [range: { from: number; to: number }];
+  crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const structureOverlayWidth = ref(0);
@@ -135,7 +135,7 @@ function scheduleOverlayUpdate(): void {
     const latest = pendingViewportRange;
     pendingViewportRange = null;
     if (latest && props.displayContext === "snapshot-reference" && chart) {
-      emit("viewportChange", { source: "reference", from: latest.from, to: latest.to });
+      emit("logicalRangeChange", { from: latest.from, to: latest.to });
     }
   });
 }
@@ -532,18 +532,16 @@ function stopBoundaryDrag(): void {
 
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
-  if (props.displayContext !== "snapshot-reference") return;
   const point = param.point;
   if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-    emit("crosshairChange", { source: "reference", sbarId: null, price: null });
+    emit("crosshairAnchorChange", { sbarId: null, price: null });
     return;
   }
   const logical = chart.timeScale().coordinateToLogical(point.x);
   const anchor = resolveReplayCrosshairAnchor(props.bars, logical);
   const bar = anchor ? props.bars[anchor.index] : undefined;
   const price = candleSeries.coordinateToPrice(point.y);
-  emit("crosshairChange", {
-    source: "reference",
+  emit("crosshairAnchorChange", {
     sbarId: bar?.sbarId ?? null,
     price: price !== null && price !== undefined && Number.isFinite(price) ? price : null,
   });
@@ -707,7 +705,7 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
 
 function handleVisibleRangeChange(): void {
   scheduleOverlayUpdate();
-  if (props.displayContext !== "snapshot-reference" || !chart || props.bars.length === 0) return;
+  if (!chart || props.bars.length === 0) return;
   const range = chart.timeScale().getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
   // Report the raw range; SnapshotReferenceChart owns sync qualification,
