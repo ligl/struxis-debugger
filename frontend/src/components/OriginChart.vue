@@ -165,10 +165,6 @@ function handleChartClick(point: { x: number; y: number } | null): void {
   emit("sbarClick", sbarId);
 }
 
-function handleChartInteractionError(message: string): void {
-  emit("selectionError", message);
-}
-
 function handleSelectionRequest(event: Event): void {
   const detail = (event as CustomEvent<{ sbarId?: unknown }>).detail;
   if (typeof detail?.sbarId !== "string" || detail.sbarId.length === 0) {
@@ -271,6 +267,9 @@ onBeforeUnmount(stopBoundaryDrag);
           :height="hoveredSbarMarker.height"
           data-testid="origin-hover-sbar"
           :data-sbar-id="hoveredSbarMarker.id"
+          fill="rgb(195 203 209 / 8%)"
+          stroke="rgb(195 203 209 / 48%)"
+          stroke-width="1"
         />
         <line
           v-for="segment in swingSegments.filter((item) => hoveredObject?.kind === 'swing' && hoveredObject.id === item.id)"
@@ -370,6 +369,6 @@ onBeforeUnmount(stopBoundaryDrag);
 <style scoped>
 .origin-chart-adapter { position: relative; display: contents; }
 .origin-selection-line::before { position: absolute; top: -6px; bottom: -6px; left: -8px; width: 17px; content: ""; background: transparent; cursor: ew-resize; }
-.origin-object-hover-label { position: absolute; z-index: 4; top: 8px; left: 10px; max-width: calc(100% - 20px); padding: 3px 6px; border: 1px solid #626c75; border-radius: 3px; background: rgba(24, 29, 34, 0.92); color: #d7dde1; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
+.origin-object-hover-label { position: absolute; z-index: 4; top: 7px; right: 10px; max-width: 42%; overflow: hidden; padding: 3px 5px; border: 1px solid #394149; border-radius: 2px; background: rgb(18 22 25 / 92%); color: #b9c2c8; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 .origin-chart-selection-status { min-width: 0; margin-left: auto; overflow: hidden; color: #a5b0b7; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
 </style>
