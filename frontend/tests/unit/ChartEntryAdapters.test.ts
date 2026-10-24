@@ -147,4 +147,27 @@ describe("chart entry adapters", () => {
     await Promise.resolve();
     expect(surfacePortCalls.crosshairs).toEqual([{ sbarId: "sbar-1", price: 11 }]);
   });
+
+  it("does not clear a local Crosshair for an unmappable peer anchor", async () => {
+    clearSurfaceCalls();
+    mount(SnapshotReferenceChart, {
+      props: {
+        bars,
+        structure: null,
+        snapshotId: "snapshot-1",
+        syncEnabled: true,
+        syncRequest: null,
+        crosshairSync: { source: "live", sbarId: "missing-sbar", price: 11, revision: 1 },
+        liveBarCount: 1,
+        playbackEnabled: true,
+        playbackOffset: 0,
+        processedCount: 0,
+      },
+      global: { stubs: { SBarChartSurface: SurfaceStub } },
+    });
+
+    await Promise.resolve();
+    expect(surfacePortCalls.clears).toBe(0);
+  });
+
 });
