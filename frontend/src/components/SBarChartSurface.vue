@@ -743,11 +743,6 @@ onBeforeUnmount(() => {
   background: #121619;
 }
 
-/* Snapshot Reference is already framed by its parent panel; avoid a doubled border. */
-.origin-chart-panel.snapshot-reference-chart {
-  border: 0;
-}
-
 .origin-chart-heading {
   display: flex;
   height: 29px;
