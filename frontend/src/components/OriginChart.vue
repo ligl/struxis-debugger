@@ -980,9 +980,9 @@ onBeforeUnmount(() => {
             :x2="syncBoundaryXs.start"
             y2="100%"
             stroke="#77838C"
-            stroke-width="0.8"
+            stroke-width="0.9"
             stroke-dasharray="3 5"
-            opacity="0.3"
+            opacity="0.42"
             data-testid="snapshot-live-range-start"
           />
           <line
@@ -991,9 +991,9 @@ onBeforeUnmount(() => {
             :x2="syncBoundaryXs.end"
             y2="100%"
             stroke="#77838C"
-            stroke-width="0.8"
+            stroke-width="0.9"
             stroke-dasharray="3 5"
-            opacity="0.3"
+            opacity="0.42"
             data-testid="snapshot-live-range-end"
           />
         </g>
