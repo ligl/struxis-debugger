@@ -68,11 +68,11 @@ function handleCrosshairChange(change: Omit<ReplayChartCrosshairSync, "revision"
 }
 
 watch(
-  () => [
+  () => JSON.stringify([
     props.testDataset?.testDatasetId,
     props.testDataset?.barType,
-    JSON.stringify(liveBars.value.map((bar) => bar.sbarId)),
-  ] as const,
+    liveBars.value.map((bar) => bar.sbarId),
+  ]),
   () => {
     // Re-evaluate qualification from the new Live identity, but never carry a
     // viewport or Crosshair command across a sequence transition—even when the
