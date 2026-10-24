@@ -28,7 +28,7 @@ const surfacePortCalls = {
 const SurfaceStub = defineComponent({
   name: "SBarChartSurface",
   props: [
-    "bars", "structure", "originDatasetId", "selectedObject",
+    "bars", "structure", "originDatasetId",
     "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
   ],
   emits: ["sbarClick", "objectClick", "chartInteractionError", "pointerPosition",
@@ -73,6 +73,7 @@ describe("chart entry adapters", () => {
     expect(surface.props("showHeader")).toBe(true);
     expect(surface.props("showFooter")).toBe(true);
     expect(surface.props("originDatasetId")).toBe("origin-1");
+    expect(surface.props("selectedObject")).toBeUndefined();
     expect(wrapper.props("selectionEditable")).toBe(true);
     expect(surface.props("selectionEditable")).toBeUndefined();
     expect(surface.props("selectionStartSbarId")).toBeUndefined();
