@@ -124,7 +124,37 @@ describe("OriginChart", () => {
       props: {
         bars,
         originDatasetId: "snapshot-playback-brightness",
-        structure: null,
+        structure: {
+          cbarCount: 1,
+          cbars: [{
+            cbarId: "cbar-checkpoint-1",
+            high: "12",
+            low: "9",
+            sbarStartId: "1700000000000000000",
+            sbarEndId: "1700000060000000000",
+            spanSbars: 2,
+            fractalType: null,
+            createdAt: "1",
+          }],
+          swingCount: 1,
+          swings: [{
+            swingId: "swing-checkpoint-1",
+            direction: "Up",
+            high: "12",
+            low: "9",
+            cbarStartId: "cbar-checkpoint-1",
+            cbarEndId: "cbar-checkpoint-1",
+            sbarStartId: "1700000000000000000",
+            sbarEndId: "1700000060000000000",
+            startOi: null,
+            endOi: null,
+            volume: "200",
+            spanSbars: 2,
+            state: "Confirmed",
+            createdAt: "1",
+            updatedAt: "1",
+          }],
+        },
         displayContext: "snapshot-reference",
         syncEnabled: true,
         syncLiveBarCount: 2,
@@ -139,6 +169,10 @@ describe("OriginChart", () => {
     expect(wrapper.get('[data-testid="snapshot-playback-dimming"]').attributes("fill-opacity")).toBe("0.68");
     expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]').map((node) => node.attributes("data-sbar-id")))
       .toEqual(["1700000000000000000"]);
+    expect(wrapper.findAll('[data-testid="snapshot-bright-cbar-cutout"]').map((node) => node.attributes("data-cbar-id")))
+      .toEqual(["cbar-checkpoint-1"]);
+    expect(wrapper.findAll('[data-testid="snapshot-bright-swing-cutout"]').map((node) => node.attributes("data-swing-id")))
+      .toEqual(["swing-checkpoint-1"]);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
 
     await wrapper.setProps({ snapshotProcessedCount: 2 });
