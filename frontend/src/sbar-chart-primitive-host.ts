@@ -98,7 +98,15 @@ export function createChartPrimitiveHost(): ChartPrimitiveHost {
           entry.attached = true;
         } catch (error) {
           entries.delete(binding.id);
-          throw error;
+          const cleanupErrors: unknown[] = [];
+          try {
+            // Attach may have partially registered with the chart before it
+            // failed; adapters must make detach safe after partial attachment.
+            binding.detach();
+          } catch (cleanupError) {
+            cleanupErrors.push(cleanupError);
+          }
+          throwCollectedErrors(`Failed to register Primitive binding ${binding.id}.`, [error, ...cleanupErrors]);
         }
       }
 
@@ -121,9 +129,11 @@ export function createChartPrimitiveHost(): ChartPrimitiveHost {
       try {
         for (const entry of entries.values()) {
           if (entry.disposed || entry.attached) continue;
-          entry.binding.attach();
-          entry.attached = true;
+          // Track the attempt before calling user code so a partially completed
+          // attach can be rolled back if attach() throws.
           newlyAttached.push(entry);
+          entry.attached = true;
+          entry.binding.attach();
         }
       } catch (error) {
         const cleanupErrors: unknown[] = [];
