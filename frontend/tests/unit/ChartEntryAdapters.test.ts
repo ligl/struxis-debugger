@@ -3,6 +3,8 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import OriginChart from "../../src/components/OriginChart.vue";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
+import SnapshotPlaybackOverlay from "../../src/components/SnapshotPlaybackOverlay.vue";
+import SnapshotLiveRangeMarkers from "../../src/components/SnapshotLiveRangeMarkers.vue";
 import type { SBarDto } from "../../src/origin-types";
 
 const bars: SBarDto[] = [{
@@ -28,7 +30,7 @@ const SurfaceStub = defineComponent({
   ],
   emits: ["sbarClick", "objectClick", "rangeBoundaryChange", "selectionError",
     "cancelRangeSelection", "viewportChange", "crosshairChange"],
-  template: '<div data-testid="surface-stub"></div>',
+  template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :enabled="true" :bright-candles="[]" :cbar-rectangles="[]" :swing-segments="[]" :boundaries="null" /></div>',
 });
 
 describe("chart entry adapters", () => {
@@ -76,5 +78,7 @@ describe("chart entry adapters", () => {
     expect(surface.props("snapshotPlaybackEnabled")).toBe(true);
     expect(surface.props("snapshotPlaybackOffset")).toBe(0);
     expect(surface.props("snapshotProcessedCount")).toBe(0);
+    expect(wrapper.findComponent(SnapshotPlaybackOverlay).exists()).toBe(true);
+    expect(wrapper.findComponent(SnapshotLiveRangeMarkers).exists()).toBe(true);
   });
 });
