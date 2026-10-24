@@ -221,6 +221,11 @@ export interface SnapshotArtifactDto {
   diagnostic: string | null;
 }
 
+export interface SnapshotStructureCheckpointDto {
+  sbarId: string;
+  structure: ReplayInspectorStructureDto | null;
+}
+
 export interface SnapshotReferenceDto {
   snapshotId: string;
   runId: string;
@@ -231,6 +236,7 @@ export interface SnapshotReferenceDto {
   sbarSequenceFingerprint: string;
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto;
+  structureTimeline: SnapshotStructureCheckpointDto[];
 }
 
 export type CompareRejectCategory =
