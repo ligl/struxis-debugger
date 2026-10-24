@@ -78,7 +78,7 @@ watch(() => props.testDataset?.testDatasetId, () => {
           :live-sbar-ids="liveBars.map((bar) => bar.sbarId)"
           :sync-request="syncRequest"
           :is-playing="playbackStatus === 'playing' && runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId"
-          :replay-progress="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId && runState.inputCount > 0 ? runState.processedCount / runState.inputCount : 0"
+          :processed-count="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId ? runState.processedCount : 0"
           @sync-eligibility="handleSyncEligibility"
           @viewport-change="handleViewportChange"
         />
