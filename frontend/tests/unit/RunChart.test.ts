@@ -124,7 +124,7 @@ function installResizeObserverMock(): void {
 function installChartMock(): void {
   mocks.createChart.mockReturnValue({
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: mocks.candleSetData, update: mocks.candleUpdate, priceToCoordinate: (price: number) => 200 - price, coordinateToPrice: (y: number) => 200 - y, applyOptions: vi.fn() })
+      .mockReturnValueOnce({ setData: mocks.candleSetData, update: mocks.candleUpdate, priceToCoordinate: (price: number) => 200 - price, coordinateToPrice: (y: number) => 200 - y, applyOptions: vi.fn(), attachPrimitive: vi.fn(), detachPrimitive: vi.fn() })
       .mockReturnValueOnce({ setData: mocks.volumeSetData, update: mocks.volumeUpdate, applyOptions: vi.fn() }),
     priceScale: vi.fn(() => ({ applyOptions: mocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
