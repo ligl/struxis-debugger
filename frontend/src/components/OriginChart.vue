@@ -647,28 +647,22 @@ function handleVisibleRangeChange(): void {
   if (!props.syncEnabled || props.displayContext !== "snapshot-reference" || suppressSyncEmit || !chart || props.bars.length === 0) return;
   const range = chart.timeScale().getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
-  const fromIndex = Math.max(0, Math.min(props.bars.length - 1, Math.round(range.from)));
-  const toIndex = Math.max(0, Math.min(props.bars.length - 1, Math.round(range.to)));
-  const fromBar = props.bars[fromIndex];
-  const toBar = props.bars[toIndex];
-  if (!fromBar || !toBar) return;
+  // Emit the raw logical range. It may extend beyond either data boundary;
+  // clamping to SBar IDs would destroy the invariant Snapshot = Live + offset.
   emit("viewportChange", {
     source: "reference",
-    fromSbarId: fromBar.sbarId,
-    fromOffset: range.from - fromIndex,
-    toSbarId: toBar.sbarId,
-    toOffset: range.to - toIndex,
+    from: range.from,
+    to: range.to,
   });
 }
 
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
   if (!request || request.source === "reference" || !props.syncEnabled || props.displayContext !== "snapshot-reference" || !chart) return;
-  const fromIndex = indexBySbarId.get(request.fromSbarId);
-  const toIndex = indexBySbarId.get(request.toSbarId);
-  if (fromIndex === undefined || toIndex === undefined || toIndex < fromIndex) return;
   const current = chart.timeScale().getVisibleLogicalRange();
-  const from = fromIndex + request.fromOffset;
-  const to = toIndex + request.toOffset;
+  // Snapshot = Live + offset: translate both boundaries by the same constant.
+  const from = request.from + request.offset;
+  const to = request.to + request.offset;
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return;
   if (current && Math.abs(current.from - from) < 0.01 && Math.abs(current.to - to) < 0.01) return;
   suppressSyncEmit = true;
   chart.timeScale().setVisibleLogicalRange({ from, to });
