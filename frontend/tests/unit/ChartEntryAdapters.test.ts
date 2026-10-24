@@ -24,8 +24,7 @@ const SurfaceStub = defineComponent({
   props: [
     "bars", "structure", "originDatasetId", "selectedObject",
     "selectionStartSbarId", "selectionEndSbarId", "selectionPending",
-    "selectionEditable", "displayContext", "syncEnabled", "syncRequest",
-    "crosshairSync", "syncLiveBarCount", "snapshotPlaybackEnabled",
+    "selectionEditable", "displayContext", "snapshotLiveBarCount", "snapshotPlaybackEnabled",
     "snapshotPlaybackOffset", "snapshotProcessedCount",
   ],
   emits: ["sbarClick", "objectClick", "rangeBoundaryChange", "selectionError",
@@ -73,8 +72,10 @@ describe("chart entry adapters", () => {
     const surface = wrapper.getComponent(SurfaceStub);
     expect(surface.props("displayContext")).toBe("snapshot-reference");
     expect(surface.props("originDatasetId")).toBe("snapshot-1");
-    expect(surface.props("syncEnabled")).toBe(true);
-    expect(surface.props("syncLiveBarCount")).toBe(1);
+    expect(surface.props("syncEnabled")).toBeUndefined();
+    expect(surface.props("syncRequest")).toBeUndefined();
+    expect(surface.props("crosshairSync")).toBeUndefined();
+    expect(surface.props("snapshotLiveBarCount")).toBe(1);
     expect(surface.props("snapshotPlaybackEnabled")).toBe(true);
     expect(surface.props("snapshotPlaybackOffset")).toBe(0);
     expect(surface.props("snapshotProcessedCount")).toBe(0);
