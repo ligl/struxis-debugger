@@ -101,6 +101,12 @@ function getSbarIdAtCoordinate(x: number, clampToSequence = false): string | nul
   return sbarIdByLogicalIndex[Math.max(0, Math.min(sbarIdByLogicalIndex.length - 1, index))] ?? null;
 }
 
+function getSbarIdAtClientX(clientX: number, clampToSequence = false): string | null {
+  const left = chartHost.value?.getBoundingClientRect().left;
+  if (left === undefined || !Number.isFinite(clientX) || !Number.isFinite(left)) return null;
+  return getSbarIdAtCoordinate(clientX - left, clampToSequence);
+}
+
 function hasSbarId(sbarId: string): boolean {
   return sbarIdByLogicalIndex.includes(sbarId);
 }
@@ -716,7 +722,7 @@ function clearCrosshairPosition(): void {
   chart?.clearCrosshairPosition?.();
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, hasSbarId });
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
