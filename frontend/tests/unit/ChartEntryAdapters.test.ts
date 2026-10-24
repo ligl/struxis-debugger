@@ -43,6 +43,7 @@ const SurfaceStub = defineComponent({
       getLogicalCoordinate: (index: number) => index * 10,
       getPriceCoordinate: (price: number) => price * 2,
       getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "sbar-1" : null,
+      getSbarIdAtClientX: (clientX: number, clampToSequence = false) => clientX >= 0 && clientX <= 10 || clampToSequence ? "sbar-1" : null,
       hasSbarId: (sbarId: string) => sbarId === "sbar-1",
     });
     return {};
