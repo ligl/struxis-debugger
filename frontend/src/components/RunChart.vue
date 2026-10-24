@@ -307,6 +307,14 @@ function fitContentShortcut(): boolean {
   return true;
 }
 
+function syncStructurePrimitives(): void {
+  const projection = { timeBySbarId, indexBySbarId };
+  cbarPrimitive?.setData(props.structure?.cbars ?? [], projection);
+  swingPrimitive?.setData(props.structure?.swings ?? [], projection);
+  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
+  swingPrimitive?.setVisible(layerVisibility.value.swing);
+}
+
 function updateStructureOverlays(): void {
   if (!chart || !candleSeries || typeof chart.timeScale().timeToCoordinate !== "function" || typeof candleSeries.priceToCoordinate !== "function") {
     selectedSbarMarker.value = null;
@@ -366,10 +374,7 @@ function updateStructureOverlays(): void {
       return { ...segment, color: style.color, dasharray: style.dasharray };
     })
     : [];
-  const primitiveProjection = { timeBySbarId, indexBySbarId };
-  cbarPrimitive?.setData(structure?.cbars ?? [], primitiveProjection);
   cbarPrimitive?.setVisible(layerVisibility.value.cbar);
-  swingPrimitive?.setData(structure?.swings ?? [], primitiveProjection);
   swingPrimitive?.setVisible(layerVisibility.value.swing);
   const targetTime = props.targetSbarId ? timeBySbarId.get(props.targetSbarId) : undefined;
   const targetX = targetTime === undefined ? null : timeScale.timeToCoordinate(targetTime);
@@ -646,6 +651,7 @@ function updateChart(): void {
     );
     timeBySbarId = chartIndex.timeBySbarId;
     indexBySbarId = chartIndex.indexBySbarId;
+    syncStructurePrimitives();
     const candles = projection.candles.map((candle, index) => {
       const base = layerVisibility.value.sbar ? candle : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
       if (!replayProgressApplies.value || index < processedCount) return base;
@@ -822,9 +828,10 @@ watch(
 );
 
 watch(() => props.structure, () => {
+  syncStructurePrimitives();
   updateStructureOverlays();
   updateHoveredObject(undefined);
-});
+}, { deep: true });
 watch(() => props.selectedObject, updateStructureOverlays);
 watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
