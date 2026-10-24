@@ -724,6 +724,7 @@ onMounted(async () => {
               :origin="origin"
               :test-dataset="testDataset"
               :run-state="runState"
+              :playback-status="playbackStatus"
               :structure="replayInspector?.sbarId === runState?.cursorSbarId ? (replayInspector?.structure ?? null) : null"
               :selected-object="selectedReplayChartObject"
               :target-sbar-id="targetSbarId"
