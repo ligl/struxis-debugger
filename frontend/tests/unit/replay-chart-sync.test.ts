@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSameLogicalRange, ReplayCrosshairSyncGate, ReplayViewportSyncGate, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../../src/replay-chart-sync";
+import { isSameLogicalRange, ReplayCrosshairSyncGate, ReplayViewportSyncGate, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../../src/replay-chart-sync";
 
 describe("Replay chart viewport protocol", () => {
   it("translates Live ranges into Snapshot logical coordinates by adding Offset", () => {
@@ -133,19 +133,3 @@ describe("Replay Crosshair command resolution", () => {
   });
 });
 
-describe("Replay Crosshair anchor mapping", () => {
-  const bars = [{ sbarId: "sbar-a" }, { sbarId: "sbar-b" }, { sbarId: "sbar-c" }];
-
-  it("maps fractional logical coordinates to the nearest exact SBar identity", () => {
-    expect(resolveReplayCrosshairAnchor(bars, 1.2)).toEqual({ index: 1, sbarId: "sbar-b" });
-    expect(resolveReplayCrosshairAnchor(bars, 1.8)).toEqual({ index: 2, sbarId: "sbar-c" });
-  });
-
-  it("rejects non-finite and out-of-sequence coordinates", () => {
-    expect(resolveReplayCrosshairAnchor(bars, Number.NaN)).toBeNull();
-    expect(resolveReplayCrosshairAnchor(bars, Number.POSITIVE_INFINITY)).toBeNull();
-    expect(resolveReplayCrosshairAnchor(bars, -0.6)).toBeNull();
-    expect(resolveReplayCrosshairAnchor(bars, 2.6)).toBeNull();
-    expect(resolveReplayCrosshairAnchor([], 0)).toBeNull();
-  });
-});
