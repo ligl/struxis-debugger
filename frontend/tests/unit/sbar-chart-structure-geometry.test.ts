@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectCBarRectangles, type CBarGeometryInput } from "../../src/sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectSwingSegments, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
 
 function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
   return {
@@ -80,3 +80,87 @@ describe("projectCBarRectangles", () => {
     expect(result).toHaveLength(1);
   });
 });
+
+function swing(overrides: Partial<SwingGeometryInput> = {}): SwingGeometryInput {
+  return {
+    swingId: "swing-1",
+    sbarStartId: "sbar-1",
+    sbarEndId: "sbar-3",
+    high: "15",
+    low: "8",
+    direction: "Up",
+    state: "Confirmed",
+    ...overrides,
+  };
+}
+
+describe("projectSwingSegments", () => {
+  it("projects directional endpoints and preserves state without choosing visual style", () => {
+    const result = projectSwingSegments({
+      swings: [swing()],
+      coordinateForSbarId: (id) => id === "sbar-1" ? 10 : 30,
+      priceToCoordinate: (price) => price === 8 ? 50 : 10,
+    });
+
+    expect(result).toEqual([{
+      id: "swing-1",
+      x1: 10,
+      y1: 50,
+      x2: 30,
+      y2: 10,
+      state: "Confirmed",
+    }]);
+    expect(result[0]).not.toHaveProperty("color");
+    expect(result[0]).not.toHaveProperty("dasharray");
+  });
+
+  it("reverses endpoint prices for non-Up direction", () => {
+    const result = projectSwingSegments({
+      swings: [swing({ direction: "Down" })],
+      coordinateForSbarId: (id) => id === "sbar-1" ? 10 : 30,
+      priceToCoordinate: (price) => price === 15 ? 10 : 50,
+    });
+
+    expect(result[0]).toMatchObject({ y1: 10, y2: 50 });
+  });
+
+  it("omits missing anchors, invalid prices, and non-finite coordinates", () => {
+    const missingAnchor = projectSwingSegments({
+      swings: [swing()],
+      coordinateForSbarId: (id) => id === "sbar-1" ? 10 : null,
+      priceToCoordinate: (price) => price,
+    });
+    const invalidPrice = projectSwingSegments({
+      swings: [swing({ low: "invalid" })],
+      coordinateForSbarId: () => 10,
+      priceToCoordinate: (price) => price,
+    });
+    const invalidCoordinate = projectSwingSegments({
+      swings: [swing()],
+      coordinateForSbarId: () => Number.NaN,
+      priceToCoordinate: (price) => price,
+    });
+
+    expect(missingAnchor).toEqual([]);
+    expect(invalidPrice).toEqual([]);
+    expect(invalidCoordinate).toEqual([]);
+  });
+
+  it("culls swings outside the visible logical range with overscan", () => {
+    const result = projectSwingSegments({
+      swings: [
+        swing({ swingId: "visible", sbarStartId: "sbar-2", sbarEndId: "sbar-3" }),
+        swing({ swingId: "outside", sbarStartId: "sbar-20", sbarEndId: "sbar-21" }),
+      ],
+      indexBySbarId: new Map([
+        ["sbar-2", 2], ["sbar-3", 3], ["sbar-20", 20], ["sbar-21", 21],
+      ]),
+      visibleRange: { from: 2, to: 4 },
+      coordinateForSbarId: (id) => id.endsWith("20") || id.endsWith("21") ? 200 : 20,
+      priceToCoordinate: (price) => price,
+    });
+
+    expect(result.map((segment) => segment.id)).toEqual(["visible"]);
+  });
+});
+
