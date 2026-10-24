@@ -26,8 +26,10 @@ type SurfacePort = {
   getSbarCoordinate: (sbarId: string) => number | null;
   getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
   hasSbarId: (sbarId: string) => boolean;
+  getSbarMarker: (sbarId: string) => { id: string; x: number; y: number; width: number; height: number } | null;
 };
 const surface = ref<SurfacePort | null>(null);
+const selectedSbarMarker = ref<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
 const selectionStartX = ref<number | null>(null);
 const selectionEndX = ref<number | null>(null);
 const previewX = ref<number | null>(null);
@@ -48,8 +50,16 @@ function updateSelectionCoordinates(): void {
   if (!props.selectionPending) previewX.value = null;
 }
 
+function updateSelectedSbarMarker(): void {
+  const selected = props.selectedObject;
+  selectedSbarMarker.value = selected?.kind === "sbar" && selected.originDatasetId === props.originDatasetId
+    ? surface.value?.getSbarMarker(selected.id) ?? null
+    : null;
+}
+
 function handleProjectionFrame(): void {
   updateSelectionCoordinates();
+  updateSelectedSbarMarker();
 }
 
 function handlePointerPosition(point: { x: number; y: number } | null): void {
@@ -124,7 +134,12 @@ watch(
   { deep: false, immediate: true, flush: "post" },
 );
 
-onMounted(updateSelectionCoordinates);
+watch(() => [props.selectedObject, props.originDatasetId] as const, updateSelectedSbarMarker, { deep: true, flush: "post" });
+
+onMounted(() => {
+  updateSelectionCoordinates();
+  updateSelectedSbarMarker();
+});
 onBeforeUnmount(stopBoundaryDrag);
 </script>
 
@@ -150,6 +165,44 @@ onBeforeUnmount(stopBoundaryDrag);
       @pointer-position="handlePointerPosition"
       @projection-frame="handleProjectionFrame"
     >
+      <template #chart-structure-overlays="{ cbarRectangles, swingSegments }">
+        <rect
+          v-if="selectedSbarMarker"
+          class="origin-object-selected-sbar"
+          :x="selectedSbarMarker.x"
+          :y="selectedSbarMarker.y"
+          :width="selectedSbarMarker.width"
+          :height="selectedSbarMarker.height"
+          data-testid="origin-selected-sbar"
+          :data-sbar-id="selectedSbarMarker.id"
+        />
+        <line
+          v-for="segment in swingSegments.filter((item) => props.selectedObject?.kind === 'swing' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
+          :key="segment.id"
+          :x1="segment.x1"
+          :y1="segment.y1"
+          :x2="segment.x2"
+          :y2="segment.y2"
+          stroke="#D99A45"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          data-testid="origin-selected-swing"
+          :data-swing-id="segment.id"
+        />
+        <rect
+          v-for="rectangle in cbarRectangles.filter((item) => props.selectedObject?.kind === 'cbar' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
+          :key="rectangle.id"
+          :x="rectangle.x"
+          :y="rectangle.y"
+          :width="rectangle.width"
+          :height="rectangle.height"
+          fill="none"
+          stroke="#D99A45"
+          stroke-width="2"
+          data-testid="origin-selected-cbar"
+          :data-cbar-id="rectangle.id"
+        />
+      </template>
       <template #footer-trailing>
         <span class="origin-chart-selection-status" data-testid="origin-chart-selection-status">{{ selectionStatus }}</span>
       </template>
