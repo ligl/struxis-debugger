@@ -9,7 +9,10 @@ import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
-  originDatasetId: string;
+  sequenceId: string;
+  headerTitle?: string;
+  headerTag?: string;
+  emptyMessage?: string;
   showHeader?: boolean;
   showFooter?: boolean;
   panelClass?: string;
@@ -33,7 +36,7 @@ let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let overlayUpdateFrame: number | null = null;
-let fittedOriginDatasetId: string | null = null;
+let fittedSequenceId: string | null = null;
 let sbarIdByLogicalIndex: readonly string[] = [];
 let indexBySbarId: ReadonlyMap<string, number> = new Map();
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
@@ -498,7 +501,7 @@ function updateChart(): void {
     firstSbarTime = projection.candles[0]?.time ?? null;
     secondSbarTime = projection.candles[1]?.time ?? null;
     chartError.value = "";
-    if (props.bars.length > 0 && fittedOriginDatasetId !== props.originDatasetId) {
+    if (props.bars.length > 0 && fittedSequenceId !== props.sequenceId) {
       const timeScale = chart.timeScale();
       timeScale.fitContent();
       // Keep the established fixed logical padding. Selection correctness
@@ -507,7 +510,7 @@ function updateChart(): void {
         from: -0.5,
         to: projection.candles.length + 3.5,
       });
-      fittedOriginDatasetId = props.originDatasetId;
+      fittedSequenceId = props.sequenceId;
     }
     updateSbarCoordinates();
   } catch (error) {
@@ -585,7 +588,7 @@ onMounted(() => {
   applyCrosshairOptions();
 });
 
-watch(() => [props.bars, props.originDatasetId] as const, () => {
+watch(() => [props.bars, props.sequenceId] as const, () => {
   updateChart();
 });
 watch(() => props.structure, () => {
@@ -636,8 +639,8 @@ onBeforeUnmount(() => {
   >
     <div v-if="showHeader !== false" class="origin-chart-heading">
       <div class="chart-title-block">
-        <h3>ORIGIN · {{ latestBar?.barType ?? originDatasetId }}</h3>
-        <span class="tag green">CATALOG SOURCE</span>
+        <h3>{{ headerTitle ?? latestBar?.barType ?? "SBAR" }}</h3>
+        <span class="tag green">{{ headerTag ?? "SBar SERIES" }}</span>
         <span class="chart-desc">K-line + Struxis structure + volume</span>
       </div>
       <div class="chart-heading-actions">
@@ -650,14 +653,14 @@ onBeforeUnmount(() => {
       <span>{{ chartError }}</span>
     </div>
     <div v-else-if="bars.length === 0" class="origin-chart-empty">
-      No SBar data is available in this Origin projection.
+      {{ emptyMessage ?? 'No SBar data is available.' }}
     </div>
     <div class="origin-chart-viewport" data-testid="origin-chart-viewport">
       <div
         ref="chartHost"
         class="origin-chart-host"
         data-testid="origin-chart-canvas"
-        :data-origin-dataset-id="originDatasetId"
+        :data-origin-dataset-id="sequenceId"
         :data-first-sbar-x="firstSbarX ?? ''"
         :data-second-sbar-x="secondSbarX ?? ''"
         :aria-label="chartLabel"
