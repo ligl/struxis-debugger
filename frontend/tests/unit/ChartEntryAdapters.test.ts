@@ -1,6 +1,6 @@
 import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import OriginChart from "../../src/components/OriginChart.vue";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
 import SnapshotPlaybackOverlay from "../../src/components/SnapshotPlaybackOverlay.vue";
