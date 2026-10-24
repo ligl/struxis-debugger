@@ -5,7 +5,7 @@ import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex } from "../sbar-chart-index";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
+import { resolveReplayCrosshairAnchor } from "../replay-chart-sync";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
@@ -18,10 +18,7 @@ const props = defineProps<{
   selectionPending?: boolean;
   selectionEditable?: boolean;
   displayContext?: "origin" | "snapshot-reference";
-  syncEnabled?: boolean;
-  syncRequest?: ReplayChartViewportSync | null;
-  crosshairSync?: ReplayChartCrosshairSync | null;
-  syncLiveBarCount?: number;
+  snapshotLiveBarCount?: number;
   snapshotPlaybackEnabled?: boolean;
   snapshotPlaybackOffset?: number | null;
   snapshotProcessedCount?: number;
@@ -51,8 +48,6 @@ let indexBySbarId: ReadonlyMap<string, number> = new Map();
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
-const viewportSyncGate = new ReplayViewportSyncGate();
-const crosshairSyncGate = new ReplayCrosshairSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
@@ -139,7 +134,7 @@ function scheduleOverlayUpdate(): void {
     updateSbarCoordinates();
     const latest = pendingViewportRange;
     pendingViewportRange = null;
-    if (latest && props.syncEnabled && props.displayContext === "snapshot-reference" && chart) {
+    if (latest && props.displayContext === "snapshot-reference" && chart) {
       emit("viewportChange", { source: "reference", from: latest.from, to: latest.to });
     }
   });
@@ -170,9 +165,9 @@ function updateSbarCoordinates(): void {
 }
 
 function updateSyncBoundaryCoordinates(): void {
-  const request = props.syncRequest;
-  const liveCount = props.syncLiveBarCount ?? 0;
-  if (!chart || !props.syncEnabled || props.displayContext !== "snapshot-reference" || !request) {
+  const offset = props.snapshotPlaybackOffset;
+  const liveCount = props.snapshotLiveBarCount ?? 0;
+  if (!chart || props.displayContext !== "snapshot-reference" || offset === null || offset === undefined || liveCount <= 0) {
     syncBoundaryXs.value = null;
     return;
   }
@@ -181,7 +176,7 @@ function updateSyncBoundaryCoordinates(): void {
   // Re-project the same domain anchors after every zoom, pan, or resize.
   // Coordinate projection never clamps an anchor to the visible viewport.
   syncBoundaryXs.value = resolveSnapshotLiveRangeCoordinates({
-    offset: request.offset,
+    offset,
     liveCount,
     barIds: sbarIdByLogicalIndex,
     coordinateForSbarId,
@@ -537,8 +532,7 @@ function stopBoundaryDrag(): void {
 
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
-  if (props.displayContext !== "snapshot-reference" || !props.syncEnabled || crosshairSyncGate.isApplying) return;
-  crosshairSyncGate.setPeerPositionActive(false);
+  if (props.displayContext !== "snapshot-reference") return;
   const point = param.point;
   if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
     emit("crosshairChange", { source: "reference", sbarId: null, price: null });
@@ -713,34 +707,13 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
 
 function handleVisibleRangeChange(): void {
   scheduleOverlayUpdate();
-  if (!props.syncEnabled || props.displayContext !== "snapshot-reference" || !chart || props.bars.length === 0) return;
+  if (props.displayContext !== "snapshot-reference" || !chart || props.bars.length === 0) return;
   const range = chart.timeScale().getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
-
-  // Ignore the asynchronous echo of a range applied from Live. A microtask-only
-  // guard is insufficient if Lightweight Charts publishes its range callback later.
-  const observation = viewportSyncGate.observeRange(range);
-  if (observation !== "publish") return;
-
-  // Zoom/pan can produce many range events in one frame. Keep only the latest
-  // raw fractional range; scheduleOverlayUpdate publishes it in the same frame
-  // as the overlay projection, so each chart has one viewport RAF pipeline.
+  // Report the raw range; SnapshotReferenceChart owns sync qualification,
+  // peer-echo suppression and cross-chart publication.
   pendingViewportRange = { from: range.from, to: range.to };
   scheduleOverlayUpdate();
-}
-
-function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
-  if (!request || request.source === "reference" || !props.syncEnabled || props.displayContext !== "snapshot-reference" || !chart) return;
-  const current = chart.timeScale().getVisibleLogicalRange();
-  // Snapshot = Live + offset: the shared protocol owns the transform semantics.
-  const target = translateReplayViewportRange(request, "live-to-reference");
-  if (!target) return;
-  if (current && isSameLogicalRange(current, target)) return;
-  const { from, to } = target;
-  viewportSyncGate.expectPeerRange(target);
-  const suppressionRevision = viewportSyncGate.beginSuppression();
-  chart.timeScale().setVisibleLogicalRange({ from, to });
-  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
 }
 
 function fitContent(): void {
@@ -765,13 +738,12 @@ function fitContentShortcut(): boolean {
  */
 function updateSnapshotCandleDimming(): void {
   const offset = props.snapshotPlaybackOffset;
-  const liveCount = props.syncLiveBarCount ?? 0;
+  const liveCount = props.snapshotLiveBarCount ?? 0;
   if (
     !chart ||
     !candleSeries ||
     props.displayContext !== "snapshot-reference" ||
     props.snapshotPlaybackEnabled !== true ||
-    props.syncEnabled !== true ||
     offset === null ||
     offset === undefined ||
     liveCount <= 0
@@ -819,21 +791,6 @@ function applyCrosshairOptions(): void {
   });
 }
 
-function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
-  if (!chart || !candleSeries || props.displayContext !== "snapshot-reference" || !props.syncEnabled) return;
-  const command = resolveReplayCrosshairCommand(sync, props.bars, timeBySbarId, "reference");
-  if (command.kind === "ignore") return;
-  if (command.kind === "clear") {
-    crosshairSyncGate.setPeerPositionActive(false);
-    crosshairSyncGate.beginApply();
-    chart.clearCrosshairPosition?.();
-    return;
-  }
-
-  crosshairSyncGate.setPeerPositionActive(true);
-  crosshairSyncGate.beginApply();
-  chart.setCrosshairPosition?.(command.price, command.time, candleSeries);
-}
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
@@ -859,7 +816,6 @@ function updateChart(): void {
       fittedOriginDatasetId = props.originDatasetId;
     }
     updateSbarCoordinates();
-    applyCrosshairSync(props.crosshairSync);
   } catch (error) {
     sbarIdByLogicalIndex = [];
     indexBySbarId = new Map();
@@ -926,21 +882,12 @@ onMounted(() => {
     updateSbarCoordinates();
   });
   resizeObserver.observe(chartHost.value);
-  const suppressionRevision = viewportSyncGate.beginSuppression();
   updateChart();
-  // Snapshot Reference can mount after Live Replay has already published its
-  // current viewport. Apply the latest viewport and crosshair after the
-  // SBar-ID index has been built and initial fit has completed.
   applyCrosshairOptions();
-  applySyncRequest(props.syncRequest);
-  applyCrosshairSync(props.crosshairSync);
-  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
 });
 
 watch(() => [props.bars, props.originDatasetId] as const, () => {
-  const suppressionRevision = viewportSyncGate.beginSuppression();
   updateChart();
-  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
   updateHoveredObject(undefined);
 });
 watch(() => props.structure, () => {
@@ -949,48 +896,11 @@ watch(() => props.structure, () => {
   updateSbarCoordinates();
   updateHoveredObject(undefined);
 }, { deep: true });
-watch(() => props.crosshairSync, (sync) => {
-  if (!props.syncEnabled || !sync) {
-    if (props.displayContext === "snapshot-reference") {
-      crosshairSyncGate.setPeerPositionActive(false);
-      crosshairSyncGate.beginApply();
-      chart?.clearCrosshairPosition?.();
-    }
-    return;
-  }
-  applyCrosshairSync(sync);
-}, { deep: true });
-watch(() => props.syncEnabled, (enabled) => {
-  applyCrosshairOptions();
-  if (!enabled && props.displayContext === "snapshot-reference") {
-    // Clear any stale peer-programmed position at the eligibility boundary.
-    // Native pointer movement remains enabled and immediately positions this
-    // chart's own Crosshair without publishing a cross-chart update.
-    crosshairSyncGate.setPeerPositionActive(false);
-    crosshairSyncGate.beginApply();
-    chart?.clearCrosshairPosition?.();
-  }
-});
-watch(() => props.syncRequest, (request) => {
-  applySyncRequest(request);
-  // The source chart already scheduled its own overlay refresh from the native
-  // range callback. Only the receiving chart needs this extra projection.
-  if (request?.source !== "reference") scheduleOverlayUpdate();
-}, { deep: true });
-watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, ([enabled]) => {
-  if (!enabled) {
-    // Eligibility loss is a hard boundary: no queued Snapshot viewport may
-    // leak back to Live, and no old echo guard may affect local navigation.
-    pendingViewportRange = null;
-    viewportSyncGate.clear();
-    syncBoundaryXs.value = null;
-  }
-  updateSbarCoordinates();
-});
 watch(
-  () => [props.snapshotPlaybackEnabled, props.snapshotPlaybackOffset, props.snapshotProcessedCount, props.syncLiveBarCount, props.syncEnabled] as const,
+  () => [props.snapshotPlaybackEnabled, props.snapshotPlaybackOffset, props.snapshotProcessedCount, props.snapshotLiveBarCount] as const,
   updateSnapshotCandleDimming,
 );
+watch(() => [props.snapshotPlaybackOffset, props.snapshotLiveBarCount] as const, updateSbarCoordinates);
 watch(() => props.selectedObject, () => {
   updateSbarMarkers();
   revealSelectedObject();
@@ -1021,8 +931,6 @@ onBeforeUnmount(() => {
     overlayUpdateFrame = null;
   }
   pendingViewportRange = null;
-  viewportSyncGate.clear();
-  crosshairSyncGate.clear();
   chart?.remove();
   chart = null;
   candleSeries = null;
@@ -1100,7 +1008,7 @@ onBeforeUnmount(() => {
       >
         <slot
           name="snapshot-overlays"
-          :enabled="props.snapshotPlaybackEnabled === true && props.syncEnabled === true"
+          :enabled="props.snapshotPlaybackEnabled === true && props.snapshotPlaybackOffset !== null && props.snapshotPlaybackOffset !== undefined"
           :bright-candles="snapshotBrightCandles"
           :cbar-rectangles="cbarRectangles"
           :swing-segments="swingSegments"
