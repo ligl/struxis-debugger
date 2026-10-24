@@ -17,6 +17,15 @@ export interface ReplayChartViewportSync {
   offset: number;
 }
 
+export interface ReplayChartCrosshairSync {
+  revision: number;
+  source: "live" | "reference";
+  /** Stable SBar identity shared by the eligible Live and Snapshot sequences. */
+  sbarId: string | null;
+  /** Source-chart price at the pointer; each chart projects it independently. */
+  price: number | null;
+}
+
 export interface SBarDto {
   sbarId: string;
   barType: string;
