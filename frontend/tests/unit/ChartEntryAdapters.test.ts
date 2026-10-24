@@ -28,7 +28,7 @@ const surfacePortCalls = {
 const SurfaceStub = defineComponent({
   name: "SBarChartSurface",
   props: [
-    "bars", "structure", "originDatasetId",
+    "bars", "structure", "sequenceId", "headerTitle", "headerTag", "emptyMessage",
     "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
   ],
   emits: ["chartClick", "pointerPosition", "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
@@ -73,7 +73,7 @@ describe("chart entry adapters", () => {
     expect(((surface.props() as Record<string, unknown>)["displayContext"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["showHeader"])).toBe(true);
     expect(((surface.props() as Record<string, unknown>)["showFooter"])).toBe(true);
-    expect(((surface.props() as Record<string, unknown>)["originDatasetId"])).toBe("origin-1");
+    expect(((surface.props() as Record<string, unknown>)["sequenceId"])).toBe("origin-1");
     expect(((surface.props() as Record<string, unknown>)["selectedObject"])).toBeUndefined();
     expect((wrapper.props() as Record<string, unknown>)["selectionEditable"]).toBe(true);
     expect(((surface.props() as Record<string, unknown>)["selectionEditable"])).toBeUndefined();
@@ -105,7 +105,7 @@ describe("chart entry adapters", () => {
     expect(((surface.props() as Record<string, unknown>)["showHeader"])).toBe(false);
     expect(((surface.props() as Record<string, unknown>)["showFooter"])).toBe(false);
     expect(((surface.props() as Record<string, unknown>)["panelClass"])).toBe("snapshot-reference-chart");
-    expect(((surface.props() as Record<string, unknown>)["originDatasetId"])).toBe("snapshot-1");
+    expect(((surface.props() as Record<string, unknown>)["sequenceId"])).toBe("snapshot-1");
     expect(((surface.props() as Record<string, unknown>)["selectedObject"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["selectionEditable"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["selectionStartSbarId"])).toBeUndefined();
