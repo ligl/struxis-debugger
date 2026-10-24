@@ -607,13 +607,16 @@ describe("SBarChartSurface and chart entry adapters", () => {
     });
 
     const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
-      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+      ((param: { point?: { x: number; y?: number } }) => void) | undefined;
     expect(clickHandler).toBeTypeOf("function");
 
     clickHandler?.({ point: { x: 200, y: 12 } });
     clickHandler?.({ point: { x: 200, y: 410 } });
+    // Preserve horizontal SBar selection if the chart engine supplies no y coordinate.
+    clickHandler?.({ point: { x: 200 } });
     await nextTick();
     expect(wrapper.emitted("sbarClick")).toEqual([
+      ["1700000060000000000"],
       ["1700000060000000000"],
       ["1700000060000000000"],
     ]);
