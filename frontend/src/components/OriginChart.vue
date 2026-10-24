@@ -95,22 +95,6 @@ function resolveBoundaryDragSbar(clientX: number): string | null {
   return props.bars[clamped]?.sbarId ?? null;
 }
 
-function handleBoundaryKey(edge: "start" | "end", event: KeyboardEvent): void {
-  if (props.selectionEditable === false || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
-  const delta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
-  if (delta === 0) return;
-  event.preventDefault();
-  const currentIndex = props.bars.findIndex((bar) => bar.sbarId === (edge === "start" ? props.selectionStartSbarId : props.selectionEndSbarId));
-  const otherIndex = props.bars.findIndex((bar) => bar.sbarId === (edge === "start" ? props.selectionEndSbarId : props.selectionStartSbarId));
-  if (currentIndex < 0 || otherIndex < 0) return;
-  const nextIndex = Math.max(0, Math.min(props.bars.length - 1, currentIndex + delta));
-  if (edge === "start" ? nextIndex > otherIndex : nextIndex < otherIndex) return;
-  const nextId = props.bars[nextIndex]?.sbarId;
-  if (nextId && nextId !== (edge === "start" ? props.selectionStartSbarId : props.selectionEndSbarId)) {
-    emit("rangeBoundaryChange", edge, nextId);
-  }
-}
-
 function startBoundaryDrag(edge: "start" | "end", event: PointerEvent): void {
   if (event.button !== 0 || props.selectionEditable === false || props.selectionPending || !props.selectionStartSbarId || !props.selectionEndSbarId) return;
   draggingBoundary = edge;
@@ -187,8 +171,6 @@ onBeforeUnmount(stopBoundaryDrag);
             data-testid="origin-selection-start-line"
             :style="{ left: `${selectionStartX}px`, pointerEvents: selectionEditable !== false && !selectionPending && selectionEndX !== null ? 'auto' : 'none', cursor: selectionEditable !== false && !selectionPending && selectionEndX !== null ? 'ew-resize' : 'default' }"
             @pointerdown.stop="startBoundaryDrag('start', $event)"
-            @keydown="handleBoundaryKey('start', $event)"
-            tabindex="0"
           ></div>
           <div
             v-if="selectionPending && selectionStartX !== null && previewX !== null"
@@ -207,8 +189,6 @@ onBeforeUnmount(stopBoundaryDrag);
               data-testid="origin-selection-end-line"
               :style="{ left: `${selectionEndX}px`, pointerEvents: selectionEditable !== false ? 'auto' : 'none', cursor: selectionEditable !== false ? 'ew-resize' : 'default' }"
               @pointerdown.stop="startBoundaryDrag('end', $event)"
-              @keydown="handleBoundaryKey('end', $event)"
-              tabindex="0"
             ></div>
           </template>
         </div>
