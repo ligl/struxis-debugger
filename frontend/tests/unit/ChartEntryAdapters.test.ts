@@ -70,16 +70,16 @@ describe("chart entry adapters", () => {
     });
 
     const surface = wrapper.getComponent(SurfaceStub);
-    expect(surface.props("displayContext")).toBeUndefined();
-    expect(surface.props("showHeader")).toBe(true);
-    expect(surface.props("showFooter")).toBe(true);
-    expect(surface.props("originDatasetId")).toBe("origin-1");
-    expect(surface.props("selectedObject")).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["displayContext"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["showHeader"])).toBe(true);
+    expect(((surface.props() as Record<string, unknown>)["showFooter"])).toBe(true);
+    expect(((surface.props() as Record<string, unknown>)["originDatasetId"])).toBe("origin-1");
+    expect(((surface.props() as Record<string, unknown>)["selectedObject"])).toBeUndefined();
     expect(wrapper.props("selectionEditable")).toBe(true);
-    expect(surface.props("selectionEditable")).toBeUndefined();
-    expect(surface.props("selectionStartSbarId")).toBeUndefined();
-    expect(surface.props("syncEnabled")).toBeUndefined();
-    expect(surface.props("snapshotPlaybackEnabled")).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["selectionEditable"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["selectionStartSbarId"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["syncEnabled"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackEnabled"])).toBeUndefined();
   });
 
   it("maps Snapshot Reference semantics through its own entry", () => {
@@ -101,21 +101,21 @@ describe("chart entry adapters", () => {
     });
 
     const surface = wrapper.getComponent(SurfaceStub);
-    expect(surface.props("displayContext")).toBeUndefined();
-    expect(surface.props("showHeader")).toBe(false);
-    expect(surface.props("showFooter")).toBe(false);
-    expect(surface.props("panelClass")).toBe("snapshot-reference-chart");
-    expect(surface.props("originDatasetId")).toBe("snapshot-1");
-    expect(surface.props("selectedObject")).toBeUndefined();
-    expect(surface.props("selectionEditable")).toBeUndefined();
-    expect(surface.props("selectionStartSbarId")).toBeUndefined();
-    expect(surface.props("syncEnabled")).toBeUndefined();
-    expect(surface.props("syncRequest")).toBeUndefined();
-    expect(surface.props("crosshairSync")).toBeUndefined();
-    expect(surface.props("snapshotLiveBarCount")).toBeUndefined();
-    expect(surface.props("snapshotPlaybackEnabled")).toBeUndefined();
-    expect(surface.props("snapshotPlaybackOffset")).toBeUndefined();
-    expect(surface.props("snapshotProcessedCount")).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["displayContext"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["showHeader"])).toBe(false);
+    expect(((surface.props() as Record<string, unknown>)["showFooter"])).toBe(false);
+    expect(((surface.props() as Record<string, unknown>)["panelClass"])).toBe("snapshot-reference-chart");
+    expect(((surface.props() as Record<string, unknown>)["originDatasetId"])).toBe("snapshot-1");
+    expect(((surface.props() as Record<string, unknown>)["selectedObject"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["selectionEditable"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["selectionStartSbarId"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["syncEnabled"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["syncRequest"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["crosshairSync"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["snapshotLiveBarCount"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackEnabled"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackOffset"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["snapshotProcessedCount"])).toBeUndefined();
     expect(wrapper.findComponent(SnapshotPlaybackOverlay).exists()).toBe(true);
     expect(wrapper.findComponent(SnapshotLiveRangeMarkers).exists()).toBe(true);
   });
@@ -207,17 +207,17 @@ describe("chart entry adapters", () => {
 
     await Promise.resolve();
     const overlay = wrapper.getComponent(SnapshotPlaybackOverlay);
-    expect(overlay.props("enabled")).toBe(true);
-    expect(overlay.props("brightCandles")).toEqual([
+    expect(((overlay.props() as Record<string, unknown>)["enabled"])).toBe(true);
+    expect(((overlay.props() as Record<string, unknown>)["brightCandles"])).toEqual([
       { id: "sbar-1", x: 6.8, y: 18, width: 6.4, height: 6 },
     ]);
-    expect(wrapper.getComponent(SnapshotLiveRangeMarkers).props("boundaries")).toEqual({
+    expect((wrapper.getComponent(SnapshotLiveRangeMarkers).props() as Record<string, unknown>)["boundaries"]).toEqual({
       start: 10,
       end: 10,
     });
     const surface = wrapper.getComponent(SurfaceStub);
-    expect(surface.props("snapshotPlaybackEnabled")).toBeUndefined();
-    expect(surface.props("snapshotPlaybackOffset")).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackEnabled"])).toBeUndefined();
+    expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackOffset"])).toBeUndefined();
   });
 
 });
