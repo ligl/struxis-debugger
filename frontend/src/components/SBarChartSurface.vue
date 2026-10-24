@@ -427,16 +427,14 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
 
   if (layer === "sbar") {
     candleSeries?.applyOptions({ visible: layerVisibility.value.sbar });
-    return;
-  }
-  if (layer === "volume") {
+  } else if (layer === "volume") {
     volumeSeries?.applyOptions({ visible: layerVisibility.value.volume });
-    return;
+  } else {
+    // Structure overlays are projections of authoritative DTOs. Recompute
+    // their screen coordinates on both hide and restore; never mutate domain data.
+    updateSbarCoordinates();
   }
-
-  // Structure overlays are projections of authoritative DTOs. Recompute their
-  // screen coordinates on both hide and restore; never mutate domain data.
-  updateSbarCoordinates();
+  emit("projectionFrame");
 }
 
 function handleVisibleRangeChange(): void {
