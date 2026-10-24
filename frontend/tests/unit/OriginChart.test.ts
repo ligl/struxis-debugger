@@ -1009,6 +1009,8 @@ describe("SBarChartSurface", () => {
     await nextTick();
 
     expect(wrapper.emitted("sbarClick")).toEqual([["1700000060000000000"]]);
+    await wrapper.setProps({ selectionStartSbarId: "1700000060000000000", selectionPending: true });
+    await nextTick();
     expect(wrapper.get('[data-testid="origin-selection-start-line"]').attributes("style"))
       .toContain("left: 200px");
     wrapper.get('[data-testid="origin-chart-panel"]').element.dispatchEvent(
