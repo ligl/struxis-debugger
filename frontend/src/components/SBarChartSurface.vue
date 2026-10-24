@@ -5,8 +5,8 @@ import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex } from "../sbar-chart-index";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
-import { resolveReplayCrosshairAnchor } from "../replay-chart-sync";
-import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
+import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
   bars: SBarDto[];
@@ -18,6 +18,9 @@ const props = defineProps<{
   selectionPending?: boolean;
   selectionEditable?: boolean;
   displayContext?: "origin" | "snapshot-reference";
+  syncEnabled?: boolean;
+  syncRequest?: ReplayChartViewportSync | null;
+  crosshairSync?: ReplayChartCrosshairSync | null;
   syncLiveBarCount?: number;
   snapshotPlaybackEnabled?: boolean;
   snapshotPlaybackOffset?: number | null;
@@ -32,6 +35,8 @@ const emit = defineEmits<{
   cancelRangeSelection: [];
   viewportRangeChange: [range: { from: number; to: number }];
   crosshairPositionChange: [position: { sbarId: string | null; price: number | null }];
+  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
+  crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const structureOverlayWidth = ref(0);
