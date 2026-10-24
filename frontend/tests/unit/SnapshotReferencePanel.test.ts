@@ -116,7 +116,7 @@ describe("SnapshotReferencePanel", () => {
     expect(chart.attributes("data-progress-active")).toBe("false");
   });
 
-  it("keeps Snapshot Reference independent when timeframe or SBar coverage differs", async () => {
+  it("keeps Snapshot Reference independent when the Replay coordinator marks sync ineligible", async () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
       props: {
