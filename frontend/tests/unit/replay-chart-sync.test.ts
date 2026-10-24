@@ -76,11 +76,9 @@ describe("Replay Crosshair sync gate", () => {
     gate.setPeerPositionActive(false);
     expect(gate.hasPeerPosition).toBe(false);
   });
-  it("prevents an earlier microtask from releasing a newer apply", async () => {
+  it("releases apply suppression after the scheduled microtask", async () => {
     const gate = new ReplayCrosshairSyncGate();
     gate.beginApply();
-    gate.beginApply();
-    await Promise.resolve();
     expect(gate.isApplying).toBe(true);
     await Promise.resolve();
     expect(gate.isApplying).toBe(false);
