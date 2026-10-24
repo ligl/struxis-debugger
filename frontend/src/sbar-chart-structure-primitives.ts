@@ -3,7 +3,7 @@ import type {
   IPrimitivePaneRenderer,
   ISeriesApi,
   ISeriesPrimitive,
-  ISeriesPrimitivePaneView,
+  IPrimitivePaneView,
   Time,
 } from "lightweight-charts";
 import type { ChartPrimitiveHost } from "./sbar-chart-primitive-host";
@@ -93,12 +93,17 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
   protected chart: IChartApi | null = null;
   protected series: ISeriesApi<"Candlestick"> | null = null;
   private requestChartUpdate: (() => void) | null = null;
+  private readonly paneViewList: readonly IPrimitivePaneView[];
   protected objects: readonly TObject[] = [];
   protected projection: StructurePrimitiveProjection = {
     timeBySbarId: new Map(),
     indexBySbarId: new Map(),
   };
   protected visible = true;
+
+  constructor() {
+    this.paneViewList = [this];
+  }
 
   attached(param: PrimitiveAttachedParameter): void {
     this.chart = param.chart;
@@ -118,8 +123,8 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     this.project();
   }
 
-  paneViews(): readonly ISeriesPrimitivePaneView[] {
-    return [this];
+  paneViews(): readonly IPrimitivePaneView[] {
+    return this.paneViewList;
   }
 
   renderer(): IPrimitivePaneRenderer | null {
