@@ -8,8 +8,9 @@ import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-fo
 const props = defineProps<{
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
-  liveBarType?: string | null;
   liveSbarIds?: string[];
+  syncEligible?: boolean;
+  syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
   crosshairSync?: ReplayChartCrosshairSync | null;
   progressApplies?: boolean;
@@ -18,7 +19,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
-  syncEligibility: [eligible: boolean, offset: number | null];
+  syncSequence: [sequence: { snapshotId: string; barType: string; sbarIds: string[] } | null];
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
 
@@ -46,27 +47,8 @@ const selectedSnapshotLabel = computed(() =>
     : "Choose completed Snapshot…",
 );
 
-function timeframeKey(barType: string | null | undefined): string | null {
-  if (!barType) return null;
-  const match = /-(\d+)-(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)-/i.exec(barType);
-  return match ? match[1] + ":" + match[2]!.toUpperCase() : null;
-}
-
-const syncOffset = computed<number | null>(() => {
-  const snapshot = selectedSnapshot.value;
-  const bars = reference.value?.bars;
-  const liveIds = props.liveSbarIds ?? [];
-  if (!snapshot || !bars || liveIds.length === 0) return null;
-  const liveTimeframe = timeframeKey(props.liveBarType);
-  const snapshotTimeframe = timeframeKey(snapshot.barType);
-  if (!liveTimeframe || liveTimeframe !== snapshotTimeframe) return null;
-  const indexById = new Map(bars.map((bar, index) => [bar.sbarId, index] as const));
-  const first = indexById.get(liveIds[0]!);
-  if (first === undefined) return null;
-  const coversLiveSequence = liveIds.every((sbarId, liveIndex) => indexById.get(sbarId) === first + liveIndex);
-  return coversLiveSequence ? first : null;
-});
-const syncEligible = computed(() => syncOffset.value !== null);
+const syncEligible = computed(() => props.syncEligible === true);
+const syncOffset = computed(() => syncEligible.value ? props.syncOffset ?? null : null);
 const processedCount = computed(() =>
   Math.max(0, Math.min(props.liveSbarIds?.length ?? 0, props.processedCount ?? 0)),
 );
@@ -86,9 +68,6 @@ const playbackStructure = computed(() => {
   if (!checkpointSbarId) return null;
   return current.structureTimeline.find((checkpoint) => checkpoint.sbarId === checkpointSbarId)?.structure ?? null;
 });
-
-watch([syncEligible, syncOffset], ([eligible, offset]) => emit("syncEligibility", eligible, offset), { immediate: true });
-
 
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
   if (left === right) return 0;
@@ -147,6 +126,7 @@ watch(selectedSnapshotId, async (snapshotId) => {
   const revision = ++requestRevision;
   reference.value = null;
   referenceError.value = "";
+  emit("syncSequence", null);
   if (!snapshotId) {
     referenceLoading.value = false;
     return;
@@ -157,6 +137,11 @@ watch(selectedSnapshotId, async (snapshotId) => {
     const result = await getSnapshotReference(snapshotId);
     if (revision !== requestRevision || selectedSnapshotId.value !== snapshotId) return;
     reference.value = result;
+    emit("syncSequence", {
+      snapshotId: result.snapshotId,
+      barType: result.barType,
+      sbarIds: result.bars.map((bar) => bar.sbarId),
+    });
   } catch (error) {
     if (revision !== requestRevision || selectedSnapshotId.value !== snapshotId) return;
     referenceError.value = describeIpcError(error);
