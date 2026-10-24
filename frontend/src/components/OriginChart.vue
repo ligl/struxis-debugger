@@ -27,6 +27,7 @@ type SurfacePort = {
   getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
   hasSbarId: (sbarId: string) => boolean;
   getSbarMarker: (sbarId: string) => { id: string; x: number; y: number; width: number; height: number } | null;
+  revealSbarRange: (anchorIds: string[]) => boolean;
 };
 const surface = ref<SurfacePort | null>(null);
 const selectedSbarMarker = ref<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
@@ -50,16 +51,35 @@ function updateSelectionCoordinates(): void {
   if (!props.selectionPending) previewX.value = null;
 }
 
-function updateSelectedSbarMarker(): void {
+function updateSelectedObjectProjection(reveal = false): void {
   const selected = props.selectedObject;
-  selectedSbarMarker.value = selected?.kind === "sbar" && selected.originDatasetId === props.originDatasetId
+  if (!selected || selected.originDatasetId !== props.originDatasetId) {
+    selectedSbarMarker.value = null;
+    return;
+  }
+  selectedSbarMarker.value = selected.kind === "sbar"
     ? surface.value?.getSbarMarker(selected.id) ?? null
     : null;
+  if (!reveal || !surface.value) return;
+
+  let anchorIds: string[];
+  if (selected.kind === "sbar") {
+    anchorIds = [selected.id];
+  } else if (selected.kind === "cbar") {
+    const cbar = props.structure?.cbars.find((item) => item.cbarId === selected.id);
+    if (!cbar) return;
+    anchorIds = [cbar.sbarStartId, cbar.sbarEndId];
+  } else {
+    const swing = props.structure?.swings.find((item) => item.swingId === selected.id);
+    if (!swing) return;
+    anchorIds = [swing.sbarStartId, swing.sbarEndId];
+  }
+  surface.value.revealSbarRange(anchorIds);
 }
 
 function handleProjectionFrame(): void {
   updateSelectionCoordinates();
-  updateSelectedSbarMarker();
+  updateSelectedObjectProjection();
 }
 
 function handlePointerPosition(point: { x: number; y: number } | null): void {
@@ -134,11 +154,11 @@ watch(
   { deep: false, immediate: true, flush: "post" },
 );
 
-watch(() => [props.selectedObject, props.originDatasetId] as const, updateSelectedSbarMarker, { deep: true, flush: "post" });
+watch(() => props.selectedObject, () => updateSelectedObjectProjection(true), { deep: true, flush: "post" });
 
 onMounted(() => {
   updateSelectionCoordinates();
-  updateSelectedSbarMarker();
+  updateSelectedObjectProjection();
 });
 onBeforeUnmount(stopBoundaryDrag);
 </script>
@@ -154,7 +174,6 @@ onBeforeUnmount(stopBoundaryDrag);
       :bars="bars"
       :structure="structure"
       :origin-dataset-id="originDatasetId"
-      :selected-object="selectedObject"
       :show-header="true"
       :show-footer="true"
       panel-label="Origin SBar chart"
