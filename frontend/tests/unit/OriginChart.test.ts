@@ -318,10 +318,20 @@ describe("OriginChart", () => {
     expect(start.attributes("stroke-width")).toBe("0.9");
     expect(start.attributes("stroke-dasharray")).toBe("3 5");
 
+    const startArrow = wrapper.get('[data-testid="snapshot-live-range-start-arrow"]');
+    const endArrow = wrapper.get('[data-testid="snapshot-live-range-end-arrow"]');
+    expect(startArrow.attributes("d")).toContain("H 208");
+    expect(endArrow.attributes("d")).toContain("H 292");
+    expect(startArrow.attributes("stroke")).toBe(start.attributes("stroke"));
+    expect(endArrow.attributes("stroke")).toBe(end.attributes("stroke"));
+    expect(startArrow.attributes("pointer-events")).toBe("none");
+
     await wrapper.setProps({ syncEnabled: false } as never);
     await nextTick();
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-live-range-start-arrow"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-live-range-end-arrow"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
