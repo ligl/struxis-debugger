@@ -452,7 +452,7 @@ describe("SnapshotReferenceChart", () => {
     expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
     const chartOptionsCallCount = chartMocks.applyChartOptions.mock.calls.length;
 
-    await wrapper.setProps({ syncEnabled: false });
+    await wrapper.setProps({ syncEnabled: false } as never);
     await nextTick();
     expect(chartMocks.clearCrosshairPosition).toHaveBeenCalledTimes(1);
     expect(initialOptions.crosshair?.mode).toBe(0);
