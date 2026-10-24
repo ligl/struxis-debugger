@@ -11,6 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
+import { createSnapshotBrightCandleGeometry, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
@@ -64,7 +65,6 @@ const crosshairSyncGate = new ReplayCrosshairSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
-type SnapshotBrightCandle = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = {
   id: string;
   x1: number;
@@ -81,7 +81,7 @@ const hoveredObject = ref<OriginObjectSelection | null>(null);
 const hoveredSbarMarker = ref<SBarMarker | null>(null);
 const selectedSbarMarker = ref<SBarMarker | null>(null);
 const syncBoundaryXs = ref<{ start: number; end: number } | null>(null);
-const snapshotBrightCandles = ref<SnapshotBrightCandle[]>([]);
+const snapshotBrightCandles = ref<SnapshotBrightCandleGeometry[]>([]);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -181,32 +181,18 @@ function updateSbarCoordinates(): void {
 function updateSyncBoundaryCoordinates(): void {
   const request = props.syncRequest;
   const liveCount = props.syncLiveBarCount ?? 0;
-  if (
-    !chart ||
-    !props.syncEnabled ||
-    props.displayContext !== "snapshot-reference" ||
-    !request ||
-    !Number.isInteger(request.offset) ||
-    liveCount <= 0
-  ) {
+  if (!chart || !props.syncEnabled || props.displayContext !== "snapshot-reference" || !request) {
     syncBoundaryXs.value = null;
     return;
   }
 
-  // Boundary identity is fixed to the first and last SBar of the Live
-  // sequence projected into Snapshot Reference. Viewport from/to is only for
-  // chart synchronization; it must never redefine these anchor bars.
-  const startSnapshotIndex = request.offset;
-  const endSnapshotIndex = request.offset + liveCount - 1;
-  if (
-    !Number.isInteger(startSnapshotIndex) ||
-    !Number.isInteger(endSnapshotIndex) ||
-    startSnapshotIndex < 0 ||
-    endSnapshotIndex >= props.bars.length
-  ) {
+  // Domain identity is resolved independently from viewport coordinates.
+  const anchors = resolveSnapshotLiveRangeIndices(request.offset, liveCount, props.bars.length);
+  if (!anchors) {
     syncBoundaryXs.value = null;
     return;
   }
+  const { start: startSnapshotIndex, end: endSnapshotIndex } = anchors;
 
   const timeScale = chart.timeScale();
   const anchorToX = (snapshotIndex: number): number | null => {
@@ -823,8 +809,13 @@ function updateSnapshotCandleDimming(): void {
   const visible = timeScale.getVisibleLogicalRange();
   const visibleFrom = visible && Number.isFinite(visible.from) ? visible.from - 1 : Number.NEGATIVE_INFINITY;
   const visibleTo = visible && Number.isFinite(visible.to) ? visible.to + 1 : Number.POSITIVE_INFINITY;
-  const firstBright = Math.max(0, offset);
-  const lastBright = Math.min(props.bars.length, offset + processedCount);
+  const anchors = resolveSnapshotLiveRangeIndices(offset, liveCount, props.bars.length);
+  if (!anchors) {
+    snapshotBrightCandles.value = [];
+    return;
+  }
+  const firstBright = anchors.start;
+  const lastBright = Math.min(props.bars.length, anchors.start + processedCount);
   const overlays: SnapshotBrightCandle[] = [];
 
   // Brightness progresses candle-by-candle through the processed Live prefix.
@@ -845,18 +836,14 @@ function updateSnapshotCandleDimming(): void {
       index > 0 ? timeScale.timeToCoordinate(timeBySbarId.get(props.bars[index - 1]!.sbarId)!) : null,
       index + 1 < props.bars.length ? timeScale.timeToCoordinate(timeBySbarId.get(props.bars[index + 1]!.sbarId)!) : null,
     ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
-    const distances = adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0);
-    const spacing = distances.length > 0 ? Math.min(...distances) : 8;
-    const width = Math.max(2, Math.min(12, spacing * 0.8));
-    const top = Math.min(highY as number, lowY as number);
-    const bottom = Math.max(highY as number, lowY as number);
-    overlays.push({
+    const geometry = createSnapshotBrightCandleGeometry({
       id: bar.sbarId,
-      x: (x as number) - width / 2,
-      y: top,
-      width,
-      height: Math.max(1, bottom - top),
+      x: x as number,
+      highY: highY as number,
+      lowY: lowY as number,
+      adjacentXs,
     });
+    if (geometry) overlays.push(geometry);
   }
 
   snapshotBrightCandles.value = overlays;
