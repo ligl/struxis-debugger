@@ -105,6 +105,9 @@ describe("SBarChartSurface and chart entry adapters", () => {
       emits: string[];
     };
     expect(surfaceContract.props).not.toHaveProperty("selectedObject");
+    expect(surfaceContract.props).not.toHaveProperty("originDatasetId");
+    expect(surfaceContract.props).toHaveProperty("sequenceId");
+    expect(surfaceContract.props).toHaveProperty("headerTitle");
     expect(surfaceContract.emits).toContain("chartClick");
     expect(surfaceContract.emits).not.toContain("sbarClick");
     expect(surfaceContract.emits).not.toContain("objectClick");
@@ -932,7 +935,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     wrapper.unmount();
   });
 
-  it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
+  it("preserves the current viewport for same-sequence updates and fits a new sequence", async () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [],
@@ -999,6 +1002,42 @@ describe("SBarChartSurface and chart entry adapters", () => {
     expect(wrapper.findAll('[data-testid="cbar-range-rectangle"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-testid="swing-state-segment"]')).toHaveLength(0);
     wrapper.unmount();
+  });
+
+  it("cancels a deferred Crosshair projection frame when the Surface unmounts", () => {
+    const requestFrame = vi.fn(() => 73);
+    const cancelFrame = vi.fn();
+    vi.stubGlobal("requestAnimationFrame", requestFrame);
+    vi.stubGlobal("cancelAnimationFrame", cancelFrame);
+
+    const wrapper = mount(SBarChartSurface, {
+      props: {
+        bars: [
+          bar(),
+          bar({
+            sbarId: "1700000060000000000",
+            tsEvent: "1700000060000000000",
+            tsInit: "1700000060000000001",
+          }),
+        ],
+        sequenceId: "surface-crosshair-cleanup",
+        structure: null,
+      },
+    });
+    const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
+    vi.spyOn(chartHost, "matches").mockReturnValue(true);
+
+    const navigation = new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(navigation);
+
+    expect(navigation.defaultPrevented).toBe(true);
+    expect(requestFrame).toHaveBeenCalledOnce();
+    wrapper.unmount();
+    expect(cancelFrame).toHaveBeenCalledWith(73);
   });
 
   it("releases the chart and resize observer on unmount", () => {
