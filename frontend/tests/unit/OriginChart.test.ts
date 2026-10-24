@@ -277,7 +277,7 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
-  it("marks the first and last visible Live SBar centers on a compatible Snapshot Reference", async () => {
+  it("anchors Snapshot sync guides to the first and last Live SBars regardless of viewport", async () => {
     const bars = [
       bar(),
       bar({
@@ -326,6 +326,23 @@ describe("OriginChart", () => {
     expect(endArrow.attributes("stroke")).toBe(end.attributes("stroke"));
     expect(startArrow.attributes("pointer-events")).toBe("none");
 
+    // A viewport request outside the Live interval must not hide or redefine
+    // the domain anchors. Only their projected pixel coordinates may change.
+    await wrapper.setProps({
+      syncRequest: {
+        revision: 2,
+        source: "live",
+        from: 8.25,
+        to: 9.75,
+        offset: 1,
+      },
+    });
+    await nextTick();
+    expect(wrapper.get('[data-testid="snapshot-live-range-start"]').attributes("x1")).toBe("200");
+    expect(wrapper.get('[data-testid="snapshot-live-range-end"]').attributes("x1")).toBe("300");
+    expect(wrapper.get('[data-testid="snapshot-live-range-start-arrow"]').attributes("d")).toContain("H 208");
+    expect(wrapper.get('[data-testid="snapshot-live-range-end-arrow"]').attributes("d")).toContain("H 292");
+
     await wrapper.setProps({ syncEnabled: false } as never);
     await nextTick();
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
@@ -335,7 +352,7 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
-  it("keeps Snapshot Live-range guides visible when zoomed between candle centers", async () => {
+  it("keeps Snapshot sync guides anchored to the same SBars at sub-candle zoom", async () => {
     const bars = [
       bar(),
       bar({
@@ -368,8 +385,8 @@ describe("OriginChart", () => {
     });
     await nextTick();
 
-    expect(wrapper.get('[data-testid="snapshot-live-range-start"]').attributes("x1")).toBe("220");
-    expect(wrapper.get('[data-testid="snapshot-live-range-end"]').attributes("x1")).toBe("240");
+    expect(wrapper.get('[data-testid="snapshot-live-range-start"]').attributes("x1")).toBe("200");
+    expect(wrapper.get('[data-testid="snapshot-live-range-end"]').attributes("x1")).toBe("300");
     wrapper.unmount();
   });
 
