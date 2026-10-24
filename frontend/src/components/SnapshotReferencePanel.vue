@@ -215,6 +215,7 @@ function handleSelection(event: Event): void {
           display-context="snapshot-reference"
           :sync-enabled="syncEligible"
           :sync-request="syncRequest"
+          :sync-live-bar-count="liveSbarIds?.length ?? 0"
           @viewport-change="emit('viewportChange', $event)"
         />
       </div>
