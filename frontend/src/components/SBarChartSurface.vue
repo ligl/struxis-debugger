@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
-import { mapOriginBarsToChart } from "../origin-chart-data";
+import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
@@ -488,7 +488,7 @@ function applyCrosshairOptions(): void {
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
-    const projection = mapOriginBarsToChart(props.bars);
+    const projection = mapSBarsToChart(props.bars);
     candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
     const sbarIndex = createSbarChartIndex(props.bars, projection.candles.map((candle) => candle.time));
