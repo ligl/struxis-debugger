@@ -10,10 +10,11 @@ export interface CatalogDatasetEntry {
 export interface ReplayChartViewportSync {
   revision: number;
   source: "live" | "reference";
-  fromSbarId: string;
-  fromOffset: number;
-  toSbarId: string;
-  toOffset: number;
+  /** Raw logical range in the source chart's own coordinate system. */
+  from: number;
+  to: number;
+  /** Snapshot logical index of Live SBar index 0; Snapshot = Live + offset. */
+  offset: number;
 }
 
 export interface SBarDto {
