@@ -787,11 +787,8 @@ watch(() => props.selectedObject, updateStructureOverlays);
 watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => props.syncRequest, applySyncRequest, { deep: true });
-watch(() => props.syncEnabled, (enabled) => {
+watch([() => props.syncEnabled, () => props.syncOffset], ([enabled]) => {
   if (enabled) handleVisibleRangeChange();
-});
-watch(() => props.syncOffset, () => {
-  if (props.syncEnabled) handleVisibleRangeChange();
 });
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
