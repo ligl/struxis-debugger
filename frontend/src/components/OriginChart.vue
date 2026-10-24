@@ -33,7 +33,7 @@ const emit = defineEmits<{
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
-  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision">];
+  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const structureOverlayWidth = ref(0);
