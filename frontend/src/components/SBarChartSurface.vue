@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import {
-  CandlestickSeries,
-  ColorType,
-  CrosshairMode,
-  HistogramSeries,
-  createChart,
-  type IChartApi,
-  type ISeriesApi,
-  type Time,
-} from "lightweight-charts";
+import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
+import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex } from "../sbar-chart-index";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
@@ -888,63 +880,14 @@ function updateChart(): void {
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
   if (!chartHost.value) return;
-  chart = createChart(chartHost.value, {
+  const runtime = createSbarChartRuntime(chartHost.value, {
     width: chartHost.value.clientWidth,
     height: Math.max(1, chartHost.value.clientHeight),
-    grid: {
-      vertLines: { visible: false },
-      horzLines: { visible: false },
-    },
-    layout: {
-      background: { type: ColorType.Solid, color: "#121619" },
-      textColor: "#a8b2b9",
-      attributionLogo: false,
-    },
-    rightPriceScale: {
-      borderColor: "#121619",
-      scaleMargins: { top: 0.08, bottom: 0.22 },
-    },
-    timeScale: {
-      borderColor: "#121619",
-      timeVisible: true,
-      secondsVisible: false,
-      rightOffset: 4,
-    },
-    crosshair: {
-      // Snapshot Reference keeps its own Crosshair even when peer sync is
-      // unavailable; syncEnabled gates only cross-chart event propagation.
-      mode: CrosshairMode.Normal,
-      vertLine: {
-        visible: true,
-        color: "#89949d",
-        labelBackgroundColor: "#30383f",
-      },
-      horzLine: {
-        visible: true,
-        color: "#89949d",
-        labelBackgroundColor: "#30383f",
-      },
-    },
+    candleLastValueVisible: true,
   });
-  candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: "#79B58B",
-    downColor: "#D98282",
-    borderUpColor: "#79B58B",
-    borderDownColor: "#D98282",
-    wickUpColor: "#79B58B",
-    wickDownColor: "#D98282",
-    priceLineVisible: false,
-    lastValueVisible: true,
-  });
-  volumeSeries = chart.addSeries(HistogramSeries, {
-    priceScaleId: "",
-    priceFormat: { type: "volume" },
-    lastValueVisible: false,
-    priceLineVisible: false,
-  });
-  chart.priceScale("").applyOptions({
-    scaleMargins: { top: 0.82, bottom: 0 },
-  });
+  chart = runtime.chart;
+  candleSeries = runtime.candleSeries;
+  volumeSeries = runtime.volumeSeries;
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
