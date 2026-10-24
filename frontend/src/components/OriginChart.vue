@@ -938,6 +938,7 @@ function updateChart(): void {
       fittedOriginDatasetId = props.originDatasetId;
     }
     updateSbarCoordinates();
+    applyCrosshairSync(props.crosshairSync);
   } catch (error) {
     sbarIdByLogicalIndex = [];
     indexBySbarId = new Map();
