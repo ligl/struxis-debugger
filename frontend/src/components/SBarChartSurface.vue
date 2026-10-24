@@ -819,7 +819,6 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
-        <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
         <rect
           v-if="hoveredSbarMarker"
           class="origin-object-hover-sbar"
@@ -884,6 +883,7 @@ onBeforeUnmount(() => {
           data-testid="origin-hover-cbar"
           :data-cbar-id="rectangle.id"
         />
+        <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
 
       </svg>
       <div
