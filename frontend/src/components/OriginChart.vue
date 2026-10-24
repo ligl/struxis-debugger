@@ -25,6 +25,7 @@ const props = defineProps<{
   displayContext?: "origin" | "snapshot-reference";
   syncEnabled?: boolean;
   syncRequest?: ReplayChartViewportSync | null;
+  syncLiveBarCount?: number;
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -68,6 +69,7 @@ const swingSegments = ref<SwingSegment[]>([]);
 const hoveredObject = ref<OriginObjectSelection | null>(null);
 const hoveredSbarMarker = ref<SBarMarker | null>(null);
 const selectedSbarMarker = ref<SBarMarker | null>(null);
+const syncBoundaryXs = ref<{ start: number; end: number } | null>(null);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -142,9 +144,49 @@ function updateSbarCoordinates(): void {
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
   selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
   selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
+  updateSyncBoundaryCoordinates();
   updateCBarRectangles();
   updateSwingSegments();
   updateSbarMarkers();
+}
+
+function updateSyncBoundaryCoordinates(): void {
+  const request = props.syncRequest;
+  const liveCount = props.syncLiveBarCount ?? 0;
+  if (
+    !chart ||
+    !props.syncEnabled ||
+    props.displayContext !== "snapshot-reference" ||
+    !request ||
+    !Number.isInteger(request.offset) ||
+    liveCount <= 0
+  ) {
+    syncBoundaryXs.value = null;
+    return;
+  }
+
+  // Resolve the first and last actual Live SBar centers inside the visible
+  // range, then translate those candle indices into Snapshot coordinates.
+  // The logical viewport itself remains fractional for synchronization; only
+  // these visual boundary markers intentionally align to real candles.
+  const liveFrom = request.source === "live" ? request.from : request.from - request.offset;
+  const liveTo = request.source === "live" ? request.to : request.to - request.offset;
+  const firstLiveIndex = Math.max(0, Math.ceil(liveFrom - 1e-6));
+  const lastLiveIndex = Math.min(liveCount - 1, Math.floor(liveTo + 1e-6));
+  if (firstLiveIndex > lastLiveIndex) {
+    syncBoundaryXs.value = null;
+    return;
+  }
+
+  const snapshotStart = props.bars[firstLiveIndex + request.offset];
+  const snapshotEnd = props.bars[lastLiveIndex + request.offset];
+  if (!snapshotStart || !snapshotEnd) {
+    syncBoundaryXs.value = null;
+    return;
+  }
+  const start = coordinateForSbarId(snapshotStart.sbarId);
+  const end = coordinateForSbarId(snapshotEnd.sbarId);
+  syncBoundaryXs.value = start === null || end === null ? null : { start, end };
 }
 
 function updateSwingSegments(): void {
@@ -808,7 +850,11 @@ watch(() => [props.bars, props.structure, props.originDatasetId] as const, () =>
   queueMicrotask(() => { suppressSyncEmit = false; });
   updateHoveredObject(undefined);
 });
-watch(() => props.syncRequest, applySyncRequest, { deep: true });
+watch(() => props.syncRequest, (request) => {
+  applySyncRequest(request);
+  updateSbarCoordinates();
+}, { deep: true });
+watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, updateSbarCoordinates);
 watch(() => props.selectedObject, () => {
   updateSbarMarkers();
   revealSelectedObject();
@@ -847,6 +893,7 @@ onBeforeUnmount(() => {
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
   selectedSbarMarker.value = null;
+  syncBoundaryXs.value = null;
   sbarIdByLogicalIndex = [];
   indexBySbarId = new Map();
   timeBySbarId = new Map();
@@ -911,6 +958,30 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
+        <g v-if="syncBoundaryXs" class="snapshot-live-range-markers" data-testid="snapshot-live-range-markers">
+          <line
+            :x1="syncBoundaryXs.start"
+            y1="0"
+            :x2="syncBoundaryXs.start"
+            y2="100%"
+            stroke="#77838C"
+            stroke-width="0.8"
+            stroke-dasharray="3 5"
+            opacity="0.3"
+            data-testid="snapshot-live-range-start"
+          />
+          <line
+            :x1="syncBoundaryXs.end"
+            y1="0"
+            :x2="syncBoundaryXs.end"
+            y2="100%"
+            stroke="#77838C"
+            stroke-width="0.8"
+            stroke-dasharray="3 5"
+            opacity="0.3"
+            data-testid="snapshot-live-range-end"
+          />
+        </g>
         <rect
           v-if="hoveredSbarMarker"
           class="origin-object-hover-sbar"
