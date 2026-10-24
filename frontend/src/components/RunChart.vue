@@ -769,7 +769,18 @@ watch(
     () => props.runState?.runId,
     () => replayProgressApplies.value,
   ],
-  () => {
+  (current, previous) => {
+    const identityChanged = previous !== undefined && (
+      current[1] !== previous[1]
+      || current[2] !== previous[2]
+      || current[3] !== previous[3]
+      || current[4] !== previous[4]
+    );
+    if (identityChanged) {
+      // Do not let a queued range or peer-echo expectation cross a dataset/run boundary.
+      pendingViewportRange = null;
+      viewportSyncGate.clear();
+    }
     updateChart();
     updateHoveredObject(undefined);
     if (props.syncEnabled) handleVisibleRangeChange();
