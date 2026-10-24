@@ -763,6 +763,8 @@ onMounted(() => {
   candleSeries = runtime.candleSeries;
   volumeSeries = runtime.volumeSeries;
   primitiveHost = runtime.primitiveHost;
+  cbarPrimitive = registerCBarPrimitive(runtime.primitiveHost, runtime.candleSeries);
+  swingPrimitive = registerSwingPrimitive(runtime.primitiveHost, runtime.candleSeries);
   const timeScale = chart.timeScale();
   if (typeof chart.subscribeClick === "function") {
     chartClickListener = handleChartClick;
