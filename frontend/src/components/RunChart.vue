@@ -11,6 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
+import { createSbarChartIndex } from "../sbar-chart-index";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
@@ -628,7 +629,10 @@ function updateChart(): void {
     const processedCount = replayProgressApplies.value
       ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
       : bars.value.length;
-    timeBySbarId = new Map(bars.value.map((bar, index) => [bar.sbarId, projection.candles[index]!.time]));
+    timeBySbarId = createSbarChartIndex(
+      bars.value,
+      projection.candles.map((candle) => candle.time),
+    ).timeBySbarId;
     const candles = projection.candles.map((candle, index) => {
       const base = layerVisibility.value.sbar ? candle : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
       if (!replayProgressApplies.value || index < processedCount) return base;
