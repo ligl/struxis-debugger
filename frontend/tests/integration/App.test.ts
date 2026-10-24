@@ -25,6 +25,10 @@ function mountApp() {
           template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button><button v-for="cbar in structure?.cbars ?? []" :key="cbar.cbarId" :data-testid="\'origin-cbar-click-\' + cbar.cbarId" @click="$emit(\'object-click\', { kind: \'cbar\', id: cbar.cbarId, originDatasetId })">Select CBar</button><button v-for="swing in structure?.swings ?? []" :key="swing.swingId" :data-testid="\'origin-swing-click-\' + swing.swingId" @click="$emit(\'object-click\', { kind: \'swing\', id: swing.swingId, originDatasetId })">Select Swing</button></section>',
           props: ["bars", "originDatasetId", "structure"],
         },
+        SnapshotReferenceChart: {
+          template: '<section data-testid="snapshot-reference-chart-test-stub"></section>',
+          props: ["bars", "structure", "snapshotId", "syncEnabled", "syncRequest", "crosshairSync", "liveBarCount", "playbackEnabled", "playbackOffset", "processedCount"],
+        },
         RunChart: {
           template: '<section data-testid="run-chart-test-stub"><h3>Test Dataset SBar chart</h3></section>',
           props: ["origin", "testDataset"],
