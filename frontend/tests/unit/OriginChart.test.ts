@@ -99,6 +99,18 @@ function installChartMock() {
 }
 
 describe("SBarChartSurface and chart entry adapters", () => {
+  it("keeps the shared Surface interaction API neutral", () => {
+    const surfaceContract = SBarChartSurface as unknown as {
+      props: Record<string, unknown>;
+      emits: string[];
+    };
+    expect(surfaceContract.props).not.toHaveProperty("selectedObject");
+    expect(surfaceContract.emits).toContain("chartClick");
+    expect(surfaceContract.emits).not.toContain("sbarClick");
+    expect(surfaceContract.emits).not.toContain("objectClick");
+    expect(surfaceContract.emits).not.toContain("chartInteractionError");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     chartMocks.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 1 });
