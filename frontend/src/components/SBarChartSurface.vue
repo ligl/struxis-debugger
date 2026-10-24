@@ -135,7 +135,6 @@ function updateCBarRectangles(): void {
       priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
     })
     : [];
-  cbarPrimitive?.setData(props.structure?.cbars ?? [], { timeBySbarId, indexBySbarId });
   cbarPrimitive?.setVisible(layerVisibility.value.cbar);
 }
 
@@ -192,10 +191,17 @@ function updateSwingSegments(): void {
       return { ...segment, color: resolvedStyle.color, dasharray: resolvedStyle.dasharray };
     })
     : [];
-  swingPrimitive?.setData(props.structure?.swings ?? [], { timeBySbarId, indexBySbarId });
   swingPrimitive?.setVisible(layerVisibility.value.swing);
 }
 
+
+function syncStructurePrimitives(): void {
+  const projection = { timeBySbarId, indexBySbarId };
+  cbarPrimitive?.setData(props.structure?.cbars ?? [], projection);
+  swingPrimitive?.setData(props.structure?.swings ?? [], projection);
+  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
+  swingPrimitive?.setVisible(layerVisibility.value.swing);
+}
 
 function markerForSbar(sbarId: string | null | undefined): SBarMarker | null {
   if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
@@ -477,6 +483,7 @@ function updateChart(): void {
     sbarIdByLogicalIndex = sbarIndex.sbarIdByLogicalIndex;
     indexBySbarId = sbarIndex.indexBySbarId;
     timeBySbarId = sbarIndex.timeBySbarId;
+    syncStructurePrimitives();
     firstSbarTime = projection.candles[0]?.time ?? null;
     secondSbarTime = projection.candles[1]?.time ?? null;
     chartError.value = "";
@@ -567,8 +574,9 @@ watch(() => [props.bars, props.sequenceId] as const, () => {
   updateChart();
 });
 watch(() => props.structure, () => {
-  // A Snapshot checkpoint advances its structure projection without rebuilding
-  // immutable candle/volume series. Reproject only SVG structure geometry.
+  // A Snapshot checkpoint replaces the authoritative structure snapshot without
+  // rebuilding immutable candle/volume series.
+  syncStructurePrimitives();
   updateSbarCoordinates();
 }, { deep: true });
 
