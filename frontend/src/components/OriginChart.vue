@@ -59,7 +59,7 @@ let pendingViewportRange: { from: number; to: number } | null = null;
 let expectedSyncedRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
-type DimmedCandleOverlay = { id: string; x: number; y: number; width: number; height: number };
+type SnapshotBrightCandle = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = {
   id: string;
   x1: number;
@@ -76,7 +76,7 @@ const hoveredObject = ref<OriginObjectSelection | null>(null);
 const hoveredSbarMarker = ref<SBarMarker | null>(null);
 const selectedSbarMarker = ref<SBarMarker | null>(null);
 const syncBoundaryXs = ref<{ start: number; end: number } | null>(null);
-const snapshotDimmedCandles = ref<DimmedCandleOverlay[]>([]);
+const snapshotBrightCandles = ref<SnapshotBrightCandle[]>([]);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -802,7 +802,7 @@ function updateSnapshotCandleDimming(): void {
     offset === undefined ||
     liveCount <= 0
   ) {
-    snapshotDimmedCandles.value = [];
+    snapshotBrightCandles.value = [];
     return;
   }
 
@@ -810,11 +810,14 @@ function updateSnapshotCandleDimming(): void {
   const visible = timeScale.getVisibleLogicalRange();
   const visibleFrom = visible && Number.isFinite(visible.from) ? visible.from - 1 : Number.NEGATIVE_INFINITY;
   const visibleTo = visible && Number.isFinite(visible.to) ? visible.to + 1 : Number.POSITIVE_INFINITY;
-  const firstDimmed = offset + processedCount;
-  const lastDimmed = Math.min(props.bars.length, offset + liveCount);
-  const overlays: DimmedCandleOverlay[] = [];
+  const firstBright = Math.max(0, offset);
+  const lastBright = Math.min(props.bars.length, offset + processedCount);
+  const overlays: SnapshotBrightCandle[] = [];
 
-  for (let index = firstDimmed; index < lastDimmed; index += 1) {
+  // Brightness progresses candle-by-candle through the processed Live prefix.
+  // The global dim layer below still covers the entire Snapshot plot, including
+  // history outside the Live overlap; mask cutouts reveal only processed candles.
+  for (let index = firstBright; index < lastBright; index += 1) {
     if (index < visibleFrom || index > visibleTo) continue;
     const bar = props.bars[index];
     if (!bar) continue;
@@ -843,7 +846,7 @@ function updateSnapshotCandleDimming(): void {
     });
   }
 
-  snapshotDimmedCandles.value = overlays;
+  snapshotBrightCandles.value = overlays;
 }
 
 function updateChart(): void {
@@ -1026,7 +1029,7 @@ onBeforeUnmount(() => {
   chart = null;
   candleSeries = null;
   volumeSeries = null;
-  snapshotDimmedCandles.value = [];
+  snapshotBrightCandles.value = [];
   cbarRectangles.value = [];
   swingSegments.value = [];
   hoveredObject.value = null;
@@ -1097,21 +1100,34 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
-        <g class="snapshot-playback-dimming" data-testid="snapshot-playback-dimming" aria-hidden="true">
-          <rect
-            v-for="overlay in snapshotDimmedCandles"
-            :key="overlay.id"
-            :x="overlay.x"
-            :y="overlay.y"
-            :width="overlay.width"
-            :height="overlay.height"
-            fill="#07090B"
-            fill-opacity="0.42"
-            stroke="none"
-            data-testid="snapshot-dimmed-candle"
-            :data-sbar-id="overlay.id"
-          />
-        </g>
+        <defs v-if="props.snapshotPlaybackEnabled === true && props.syncEnabled === true">
+          <mask id="snapshot-playback-brightness-mask" maskUnits="userSpaceOnUse">
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            <rect
+              v-for="overlay in snapshotBrightCandles"
+              :key="overlay.id"
+              :x="overlay.x"
+              :y="overlay.y"
+              :width="overlay.width"
+              :height="overlay.height"
+              fill="black"
+              data-testid="snapshot-bright-candle-cutout"
+              :data-sbar-id="overlay.id"
+            />
+          </mask>
+        </defs>
+        <rect
+          v-if="props.snapshotPlaybackEnabled === true && props.syncEnabled === true"
+          class="snapshot-playback-dimming"
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="#050709"
+          fill-opacity="0.68"
+          mask="url(#snapshot-playback-brightness-mask)"
+          data-testid="snapshot-playback-dimming"
+        />
         <g v-if="syncBoundaryXs" class="snapshot-live-range-markers" data-testid="snapshot-live-range-markers">
           <line
             :x1="syncBoundaryXs.start"
