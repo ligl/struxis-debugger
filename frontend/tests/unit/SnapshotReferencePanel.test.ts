@@ -101,7 +101,7 @@ describe("SnapshotReferencePanel", () => {
     expect(chart.attributes("data-replay-playing")).toBe("true");
     expect(chart.attributes("style")).toContain("brightness(0.775)");
 
-    await wrapper.setProps({ replayProgress: 1 });
+    await wrapper.setProps({ replayProgress: 1 } as never);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("brightness(1)");
   });
 
@@ -124,7 +124,7 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.find('[data-testid="snapshot-reference-sync-indicator"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("filter: none");
 
-    await wrapper.setProps({ liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", liveSbarIds: ["not-covered"] });
+    await wrapper.setProps({ liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", liveSbarIds: ["not-covered"] } as never);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
     expect(wrapper.find('[data-testid="snapshot-reference-sync-indicator"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("filter: none");
