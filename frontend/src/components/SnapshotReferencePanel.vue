@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import OriginChart from "./OriginChart.vue";
 import { describeIpcError, getSnapshotReference } from "../origin-bridge";
-import type { ReplayChartViewportSync, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
+import type { ReplayChartCrosshairSync, ReplayChartViewportSync, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
@@ -11,6 +11,7 @@ const props = defineProps<{
   liveBarType?: string | null;
   liveSbarIds?: string[];
   syncRequest?: ReplayChartViewportSync | null;
+  crosshairSync?: ReplayChartCrosshairSync | null;
   progressApplies?: boolean;
   processedCount?: number;
 }>();
@@ -18,6 +19,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
   syncEligibility: [eligible: boolean, offset: number | null];
+  crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
 
 const selectedSnapshotId = ref<string | null>(null);
@@ -229,11 +231,13 @@ function handleSelection(event: Event): void {
           display-context="snapshot-reference"
           :sync-enabled="syncEligible"
           :sync-request="syncRequest"
+          :crosshair-sync="crosshairSync"
           :sync-live-bar-count="liveSbarIds?.length ?? 0"
           :snapshot-playback-enabled="snapshotPlaybackEnabled"
           :snapshot-playback-offset="syncOffset"
           :snapshot-processed-count="processedCount ?? 0"
           @viewport-change="emit('viewportChange', $event)"
+          @crosshair-change="emit('crosshairChange', $event)"
         />
       </div>
       <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">
