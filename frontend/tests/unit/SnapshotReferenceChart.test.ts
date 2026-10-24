@@ -263,6 +263,8 @@ describe("SnapshotReferenceChart", () => {
         syncEnabled: true,
         liveBarCount: 2,
         playbackOffset: 1,
+        playbackEnabled: true,
+        processedCount: 1,
         syncRequest: {
           revision: 1,
           source: "live",
@@ -313,6 +315,7 @@ describe("SnapshotReferenceChart", () => {
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start-arrow"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end-arrow"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(true);
     wrapper.unmount();
   });
 
