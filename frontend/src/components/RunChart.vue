@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
-import { projectCBarRectangles } from "../sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
@@ -330,21 +330,19 @@ function updateStructureOverlays(): void {
       priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
     })
     : [];
-  swingSegments.value = layerVisibility.value.swing ? (structure?.swings ?? []).flatMap((swing) => {
-    const start = timeBySbarId.get(swing.sbarStartId);
-    const end = timeBySbarId.get(swing.sbarEndId);
-    const high = Number(swing.high);
-    const low = Number(swing.low);
-    if (start === undefined || end === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
-    const x1 = timeScale.timeToCoordinate(start);
-    const x2 = timeScale.timeToCoordinate(end);
-    const startsAtLow = swing.direction === "Up";
-    const y1 = candleSeries?.priceToCoordinate(startsAtLow ? low : high);
-    const y2 = candleSeries?.priceToCoordinate(startsAtLow ? high : low);
-    if ([x1, x2, y1, y2].some((v) => v === null || v === undefined || !Number.isFinite(v))) return [];
-    const style = swingStyleByState[swing.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
-    return [{ id: swing.swingId, x1: x1 as number, y1: y1 as number, x2: x2 as number, y2: y2 as number, color: style.color, dasharray: style.dasharray, state: swing.state }];
-  }) : [];
+  swingSegments.value = layerVisibility.value.swing
+    ? projectSwingSegments({
+      swings: structure?.swings ?? [],
+      coordinateForSbarId: (sbarId) => {
+        const time = timeBySbarId.get(sbarId);
+        return time === undefined ? null : timeScale.timeToCoordinate(time);
+      },
+      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
+    }).map((segment) => {
+      const style = swingStyleByState[segment.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
+      return { ...segment, color: style.color, dasharray: style.dasharray };
+    })
+    : [];
   const targetTime = props.targetSbarId ? timeBySbarId.get(props.targetSbarId) : undefined;
   const targetX = targetTime === undefined ? null : timeScale.timeToCoordinate(targetTime);
   targetSbarX.value = targetX !== null && targetX !== undefined && Number.isFinite(targetX)
