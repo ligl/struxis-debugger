@@ -816,7 +816,7 @@ function updateSnapshotCandleDimming(): void {
   }
   const firstBright = anchors.start;
   const lastBright = Math.min(props.bars.length, anchors.start + processedCount);
-  const overlays: SnapshotBrightCandle[] = [];
+  const overlays: SnapshotBrightCandleGeometry[] = [];
 
   // Brightness progresses candle-by-candle through the processed Live prefix.
   // The global dim layer below still covers the entire Snapshot plot, including
