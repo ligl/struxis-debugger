@@ -27,7 +27,7 @@ const emit = defineEmits<{
   objectSelect: [selection: ReplayChartSelection];
   targetSelect: [sbarId: string];
   targetCancel: [];
-  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision">];
+  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
 }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
