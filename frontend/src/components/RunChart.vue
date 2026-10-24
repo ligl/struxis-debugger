@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import type { OriginDatasetDto, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
+import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
   origin: OriginDatasetDto | null;
@@ -23,12 +23,14 @@ const props = defineProps<{
   syncEnabled?: boolean;
   syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
+  crosshairSync?: ReplayChartCrosshairSync | null;
 }>();
 const emit = defineEmits<{
   objectSelect: [selection: ReplayChartSelection];
   targetSelect: [sbarId: string];
   targetCancel: [];
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
+  crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
 
 const chartHost = ref<HTMLDivElement | null>(null);
@@ -409,6 +411,29 @@ function handleVisibleRangeChange(): void {
   scheduleOverlayUpdate();
 }
 
+function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
+  if (!chart || !candleSeries || !props.syncEnabled || !sync || sync.source === "live") return;
+  if (!sync.sbarId) {
+    applyingSyncedCrosshair = true;
+    chart.clearCrosshairPosition?.();
+    queueMicrotask(() => { applyingSyncedCrosshair = false; });
+    return;
+  }
+  const bar = bars.value.find((item) => item.sbarId === sync.sbarId);
+  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
+  if (!bar || time === undefined) {
+    chart.clearCrosshairPosition?.();
+    return;
+  }
+  applyingSyncedCrosshair = true;
+  chart.setCrosshairPosition?.(
+    sync.price !== null && Number.isFinite(sync.price) ? sync.price : Number(bar.close),
+    time,
+    candleSeries,
+  );
+  queueMicrotask(() => { applyingSyncedCrosshair = false; });
+}
+
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
   if (!request || request.source === "live" || !props.syncEnabled || !chart) return;
   const current = chart.timeScale().getVisibleLogicalRange();
@@ -507,7 +532,30 @@ function updateHoveredObject(point: { x: number; y: number } | undefined): void 
   updateHoverMarker();
 }
 
+let applyingSyncedCrosshair = false;
+
+function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
+  if (!props.syncEnabled || applyingSyncedCrosshair) return;
+  const point = param.point;
+  if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    emit("crosshairChange", { source: "live", sbarId: null, price: null });
+    return;
+  }
+  const logical = chart.timeScale().coordinateToLogical?.(point.x);
+  const index = logical === null || logical === undefined || !Number.isFinite(logical)
+    ? -1
+    : Math.round(logical);
+  const bar = bars.value[index];
+  const price = candleSeries.coordinateToPrice(point.y);
+  emit("crosshairChange", {
+    source: "live",
+    sbarId: bar?.sbarId ?? null,
+    price: price !== null && price !== undefined && Number.isFinite(price) ? price : null,
+  });
+}
+
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
+  publishCrosshair(param);
   const x = param.point?.x;
   // A leave event clears hover, but retains the last logical crosshair anchor
   // so T still targets the position the user was inspecting.
@@ -809,6 +857,20 @@ watch(() => props.structure, () => {
 watch(() => props.selectedObject, updateStructureOverlays);
 watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
+watch(() => props.crosshairSync, (sync) => {
+  if (!props.syncEnabled || !sync) {
+    chart?.clearCrosshairPosition?.();
+    return;
+  }
+  applyCrosshairSync(sync);
+}, { deep: true });
+watch(() => props.syncEnabled, (enabled) => {
+  if (!enabled) {
+    applyingSyncedCrosshair = true;
+    chart?.clearCrosshairPosition?.();
+    queueMicrotask(() => { applyingSyncedCrosshair = false; });
+  }
+});
 watch(() => props.syncRequest, (request) => {
   applySyncRequest(request);
   // The source chart already scheduled its overlay refresh from its own range
