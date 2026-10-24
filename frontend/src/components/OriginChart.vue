@@ -1186,6 +1186,28 @@ onBeforeUnmount(() => {
             opacity="0.42"
             data-testid="snapshot-live-range-end"
           />
+          <path
+            :d="`M ${syncBoundaryXs.start + 2} 7 H ${syncBoundaryXs.start + 8} M ${syncBoundaryXs.start + 5} 4 L ${syncBoundaryXs.start + 8} 7 L ${syncBoundaryXs.start + 5} 10`"
+            fill="none"
+            stroke="#77838C"
+            stroke-width="0.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            opacity="0.55"
+            pointer-events="none"
+            data-testid="snapshot-live-range-start-arrow"
+          />
+          <path
+            :d="`M ${syncBoundaryXs.end - 2} 7 H ${syncBoundaryXs.end - 8} M ${syncBoundaryXs.end - 5} 4 L ${syncBoundaryXs.end - 8} 7 L ${syncBoundaryXs.end - 5} 10`"
+            fill="none"
+            stroke="#77838C"
+            stroke-width="0.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            opacity="0.55"
+            pointer-events="none"
+            data-testid="snapshot-live-range-end-arrow"
+          />
         </g>
         <rect
           v-if="hoveredSbarMarker"
