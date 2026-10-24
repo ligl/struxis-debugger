@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import SBarChartSurface from "./SBarChartSurface.vue";
+import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
+import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import type { ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 defineProps<{
@@ -37,5 +39,15 @@ const emit = defineEmits<{
     :snapshot-processed-count="processedCount"
     @viewport-change="emit('viewportChange', $event)"
     @crosshair-change="emit('crosshairChange', $event)"
-  />
+  >
+    <template #snapshot-overlays="{ enabled, brightCandles, cbarRectangles, swingSegments, boundaries }">
+      <SnapshotPlaybackOverlay
+        :enabled="enabled"
+        :bright-candles="brightCandles"
+        :cbar-rectangles="cbarRectangles"
+        :swing-segments="swingSegments"
+      />
+      <SnapshotLiveRangeMarkers :boundaries="boundaries" />
+    </template>
+  </SBarChartSurface>
 </template>
