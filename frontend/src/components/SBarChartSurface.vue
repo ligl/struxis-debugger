@@ -505,6 +505,7 @@ function updateChart(): void {
     timeBySbarId = new Map();
     firstSbarTime = null;
     secondSbarTime = null;
+    syncStructurePrimitives();
     updateSbarCoordinates();
     candleSeries.setData([]);
     volumeSeries.setData([]);
