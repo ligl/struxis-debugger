@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
+import { registerCBarPrimitive, registerSwingPrimitive, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
@@ -39,6 +40,8 @@ let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let primitiveHost: ChartPrimitiveHost | null = null;
+let cbarPrimitive: StructurePrimitiveController | null = null;
+let swingPrimitive: StructurePrimitiveController | null = null;
 let stopObservingResize: (() => void) | null = null;
 
 let crosshairUpdateFrame: number | null = null;
@@ -132,6 +135,8 @@ function updateCBarRectangles(): void {
       priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
     })
     : [];
+  cbarPrimitive?.setData(props.structure?.cbars ?? [], { timeBySbarId, indexBySbarId });
+  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
 }
 
 const scheduleOverlayUpdate = createAnimationFrameCoalescer(() => {
@@ -187,6 +192,8 @@ function updateSwingSegments(): void {
       return { ...segment, color: resolvedStyle.color, dasharray: resolvedStyle.dasharray };
     })
     : [];
+  swingPrimitive?.setData(props.structure?.swings ?? [], { timeBySbarId, indexBySbarId });
+  swingPrimitive?.setVisible(layerVisibility.value.swing);
 }
 
 
@@ -543,6 +550,8 @@ onMounted(() => {
   candleSeries = runtime.candleSeries;
   volumeSeries = runtime.volumeSeries;
   primitiveHost = runtime.primitiveHost;
+  cbarPrimitive = registerCBarPrimitive(primitiveHost, candleSeries);
+  swingPrimitive = registerSwingPrimitive(primitiveHost, candleSeries);
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
@@ -579,6 +588,8 @@ onBeforeUnmount(() => {
   pendingViewportRange = null;
   primitiveHost?.dispose();
   primitiveHost = null;
+  cbarPrimitive = null;
+  swingPrimitive = null;
   chart?.remove();
   chart = null;
   candleSeries = null;
@@ -651,6 +662,7 @@ onBeforeUnmount(() => {
           :stroke="segment.color"
           stroke-width="1.25"
           :stroke-dasharray="segment.dasharray || undefined"
+          visibility="hidden"
           stroke-linecap="round"
           data-testid="swing-state-segment"
           :data-swing-id="segment.id"
@@ -664,6 +676,7 @@ onBeforeUnmount(() => {
           :width="rectangle.width"
           :height="rectangle.height"
           fill="none"
+          visibility="hidden"
           stroke="#A0A7B0"
           stroke-width="1"
           data-testid="cbar-range-rectangle"
