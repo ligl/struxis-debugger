@@ -696,8 +696,11 @@ describe("SBarChartSurface and chart entry adapters", () => {
       value: () => ({ left: 50 }) as DOMRect,
     });
 
-    expect(wrapper.vm.getSbarIdAtClientX(250)).toBe("1700000060000000000");
-    expect(wrapper.vm.getSbarIdAtClientX(250, true)).toBe("1700000060000000000");
+    const surfaceApi = wrapper.vm as unknown as {
+      getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
+    };
+    expect(surfaceApi.getSbarIdAtClientX(250)).toBe("1700000060000000000");
+    expect(surfaceApi.getSbarIdAtClientX(250, true)).toBe("1700000060000000000");
 
     wrapper.unmount();
   });
@@ -727,7 +730,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     await nextTick();
 
     expect(wrapper.emitted("sbarClick")).toEqual([["1700000060000000000"]]);
-    await wrapper.setProps({ selectionStartSbarId: "1700000060000000000", selectionPending: true });
+    await wrapper.setProps({ selectionStartSbarId: "1700000060000000000", selectionPending: true } as never);
     await nextTick();
     expect(wrapper.get('[data-testid="origin-selection-start-line"]').attributes("style"))
       .toContain("left: 200px");
