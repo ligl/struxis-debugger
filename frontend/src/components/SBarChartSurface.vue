@@ -10,7 +10,6 @@ const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   originDatasetId: string;
-  selectedObject?: OriginObjectSelection | null;
   showHeader?: boolean;
   showFooter?: boolean;
   panelClass?: string;
@@ -255,42 +254,23 @@ function updateSbarMarkers(): void {
     : null;
 }
 
-function revealSelectedObject(): void {
-  const selected = props.selectedObject;
-  if (!chart || !selected || selected.originDatasetId !== props.originDatasetId) return;
-
-  let anchorIds: string[];
-  if (selected.kind === "sbar") {
-    anchorIds = [selected.id];
-  } else if (selected.kind === "cbar") {
-    const cbar = props.structure?.cbars.find((item) => item.cbarId === selected.id);
-    if (!cbar) return;
-    anchorIds = [cbar.sbarStartId, cbar.sbarEndId];
-  } else {
-    const swing = props.structure?.swings.find((item) => item.swingId === selected.id);
-    if (!swing) return;
-    anchorIds = [swing.sbarStartId, swing.sbarEndId];
-  }
-
+function revealSbarRange(anchorIds: string[]): boolean {
+  if (!chart || anchorIds.length === 0) return false;
   const indices = anchorIds
     .map((id) => indexBySbarId.get(id))
     .filter((index): index is number => index !== undefined);
-  if (indices.length === 0) return;
+  if (indices.length === 0) return false;
 
   const targetLeft = Math.min(...indices);
   const targetRight = Math.max(...indices);
   const visible = chart.timeScale().getVisibleLogicalRange();
-  if (!visible) return;
-
-  // Preserve the current zoom. Only pan when the selected object's actual
-  // SBar anchor interval is completely outside the visible chart range.
-  if (targetRight >= visible.from && targetLeft <= visible.to) return;
+  if (!visible) return false;
+  // Preserve zoom; pan only when the complete anchor interval is off-screen.
+  if (targetRight >= visible.from && targetLeft <= visible.to) return true;
   const span = visible.to - visible.from;
   const center = (targetLeft + targetRight) / 2;
-  chart.timeScale().setVisibleLogicalRange({
-    from: center - span / 2,
-    to: center + span / 2,
-  });
+  chart.timeScale().setVisibleLogicalRange({ from: center - span / 2, to: center + span / 2 });
+  return true;
 }
 
 function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
@@ -716,7 +696,7 @@ function clearCrosshairPosition(): void {
   chart?.clearCrosshairPosition?.();
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar });
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, revealSbarRange });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
@@ -756,10 +736,6 @@ watch(() => props.structure, () => {
   // immutable candle/volume series. Reproject only SVG structure geometry.
   updateSbarCoordinates();
   updateHoveredObject(undefined);
-}, { deep: true });
-watch(() => props.selectedObject, () => {
-  updateSbarMarkers();
-  revealSelectedObject();
 }, { deep: true });
 watch(() => layerVisibility.value.sbar, () => {
   if (!layerVisibility.value.sbar && hoveredObject.value?.kind === "sbar") hoveredObject.value = null;
