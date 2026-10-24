@@ -1122,4 +1122,52 @@ describe("RunChart", () => {
     expect(mocks.fitContent).not.toHaveBeenCalled();
     wrapper.unmount();
   });
+
+  it("culls Live CBar and Swing overlays outside the visible logical range", async () => {
+    const extendedBars = Array.from({ length: 8 }, (_, index) => {
+      const ts = (1700000000000000000n + BigInt(index) * 60000000000n).toString();
+      return bar(ts, ts);
+    });
+    const extendedOrigin: OriginDatasetDto = {
+      ...origin(),
+      bars: extendedBars,
+      sbarCount: extendedBars.length,
+      firstSbarId: extendedBars[0]!.sbarId,
+      lastSbarId: extendedBars[extendedBars.length - 1]!.sbarId,
+      firstTsEvent: extendedBars[0]!.tsEvent,
+      lastTsEvent: extendedBars[extendedBars.length - 1]!.tsEvent,
+    };
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 1 });
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: extendedOrigin,
+        testDataset: testDataset({
+          startSbarId: extendedBars[0]!.sbarId,
+          endSbarId: extendedBars[7]!.sbarId,
+          sbarCount: extendedBars.length,
+        }),
+        runState: null,
+        structure: {
+          cbarCount: 2,
+          cbars: [
+            { cbarId: "cbar-visible", sbarStartId: extendedBars[1]!.sbarId, sbarEndId: extendedBars[2]!.sbarId, high: "12", low: "9", spanSbars: 2, fractalType: null, createdAt: "2026-10-25 12:00:00" },
+            { cbarId: "cbar-offscreen", sbarStartId: extendedBars[5]!.sbarId, sbarEndId: extendedBars[6]!.sbarId, high: "12", low: "9", spanSbars: 2, fractalType: null, createdAt: "2026-10-25 12:00:00" },
+          ],
+          swingCount: 2,
+          swings: [
+            { swingId: "swing-visible", direction: "Up", high: "12", low: "9", cbarStartId: "cbar-visible", cbarEndId: "cbar-visible", sbarStartId: extendedBars[1]!.sbarId, sbarEndId: extendedBars[2]!.sbarId, startOi: null, endOi: null, volume: "100", spanSbars: 2, state: "Confirmed", createdAt: "2026-10-25 12:00:00", updatedAt: "2026-10-25 12:00:00" },
+            { swingId: "swing-offscreen", direction: "Up", high: "12", low: "9", cbarStartId: "cbar-offscreen", cbarEndId: "cbar-offscreen", sbarStartId: extendedBars[5]!.sbarId, sbarEndId: extendedBars[6]!.sbarId, startOi: null, endOi: null, volume: "100", spanSbars: 2, state: "Confirmed", createdAt: "2026-10-25 12:00:00", updatedAt: "2026-10-25 12:00:00" },
+          ],
+        },
+      },
+    });
+    await nextTick();
+
+    expect(wrapper.findAll('[data-testid="run-cbar-rectangle"]').map((node) => node.attributes("data-cbar-id")))
+      .toEqual(["cbar-visible"]);
+    expect(wrapper.findAll('[data-testid="run-swing-segment"]').map((node) => node.attributes("data-swing-id")))
+      .toEqual(["swing-visible"]);
+    wrapper.unmount();
+  });
+
 });
