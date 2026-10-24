@@ -67,14 +67,20 @@ function handleCrosshairChange(change: Omit<ReplayChartCrosshairSync, "revision"
   crosshairSync.value = { ...change, revision: (crosshairSync.value?.revision ?? 0) + 1 };
 }
 
-watch(() => props.testDataset?.testDatasetId, () => {
-  // A new Test Dataset invalidates the previous coordinate transform
-  // immediately; never let the old pair synchronize while Snapshot rechecks
-  // its SBar coverage against the new Live sequence.
-  referenceSequence.value = null;
-  syncRequest.value = null;
-  crosshairSync.value = null;
-});
+watch(
+  () => [
+    props.testDataset?.testDatasetId,
+    props.testDataset?.barType,
+    liveBars.value.map((bar) => bar.sbarId).join("\\u0000"),
+  ] as const,
+  () => {
+    // Re-evaluate qualification from the new Live identity, but never carry a
+    // viewport or Crosshair command across a sequence transition—even when the
+    // recomputed numeric Offset happens to be unchanged.
+    syncRequest.value = null;
+    crosshairSync.value = null;
+  },
+);
 
 </script>
 
