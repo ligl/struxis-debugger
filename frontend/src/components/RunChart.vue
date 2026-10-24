@@ -678,6 +678,7 @@ function updateChart(): void {
       });
       fittedTestDatasetId = props.testDataset.testDatasetId;
     }
+    applyCrosshairSync(props.crosshairSync);
   } catch (error) {
     candleSeries.setData([]);
     volumeSeries.setData([]);
