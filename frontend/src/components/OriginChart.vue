@@ -571,8 +571,10 @@ function stopBoundaryDrag(): void {
 }
 
 let applyingSyncedCrosshair = false;
+let hasSyncedCrosshair = false;
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
+  hasSyncedCrosshair = false;
   if (props.displayContext !== "snapshot-reference" || !props.syncEnabled || applyingSyncedCrosshair) return;
   const point = param.point;
   if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
@@ -888,6 +890,7 @@ function applyCrosshairOptions(): void {
 function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
   if (!chart || !candleSeries || props.displayContext !== "snapshot-reference" || !props.syncEnabled || !sync || sync.source === "reference") return;
   if (!sync.sbarId) {
+    hasSyncedCrosshair = false;
     applyingSyncedCrosshair = true;
     chart.clearCrosshairPosition?.();
     queueMicrotask(() => { applyingSyncedCrosshair = false; });
@@ -900,6 +903,7 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
     chart.clearCrosshairPosition?.();
     return;
   }
+  hasSyncedCrosshair = true;
   applyingSyncedCrosshair = true;
   chart.setCrosshairPosition?.(
     sync.price !== null && Number.isFinite(sync.price) ? sync.price : Number(bar.close),
@@ -1050,14 +1054,18 @@ watch(() => props.structure, () => {
 }, { deep: true });
 watch(() => props.crosshairSync, (sync) => {
   if (!props.syncEnabled || !sync) {
-    chart?.clearCrosshairPosition?.();
+    if (hasSyncedCrosshair) {
+      hasSyncedCrosshair = false;
+      chart?.clearCrosshairPosition?.();
+    }
     return;
   }
   applyCrosshairSync(sync);
 }, { deep: true });
 watch(() => props.syncEnabled, (enabled) => {
   applyCrosshairOptions();
-  if (!enabled) {
+  if (!enabled && hasSyncedCrosshair) {
+    hasSyncedCrosshair = false;
     applyingSyncedCrosshair = true;
     chart?.clearCrosshairPosition?.();
     queueMicrotask(() => { applyingSyncedCrosshair = false; });
