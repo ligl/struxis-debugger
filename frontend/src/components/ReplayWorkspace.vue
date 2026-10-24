@@ -44,14 +44,11 @@ function handleSyncEligibility(eligible: boolean, offset: number | null): void {
   const offsetChanged = syncOffset.value !== nextOffset;
   syncEligible.value = nextEligible;
   syncOffset.value = nextOffset;
-  if (!nextEligible) {
+  if (!nextEligible || offsetChanged) {
+    // If the coordinate origin changes, discard the old request. RunChart
+    // publishes its current Live range when syncOffset changes, avoiding
+    // reinterpreting an old Snapshot-origin range with a new offset.
     syncRequest.value = null;
-  } else if (offsetChanged && syncRequest.value) {
-    syncRequest.value = {
-      ...syncRequest.value,
-      offset: nextOffset!,
-      revision: ++viewportRevision,
-    };
   }
 }
 
@@ -70,7 +67,7 @@ watch(() => props.testDataset?.testDatasetId, () => {
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :sync-enabled="syncEligible" :sync-request="syncRequest" @viewport-change="handleViewportChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="syncRequest" @viewport-change="handleViewportChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel
