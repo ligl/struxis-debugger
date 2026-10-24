@@ -188,24 +188,23 @@ function updateSyncBoundaryCoordinates(): void {
     return;
   }
 
-  // Keep the raw fractional viewport transform used by chart synchronization,
-  // then intersect it with the finite Live interval. A narrow zoom can place
-  // the whole overlap between candle centers, so an empty integer-center range
-  // must not make both guide lines disappear.
-  const liveFrom = request.source === "live" ? request.from : request.from - request.offset;
-  const liveTo = request.source === "live" ? request.to : request.to - request.offset;
-  const overlapFrom = Math.max(0, liveFrom);
-  const overlapTo = Math.min(liveCount - 1, liveTo);
-  if (!Number.isFinite(overlapFrom) || !Number.isFinite(overlapTo) || overlapFrom > overlapTo) {
+  // Boundary identity is fixed to the first and last SBar of the Live
+  // sequence projected into Snapshot Reference. Viewport from/to is only for
+  // chart synchronization; it must never redefine these anchor bars.
+  const startSnapshotIndex = request.offset;
+  const endSnapshotIndex = request.offset + liveCount - 1;
+  if (
+    !Number.isInteger(startSnapshotIndex) ||
+    !Number.isInteger(endSnapshotIndex) ||
+    startSnapshotIndex < 0 ||
+    endSnapshotIndex >= props.bars.length
+  ) {
     syncBoundaryXs.value = null;
     return;
   }
 
-  const firstLiveIndex = Math.max(0, Math.ceil(overlapFrom - 1e-6));
-  const lastLiveIndex = Math.min(liveCount - 1, Math.floor(overlapTo + 1e-6));
   const timeScale = chart.timeScale();
-  const logicalToX = (liveIndex: number): number | null => {
-    const snapshotIndex = liveIndex + request.offset;
+  const anchorToX = (snapshotIndex: number): number | null => {
     const bar = props.bars[snapshotIndex];
     const byTime = bar ? coordinateForSbarId(bar.sbarId) : null;
     if (byTime !== null && Number.isFinite(byTime)) return byTime;
@@ -215,21 +214,11 @@ function updateSyncBoundaryCoordinates(): void {
       : null;
   };
 
-  // Prefer real candle centers whenever at least one center is visible.
-  // If zoomed into the gap between two centers, project the fractional overlap
-  // edges instead. This preserves the guides without changing viewport sync.
-  const start = firstLiveIndex <= lastLiveIndex
-    ? logicalToX(firstLiveIndex)
-    : (() => {
-        const x = timeScale.logicalToCoordinate(overlapFrom + request.offset);
-        return x !== null && x !== undefined && Number.isFinite(x) ? x : null;
-      })();
-  const end = firstLiveIndex <= lastLiveIndex
-    ? logicalToX(lastLiveIndex)
-    : (() => {
-        const x = timeScale.logicalToCoordinate(overlapTo + request.offset);
-        return x !== null && x !== undefined && Number.isFinite(x) ? x : null;
-      })();
+  // Re-project the same domain anchors after every zoom, pan, or resize.
+  // If an anchor leaves the viewport, its coordinate leaves the plot too;
+  // never clamp it to the viewport or substitute a currently visible candle.
+  const start = anchorToX(startSnapshotIndex);
+  const end = anchorToX(endSnapshotIndex);
   syncBoundaryXs.value = start === null || end === null ? null : { start, end };
 }
 function updateSwingSegments(): void {
