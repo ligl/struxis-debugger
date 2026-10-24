@@ -194,7 +194,7 @@ describe("chart entry adapters", () => {
         bars,
         structure: null,
         snapshotId: "snapshot-geometry",
-        syncEnabled: false,
+        syncEnabled: true,
         syncRequest: null,
         crosshairSync: null,
         liveBarCount: 1,
