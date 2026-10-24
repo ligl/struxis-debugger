@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
   runState: RunStateDto | null;
+  playbackStatus?: "idle" | "playing" | "paused";
   structure: ReplayInspectorStructureDto | null;
   selectedObject: ReplayChartSelection | null;
   targetSbarId: string | null;
@@ -76,8 +77,8 @@ watch(() => props.testDataset?.testDatasetId, () => {
           :live-bar-type="testDataset?.barType ?? null"
           :live-sbar-ids="liveBars.map((bar) => bar.sbarId)"
           :sync-request="syncRequest"
-          :is-playing="runState?.testDatasetId === testDataset?.testDatasetId && runState?.status === 'running'"
-          :replay-progress="testDataset && runState?.testDatasetId === testDataset.testDatasetId ? runState.processedCount / Math.max(1, testDataset.sbarCount) : 0"
+          :is-playing="playbackStatus === 'playing' && runState?.testDatasetId === testDataset?.testDatasetId"
+          :replay-progress="runState?.testDatasetId === testDataset?.testDatasetId && runState.inputCount > 0 ? runState.processedCount / runState.inputCount : 0"
           @sync-eligibility="handleSyncEligibility"
           @viewport-change="handleViewportChange"
         />
