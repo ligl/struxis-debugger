@@ -22,6 +22,32 @@ describe("Snapshot Live range anchor indices", () => {
 });
 
 
+describe("Snapshot processed Live prefix indices", () => {
+  it("maps the processed prefix onto the fixed Snapshot overlap", () => {
+    expect(resolveSnapshotProcessedRangeIndices({
+      offset: 4, liveCount: 3, processedCount: 2, snapshotCount: 10,
+    })).toEqual({ start: 4, endExclusive: 6 });
+  });
+
+  it("clamps progress to the Live sequence and supports an empty prefix", () => {
+    expect(resolveSnapshotProcessedRangeIndices({
+      offset: 2, liveCount: 3, processedCount: 99, snapshotCount: 10,
+    })).toEqual({ start: 2, endExclusive: 5 });
+    expect(resolveSnapshotProcessedRangeIndices({
+      offset: 2, liveCount: 3, processedCount: -4, snapshotCount: 10,
+    })).toEqual({ start: 2, endExclusive: 2 });
+  });
+
+  it("rejects invalid overlap and non-finite progress", () => {
+    expect(resolveSnapshotProcessedRangeIndices({
+      offset: 8, liveCount: 3, processedCount: 1, snapshotCount: 10,
+    })).toBeNull();
+    expect(resolveSnapshotProcessedRangeIndices({
+      offset: 2, liveCount: 3, processedCount: Number.NaN, snapshotCount: 10,
+    })).toBeNull();
+  });
+});
+
 describe("Snapshot Live range coordinate projection", () => {
   const barIds = ["s0", "s1", "s2", "s3", "s4"];
 
