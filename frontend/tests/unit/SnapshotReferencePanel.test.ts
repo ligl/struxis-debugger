@@ -79,7 +79,7 @@ describe("SnapshotReferencePanel", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_snapshot_reference", { snapshotId: "snapshot-complete-01" });
   });
 
-  it("dims a compatible Snapshot Reference during playback and brightens with confirmed progress", async () => {
+  it("passes per-candle playback state to a compatible Snapshot without a chart-wide brightness filter", async () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
       props: {
@@ -88,7 +88,7 @@ describe("SnapshotReferencePanel", () => {
         liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
         liveSbarIds: ["100"],
         isPlaying: true,
-        replayProgress: 0.5,
+        processedCount: 6,
       },
     });
 
@@ -99,10 +99,14 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.get('[data-testid="snapshot-reference-sync-indicator"]').attributes("aria-label"))
       .toBe("Viewport synchronization available");
     expect(chart.attributes("data-replay-playing")).toBe("true");
-    expect(chart.attributes("style")).toContain("brightness(0.775)");
+    expect(chart.attributes("style") ?? "").not.toContain("brightness(");
+    const chartStub = wrapper.get('[data-testid="snapshot-reference-chart-host"]');
+    expect(chartStub.attributes("snapshot-playback-enabled")).toBe("true");
+    expect(chartStub.attributes("snapshot-playback-offset")).toBe("0");
+    expect(chartStub.attributes("snapshot-processed-count")).toBe("6");
 
-    await wrapper.setProps({ replayProgress: 1 } as never);
-    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("brightness(1)");
+    await wrapper.setProps({ processedCount: 7 } as never);
+    expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').attributes("snapshot-processed-count")).toBe("7");
   });
 
   it("keeps Snapshot Reference independent when timeframe or SBar coverage differs", async () => {
@@ -114,7 +118,7 @@ describe("SnapshotReferencePanel", () => {
         liveBarType: "AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL",
         liveSbarIds: ["100"],
         isPlaying: true,
-        replayProgress: 0.2,
+        processedCount: 1,
       },
     });
 
@@ -122,7 +126,7 @@ describe("SnapshotReferencePanel", () => {
     await flushPromises();
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
     expect(wrapper.find('[data-testid="snapshot-reference-sync-indicator"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("filter: none");
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style") ?? "").not.toContain("brightness(");
 
     await wrapper.setProps({ liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", liveSbarIds: ["not-covered"] } as never);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
