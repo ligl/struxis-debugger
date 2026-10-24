@@ -162,7 +162,7 @@ function invalidatePeerState(): void {
 }
 
 watch(
-  () => [props.snapshotId, props.bars, props.liveBarCount, props.playbackEnabled, props.playbackOffset, props.processedCount] as const,
+  () => [props.snapshotId, props.bars, props.liveBarCount, props.syncEnabled, props.playbackEnabled, props.playbackOffset, props.processedCount] as const,
   refreshSnapshotGeometry,
   { deep: true },
 );
