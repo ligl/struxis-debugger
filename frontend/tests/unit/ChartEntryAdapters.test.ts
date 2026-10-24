@@ -31,8 +31,7 @@ const SurfaceStub = defineComponent({
     "bars", "structure", "originDatasetId",
     "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
   ],
-  emits: ["sbarClick", "objectClick", "chartInteractionError", "pointerPosition",
-    "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
+  emits: ["chartClick", "pointerPosition", "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
   setup(_props, { expose }) {
     expose({
       getVisibleLogicalRange: () => ({ from: 0, to: 1 }),
@@ -40,6 +39,8 @@ const SurfaceStub = defineComponent({
       applyCrosshairPosition: (sbarId: string, price: number) => { surfacePortCalls.crosshairs.push({ sbarId, price }); return true; },
       clearCrosshairPosition: () => { surfacePortCalls.clears += 1; },
       getSbarCoordinate: (sbarId: string) => sbarId === "sbar-1" ? 10 : null,
+      getSbarMarker: (sbarId: string) => sbarId === "sbar-1" ? { id: sbarId, x: 5, y: 10, width: 6, height: 8 } : null,
+      getStructureGeometry: () => ({ cbarRectangles: [], swingSegments: [] }),
       getLogicalCoordinate: (index: number) => index * 10,
       getPriceCoordinate: (price: number) => price * 2,
       getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "sbar-1" : null,
