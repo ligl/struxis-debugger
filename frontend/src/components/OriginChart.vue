@@ -1050,9 +1050,11 @@ watch(() => props.structure, () => {
 }, { deep: true });
 watch(() => props.crosshairSync, (sync) => {
   if (!props.syncEnabled || !sync) {
-    if (hasSyncedCrosshair) {
+    if (props.displayContext === "snapshot-reference") {
       hasSyncedCrosshair = false;
+      applyingSyncedCrosshair = true;
       chart?.clearCrosshairPosition?.();
+      queueMicrotask(() => { applyingSyncedCrosshair = false; });
     }
     return;
   }
