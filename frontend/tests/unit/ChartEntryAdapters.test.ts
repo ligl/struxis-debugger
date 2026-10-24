@@ -30,21 +30,23 @@ const SurfaceStub = defineComponent({
   props: [
     "bars", "structure", "originDatasetId", "selectedObject",
     "selectionStartSbarId", "selectionEndSbarId", "selectionPending",
-    "selectionEditable", "displayContext", "snapshotLiveBarCount", "snapshotPlaybackEnabled",
-    "snapshotPlaybackOffset", "snapshotProcessedCount",
+    "selectionEditable", "displayContext", "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
   ],
   emits: ["sbarClick", "objectClick", "rangeBoundaryChange", "selectionError",
-    "cancelRangeSelection", "logicalRangeChange", "crosshairAnchorChange"],
+    "cancelRangeSelection", "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
   setup(_props, { expose }) {
     expose({
       getVisibleLogicalRange: () => null,
       applyViewportRange: (range: { from: number; to: number }) => { surfacePortCalls.viewportRanges.push(range); return true; },
       applyCrosshairPosition: (sbarId: string, price: number) => { surfacePortCalls.crosshairs.push({ sbarId, price }); return true; },
       clearCrosshairPosition: () => { surfacePortCalls.clears += 1; },
+      getSbarCoordinate: (_sbarId: string) => null,
+      getLogicalCoordinate: (_index: number) => null,
+      getPriceCoordinate: (_price: number) => null,
     });
     return {};
   },
-  template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :enabled="true" :bright-candles="[]" :cbar-rectangles="[]" :swing-segments="[]" :boundaries="null" /></div>',
+  template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :cbar-rectangles="[]" :swing-segments="[]" /></div>',
 });
 
 describe("chart entry adapters", () => {
@@ -65,7 +67,9 @@ describe("chart entry adapters", () => {
     });
 
     const surface = wrapper.getComponent(SurfaceStub);
-    expect(surface.props("displayContext")).toBe("origin");
+    expect(surface.props("displayContext")).toBeUndefined();
+    expect(surface.props("showHeader")).toBe(true);
+    expect(surface.props("showFooter")).toBe(true);
     expect(surface.props("originDatasetId")).toBe("origin-1");
     expect(surface.props("selectionEditable")).toBe(true);
     expect(surface.props("syncEnabled")).toBeUndefined();
@@ -91,15 +95,18 @@ describe("chart entry adapters", () => {
     });
 
     const surface = wrapper.getComponent(SurfaceStub);
-    expect(surface.props("displayContext")).toBe("snapshot-reference");
+    expect(surface.props("displayContext")).toBeUndefined();
+    expect(surface.props("showHeader")).toBe(false);
+    expect(surface.props("showFooter")).toBe(false);
+    expect(surface.props("panelClass")).toBe("snapshot-reference-chart");
     expect(surface.props("originDatasetId")).toBe("snapshot-1");
     expect(surface.props("syncEnabled")).toBeUndefined();
     expect(surface.props("syncRequest")).toBeUndefined();
     expect(surface.props("crosshairSync")).toBeUndefined();
-    expect(surface.props("snapshotLiveBarCount")).toBe(1);
-    expect(surface.props("snapshotPlaybackEnabled")).toBe(true);
-    expect(surface.props("snapshotPlaybackOffset")).toBe(0);
-    expect(surface.props("snapshotProcessedCount")).toBe(0);
+    expect(surface.props("snapshotLiveBarCount")).toBeUndefined();
+    expect(surface.props("snapshotPlaybackEnabled")).toBeUndefined();
+    expect(surface.props("snapshotPlaybackOffset")).toBeUndefined();
+    expect(surface.props("snapshotProcessedCount")).toBeUndefined();
     expect(wrapper.findComponent(SnapshotPlaybackOverlay).exists()).toBe(true);
     expect(wrapper.findComponent(SnapshotLiveRangeMarkers).exists()).toBe(true);
   });
