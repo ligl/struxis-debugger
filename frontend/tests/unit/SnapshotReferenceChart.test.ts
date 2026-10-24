@@ -192,7 +192,7 @@ describe("SnapshotReferenceChart", () => {
       .toEqual(["swing-checkpoint-1"]);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
 
-    await wrapper.setProps({ processedCount: 2 });
+    await wrapper.setProps({ processedCount: 2 } as never);
     expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]').map((node) => node.attributes("data-sbar-id")))
       .toEqual(["1700000000000000000", "1700000060000000000"]);
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(true);
@@ -200,7 +200,7 @@ describe("SnapshotReferenceChart", () => {
 
     // Playback completion disables the overlay and restores the whole Snapshot,
     // including historical bars outside the Live/Snapshot overlap.
-    await wrapper.setProps({ playbackEnabled: false });
+    await wrapper.setProps({ playbackEnabled: false } as never);
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]')).toHaveLength(0);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
@@ -302,7 +302,7 @@ describe("SnapshotReferenceChart", () => {
         to: 9.75,
         offset: 1,
       },
-    });
+    } as never);
     await nextTick();
     expect(wrapper.get('[data-testid="snapshot-live-range-start"]').attributes("x1")).toBe("200");
     expect(wrapper.get('[data-testid="snapshot-live-range-end"]').attributes("x1")).toBe("300");
