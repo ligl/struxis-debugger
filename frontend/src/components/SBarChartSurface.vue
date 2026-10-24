@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
+import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
@@ -37,6 +38,7 @@ const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true 
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
+let primitiveHost: ChartPrimitiveHost | null = null;
 let stopObservingResize: (() => void) | null = null;
 
 let crosshairUpdateFrame: number | null = null;
@@ -540,6 +542,7 @@ onMounted(() => {
   chart = runtime.chart;
   candleSeries = runtime.candleSeries;
   volumeSeries = runtime.volumeSeries;
+  primitiveHost = runtime.primitiveHost;
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
@@ -574,6 +577,8 @@ onBeforeUnmount(() => {
     crosshairUpdateFrame = null;
   }
   pendingViewportRange = null;
+  primitiveHost?.dispose();
+  primitiveHost = null;
   chart?.remove();
   chart = null;
   candleSeries = null;
