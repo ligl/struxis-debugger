@@ -538,8 +538,8 @@ let applyingSyncedCrosshair = false;
 let hasSyncedCrosshair = false;
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
-  hasSyncedCrosshair = false;
   if (!props.syncEnabled || applyingSyncedCrosshair) return;
+  hasSyncedCrosshair = false;
   const point = param.point;
   if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
     emit("crosshairChange", { source: "live", sbarId: null, price: null });
