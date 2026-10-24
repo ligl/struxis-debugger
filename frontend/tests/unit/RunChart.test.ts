@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   setVisibleLogicalRange: vi.fn(),
   getVisibleLogicalRange: vi.fn(() => ({ from: -0.5, to: 5.5 })),
   setCrosshairPosition: vi.fn(),
+  clearCrosshairPosition: vi.fn(),
+  coordinateToPrice: vi.fn(),
   applyChartOptions: vi.fn(),
   applyPriceScaleOptions: vi.fn(),
   coordinateToLogical: vi.fn(),
@@ -122,7 +124,7 @@ function installResizeObserverMock(): void {
 function installChartMock(): void {
   mocks.createChart.mockReturnValue({
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: mocks.candleSetData, update: mocks.candleUpdate, priceToCoordinate: (price: number) => 200 - price, applyOptions: vi.fn() })
+      .mockReturnValueOnce({ setData: mocks.candleSetData, update: mocks.candleUpdate, priceToCoordinate: (price: number) => 200 - price, coordinateToPrice: (y: number) => 200 - y, applyOptions: vi.fn() })
       .mockReturnValueOnce({ setData: mocks.volumeSetData, update: mocks.volumeUpdate, applyOptions: vi.fn() }),
     priceScale: vi.fn(() => ({ applyOptions: mocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
@@ -141,6 +143,7 @@ function installChartMock(): void {
     },
     unsubscribeClick: mocks.unsubscribeClick,
     setCrosshairPosition: mocks.setCrosshairPosition,
+    clearCrosshairPosition: mocks.clearCrosshairPosition,
     subscribeCrosshairMove: (listener: (param: { point?: { x: number; y: number } | undefined }) => void) => {
       mocks.crosshairMoveListener = listener;
       mocks.subscribeCrosshairMove();
@@ -367,6 +370,30 @@ describe("RunChart", () => {
     expect(wrapper.find('[data-testid="run-object-hover-label"]').exists()).toBe(false);
     wrapper.unmount();
     expect(mocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
+  });
+
+  it("publishes the hovered SBar identity and price for eligible crosshair synchronization", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: null, syncEnabled: true },
+    });
+    await nextTick();
+
+    mocks.coordinateToLogical.mockReturnValue(0);
+    mocks.crosshairMoveListener?.({ point: { x: 60, y: 190 } });
+    await nextTick();
+    expect(wrapper.emitted("crosshairChange")?.at(-1)?.[0]).toEqual({
+      source: "live",
+      sbarId: originBars[1]!.sbarId,
+      price: 10,
+    });
+
+    mocks.crosshairMoveListener?.({ point: undefined });
+    await nextTick();
+    expect(wrapper.emitted("crosshairChange")?.at(-1)?.[0]).toEqual({
+      source: "live",
+      sbarId: null,
+      price: null,
+    });
   });
 
   it("dims future input bars according to backend-confirmed cursor progress", async () => {
