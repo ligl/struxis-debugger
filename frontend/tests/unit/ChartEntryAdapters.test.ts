@@ -48,7 +48,7 @@ const SurfaceStub = defineComponent({
     });
     return {};
   },
-  template: '<div data-testid="surface-stub"><slot name="snapshot-overlays" :cbar-rectangles="[]" :swing-segments="[]" /><slot name="origin-selection-overlay" /><slot name="origin-selection-status" /></div>',
+  template: '<div data-testid="surface-stub"><slot name="chart-structure-overlays" :cbar-rectangles="[]" :swing-segments="[]" /><slot name="chart-interaction-overlay" /><slot name="footer-trailing" /></div>',
 });
 
 describe("chart entry adapters", () => {
