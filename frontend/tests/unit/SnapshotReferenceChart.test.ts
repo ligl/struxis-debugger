@@ -450,6 +450,7 @@ describe("SnapshotReferenceChart", () => {
     expect(initialOptions.crosshair?.mode).toBe(0);
     expect(initialOptions.crosshair?.vertLine?.visible).toBe(true);
     expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
+    const chartOptionsCallCount = chartMocks.applyChartOptions.mock.calls.length;
 
     await wrapper.setProps({ syncEnabled: false });
     await nextTick();
@@ -457,6 +458,7 @@ describe("SnapshotReferenceChart", () => {
     expect(initialOptions.crosshair?.mode).toBe(0);
     expect(initialOptions.crosshair?.vertLine?.visible).toBe(true);
     expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
+    expect(chartMocks.applyChartOptions).toHaveBeenCalledTimes(chartOptionsCallCount);
   });
 
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
