@@ -172,7 +172,13 @@ describe("RunChart", () => {
   });
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    const nativeMatches = HTMLElement.prototype.matches;
+    vi.spyOn(HTMLElement.prototype, "matches").mockImplementation(function (selector: string) {
+      // Keyboard tests model the pointer remaining over the Live chart.
+      return selector === ":hover" ? true : nativeMatches.call(this, selector);
+    });
     // clearAllMocks preserves mock implementations/return values. Reset the
     // viewport to its default fitted range so one test cannot leak a narrow
     // logical range into later keyboard tests.
@@ -189,7 +195,10 @@ describe("RunChart", () => {
     installChartMock();
   });
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   it("renders only the exact inclusive Test Dataset slice from its matching validated Origin", async () => {
     const wrapper = mount(RunChart, {
@@ -215,6 +224,25 @@ describe("RunChart", () => {
     expect(wrapper.get('[data-testid="run-structure-overlay"]').attributes("style")).toContain("width: 700px");
     expect(mocks.fitContent).toHaveBeenCalledOnce();
     expect(mocks.setVisibleLogicalRange).toHaveBeenCalledWith({ from: -0.5, to: 5.5 });
+    wrapper.unmount();
+  });
+
+  it("ignores keyboard navigation when the pointer and focus belong to another chart", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: null },
+    });
+    await nextTick();
+    const chartHost = wrapper.get('[data-testid="run-chart-canvas"]').element;
+    vi.spyOn(chartHost, "matches").mockReturnValue(false);
+    mocks.setVisibleLogicalRange.mockClear();
+    mocks.setCrosshairPosition.mockClear();
+
+    const event = new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(mocks.setVisibleLogicalRange).not.toHaveBeenCalled();
+    expect(mocks.setCrosshairPosition).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 
