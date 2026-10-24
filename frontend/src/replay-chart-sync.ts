@@ -125,3 +125,28 @@ export function resolveReplayCrosshairAnchor(
   const sbarId = bars[index]?.sbarId;
   return sbarId ? { index, sbarId } : null;
 }
+
+export type ReplayCrosshairCommand<TTime> =
+  | { kind: "ignore" }
+  | { kind: "clear" }
+  | { kind: "position"; sbarId: string; price: number; time: TTime };
+
+/**
+ * Resolve the peer Crosshair message into a chart command without touching the
+ * chart API. A peer message with no valid/mappable position clears stale peer
+ * state; a message originating from this chart is ignored to prevent feedback.
+ */
+export function resolveReplayCrosshairCommand<TTime>(
+  sync: Pick<NonNullable<import("./origin-types").ReplayChartCrosshairSync>, "source" | "sbarId" | "price"> | null | undefined,
+  bars: readonly { sbarId: string }[],
+  timeBySbarId: ReadonlyMap<string, TTime>,
+): ReplayCrosshairCommand<TTime> {
+  if (!sync || sync.source === "reference") return { kind: "ignore" };
+  if (!sync.sbarId || sync.price === null || !Number.isFinite(sync.price)) {
+    return { kind: "clear" };
+  }
+  const bar = bars.find((candidate) => candidate.sbarId === sync.sbarId);
+  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
+  if (!bar || time === undefined) return { kind: "clear" };
+  return { kind: "position", sbarId: bar.sbarId, price: sync.price, time };
+}
