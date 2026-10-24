@@ -87,9 +87,25 @@ function updateSelectedObjectProjection(reveal = false): void {
 function handleProjectionFrame(): void {
   updateSelectionCoordinates();
   updateSelectedObjectProjection();
-  hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar"
-    ? surface.value?.getSbarMarker(hoveredObject.value.id) ?? null
-    : null;
+
+  const hovered = hoveredObject.value;
+  if (!hovered) {
+    hoveredSbarMarker.value = null;
+    return;
+  }
+  if (hovered.kind === "sbar") {
+    const marker = surface.value?.getSbarMarker(hovered.id) ?? null;
+    hoveredSbarMarker.value = marker;
+    if (!marker) hoveredObject.value = null;
+    return;
+  }
+
+  hoveredSbarMarker.value = null;
+  const geometry = surface.value?.getStructureGeometry();
+  const stillProjected = hovered.kind === "cbar"
+    ? geometry?.cbarRectangles.some((item) => item.id === hovered.id)
+    : geometry?.swingSegments.some((item) => item.id === hovered.id);
+  if (!stillProjected) hoveredObject.value = null;
 }
 
 function handlePointerPosition(point: { x: number; y: number } | null): void {
