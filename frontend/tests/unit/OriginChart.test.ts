@@ -435,6 +435,31 @@ describe("OriginChart", () => {
     expect(chartOptions.crosshair?.horzLine?.visible).toBe(false);
   });
 
+  it("projects a Live crosshair onto the matching Snapshot SBar", async () => {
+    mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "snapshot-reference-crosshair-target",
+        structure: null,
+        displayContext: "snapshot-reference",
+        syncEnabled: true,
+        crosshairSync: {
+          revision: 1,
+          source: "live",
+          sbarId: bar().sbarId,
+          price: 10.5,
+        },
+      },
+    });
+    await nextTick();
+
+    expect(chartMocks.setCrosshairPosition).toHaveBeenCalledWith(
+      10.5,
+      1700000000,
+      expect.anything(),
+    );
+  });
+
   it("shows the crosshair in Snapshot Reference only while synchronization is eligible", async () => {
     const wrapper = mount(OriginChart, {
       props: {
