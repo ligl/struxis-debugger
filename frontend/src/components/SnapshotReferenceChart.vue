@@ -52,13 +52,16 @@ const crosshairGate = new ReplayCrosshairSyncGate();
 const brightCandles = ref<SnapshotBrightCandleGeometry[]>([]);
 const boundaries = ref<{ start: number; end: number } | null>(null);
 const playbackOverlayEnabled = computed(() =>
-  props.playbackEnabled && props.playbackOffset !== null && props.playbackOffset !== undefined,
+  props.syncEnabled
+  && props.playbackEnabled
+  && props.playbackOffset !== null
+  && props.playbackOffset !== undefined,
 );
 
 function refreshSnapshotGeometry(): void {
   const port = surface.value;
   const offset = props.playbackOffset;
-  if (!port || offset === null || offset === undefined || props.liveBarCount <= 0) {
+  if (!port || !props.syncEnabled || offset === null || offset === undefined || props.liveBarCount <= 0) {
     brightCandles.value = [];
     boundaries.value = null;
     return;
