@@ -464,6 +464,12 @@ describe("SBarChartSurface and chart entry adapters", () => {
     expect(wrapper.get('[data-testid="origin-hover-swing"]').attributes("data-swing-id")).toBe("swing-hover");
     expect(wrapper.find('[data-testid="origin-selected-swing"]').exists()).toBe(false);
 
+    // Hiding the hovered structure layer invalidates the transient hover but not persistent selection.
+    await wrapper.get('[data-testid="layer-toggle-swing"]').trigger("click");
+    await nextTick();
+    expect(wrapper.find('[data-testid="origin-object-hover-label"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="origin-selected-sbar"]').exists()).toBe(true);
+
     moveHandler?.({});
     await nextTick();
     expect(wrapper.find('[data-testid="origin-object-hover-label"]').exists()).toBe(false);
