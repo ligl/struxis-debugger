@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
-import { projectCBarRectangles } from "../sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -172,43 +172,27 @@ function updateSwingSegments(): void {
     swingSegments.value = [];
     return;
   }
-  const visible = chart.timeScale().getVisibleLogicalRange();
-  const from = visible && Number.isFinite(visible.from) ? visible.from - 2 : Number.NEGATIVE_INFINITY;
-  const to = visible && Number.isFinite(visible.to) ? visible.to + 2 : Number.POSITIVE_INFINITY;
   const timeScale = chart.timeScale();
-  swingSegments.value = layerVisibility.value.swing ? (props.structure?.swings ?? []).flatMap((swing) => {
-    const startIndex = indexBySbarId.get(swing.sbarStartId);
-    const endIndex = indexBySbarId.get(swing.sbarEndId);
-    if (startIndex === undefined || endIndex === undefined ||
-        Math.max(startIndex, endIndex) < from || Math.min(startIndex, endIndex) > to) return [];
-    const startTime = timeBySbarId.get(swing.sbarStartId);
-    const endTime = timeBySbarId.get(swing.sbarEndId);
-    const high = Number(swing.high);
-    const low = Number(swing.low);
-    if (startTime === undefined || endTime === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
-    const startX = timeScale.timeToCoordinate(startTime);
-    const endX = timeScale.timeToCoordinate(endTime);
-    const startsAtLow = swing.direction === "Up";
-    const startY = candleSeries.priceToCoordinate(startsAtLow ? low : high);
-    const endY = candleSeries.priceToCoordinate(startsAtLow ? high : low);
-    if ([startX, endX, startY, endY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return [];
-    const style = swingStyleByState[swing.state];
-    if (!style && !unknownSwingStates.has(swing.state)) {
-      unknownSwingStates.add(swing.state);
-      console.warn(`Unknown Struxis SwingState received by SBarChartSurface: ${swing.state}`);
-    }
-    const resolvedStyle = style ?? { color: "#A0A7B0", dasharray: "4 3" };
-    return [{
-      id: swing.swingId,
-      x1: startX as number,
-      y1: startY as number,
-      x2: endX as number,
-      y2: endY as number,
-      state: swing.state,
-      color: resolvedStyle.color,
-      dasharray: resolvedStyle.dasharray,
-    }];
-  }) : [];
+  swingSegments.value = layerVisibility.value.swing
+    ? projectSwingSegments({
+      swings: props.structure?.swings ?? [],
+      indexBySbarId,
+      visibleRange: timeScale.getVisibleLogicalRange(),
+      coordinateForSbarId: (sbarId) => {
+        const time = timeBySbarId.get(sbarId);
+        return time === undefined ? null : timeScale.timeToCoordinate(time);
+      },
+      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
+    }).map((segment) => {
+      const style = swingStyleByState[segment.state];
+      if (!style && !unknownSwingStates.has(segment.state)) {
+        unknownSwingStates.add(segment.state);
+        console.warn(`Unknown Struxis SwingState received by SBarChartSurface: ${segment.state}`);
+      }
+      const resolvedStyle = style ?? { color: "#A0A7B0", dasharray: "4 3" };
+      return { ...segment, color: resolvedStyle.color, dasharray: resolvedStyle.dasharray };
+    })
+    : [];
 }
 
 
