@@ -850,7 +850,7 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
-        <slot name="snapshot-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
+        <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
         <rect
           v-if="hoveredSbarMarker"
           class="origin-object-hover-sbar"
@@ -959,7 +959,7 @@ onBeforeUnmount(() => {
         data-testid="origin-object-hover-label"
         aria-live="off"
       >{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
-      <slot name="origin-selection-overlay" />
+      <slot name="chart-interaction-overlay" />
       <div class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
@@ -971,7 +971,7 @@ onBeforeUnmount(() => {
       <span>SBARS <b>{{ bars.length.toLocaleString() }}</b></span>
       <span v-if="latestBar">VOL <b>{{ latestBar.volume }}</b></span>
       <span v-if="latestBar" class="origin-chart-last-id" :title="latestBar.sbarId">LAST ID <code>{{ latestBar.sbarId }}</code></span>
-      <slot name="origin-selection-status" />
+      <slot name="footer-trailing" />
     </div>
   </section>
 </template>
