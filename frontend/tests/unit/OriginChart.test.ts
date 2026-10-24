@@ -236,6 +236,28 @@ describe("OriginChart", () => {
     expect(chartOptions.rightPriceScale?.borderColor).toBe("#121619");
   });
 
+  it("hides the crosshair in Snapshot Reference without changing Origin chart behavior", () => {
+    mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "snapshot-reference-no-crosshair",
+        structure: null,
+        displayContext: "snapshot-reference",
+      },
+    });
+
+    const chartOptions = chartMocks.createChart.mock.calls[0]?.[1] as {
+      crosshair?: {
+        mode?: number;
+        vertLine?: { visible?: boolean };
+        horzLine?: { visible?: boolean };
+      };
+    };
+    expect(chartOptions.crosshair?.mode).toBe(2);
+    expect(chartOptions.crosshair?.vertLine?.visible).toBe(false);
+    expect(chartOptions.crosshair?.horzLine?.visible).toBe(false);
+  });
+
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
     const wrapper = mount(OriginChart, {
       props: {
