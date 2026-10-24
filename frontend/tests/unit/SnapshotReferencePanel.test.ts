@@ -126,7 +126,7 @@ describe("SnapshotReferencePanel", () => {
         syncEligible: false,
         syncOffset: null,
         progressApplies: true,
-        processedCount: 1,
+        processedCount: 0,
       },
     });
 
@@ -134,6 +134,7 @@ describe("SnapshotReferencePanel", () => {
     await flushPromises();
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
     expect(wrapper.find('[data-testid="snapshot-reference-sync-indicator"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').attributes("snapshot-playback-enabled")).toBe("false");
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style") ?? "").not.toContain("brightness(");
 
     await wrapper.setProps({ syncEligible: false, syncOffset: null } as never);
