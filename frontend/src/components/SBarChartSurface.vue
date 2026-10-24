@@ -69,7 +69,6 @@ const unknownSwingStates = new Set<string>();
 const firstSbarX = ref<number | null>(null);
 const secondSbarX = ref<number | null>(null);
 let crosshairLogicalIndex: number | null = null;
-let lastEmittedBoundaryId: string | null = null;
 
 function coordinateForSbarId(sbarId: string | null | undefined): number | null {
   if (!chart || !sbarId) return null;
