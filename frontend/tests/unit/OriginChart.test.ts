@@ -170,6 +170,53 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("marks the first and last visible Live SBar centers on a compatible Snapshot Reference", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+      }),
+      bar({
+        sbarId: "1700000120000000000",
+        tsEvent: "1700000120000000000",
+        tsInit: "1700000120000000001",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "snapshot-reference-live-range-guides",
+        structure: null,
+        displayContext: "snapshot-reference",
+        syncEnabled: true,
+        syncLiveBarCount: 2,
+        syncRequest: {
+          revision: 1,
+          source: "live",
+          from: -0.5,
+          to: 1.5,
+          offset: 1,
+        },
+      },
+    });
+    await nextTick();
+
+    const start = wrapper.get('[data-testid="snapshot-live-range-start"]');
+    const end = wrapper.get('[data-testid="snapshot-live-range-end"]');
+    expect(start.attributes("x1")).toBe("200");
+    expect(end.attributes("x1")).toBe("300");
+    expect(start.attributes("opacity")).toBe("0.3");
+    expect(start.attributes("stroke-dasharray")).toBe("3 5");
+
+    await wrapper.setProps({ syncEnabled: false });
+    await nextTick();
+    expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
     mount(OriginChart, {
       props: {
