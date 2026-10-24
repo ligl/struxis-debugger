@@ -875,6 +875,33 @@ function updateChart(): void {
   }
 }
 
+function getVisibleLogicalRange(): { from: number; to: number } | null {
+  const range = chart?.timeScale().getVisibleLogicalRange();
+  return range && Number.isFinite(range.from) && Number.isFinite(range.to)
+    ? { from: range.from, to: range.to }
+    : null;
+}
+
+function applyViewportRange(range: { from: number; to: number }): boolean {
+  if (!chart || !Number.isFinite(range.from) || !Number.isFinite(range.to) || range.to <= range.from) return false;
+  chart.timeScale().setVisibleLogicalRange(range);
+  return true;
+}
+
+function applyCrosshairPosition(sbarId: string, price: number): boolean {
+  if (!chart || !candleSeries || !Number.isFinite(price)) return false;
+  const time = timeBySbarId.get(sbarId);
+  if (time === undefined) return false;
+  chart.setCrosshairPosition?.(price, time, candleSeries);
+  return true;
+}
+
+function clearCrosshairPosition(): void {
+  chart?.clearCrosshairPosition?.();
+}
+
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition });
+
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
   if (!chartHost.value) return;
