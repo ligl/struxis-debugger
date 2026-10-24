@@ -114,7 +114,7 @@ describe("OriginChart", () => {
   });
 
 
-  it("dims only unprocessed Snapshot candles in the Live overlap without resetting candle data", async () => {
+  it("dims the full Snapshot plot while revealing processed candles one by one", async () => {
     const bars = [
       bar(),
       bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001", open: "10", close: "11" }),
@@ -136,17 +136,22 @@ describe("OriginChart", () => {
     await nextTick();
 
     const initialSetDataCalls = chartMocks.candleSetData.mock.calls.length;
-    const dimmed = wrapper.findAll('[data-testid="snapshot-dimmed-candle"]');
-    expect(dimmed.map((node) => node.attributes("data-sbar-id"))).toEqual(["1700000060000000000"]);
+    expect(wrapper.get('[data-testid="snapshot-playback-dimming"]').attributes("fill-opacity")).toBe("0.68");
+    expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]').map((node) => node.attributes("data-sbar-id")))
+      .toEqual(["1700000000000000000"]);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
 
     await wrapper.setProps({ snapshotProcessedCount: 2 });
-    expect(wrapper.findAll('[data-testid="snapshot-dimmed-candle"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]').map((node) => node.attributes("data-sbar-id")))
+      .toEqual(["1700000000000000000", "1700000060000000000"]);
+    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(true);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
 
-    await wrapper.setProps({ snapshotProcessedCount: 1 });
+    // Playback completion disables the overlay and restores the whole Snapshot,
+    // including historical bars outside the Live/Snapshot overlap.
     await wrapper.setProps({ snapshotPlaybackEnabled: false });
-    expect(wrapper.findAll('[data-testid="snapshot-dimmed-candle"]')).toHaveLength(0);
+    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]')).toHaveLength(0);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
     wrapper.unmount();
   });
