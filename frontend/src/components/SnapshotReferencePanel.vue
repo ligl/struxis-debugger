@@ -65,6 +65,17 @@ const syncOffset = computed<number | null>(() => {
   return coversLiveSequence ? first : null;
 });
 const syncEligible = computed(() => syncOffset.value !== null);
+const playbackStructure = computed(() => {
+  const current = reference.value;
+  if (!current) return null;
+  if (props.isPlaying !== true || !syncEligible.value) return current.structure;
+  const processed = Math.max(0, Math.min(props.liveSbarIds?.length ?? 0, props.processedCount ?? 0));
+  if (processed === 0) return null;
+  const snapshotIndex = (syncOffset.value ?? 0) + processed - 1;
+  const checkpointSbarId = current.bars[snapshotIndex]?.sbarId;
+  if (!checkpointSbarId) return null;
+  return current.structureTimeline.find((checkpoint) => checkpoint.sbarId === checkpointSbarId)?.structure ?? null;
+});
 
 watch([syncEligible, syncOffset], ([eligible, offset]) => emit("syncEligibility", eligible, offset), { immediate: true });
 
@@ -204,7 +215,7 @@ function handleSelection(event: Event): void {
       <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-replay-playing': syncEligible && isPlaying }" :data-sync-eligible="syncEligible" :data-replay-playing="syncEligible && isPlaying" data-testid="snapshot-reference-chart">
         <OriginChart
           :bars="reference.bars"
-          :structure="reference.structure"
+          :structure="playbackStructure"
           :origin-dataset-id="reference.snapshotId"
           :selection-editable="false"
           display-context="snapshot-reference"
