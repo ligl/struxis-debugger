@@ -9,8 +9,6 @@ import {
   type IChartApi,
   type ISeriesApi,
   type Time,
-  type CandlestickData,
-  type UTCTimestamp,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import type { OriginObjectSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -47,7 +45,6 @@ const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
-let baseCandleData: CandlestickData<UTCTimestamp>[] = [];
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let overlayUpdateFrame: number | null = null;
@@ -62,6 +59,7 @@ let pendingViewportRange: { from: number; to: number } | null = null;
 let expectedSyncedRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
+type DimmedCandleOverlay = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = {
   id: string;
   x1: number;
@@ -78,6 +76,7 @@ const hoveredObject = ref<OriginObjectSelection | null>(null);
 const hoveredSbarMarker = ref<SBarMarker | null>(null);
 const selectedSbarMarker = ref<SBarMarker | null>(null);
 const syncBoundaryXs = ref<{ start: number; end: number } | null>(null);
+const snapshotDimmedCandles = ref<DimmedCandleOverlay[]>([]);
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -168,6 +167,7 @@ function updateSbarCoordinates(): void {
   selectionStartX.value = coordinateForSbarId(props.selectionStartSbarId);
   selectionEndX.value = coordinateForSbarId(props.selectionEndSbarId);
   updateSyncBoundaryCoordinates();
+  updateSnapshotCandleDimming();
   updateCBarRectangles();
   updateSwingSegments();
   updateSbarMarkers();
@@ -764,46 +764,73 @@ function fitContentShortcut(): boolean {
 
 
 /**
- * Playback dims only the unprocessed suffix of the Live/Snapshot overlap.
- * The Snapshot OHLC/time sequence remains unchanged. Lightweight Charts has no
- * public setter for the colors of arbitrary historical points, so the existing
- * candle data is re-submitted with per-point colors; no Snapshot data is fetched.
+ * Shade only unprocessed candles inside the Live/Snapshot overlap. This is an
+ * SVG presentation overlay: the Snapshot candle series and OHLC data are never
+ * re-submitted or rebuilt when Replay advances.
  */
-function updateSnapshotPlaybackBrightness(): void {
-  if (!candleSeries || baseCandleData.length === 0) return;
+function updateSnapshotCandleDimming(): void {
   const offset = props.snapshotPlaybackOffset;
   const liveCount = Math.max(0, props.syncLiveBarCount ?? 0);
   const processedCount = Math.max(0, Math.min(liveCount, props.snapshotProcessedCount ?? 0));
-  const shouldDimOverlap = props.displayContext === "snapshot-reference"
-    && props.snapshotPlaybackEnabled === true
-    && props.syncEnabled === true
-    && offset !== null
-    && offset !== undefined
-    && liveCount > 0;
-  if (!shouldDimOverlap) {
-    candleSeries.setData(baseCandleData);
+  if (
+    !chart ||
+    !candleSeries ||
+    props.displayContext !== "snapshot-reference" ||
+    props.snapshotPlaybackEnabled !== true ||
+    props.syncEnabled !== true ||
+    offset === null ||
+    offset === undefined ||
+    liveCount <= 0
+  ) {
+    snapshotDimmedCandles.value = [];
     return;
   }
-  const dimStart = offset + processedCount;
-  const dimEnd = Math.min(baseCandleData.length, offset + liveCount);
-  const candles = baseCandleData.map((candle, index) => {
-    if (index < dimStart || index >= dimEnd) return candle;
-    const dimColor = candle.close > candle.open
-      ? "#3D5D49"
-      : candle.close < candle.open
-        ? "#694343"
-        : "#454A50";
-    return { ...candle, color: dimColor, borderColor: dimColor, wickColor: dimColor };
-  });
-  candleSeries.setData(candles);
+
+  const timeScale = chart.timeScale();
+  const visible = timeScale.getVisibleLogicalRange();
+  const visibleFrom = visible && Number.isFinite(visible.from) ? visible.from - 1 : Number.NEGATIVE_INFINITY;
+  const visibleTo = visible && Number.isFinite(visible.to) ? visible.to + 1 : Number.POSITIVE_INFINITY;
+  const firstDimmed = offset + processedCount;
+  const lastDimmed = Math.min(props.bars.length, offset + liveCount);
+  const overlays: DimmedCandleOverlay[] = [];
+
+  for (let index = firstDimmed; index < lastDimmed; index += 1) {
+    if (index < visibleFrom || index > visibleTo) continue;
+    const bar = props.bars[index];
+    if (!bar) continue;
+    const time = timeBySbarId.get(bar.sbarId);
+    if (time === undefined) continue;
+    const x = timeScale.timeToCoordinate(time);
+    const highY = candleSeries.priceToCoordinate(Number(bar.high));
+    const lowY = candleSeries.priceToCoordinate(Number(bar.low));
+    if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) continue;
+
+    const adjacentXs = [
+      index > 0 ? timeScale.timeToCoordinate(timeBySbarId.get(props.bars[index - 1]!.sbarId)!) : null,
+      index + 1 < props.bars.length ? timeScale.timeToCoordinate(timeBySbarId.get(props.bars[index + 1]!.sbarId)!) : null,
+    ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
+    const distances = adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0);
+    const spacing = distances.length > 0 ? Math.min(...distances) : 8;
+    const width = Math.max(2, Math.min(10, spacing * 0.55));
+    const top = Math.min(highY as number, lowY as number);
+    const bottom = Math.max(highY as number, lowY as number);
+    overlays.push({
+      id: bar.sbarId,
+      x: (x as number) - width / 2,
+      y: top,
+      width,
+      height: Math.max(1, bottom - top),
+    });
+  }
+
+  snapshotDimmedCandles.value = overlays;
 }
 
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
     const projection = mapOriginBarsToChart(props.bars);
-    baseCandleData = projection.candles;
-    updateSnapshotPlaybackBrightness();
+    candleSeries.setData(projection.candles);
     volumeSeries.setData(projection.volume);
     sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
     indexBySbarId = new Map(sbarIdByLogicalIndex.map((sbarId, index) => [sbarId, index] as const));
@@ -829,7 +856,6 @@ function updateChart(): void {
     }
     updateSbarCoordinates();
   } catch (error) {
-    baseCandleData = [];
     sbarIdByLogicalIndex = [];
     indexBySbarId = new Map();
     timeBySbarId = new Map();
@@ -943,7 +969,7 @@ watch(() => props.syncRequest, (request) => {
 watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, updateSbarCoordinates);
 watch(
   () => [props.snapshotPlaybackEnabled, props.snapshotPlaybackOffset, props.snapshotProcessedCount, props.syncLiveBarCount, props.syncEnabled] as const,
-  updateSnapshotPlaybackBrightness,
+  updateSnapshotCandleDimming,
 );
 watch(() => props.selectedObject, () => {
   updateSbarMarkers();
@@ -979,8 +1005,8 @@ onBeforeUnmount(() => {
   chart?.remove();
   chart = null;
   candleSeries = null;
-  baseCandleData = [];
   volumeSeries = null;
+  snapshotDimmedCandles.value = [];
   cbarRectangles.value = [];
   swingSegments.value = [];
   hoveredObject.value = null;
@@ -1051,6 +1077,21 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
+        <g class="snapshot-playback-dimming" data-testid="snapshot-playback-dimming" aria-hidden="true">
+          <rect
+            v-for="overlay in snapshotDimmedCandles"
+            :key="overlay.id"
+            :x="overlay.x"
+            :y="overlay.y"
+            :width="overlay.width"
+            :height="overlay.height"
+            fill="#07090B"
+            fill-opacity="0.48"
+            stroke="none"
+            data-testid="snapshot-dimmed-candle"
+            :data-sbar-id="overlay.id"
+          />
+        </g>
         <g v-if="syncBoundaryXs" class="snapshot-live-range-markers" data-testid="snapshot-live-range-markers">
           <line
             :x1="syncBoundaryXs.start"
