@@ -111,12 +111,11 @@ describe("OriginChart", () => {
   });
 
 
-  it("brightens Snapshot candles one by one across only the Live overlap", async () => {
+  it("dims only unprocessed Snapshot candles in the Live overlap without resetting candle data", async () => {
     const bars = [
       bar(),
       bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001", open: "10", close: "11" }),
       bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001", open: "11", close: "10" }),
-      bar({ sbarId: "1700000180000000000", tsEvent: "1700000180000000000", tsInit: "1700000180000000001", open: "10", close: "10" }),
     ];
     const wrapper = mount(OriginChart, {
       props: {
@@ -127,23 +126,25 @@ describe("OriginChart", () => {
         syncEnabled: true,
         syncLiveBarCount: 2,
         snapshotPlaybackEnabled: true,
-        snapshotPlaybackOffset: 1,
+        snapshotPlaybackOffset: 0,
         snapshotProcessedCount: 1,
       },
     });
     await nextTick();
 
-    const firstPass = chartMocks.candleSetData.mock.calls.at(-1)?.[0] as Array<{ color: string; borderColor: string; wickColor: string }>;
-    expect(firstPass[0]!.color).toBe("#79B58B"); // outside the overlap remains unchanged
-    expect(firstPass[1]!.color).toBe("#79B58B"); // already processed prefix is bright
-    expect(firstPass[2]!.color).toBe("#694343"); // unprocessed overlapping candle is dim
-    expect(firstPass[2]!.borderColor).toBe("#694343");
-    expect(firstPass[2]!.wickColor).toBe("#694343");
-    expect(firstPass[3]!.color).toBe("#858D97"); // outside the overlap remains unchanged
+    const initialSetDataCalls = chartMocks.candleSetData.mock.calls.length;
+    const dimmed = wrapper.findAll('[data-testid="snapshot-dimmed-candle"]');
+    expect(dimmed.map((node) => node.attributes("data-sbar-id"))).toEqual(["1700000060000000000"]);
+    expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
 
     await wrapper.setProps({ snapshotProcessedCount: 2 });
-    const completedPass = chartMocks.candleSetData.mock.calls.at(-1)?.[0] as Array<{ color: string }>;
-    expect(completedPass.map((candle) => candle.color)).toEqual(["#79B58B", "#79B58B", "#D98282", "#858D97"]);
+    expect(wrapper.findAll('[data-testid="snapshot-dimmed-candle"]')).toHaveLength(0);
+    expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
+
+    await wrapper.setProps({ snapshotProcessedCount: 1 });
+    await wrapper.setProps({ snapshotPlaybackEnabled: false });
+    expect(wrapper.findAll('[data-testid="snapshot-dimmed-candle"]')).toHaveLength(0);
+    expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
     wrapper.unmount();
   });
 
