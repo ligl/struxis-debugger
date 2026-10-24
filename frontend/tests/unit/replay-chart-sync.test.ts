@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSameLogicalRange, translateReplayViewportRange } from "../../src/replay-chart-sync";
+import { isSameLogicalRange, ReplayViewportSyncGate, translateReplayViewportRange } from "../../src/replay-chart-sync";
 
 describe("Replay chart viewport protocol", () => {
   it("translates Live ranges into Snapshot logical coordinates by adding Offset", () => {
@@ -23,5 +23,44 @@ describe("Replay chart viewport protocol", () => {
     expect(isSameLogicalRange({ from: 1.004, to: 9.004 }, { from: 1, to: 9 })).toBe(true);
     expect(isSameLogicalRange({ from: 1.02, to: 9 }, { from: 1, to: 9 })).toBe(false);
     expect(isSameLogicalRange({ from: Number.NaN, to: 9 }, { from: 1, to: 9 })).toBe(false);
+  });
+});
+
+
+describe("Replay viewport sync gate", () => {
+  it("consumes matching peer echoes without publishing them", () => {
+    const gate = new ReplayViewportSyncGate();
+    gate.expectPeerRange({ from: 10, to: 20 });
+    expect(gate.observeRange({ from: 10.004, to: 20.004 })).toBe("echo");
+    expect(gate.observeRange({ from: 10, to: 20 })).toBe("publish");
+  });
+
+  it("routes mismatched ranges through suppression or local publishing", () => {
+    const gate = new ReplayViewportSyncGate();
+    gate.expectPeerRange({ from: 10, to: 20 });
+    expect(gate.observeRange({ from: 11, to: 21 })).toBe("publish");
+    const revision = gate.beginSuppression();
+    expect(gate.observeRange({ from: 11, to: 21 })).toBe("suppressed");
+    gate.endSuppression(revision);
+    expect(gate.observeRange({ from: 11, to: 21 })).toBe("publish");
+  });
+
+  it("prevents an older release from ending a newer suppression window", () => {
+    const gate = new ReplayViewportSyncGate();
+    const oldRevision = gate.beginSuppression();
+    const newRevision = gate.beginSuppression();
+    gate.endSuppression(oldRevision);
+    expect(gate.observeRange({ from: 1, to: 2 })).toBe("suppressed");
+    gate.endSuppression(newRevision);
+    expect(gate.observeRange({ from: 1, to: 2 })).toBe("publish");
+  });
+
+  it("reset invalidates expected echoes and pending suppression releases", () => {
+    const gate = new ReplayViewportSyncGate();
+    gate.expectPeerRange({ from: 10, to: 20 });
+    const revision = gate.beginSuppression();
+    gate.clear();
+    gate.endSuppression(revision);
+    expect(gate.observeRange({ from: 10, to: 20 })).toBe("publish");
   });
 });
