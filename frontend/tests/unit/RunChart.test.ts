@@ -627,6 +627,32 @@ describe("RunChart", () => {
     expect(mocks.unsubscribeVisibleRangeChange).toHaveBeenCalled();
   });
 
+  it("coalesces Live viewport sync to the latest range in the pending render frame", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+        syncEnabled: true,
+      },
+    });
+    await nextTick();
+
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 1.25, to: 4.25 });
+    mocks.visibleRangeListener?.();
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: 2.5, to: 5.75 });
+    mocks.visibleRangeListener?.();
+
+    // The one pending frame publishes the latest raw fractional range only.
+    mocks.animationFrameCallback?.(0);
+    await nextTick();
+    expect(wrapper.emitted("viewportChange")).toEqual([[
+      { source: "live", from: 2.5, to: 5.75 },
+    ]]);
+
+    wrapper.unmount();
+  });
+
   it("emits the selected SBar and authoritative structure object from chart clicks", async () => {
     const structure = {
       cbarCount: 1,
