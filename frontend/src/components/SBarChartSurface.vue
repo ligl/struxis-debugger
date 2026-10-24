@@ -262,35 +262,6 @@ function revealSbarRange(anchorIds: string[]): boolean {
   return true;
 }
 
-function distanceToSegment(
-  x: number,
-  y: number,
-  segment: SwingSegment,
-): number {
-  const dx = segment.x2 - segment.x1;
-  const dy = segment.y2 - segment.y1;
-  const lengthSquared = dx * dx + dy * dy;
-  const projection = lengthSquared === 0
-    ? 0
-    : Math.max(0, Math.min(1, ((x - segment.x1) * dx + (y - segment.y1) * dy) / lengthSquared));
-  return Math.hypot(x - (segment.x1 + projection * dx), y - (segment.y1 + projection * dy));
-}
-
-function distanceToRectangleBorder(
-  x: number,
-  y: number,
-  rectangle: CBarRectangle,
-): number {
-  const left = Math.min(rectangle.x, rectangle.x + rectangle.width);
-  const right = Math.max(rectangle.x, rectangle.x + rectangle.width);
-  const top = Math.min(rectangle.y, rectangle.y + rectangle.height);
-  const bottom = Math.max(rectangle.y, rectangle.y + rectangle.height);
-  const outsideX = x < left ? left - x : x > right ? x - right : 0;
-  const outsideY = y < top ? top - y : y > bottom ? y - bottom : 0;
-  if (outsideX > 0 || outsideY > 0) return Math.hypot(outsideX, outsideY);
-  return Math.min(x - left, right - x, y - top, bottom - y);
-}
-
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   const point = param.point;
   emit("chartClick", point && Number.isFinite(point.x) && Number.isFinite(point.y)
