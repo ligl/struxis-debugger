@@ -861,7 +861,7 @@ function applyCrosshairOptions(): void {
 
 function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
   if (!chart || !candleSeries || props.displayContext !== "snapshot-reference" || !props.syncEnabled) return;
-  const command = resolveReplayCrosshairCommand(sync, props.bars, timeBySbarId);
+  const command = resolveReplayCrosshairCommand(sync, props.bars, timeBySbarId, "reference");
   if (command.kind === "ignore") return;
   if (command.kind === "clear") {
     crosshairSyncGate.setPeerPositionActive(false);
