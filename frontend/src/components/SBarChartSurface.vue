@@ -4,7 +4,7 @@ import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "light
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
-import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
   bars: SBarDto[];
@@ -18,9 +18,7 @@ const props = defineProps<{
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
-  sbarClick: [sbarId: string];
-  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>];
-  chartInteractionError: [message: string];
+  chartClick: [point: { x: number; y: number } | null];
   pointerPosition: [point: { x: number; y: number } | null];
   logicalRangeChange: [range: { from: number; to: number }];
   crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
@@ -56,8 +54,7 @@ type SwingSegment = {
 };
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
-const hoveredObject = ref<OriginObjectSelection | null>(null);
-const hoveredSbarMarker = ref<SBarMarker | null>(null);
+
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#B49ACD", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
@@ -247,13 +244,6 @@ function markerForSbar(sbarId: string | null | undefined): SBarMarker | null {
   return { id: sbarId, x: (x as number) - width / 2, y: top, width, height: Math.max(2, bottom - top) };
 }
 
-function updateSbarMarkers(): void {
-  hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar" &&
-    hoveredObject.value.originDatasetId === props.originDatasetId
-    ? markerForSbar(hoveredObject.value.id)
-    : null;
-}
-
 function revealSbarRange(anchorIds: string[]): boolean {
   if (!chart || anchorIds.length === 0) return false;
   const indices = anchorIds
@@ -271,45 +261,6 @@ function revealSbarRange(anchorIds: string[]): boolean {
   const center = (targetLeft + targetRight) / 2;
   chart.timeScale().setVisibleLogicalRange({ from: center - span / 2, to: center + span / 2 });
   return true;
-}
-
-function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
-  if (!chart || !candleSeries || !layerVisibility.value.sbar || sbarIdByLogicalIndex.length === 0) return null;
-  const logical = chart.timeScale().coordinateToLogical(x);
-  if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
-  const index = Math.round(logical);
-  const bar = props.bars[index];
-  if (!bar) return null;
-  const marker = markerForSbar(bar.sbarId);
-  if (!marker) return null;
-  const centerX = marker.x + marker.width / 2;
-  const left = Math.max(3, marker.width / 2 + 1);
-  const top = marker.y - 5;
-  const bottom = marker.y + marker.height + 5;
-  if (Math.abs(x - centerX) > left || y < top || y > bottom) return null;
-  return { kind: "sbar", id: bar.sbarId, originDatasetId: props.originDatasetId };
-}
-
-function updateHoveredObject(point: { x: number; y: number } | undefined): void {
-  const nextObject = !point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || chartError.value
-    ? null
-    : hitTestStructureObject(point.x, point.y) ?? hitTestSbar(point.x, point.y);
-  const currentObject = hoveredObject.value;
-  if (
-    currentObject?.kind === nextObject?.kind &&
-    currentObject?.id === nextObject?.id &&
-    currentObject?.originDatasetId === nextObject?.originDatasetId
-  ) return;
-
-  // Only update reactive overlays when the pointer crosses an object boundary.
-  // This avoids re-rendering the SVG layer on every crosshair movement.
-  hoveredObject.value = nextObject;
-  updateSbarMarkers();
-}
-
-function selectSbarById(sbarId: string): void {
-  if (chartError.value || props.bars.length === 0 || !sbarIdByLogicalIndex.includes(sbarId)) return;
-  emit("sbarClick", sbarId);
 }
 
 function distanceToSegment(
@@ -341,76 +292,11 @@ function distanceToRectangleBorder(
   return Math.min(x - left, right - x, y - top, bottom - y);
 }
 
-function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" }> | null {
-  const tolerance = 6;
-  type Candidate = { kind: "cbar" | "swing"; id: string; distance: number; priority: number };
-  const chooseCloser = (best: Candidate | null, candidate: Candidate): Candidate | null => {
-    if (candidate.distance > tolerance) return best;
-    if (
-      !best ||
-      candidate.distance < best.distance ||
-      (candidate.distance === best.distance && candidate.priority < best.priority) ||
-      (candidate.distance === best.distance && candidate.priority === best.priority && candidate.id.localeCompare(best.id) < 0)
-    ) return candidate;
-    return best;
-  };
-
-  let best: Candidate | null = null;
-  for (const segment of swingSegments.value) {
-    best = chooseCloser(best, {
-      kind: "swing",
-      id: segment.id,
-      distance: distanceToSegment(x, y, segment),
-      priority: 0,
-    });
-  }
-  for (const rectangle of cbarRectangles.value) {
-    best = chooseCloser(best, {
-      kind: "cbar",
-      id: rectangle.id,
-      distance: distanceToRectangleBorder(x, y, rectangle),
-      priority: 1,
-    });
-  }
-
-  return best ? { kind: best.kind, id: best.id, originDatasetId: props.originDatasetId } : null;
-}
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
-  if (chartError.value || props.bars.length === 0) return;
-  const pointX = param.point?.x;
-  if (typeof pointX !== "number" || !Number.isFinite(pointX)) {
-    emit("chartInteractionError", "The click did not resolve to a horizontal position inside the chart plot.");
-    return;
-  }
-
-  const pointY = param.point?.y;
-  if (typeof pointY === "number" && Number.isFinite(pointY)) {
-    const selectedStructureObject = hitTestStructureObject(pointX, pointY);
-    if (selectedStructureObject) {
-      emit("objectClick", selectedStructureObject);
-      return;
-    }
-  }
-
-  // A miss on structure geometry falls back to the existing SBar time-axis
-  // selection. It never picks the nearest structure object.
-  const logical = chart?.timeScale().coordinateToLogical(pointX);
-  if (logical === null || logical === undefined || !Number.isFinite(logical)) {
-    emit("chartInteractionError", "The clicked horizontal position does not map to the chart time axis.");
-    return;
-  }
-  const index = Math.round(logical);
-  if (index < 0 || index >= sbarIdByLogicalIndex.length) {
-    emit("chartInteractionError", "The clicked horizontal position is outside the loaded SBar sequence.");
-    return;
-  }
-  const sbarId = sbarIdByLogicalIndex[index];
-  if (sbarId === undefined) {
-    emit("chartInteractionError", "The clicked horizontal position does not map to an SBar.");
-    return;
-  }
-
-  selectSbarById(sbarId);
+  const point = param.point;
+  emit("chartClick", point && Number.isFinite(point.x) && Number.isFinite(point.y)
+    ? { x: point.x, y: point.y }
+    : null);
 }
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
@@ -437,7 +323,6 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
     const anchor = resolveSbarChartAnchor(props.bars, logical);
     if (anchor) crosshairLogicalIndex = anchor.index;
   }
-  updateHoveredObject(param.point);
   const point = param.point && Number.isFinite(param.point.x) && Number.isFinite(param.point.y)
     ? { x: param.point.x, y: param.point.y }
     : null;
@@ -696,7 +581,11 @@ function clearCrosshairPosition(): void {
   chart?.clearCrosshairPosition?.();
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, revealSbarRange });
+function getStructureGeometry() {
+  return { cbarRectangles: cbarRectangles.value, swingSegments: swingSegments.value };
+}
+
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, revealSbarRange, getStructureGeometry });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
@@ -729,18 +618,12 @@ onMounted(() => {
 
 watch(() => [props.bars, props.originDatasetId] as const, () => {
   updateChart();
-  updateHoveredObject(undefined);
 });
 watch(() => props.structure, () => {
   // A Snapshot checkpoint advances its structure projection without rebuilding
   // immutable candle/volume series. Reproject only SVG structure geometry.
   updateSbarCoordinates();
-  updateHoveredObject(undefined);
 }, { deep: true });
-watch(() => layerVisibility.value.sbar, () => {
-  if (!layerVisibility.value.sbar && hoveredObject.value?.kind === "sbar") hoveredObject.value = null;
-  updateSbarMarkers();
-});
 
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleChartKeyboard);
@@ -819,16 +702,6 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
-        <rect
-          v-if="hoveredSbarMarker"
-          class="origin-object-hover-sbar"
-          :x="hoveredSbarMarker.x"
-          :y="hoveredSbarMarker.y"
-          :width="hoveredSbarMarker.width"
-          :height="hoveredSbarMarker.height"
-          data-testid="origin-hover-sbar"
-          :data-sbar-id="hoveredSbarMarker.id"
-        />
         <line
           v-for="segment in swingSegments"
           :key="segment.id"
@@ -844,19 +717,6 @@ onBeforeUnmount(() => {
           :data-swing-id="segment.id"
           :data-swing-state="segment.state"
         />
-        <line
-          v-for="segment in swingSegments.filter((item) => hoveredObject?.kind === 'swing' && hoveredObject.id === item.id)"
-          :key="`hover-${segment.id}`"
-          :x1="segment.x1"
-          :y1="segment.y1"
-          :x2="segment.x2"
-          :y2="segment.y2"
-          stroke="#C3CBD1"
-          stroke-width="2"
-          stroke-linecap="round"
-          data-testid="origin-hover-swing"
-          :data-swing-id="segment.id"
-        />
         <rect
           v-for="rectangle in cbarRectangles"
           :key="rectangle.id"
@@ -870,28 +730,9 @@ onBeforeUnmount(() => {
           data-testid="cbar-range-rectangle"
           :data-cbar-id="rectangle.id"
         />
-        <rect
-          v-for="rectangle in cbarRectangles.filter((item) => hoveredObject?.kind === 'cbar' && hoveredObject.id === item.id)"
-          :key="`hover-${rectangle.id}`"
-          :x="rectangle.x"
-          :y="rectangle.y"
-          :width="rectangle.width"
-          :height="rectangle.height"
-          fill="none"
-          stroke="#C3CBD1"
-          stroke-width="1.75"
-          data-testid="origin-hover-cbar"
-          :data-cbar-id="rectangle.id"
-        />
         <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
 
       </svg>
-      <div
-        v-if="hoveredObject"
-        class="origin-object-hover-label"
-        data-testid="origin-object-hover-label"
-        aria-live="off"
-      >{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
       <slot name="chart-interaction-overlay" />
       <div class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
