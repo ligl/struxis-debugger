@@ -33,8 +33,6 @@ const emit = defineEmits<{
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
-  viewportRangeChange: [range: { from: number; to: number }];
-  crosshairPositionChange: [position: { sbarId: string | null; price: number | null }];
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
@@ -141,9 +139,8 @@ function scheduleOverlayUpdate(): void {
     updateSbarCoordinates();
     const latest = pendingViewportRange;
     pendingViewportRange = null;
-    if (latest && props.displayContext === "snapshot-reference" && chart) {
-      emit("viewportRangeChange", latest);
-      if (props.syncEnabled) emit("viewportChange", { source: "reference", from: latest.from, to: latest.to });
+    if (latest && props.syncEnabled && props.displayContext === "snapshot-reference" && chart) {
+      emit("viewportChange", { source: "reference", from: latest.from, to: latest.to });
     }
   });
 }
