@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
+import { projectCBarRectangles } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
@@ -319,19 +320,16 @@ function updateStructureOverlays(): void {
       selectedSbarMarker.value = { id: selected.id, x: selectedX - 6, y: Math.min(selectedHigh, selectedLow), width: 12, height: Math.max(4, Math.abs(selectedLow - selectedHigh)) };
     } else selectedSbarMarker.value = null;
   } else selectedSbarMarker.value = null;
-  cbarRectangles.value = layerVisibility.value.cbar ? (structure?.cbars ?? []).flatMap((cbar) => {
-    const start = timeBySbarId.get(cbar.sbarStartId);
-    const end = timeBySbarId.get(cbar.sbarEndId);
-    const high = Number(cbar.high);
-    const low = Number(cbar.low);
-    if (start === undefined || end === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
-    const x1 = timeScale.timeToCoordinate(start);
-    const x2 = timeScale.timeToCoordinate(end);
-    const y1 = candleSeries?.priceToCoordinate(high);
-    const y2 = candleSeries?.priceToCoordinate(low);
-    if ([x1, x2, y1, y2].some((v) => v === null || v === undefined || !Number.isFinite(v))) return [];
-    return [{ id: cbar.cbarId, x: Math.min(x1 as number, x2 as number), y: Math.min(y1 as number, y2 as number), width: Math.abs((x2 as number) - (x1 as number)), height: Math.abs((y2 as number) - (y1 as number)) }];
-  }) : [];
+  cbarRectangles.value = layerVisibility.value.cbar
+    ? projectCBarRectangles({
+      cbars: structure?.cbars ?? [],
+      coordinateForSbarId: (sbarId) => {
+        const time = timeBySbarId.get(sbarId);
+        return time === undefined ? null : timeScale.timeToCoordinate(time);
+      },
+      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
+    })
+    : [];
   swingSegments.value = layerVisibility.value.swing ? (structure?.swings ?? []).flatMap((swing) => {
     const start = timeBySbarId.get(swing.sbarStartId);
     const end = timeBySbarId.get(swing.sbarEndId);
