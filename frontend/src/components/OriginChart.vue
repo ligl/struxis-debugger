@@ -688,6 +688,10 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
+  // Snapshot Reference and Live Replay both listen at document level. Keep
+  // keyboard commands local to the chart under the pointer or holding focus.
+  if (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement))) return;
+
   const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
     event.key === "ArrowLeft" || event.key === "ArrowRight";
   const isFitShortcut = event.ctrlKey && !event.altKey && !event.metaKey &&
