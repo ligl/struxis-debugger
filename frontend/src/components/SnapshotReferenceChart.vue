@@ -225,3 +225,10 @@ onMounted(() => {
     </template>
   </SBarChartSurface>
 </template>
+
+<style scoped>
+/* The Snapshot panel already supplies its outer frame. */
+:deep(.snapshot-reference-chart) {
+  border: 0;
+}
+</style>
