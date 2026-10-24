@@ -869,10 +869,12 @@ function updateSnapshotCandleDimming(): void {
 
 function applyCrosshairOptions(): void {
   if (!chart) return;
-  const visible = props.displayContext !== "snapshot-reference" || props.syncEnabled === true;
+  // Crosshair rendering is always local to this chart. Sync eligibility only
+  // controls whether pointer positions are published to the peer chart.
+  const visible = true;
   chart.applyOptions({
     crosshair: {
-      mode: visible ? CrosshairMode.Normal : CrosshairMode.Hidden,
+      mode: CrosshairMode.Normal,
       vertLine: {
         visible,
         color: "#89949d",
@@ -980,14 +982,16 @@ onMounted(() => {
       rightOffset: 4,
     },
     crosshair: {
-      mode: props.displayContext === "snapshot-reference" && !props.syncEnabled ? CrosshairMode.Hidden : CrosshairMode.Normal,
+      // Snapshot Reference keeps its own Crosshair even when peer sync is
+      // unavailable; syncEnabled gates only cross-chart event propagation.
+      mode: CrosshairMode.Normal,
       vertLine: {
-        visible: props.displayContext !== "snapshot-reference" || props.syncEnabled === true,
+        visible: true,
         color: "#89949d",
         labelBackgroundColor: "#30383f",
       },
       horzLine: {
-        visible: props.displayContext !== "snapshot-reference" || props.syncEnabled === true,
+        visible: true,
         color: "#89949d",
         labelBackgroundColor: "#30383f",
       },
@@ -1063,9 +1067,9 @@ watch(() => props.crosshairSync, (sync) => {
 watch(() => props.syncEnabled, (enabled) => {
   applyCrosshairOptions();
   if (!enabled && props.displayContext === "snapshot-reference") {
-    // Snapshot Reference has no independent visible crosshair while ineligible.
-    // Clear even a locally positioned crosshair so it cannot reappear stale
-    // if eligibility returns before the pointer moves again.
+    // Clear any stale peer-programmed position at the eligibility boundary.
+    // Native pointer movement remains enabled and immediately positions this
+    // chart's own Crosshair without publishing a cross-chart update.
     hasSyncedCrosshair = false;
     applyingSyncedCrosshair = true;
     chart?.clearCrosshairPosition?.();
