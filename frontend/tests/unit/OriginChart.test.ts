@@ -69,6 +69,19 @@ function installResizeObserverMock() {
   vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 }
 
+const snapshotDefaults = {
+  bars: [bar()],
+  structure: null,
+  snapshotId: "snapshot-default",
+  syncEnabled: false,
+  syncRequest: null,
+  crosshairSync: null,
+  liveBarCount: 1,
+  playbackEnabled: false,
+  playbackOffset: null,
+  processedCount: 0,
+};
+
 function installChartMock() {
   const chart = {
     addSeries: vi.fn()
@@ -129,6 +142,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     ];
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars,
         snapshotId: "snapshot-playback-brightness",
         structure: {
@@ -260,6 +274,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     ];
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars,
         snapshotId: "snapshot-reference-sync-late-mount",
         structure: null,
@@ -297,11 +312,13 @@ describe("SBarChartSurface and chart entry adapters", () => {
     ];
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars,
         snapshotId: "snapshot-reference-live-range-guides",
         structure: null,
         syncEnabled: true,
         liveBarCount: 2,
+        playbackOffset: 1,
         syncRequest: {
           revision: 1,
           source: "live",
@@ -371,11 +388,13 @@ describe("SBarChartSurface and chart entry adapters", () => {
     ];
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars,
         snapshotId: "snapshot-reference-live-range-subcandle-zoom",
         structure: null,
         syncEnabled: true,
         liveBarCount: 2,
+        playbackOffset: 1,
         syncRequest: {
           revision: 1,
           source: "live",
@@ -395,6 +414,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
     mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars: [bar()],
         snapshotId: "snapshot-reference-01",
         structure: null,
@@ -412,6 +432,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   it("keeps the Snapshot Reference crosshair locally visible when synchronization is ineligible", () => {
     mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars: [bar()],
         snapshotId: "snapshot-reference-local-crosshair",
         structure: null,
@@ -433,6 +454,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   it("projects a Live crosshair onto the matching Snapshot SBar", async () => {
     mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars: [bar()],
         snapshotId: "snapshot-reference-crosshair-target",
         structure: null,
@@ -457,6 +479,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   it("keeps Snapshot crosshair visible while sync eligibility changes", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars: [bar()],
         snapshotId: "snapshot-reference-crosshair-sync",
         structure: null,
@@ -474,19 +497,16 @@ describe("SBarChartSurface and chart entry adapters", () => {
 
     await wrapper.setProps({ syncEnabled: false });
     await nextTick();
-    expect(chartMocks.applyChartOptions).toHaveBeenCalledWith(expect.objectContaining({
-      crosshair: expect.objectContaining({
-        mode: 0,
-        vertLine: expect.objectContaining({ visible: true }),
-        horzLine: expect.objectContaining({ visible: true }),
-      }),
-    }));
-    expect(chartMocks.clearCrosshairPosition).toHaveBeenCalled();
+    expect(chartMocks.clearCrosshairPosition).not.toHaveBeenCalled();
+    expect(initialOptions.crosshair?.mode).toBe(0);
+    expect(initialOptions.crosshair?.vertLine?.visible).toBe(true);
+    expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
   });
 
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
+        ...snapshotDefaults,
         bars: [bar()],
         snapshotId: "snapshot-reference-01",
         structure: null,
