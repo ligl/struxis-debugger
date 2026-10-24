@@ -36,6 +36,7 @@ let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let overlayUpdateFrame: number | null = null;
+let crosshairUpdateFrame: number | null = null;
 let fittedSequenceId: string | null = null;
 let sbarIdByLogicalIndex: readonly string[] = [];
 let indexBySbarId: ReadonlyMap<string, number> = new Map();
@@ -359,7 +360,11 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
     chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
   };
   applySelectedCrosshair();
-  requestAnimationFrame(applySelectedCrosshair);
+  if (crosshairUpdateFrame !== null) cancelAnimationFrame(crosshairUpdateFrame);
+  crosshairUpdateFrame = requestAnimationFrame(() => {
+    crosshairUpdateFrame = null;
+    applySelectedCrosshair();
+  });
   return true;
 }
 
@@ -608,6 +613,10 @@ onBeforeUnmount(() => {
   if (overlayUpdateFrame !== null) {
     cancelAnimationFrame(overlayUpdateFrame);
     overlayUpdateFrame = null;
+  }
+  if (crosshairUpdateFrame !== null) {
+    cancelAnimationFrame(crosshairUpdateFrame);
+    crosshairUpdateFrame = null;
   }
   pendingViewportRange = null;
   chart?.remove();
