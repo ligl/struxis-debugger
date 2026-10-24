@@ -22,11 +22,11 @@ const SnapshotReferencePanelStub = defineComponent({
     processedCount: { type: Number, default: 0 },
     syncRequest: { type: Object, default: null },
   },
-  emits: ["syncEligibility", "viewportChange"],
+  emits: ["syncSequence", "viewportChange"],
   template: `
     <div data-testid="snapshot-reference-panel-stub" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
-      <button data-testid="sync-enable" @click="$emit('syncEligibility', true, 1)">enable sync</button>
-      <button data-testid="sync-disable" @click="$emit('syncEligibility', false, null)">disable sync</button>
+      <button data-testid="sync-enable" @click="$emit('syncSequence', { snapshotId: 'snapshot-1', barType: 'AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL', sbarIds: ['x', '1', '2', '3', '4'] })">enable sync</button>
+      <button data-testid="sync-disable" @click="$emit('syncSequence', null)">disable sync</button>
       <button data-testid="snapshot-viewport-change" @click="$emit('viewportChange', { source: 'reference', from: 2, to: 5 })">change viewport</button>
     </div>
   `,
@@ -54,7 +54,7 @@ describe("ReplayWorkspace", () => {
     expect(referencePanel.attributes("data-progress-applies")).toBe("true");
     expect(referencePanel.attributes("data-processed-count")).toBe("2");
   });
-  it("isolates both chart viewports whenever synchronization eligibility is lost", async () => {
+  it("owns sequence compatibility and isolates both chart viewports when the reference sequence is invalidated", async () => {
     const Host = defineComponent({
       components: { ReplayWorkspace },
       setup() {
