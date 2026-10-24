@@ -36,13 +36,13 @@ const SurfaceStub = defineComponent({
     "cancelRangeSelection", "logicalRangeChange", "crosshairAnchorChange", "projectionFrame"],
   setup(_props, { expose }) {
     expose({
-      getVisibleLogicalRange: () => null,
+      getVisibleLogicalRange: () => ({ from: 0, to: 1 }),
       applyViewportRange: (range: { from: number; to: number }) => { surfacePortCalls.viewportRanges.push(range); return true; },
       applyCrosshairPosition: (sbarId: string, price: number) => { surfacePortCalls.crosshairs.push({ sbarId, price }); return true; },
       clearCrosshairPosition: () => { surfacePortCalls.clears += 1; },
-      getSbarCoordinate: (_sbarId: string) => null,
-      getLogicalCoordinate: (_index: number) => null,
-      getPriceCoordinate: (_price: number) => null,
+      getSbarCoordinate: (sbarId: string) => sbarId === "sbar-1" ? 10 : null,
+      getLogicalCoordinate: (index: number) => index * 10,
+      getPriceCoordinate: (price: number) => price * 2,
     });
     return {};
   },
@@ -175,6 +175,40 @@ describe("chart entry adapters", () => {
 
     await Promise.resolve();
     expect(surfacePortCalls.clears).toBe(0);
+  });
+
+
+  it("projects Snapshot playback geometry in the Snapshot adapter", async () => {
+    clearSurfaceCalls();
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        bars,
+        structure: null,
+        snapshotId: "snapshot-geometry",
+        syncEnabled: false,
+        syncRequest: null,
+        crosshairSync: null,
+        liveBarCount: 1,
+        playbackEnabled: true,
+        playbackOffset: 0,
+        processedCount: 1,
+      },
+      global: { stubs: { SBarChartSurface: SurfaceStub } },
+    });
+
+    await Promise.resolve();
+    const overlay = wrapper.getComponent(SnapshotPlaybackOverlay);
+    expect(overlay.props("enabled")).toBe(true);
+    expect(overlay.props("brightCandles")).toEqual([
+      { id: "sbar-1", x: 6.8, y: 18, width: 6.4, height: 6 },
+    ]);
+    expect(wrapper.getComponent(SnapshotLiveRangeMarkers).props("boundaries")).toEqual({
+      start: 10,
+      end: 10,
+    });
+    const surface = wrapper.getComponent(SurfaceStub);
+    expect(surface.props("snapshotPlaybackEnabled")).toBeUndefined();
+    expect(surface.props("snapshotPlaybackOffset")).toBeUndefined();
   });
 
 });
