@@ -27,6 +27,10 @@ const reference = {
     tsEvent: "100", tsInit: "100", open: "10", high: "12", low: "9", close: "11", volume: "100",
   }],
   structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] },
+  structureTimeline: [{
+    sbarId: "100",
+    structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] },
+  }],
 } as SnapshotReferenceDto;
 
 const snapshots: SnapshotArtifactDto[] = [
