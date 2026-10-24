@@ -339,8 +339,10 @@ function registerSeriesPrimitive<TObject, TPrimitive extends StructureSeriesPrim
     id,
     attach() {
       if (attached) return;
-      series.attachPrimitive(primitive as ISeriesPrimitive<Time>);
+      // Mark the attempt first so Host rollback can detach even if the chart
+      // partially attaches the Primitive and then throws.
       attached = true;
+      series.attachPrimitive(primitive as ISeriesPrimitive<Time>);
     },
     detach() {
       if (!attached) return;
