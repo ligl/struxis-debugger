@@ -345,12 +345,19 @@ impl AppState {
                 "Catalog SBar sequence fingerprint does not match the Snapshot; historical chart is unavailable"));
         }
 
-        let last_checkpoint = checkpoints.last().ok_or_else(|| IpcError::new(
-            IpcErrorCode::InvalidState, "Complete Snapshot contains no checkpoint records"))?;
-        let structure = serde_json::from_str::<serde_json::Value>(&last_checkpoint.state_data).map_err(|error| {
-            IpcError::new(IpcErrorCode::InvalidState,
-                format!("Decode Snapshot final structure state failed: {error}"))
-        })?;
+        let structure_timeline = checkpoints.iter().map(|checkpoint| {
+            let structure = serde_json::from_str::<serde_json::Value>(&checkpoint.state_data).map_err(|error| {
+                IpcError::new(IpcErrorCode::InvalidState,
+                    format!("Decode Snapshot structure state at checkpoint {} failed: {error}", checkpoint.checkpoint_index))
+            })?;
+            Ok(SnapshotStructureCheckpointDto {
+                sbar_id: checkpoint.sbar_id.clone(),
+                structure,
+            })
+        }).collect::<Result<Vec<_>, IpcError>>()?;
+        let structure = structure_timeline.last().map(|checkpoint| checkpoint.structure.clone())
+            .ok_or_else(|| IpcError::new(
+                IpcErrorCode::InvalidState, "Complete Snapshot contains no checkpoint records"))?;
         Ok(SnapshotReferenceDto {
             snapshot_id: manifest.snapshot_id,
             run_id: manifest.run_id,
@@ -361,6 +368,7 @@ impl AppState {
             sbar_sequence_fingerprint: manifest.sbar_sequence_fingerprint,
             bars: bars.iter().map(sbar_to_dto).collect(),
             structure,
+            structure_timeline,
         })
     }
 
@@ -582,6 +590,14 @@ pub(crate) struct SnapshotReferenceDto {
     pub(crate) snapshot_generated_at: String,
     pub(crate) sbar_sequence_fingerprint: String,
     pub(crate) bars: Vec<SBarDto>,
+    pub(crate) structure: serde_json::Value,
+    pub(crate) structure_timeline: Vec<SnapshotStructureCheckpointDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SnapshotStructureCheckpointDto {
+    pub(crate) sbar_id: String,
     pub(crate) structure: serde_json::Value,
 }
 
