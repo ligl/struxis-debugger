@@ -419,6 +419,8 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
   const bar = bars.value.find((item) => item.sbarId === sync.sbarId);
   const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
   if (!bar || time === undefined) {
+    crosshairSyncGate.setPeerPositionActive(false);
+    crosshairSyncGate.beginApply();
     chart.clearCrosshairPosition?.();
     return;
   }
