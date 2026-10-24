@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -60,6 +60,7 @@ let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
 const viewportSyncGate = new ReplayViewportSyncGate();
+const crosshairSyncGate = new ReplayCrosshairSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
@@ -572,12 +573,10 @@ function stopBoundaryDrag(): void {
   window.removeEventListener("pointercancel", stopBoundaryDrag);
 }
 
-let applyingSyncedCrosshair = false;
-let hasSyncedCrosshair = false;
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
-  if (props.displayContext !== "snapshot-reference" || !props.syncEnabled || applyingSyncedCrosshair) return;
-  hasSyncedCrosshair = false;
+  if (props.displayContext !== "snapshot-reference" || !props.syncEnabled || crosshairSyncGate.isApplying) return;
+  crosshairSyncGate.setPeerPositionActive(false);
   const point = param.point;
   if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
     emit("crosshairChange", { source: "reference", sbarId: null, price: null });
@@ -903,7 +902,7 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
     chart.clearCrosshairPosition?.();
     return;
   }
-  hasSyncedCrosshair = true;
+  crosshairSyncGate.setPeerPositionActive(true);
   applyingSyncedCrosshair = true;
   chart.setCrosshairPosition?.(sync.price, time, candleSeries);
   queueMicrotask(() => { applyingSyncedCrosshair = false; });
@@ -1125,6 +1124,7 @@ onBeforeUnmount(() => {
   }
   pendingViewportRange = null;
   viewportSyncGate.clear();
+  crosshairSyncGate.clear();
   chart?.remove();
   chart = null;
   candleSeries = null;
