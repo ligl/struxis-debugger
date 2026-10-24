@@ -826,10 +826,19 @@ onMounted(() => {
       rightOffset: 4,
     },
     crosshair: {
-      // Keep the horizontal guide at the actual pointer Y, not magnetized to candle close.
-      mode: CrosshairMode.Normal,
-      vertLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
-      horzLine: { color: "#89949d", labelBackgroundColor: "#30383f" },
+      // Snapshot Reference is a static comparison surface: clicking it must not
+      // leave a crosshair line behind. Chart click/object selection remains active.
+      mode: props.displayContext === "snapshot-reference" ? CrosshairMode.Hidden : CrosshairMode.Normal,
+      vertLine: {
+        visible: props.displayContext !== "snapshot-reference",
+        color: "#89949d",
+        labelBackgroundColor: "#30383f",
+      },
+      horzLine: {
+        visible: props.displayContext !== "snapshot-reference",
+        color: "#89949d",
+        labelBackgroundColor: "#30383f",
+      },
     },
   });
   candleSeries = chart.addSeries(CandlestickSeries, {
