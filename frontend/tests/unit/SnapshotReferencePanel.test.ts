@@ -89,8 +89,9 @@ describe("SnapshotReferencePanel", () => {
       props: {
         instrumentId: "AUD/USD.SIM",
         snapshots,
-        liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
         liveSbarIds: ["100"],
+        syncEligible: true,
+        syncOffset: 0,
         progressApplies: true,
         processedCount: 0,
       },
@@ -121,8 +122,9 @@ describe("SnapshotReferencePanel", () => {
       props: {
         instrumentId: "AUD/USD.SIM",
         snapshots,
-        liveBarType: "AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL",
         liveSbarIds: ["100"],
+        syncEligible: false,
+        syncOffset: null,
         progressApplies: true,
         processedCount: 1,
       },
@@ -134,7 +136,7 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.find('[data-testid="snapshot-reference-sync-indicator"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style") ?? "").not.toContain("brightness(");
 
-    await wrapper.setProps({ liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", liveSbarIds: ["not-covered"] } as never);
+    await wrapper.setProps({ syncEligible: false, syncOffset: null } as never);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
     expect(wrapper.find('[data-testid="snapshot-reference-sync-indicator"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style") ?? "").not.toContain("brightness(");
