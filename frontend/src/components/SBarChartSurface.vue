@@ -134,7 +134,7 @@ function scheduleOverlayUpdate(): void {
     updateSbarCoordinates();
     const latest = pendingViewportRange;
     pendingViewportRange = null;
-    if (latest && props.displayContext === "snapshot-reference" && chart) {
+    if (latest && chart) {
       emit("logicalRangeChange", { from: latest.from, to: latest.to });
     }
   });
