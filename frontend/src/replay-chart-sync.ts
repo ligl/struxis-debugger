@@ -84,3 +84,27 @@ export class ReplayViewportSyncGate {
     this.suppressionRevision += 1;
   }
 }
+
+
+/** Owns transient Crosshair-sync state; chart APIs remain with each chart. */
+export class ReplayCrosshairSyncGate {
+  private applyRevision = 0;
+  private applying = false;
+  private peerPositionActive = false;
+  get isApplying(): boolean { return this.applying; }
+  get hasPeerPosition(): boolean { return this.peerPositionActive; }
+  setPeerPositionActive(active: boolean): void { this.peerPositionActive = active; }
+  beginApply(): void {
+    this.applyRevision += 1;
+    const revision = this.applyRevision;
+    this.applying = true;
+    queueMicrotask(() => {
+      if (revision === this.applyRevision) this.applying = false;
+    });
+  }
+  clear(): void {
+    this.applyRevision += 1;
+    this.applying = false;
+    this.peerPositionActive = false;
+  }
+}
