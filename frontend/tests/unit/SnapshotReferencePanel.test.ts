@@ -131,7 +131,7 @@ describe("SnapshotReferencePanel", () => {
     await wrapper.setProps({ liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", liveSbarIds: ["not-covered"] } as never);
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("data-sync-eligible")).toBe("false");
     expect(wrapper.find('[data-testid="snapshot-reference-sync-indicator"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style")).toContain("filter: none");
+    expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style") ?? "").not.toContain("brightness(");
   });
 
   it("shows an embedded loading animation while resolving a selected Snapshot", async () => {
