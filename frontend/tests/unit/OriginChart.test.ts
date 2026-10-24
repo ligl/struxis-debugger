@@ -3,6 +3,7 @@ import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SBarChartSurface from "../../src/components/SBarChartSurface.vue";
 import OriginChart from "../../src/components/OriginChart.vue";
+import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
 import type { SBarDto } from "../../src/origin-types";
 
 const chartMocks = vi.hoisted(() => ({
@@ -98,7 +99,7 @@ function installChartMock() {
   return chart;
 }
 
-describe("SBarChartSurface and OriginChart adapters", () => {
+describe("SBarChartSurface and chart entry adapters", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     chartMocks.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 1 });
@@ -126,10 +127,10 @@ describe("SBarChartSurface and OriginChart adapters", () => {
       bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001", open: "10", close: "11" }),
       bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001", open: "11", close: "10" }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(SnapshotReferenceChart, {
       props: {
         bars,
-        originDatasetId: "snapshot-playback-brightness",
+        snapshotId: "snapshot-playback-brightness",
         structure: {
           cbarCount: 1,
           cbars: [{
@@ -161,12 +162,11 @@ describe("SBarChartSurface and OriginChart adapters", () => {
             updatedAt: "1",
           }],
         },
-        displayContext: "snapshot-reference",
         syncEnabled: true,
-        syncLiveBarCount: 2,
-        snapshotPlaybackEnabled: true,
-        snapshotPlaybackOffset: 0,
-        snapshotProcessedCount: 1,
+        liveBarCount: 2,
+        playbackEnabled: true,
+        playbackOffset: 0,
+        processedCount: 1,
       },
     });
     await nextTick();
@@ -181,7 +181,7 @@ describe("SBarChartSurface and OriginChart adapters", () => {
       .toEqual(["swing-checkpoint-1"]);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
 
-    await wrapper.setProps({ snapshotProcessedCount: 2 });
+    await wrapper.setProps({ processedCount: 2 });
     expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]').map((node) => node.attributes("data-sbar-id")))
       .toEqual(["1700000000000000000", "1700000060000000000"]);
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(true);
@@ -189,20 +189,19 @@ describe("SBarChartSurface and OriginChart adapters", () => {
 
     // Playback completion disables the overlay and restores the whole Snapshot,
     // including historical bars outside the Live/Snapshot overlap.
-    await wrapper.setProps({ snapshotPlaybackEnabled: false });
+    await wrapper.setProps({ playbackEnabled: false });
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]')).toHaveLength(0);
     expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
     wrapper.unmount();
   });
 
-  it("keeps Snapshot keyboard navigation local to the chart under the pointer or focus", async () => {
+  it("keeps chart keyboard navigation local to the chart under the pointer or focus", async () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar(), bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001" }), bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001" })],
         structure: null,
         originDatasetId: "snapshot-1",
-        displayContext: "snapshot-reference",
       },
     });
     const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
@@ -259,12 +258,11 @@ describe("SBarChartSurface and OriginChart adapters", () => {
         tsInit: "1700000060000000001",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(SnapshotReferenceChart, {
       props: {
         bars,
-        originDatasetId: "snapshot-reference-sync-late-mount",
+        snapshotId: "snapshot-reference-sync-late-mount",
         structure: null,
-        displayContext: "snapshot-reference",
         syncEnabled: true,
         syncRequest: {
           revision: 1,
@@ -297,14 +295,13 @@ describe("SBarChartSurface and OriginChart adapters", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(SnapshotReferenceChart, {
       props: {
         bars,
-        originDatasetId: "snapshot-reference-live-range-guides",
+        snapshotId: "snapshot-reference-live-range-guides",
         structure: null,
-        displayContext: "snapshot-reference",
         syncEnabled: true,
-        syncLiveBarCount: 2,
+        liveBarCount: 2,
         syncRequest: {
           revision: 1,
           source: "live",
@@ -372,14 +369,13 @@ describe("SBarChartSurface and OriginChart adapters", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(SnapshotReferenceChart, {
       props: {
         bars,
-        originDatasetId: "snapshot-reference-live-range-subcandle-zoom",
+        snapshotId: "snapshot-reference-live-range-subcandle-zoom",
         structure: null,
-        displayContext: "snapshot-reference",
         syncEnabled: true,
-        syncLiveBarCount: 2,
+        liveBarCount: 2,
         syncRequest: {
           revision: 1,
           source: "live",
@@ -397,12 +393,11 @@ describe("SBarChartSurface and OriginChart adapters", () => {
   });
 
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
-    mount(SBarChartSurface, {
+    mount(SnapshotReferenceChart, {
       props: {
         bars: [bar()],
-        originDatasetId: "snapshot-reference-01",
+        snapshotId: "snapshot-reference-01",
         structure: null,
-        displayContext: "snapshot-reference",
       },
     });
 
@@ -415,12 +410,11 @@ describe("SBarChartSurface and OriginChart adapters", () => {
   });
 
   it("keeps the Snapshot Reference crosshair locally visible when synchronization is ineligible", () => {
-    mount(SBarChartSurface, {
+    mount(SnapshotReferenceChart, {
       props: {
         bars: [bar()],
-        originDatasetId: "snapshot-reference-local-crosshair",
+        snapshotId: "snapshot-reference-local-crosshair",
         structure: null,
-        displayContext: "snapshot-reference",
       },
     });
 
@@ -437,12 +431,11 @@ describe("SBarChartSurface and OriginChart adapters", () => {
   });
 
   it("projects a Live crosshair onto the matching Snapshot SBar", async () => {
-    mount(SBarChartSurface, {
+    mount(SnapshotReferenceChart, {
       props: {
         bars: [bar()],
-        originDatasetId: "snapshot-reference-crosshair-target",
+        snapshotId: "snapshot-reference-crosshair-target",
         structure: null,
-        displayContext: "snapshot-reference",
         syncEnabled: true,
         crosshairSync: {
           revision: 1,
@@ -462,12 +455,11 @@ describe("SBarChartSurface and OriginChart adapters", () => {
   });
 
   it("keeps Snapshot crosshair visible while sync eligibility changes", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(SnapshotReferenceChart, {
       props: {
         bars: [bar()],
-        originDatasetId: "snapshot-reference-crosshair-sync",
+        snapshotId: "snapshot-reference-crosshair-sync",
         structure: null,
-        displayContext: "snapshot-reference",
         syncEnabled: true,
       },
     });
@@ -493,12 +485,11 @@ describe("SBarChartSurface and OriginChart adapters", () => {
   });
 
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(SnapshotReferenceChart, {
       props: {
         bars: [bar()],
-        originDatasetId: "snapshot-reference-01",
+        snapshotId: "snapshot-reference-01",
         structure: null,
-        displayContext: "snapshot-reference",
       },
     });
 
