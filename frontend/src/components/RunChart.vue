@@ -888,7 +888,7 @@ watch([() => props.syncEnabled, () => props.syncOffset], ([enabled]) => {
   // already queued may still reproject this chart, but it cannot publish an
   // old range or suppress a later, genuinely local viewport change.
   pendingViewportRange = null;
-    viewportSyncGate.clear();
+  viewportSyncGate.clear();
 });
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
