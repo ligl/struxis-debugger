@@ -263,6 +263,7 @@ function revealSbarRange(anchorIds: string[]): boolean {
 }
 
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
+  if (chartError.value || props.bars.length === 0) return;
   const point = param.point;
   emit("chartClick", point && Number.isFinite(point.x)
     ? { x: point.x, y: Number.isFinite(point.y) ? point.y : null }
