@@ -178,7 +178,7 @@ describe("RunChart", () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
     const nativeMatches = HTMLElement.prototype.matches;
-    vi.spyOn(HTMLElement.prototype, "matches").mockImplementation(function (selector: string) {
+    vi.spyOn(HTMLElement.prototype, "matches").mockImplementation(function (this: HTMLElement, selector: string) {
       // Keyboard tests model the pointer remaining over the Live chart.
       return selector === ":hover" ? true : nativeMatches.call(this, selector);
     });
