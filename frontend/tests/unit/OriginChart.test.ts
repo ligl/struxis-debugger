@@ -138,7 +138,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
       props: {
         bars: [bar(), bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001" }), bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001" })],
         structure: null,
-        originDatasetId: "snapshot-1",
+        sequenceId: "snapshot-1",
       },
     });
     const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
@@ -209,7 +209,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
             close: "12",
           }),
         ],
-        originDatasetId: "origin-1",
+        sequenceId: "origin-1",
         structure: null,
       },
     });
@@ -277,7 +277,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
-        originDatasetId: "origin-structure",
+        sequenceId: "origin-structure",
         structure: {
           cbarCount: 1,
           cbars: [{
@@ -506,7 +506,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
-        originDatasetId: "origin-swing-states",
+        sequenceId: "origin-swing-states",
         structure: {
           cbarCount: 0,
           cbars: [],
@@ -549,7 +549,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
-        originDatasetId: "origin-zoom-overlay",
+        sequenceId: "origin-zoom-overlay",
         structure: {
           cbarCount: 1,
           cbars: [{
@@ -689,7 +689,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
       }),
     ];
     const wrapper = mount(SBarChartSurface, {
-      props: { bars, originDatasetId: "surface-client-coordinate", structure: null },
+      props: { bars, sequenceId: "surface-client-coordinate", structure: null },
     });
     const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
     Object.defineProperty(chartHost, "getBoundingClientRect", {
@@ -877,7 +877,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar()],
-        originDatasetId: "origin-layer-visibility",
+        sequenceId: "origin-layer-visibility",
         structure: {
           cbars: [{
             cbarId: "cbar-1",
@@ -936,7 +936,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [],
-        originDatasetId: "origin-1",
+        sequenceId: "origin-1",
         structure: null,
       },
     });
@@ -945,7 +945,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
 
     // Vue Test Utils currently infers only the generic vnode props for this
     // SFC's setProps overload, so narrow the helper to this component's public props.
-    const setOriginChartProps = (props: Partial<{ bars: SBarDto[]; originDatasetId: string }>) =>
+    const setSequenceProps = (props: Partial<{ bars: SBarDto[]; sequenceId: string }>) =>
       wrapper.setProps(props as never);
 
     await setOriginChartProps({ bars: [bar()] });
@@ -965,7 +965,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
 
     await setOriginChartProps({
-      originDatasetId: "origin-2",
+      sequenceId: "origin-2",
       bars: [bar({
         sbarId: "1700000120000000000",
         tsEvent: "1700000120000000000",
@@ -985,7 +985,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar({ close: "NaN" })],
-        originDatasetId: "origin-invalid",
+        sequenceId: "origin-invalid",
         structure: null,
       },
     });
@@ -1005,7 +1005,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [],
-        originDatasetId: "origin-empty",
+        sequenceId: "origin-empty",
         structure: null,
       },
     });
