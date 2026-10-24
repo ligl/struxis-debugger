@@ -3,9 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { createSbarChartIndex } from "../sbar-chart-index";
+
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
-import { resolveReplayCrosshairAnchor } from "../replay-chart-sync";
+import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
@@ -538,7 +538,7 @@ function publishCrosshair(param: { point?: { x: number; y: number } | undefined 
     return;
   }
   const logical = chart.timeScale().coordinateToLogical(point.x);
-  const anchor = resolveReplayCrosshairAnchor(props.bars, logical);
+  const anchor = resolveSbarChartAnchor(props.bars, logical);
   const bar = anchor ? props.bars[anchor.index] : undefined;
   const price = candleSeries.coordinateToPrice(point.y);
   emit("crosshairAnchorChange", {
@@ -552,7 +552,7 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
   const x = param.point?.x;
   if (typeof x === "number" && chart) {
     const logical = chart.timeScale().coordinateToLogical(x);
-    const anchor = resolveReplayCrosshairAnchor(props.bars, logical);
+    const anchor = resolveSbarChartAnchor(props.bars, logical);
     if (anchor) crosshairLogicalIndex = anchor.index;
   }
   updateHoveredObject(param.point);
