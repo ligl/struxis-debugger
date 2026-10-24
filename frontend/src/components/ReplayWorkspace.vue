@@ -23,6 +23,7 @@ const emit = defineEmits<{
   targetCancel: [];
 }>();
 const syncEligible = ref(false);
+const syncOffset = ref<number | null>(null);
 const syncRequest = ref<ReplayChartViewportSync | null>(null);
 let viewportRevision = 0;
 
@@ -37,15 +38,26 @@ const liveBars = computed(() => {
   return selected.length === test.sbarCount ? selected : [];
 });
 
-function handleSyncEligibility(eligible: boolean): void {
-  if (syncEligible.value === eligible) return;
-  syncEligible.value = eligible;
-  if (!eligible) syncRequest.value = null;
+function handleSyncEligibility(eligible: boolean, offset: number | null): void {
+  const nextEligible = eligible && offset !== null;
+  const nextOffset = nextEligible ? offset : null;
+  const offsetChanged = syncOffset.value !== nextOffset;
+  syncEligible.value = nextEligible;
+  syncOffset.value = nextOffset;
+  if (!nextEligible) {
+    syncRequest.value = null;
+  } else if (offsetChanged && syncRequest.value) {
+    syncRequest.value = {
+      ...syncRequest.value,
+      offset: nextOffset!,
+      revision: ++viewportRevision,
+    };
+  }
 }
 
-function handleViewportChange(change: Omit<ReplayChartViewportSync, "revision">): void {
-  if (!syncEligible.value) return;
-  syncRequest.value = { ...change, revision: ++viewportRevision };
+function handleViewportChange(change: Omit<ReplayChartViewportSync, "revision" | "offset">): void {
+  if (!syncEligible.value || syncOffset.value === null) return;
+  syncRequest.value = { ...change, offset: syncOffset.value, revision: ++viewportRevision };
 }
 
 watch(() => props.testDataset?.testDatasetId, () => {
