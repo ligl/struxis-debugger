@@ -3,6 +3,7 @@ import {
   createSnapshotBrightCandleGeometry,
   resolveSnapshotLiveRangeCoordinates,
   resolveSnapshotLiveRangeIndices,
+  resolveSnapshotProcessedRangeIndices,
 } from "../../src/snapshot-playback-geometry";
 
 describe("Snapshot Live range anchor indices", () => {
