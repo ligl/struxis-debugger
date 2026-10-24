@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
@@ -537,10 +537,8 @@ function publishCrosshair(param: { point?: { x: number; y: number } | undefined 
     return;
   }
   const logical = chart.timeScale().coordinateToLogical?.(point.x);
-  const index = logical === null || logical === undefined || !Number.isFinite(logical)
-    ? -1
-    : Math.round(logical);
-  const bar = bars.value[index];
+  const anchor = resolveReplayCrosshairAnchor(bars.value, logical);
+  const bar = anchor ? bars.value[anchor.index] : undefined;
   const price = candleSeries.coordinateToPrice(point.y);
   emit("crosshairChange", {
     source: "live",
@@ -560,12 +558,8 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
     // is outside the Test Dataset, retain the last valid navigation anchor;
     // clearing it makes the next keypress fall back to the backend cursor and
     // can appear to jump back to the beginning after boundary navigation.
-    if (
-      logical !== null && logical !== undefined && Number.isFinite(logical) &&
-      Math.round(logical) >= 0 && Math.round(logical) < bars.value.length
-    ) {
-      crosshairLogicalIndex = Math.round(logical);
-    }
+    const anchor = resolveReplayCrosshairAnchor(bars.value, logical);
+    if (anchor) crosshairLogicalIndex = anchor.index;
   }
   updateHoveredObject(param.point);
 }
