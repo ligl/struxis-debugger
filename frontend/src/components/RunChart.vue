@@ -409,9 +409,13 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
   const command = resolveReplayCrosshairCommand(sync, bars.value, timeBySbarId, "live");
   if (command.kind === "ignore") return;
   if (command.kind === "clear") {
-    crosshairSyncGate.setPeerPositionActive(false);
-    crosshairSyncGate.beginApply();
-    chart.clearCrosshairPosition?.();
+    // A peer clear may only remove a Crosshair that this adapter installed.
+    // If local interaction already took ownership, preserve the local position.
+    if (crosshairSyncGate.hasPeerPosition) {
+      crosshairSyncGate.setPeerPositionActive(false);
+      crosshairSyncGate.beginApply();
+      chart.clearCrosshairPosition?.();
+    }
     return;
   }
 
