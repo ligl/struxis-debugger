@@ -416,17 +416,17 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   // selection. It never picks the nearest structure object.
   const logical = chart?.timeScale().coordinateToLogical(pointX);
   if (logical === null || logical === undefined || !Number.isFinite(logical)) {
-    emit("chartInteractionError", "The clicked horizontal position does not map to the Origin time axis.");
+    emit("chartInteractionError", "The clicked horizontal position does not map to the chart time axis.");
     return;
   }
   const index = Math.round(logical);
   if (index < 0 || index >= sbarIdByLogicalIndex.length) {
-    emit("chartInteractionError", "The clicked horizontal position is outside the loaded Origin SBar sequence.");
+    emit("chartInteractionError", "The clicked horizontal position is outside the loaded SBar sequence.");
     return;
   }
   const sbarId = sbarIdByLogicalIndex[index];
   if (sbarId === undefined) {
-    emit("chartInteractionError", "The clicked horizontal position does not map to an Origin SBar.");
+    emit("chartInteractionError", "The clicked horizontal position does not map to an SBar.");
     return;
   }
 
