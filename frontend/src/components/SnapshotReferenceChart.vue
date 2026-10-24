@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import SBarChartSurface from "./SBarChartSurface.vue";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
@@ -22,6 +23,9 @@ interface ChartSurfacePort {
   applyViewportRange(range: LogicalRange): boolean;
   applyCrosshairPosition(sbarId: string, price: number): boolean;
   clearCrosshairPosition(): void;
+  getSbarCoordinate(sbarId: string): number | null;
+  getLogicalCoordinate(index: number): number | null;
+  getPriceCoordinate(price: number): number | null;
 }
 
 const props = defineProps<{
@@ -45,6 +49,45 @@ const emit = defineEmits<{
 const surface = ref<ChartSurfacePort | null>(null);
 const viewportGate = new ReplayViewportSyncGate();
 const crosshairGate = new ReplayCrosshairSyncGate();
+const brightCandles = ref<SnapshotBrightCandleGeometry[]>([]);
+const boundaries = ref<{ start: number; end: number } | null>(null);
+const playbackOverlayEnabled = computed(() =>
+  props.playbackEnabled && props.playbackOffset !== null && props.playbackOffset !== undefined,
+);
+
+function refreshSnapshotGeometry(): void {
+  const port = surface.value;
+  const offset = props.playbackOffset;
+  if (!port || offset === null || offset === undefined || props.liveBarCount <= 0) {
+    brightCandles.value = [];
+    boundaries.value = null;
+    return;
+  }
+
+  boundaries.value = resolveSnapshotLiveRangeCoordinates({
+    offset,
+    liveCount: props.liveBarCount,
+    barIds: props.bars.map((bar) => bar.sbarId),
+    coordinateForSbarId: (sbarId) => port.getSbarCoordinate(sbarId),
+    logicalToCoordinate: (index) => port.getLogicalCoordinate(index),
+  });
+
+  if (!props.playbackEnabled) {
+    brightCandles.value = [];
+    return;
+  }
+  const visible = port.getVisibleLogicalRange();
+  brightCandles.value = projectSnapshotBrightCandles({
+    offset,
+    liveCount: props.liveBarCount,
+    processedCount: props.processedCount,
+    bars: props.bars,
+    visibleFrom: visible ? visible.from - 1 : Number.NEGATIVE_INFINITY,
+    visibleTo: visible ? visible.to + 1 : Number.POSITIVE_INFINITY,
+    coordinateForSbarId: (sbarId) => port.getSbarCoordinate(sbarId),
+    priceToCoordinate: (price) => port.getPriceCoordinate(price),
+  });
+}
 
 function handleViewportChange(range: { from: number; to: number }): void {
   if (!props.syncEnabled) return;
@@ -116,6 +159,12 @@ function invalidatePeerState(): void {
   if (hadPeerPosition) surface.value?.clearCrosshairPosition();
 }
 
+watch(
+  () => [props.snapshotId, props.bars, props.liveBarCount, props.playbackEnabled, props.playbackOffset, props.processedCount] as const,
+  refreshSnapshotGeometry,
+  { deep: true },
+);
+
 watch(() => props.syncRequest, (request) => {
   applyViewportRequest(request);
 }, { deep: true });
@@ -141,6 +190,7 @@ watch(() => [props.snapshotId, props.bars.map((bar) => bar.sbarId).join("\\u0000
 
 onMounted(() => {
   // The Surface's chart and SBar index are ready only after mount.
+  refreshSnapshotGeometry();
   applyViewportRequest(props.syncRequest);
   applyCrosshairRequest(props.crosshairSync);
 });
@@ -154,16 +204,13 @@ onMounted(() => {
     :origin-dataset-id="snapshotId"
     :selection-editable="false"
     display-context="snapshot-reference"
-    :snapshot-live-bar-count="liveBarCount"
-    :snapshot-playback-enabled="playbackEnabled"
-    :snapshot-playback-offset="playbackOffset"
-    :snapshot-processed-count="processedCount"
     @logical-range-change="handleViewportChange"
+    @projection-frame="refreshSnapshotGeometry"
     @crosshair-anchor-change="handleCrosshairChange"
   >
-    <template #snapshot-overlays="{ enabled, brightCandles, cbarRectangles, swingSegments, boundaries }">
+    <template #snapshot-overlays="{ cbarRectangles, swingSegments }">
       <SnapshotPlaybackOverlay
-        :enabled="enabled"
+        :enabled="playbackOverlayEnabled"
         :bright-candles="brightCandles"
         :cbar-rectangles="cbarRectangles"
         :swing-segments="swingSegments"
