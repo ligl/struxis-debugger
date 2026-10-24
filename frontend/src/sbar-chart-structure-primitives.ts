@@ -323,7 +323,7 @@ class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
   }
 }
 
-function registerSeriesPrimitive<TPrimitive extends StructureSeriesPrimitive<never>>(
+function registerSeriesPrimitive<TObject, TPrimitive extends StructureSeriesPrimitive<TObject>>(
   host: ChartPrimitiveHost,
   id: string,
   series: ISeriesApi<"Candlestick">,
@@ -352,7 +352,7 @@ function registerSeriesPrimitive<TPrimitive extends StructureSeriesPrimitive<nev
   host.register(binding);
   return {
     setData(objects, projection) {
-      primitive.setObjects(objects as never[], projection);
+      primitive.setObjects(objects as readonly TObject[], projection);
     },
     setVisible(visible) {
       primitive.setVisibility(visible);
@@ -364,12 +364,12 @@ export function registerCBarPrimitive(
   host: ChartPrimitiveHost,
   series: ISeriesApi<"Candlestick">,
 ): StructurePrimitiveController {
-  return registerSeriesPrimitive(host, "structure.cbar", series, new CBarSeriesPrimitive());
+  return registerSeriesPrimitive<CBarPrimitiveDto, CBarSeriesPrimitive>(host, "structure.cbar", series, new CBarSeriesPrimitive());
 }
 
 export function registerSwingPrimitive(
   host: ChartPrimitiveHost,
   series: ISeriesApi<"Candlestick">,
 ): StructurePrimitiveController {
-  return registerSeriesPrimitive(host, "structure.swing", series, new SwingSeriesPrimitive());
+  return registerSeriesPrimitive<SwingPrimitiveDto, SwingSeriesPrimitive>(host, "structure.swing", series, new SwingSeriesPrimitive());
 }
