@@ -222,6 +222,11 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
+  // The document listener is shared with the Snapshot chart. Keyboard
+  // navigation must belong to the chart currently under the pointer or
+  // containing keyboard focus; otherwise one keypress can mutate both charts.
+  if (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement))) return;
+
   // Vim normal-mode navigation aliases: h/ j/ k/ l behave exactly like the
   // corresponding arrow keys, without changing the existing chart commands.
   const key = ({ h: "ArrowLeft", j: "ArrowDown", k: "ArrowUp", l: "ArrowRight" } as const)[
