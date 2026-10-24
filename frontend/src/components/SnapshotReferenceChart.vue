@@ -202,7 +202,6 @@ onMounted(() => {
     :bars="bars"
     :structure="structure"
     :origin-dataset-id="snapshotId"
-    :selection-editable="false"
     :show-header="false"
     :show-footer="false"
     panel-class="snapshot-reference-chart"
