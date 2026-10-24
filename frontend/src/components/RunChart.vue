@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
@@ -101,9 +101,8 @@ let visibleRangeListener: (() => void) | null = null;
 let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
-let suppressSyncEmit = false;
+const viewportSyncGate = new ReplayViewportSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
-let expectedSyncedRange: { from: number; to: number } | null = null;
 
 function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -399,12 +398,8 @@ function handleVisibleRangeChange(): void {
 
   // Ignore the asynchronous echo of a range applied from Snapshot Reference.
   // A microtask-only guard can expire before Lightweight Charts publishes it.
-  if (expectedSyncedRange) {
-    const expected = expectedSyncedRange;
-    expectedSyncedRange = null;
-    if (isSameLogicalRange(range, expected)) return;
-  }
-  if (suppressSyncEmit) return;
+  const observation = viewportSyncGate.observeRange(range);
+  if (observation !== "publish") return;
 
   // Coalesce high-frequency wheel/pan events; publish the latest fractional
   // viewport in the same frame as the overlay projection.
@@ -441,10 +436,10 @@ function applySyncRequest(request: ReplayChartViewportSync | null | undefined): 
   if (!target) return;
   if (current && isSameLogicalRange(current, target)) return;
   const { from, to } = target;
-  expectedSyncedRange = target;
-  suppressSyncEmit = true;
+  viewportSyncGate.expectPeerRange(target);
+  const suppressionRevision = viewportSyncGate.beginSuppression();
   chart.timeScale().setVisibleLogicalRange({ from, to });
-  queueMicrotask(() => { suppressSyncEmit = false; });
+  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
 }
 
 function scheduleOverlayUpdate(): void {
@@ -893,8 +888,7 @@ watch([() => props.syncEnabled, () => props.syncOffset], ([enabled]) => {
   // already queued may still reproject this chart, but it cannot publish an
   // old range or suppress a later, genuinely local viewport change.
   pendingViewportRange = null;
-  expectedSyncedRange = null;
-  suppressSyncEmit = false;
+    viewportSyncGate.clear();
 });
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
@@ -916,7 +910,7 @@ onBeforeUnmount(() => {
     overlayUpdateFrame = null;
   }
   pendingViewportRange = null;
-  expectedSyncedRange = null;
+  viewportSyncGate.clear();
   chart?.remove();
   chart = null;
   candleSeries = null;
