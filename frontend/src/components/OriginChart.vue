@@ -24,12 +24,10 @@ const emit = defineEmits<{
 
 type SurfacePort = {
   getSbarCoordinate: (sbarId: string) => number | null;
-  getSbarIdAtCoordinate: (x: number, clampToSequence?: boolean) => string | null;
   getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
   hasSbarId: (sbarId: string) => boolean;
 };
 const surface = ref<SurfacePort | null>(null);
-const adapterRoot = ref<HTMLElement | null>(null);
 const selectionStartX = ref<number | null>(null);
 const selectionEndX = ref<number | null>(null);
 const previewX = ref<number | null>(null);
@@ -132,7 +130,6 @@ onBeforeUnmount(stopBoundaryDrag);
 
 <template>
   <section
-    ref="adapterRoot"
     class="origin-chart-adapter"
     @struxis-select-sbar="handleSelectionRequest"
     @contextmenu.prevent.stop="handleContextMenu"
