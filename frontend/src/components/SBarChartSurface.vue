@@ -192,7 +192,7 @@ function updateSyncBoundaryCoordinates(): void {
   syncBoundaryXs.value = resolveSnapshotLiveRangeCoordinates({
     offset: request.offset,
     liveCount,
-    barIds: props.bars.map((bar) => bar.sbarId),
+    barIds: sbarIdByLogicalIndex,
     coordinateForSbarId,
     logicalToCoordinate: (index) => timeScale.logicalToCoordinate(index),
   });
