@@ -87,6 +87,9 @@ function updateSelectedObjectProjection(reveal = false): void {
 function handleProjectionFrame(): void {
   updateSelectionCoordinates();
   updateSelectedObjectProjection();
+  hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar"
+    ? surface.value?.getSbarMarker(hoveredObject.value.id) ?? null
+    : null;
 }
 
 function handlePointerPosition(point: { x: number; y: number } | null): void {
@@ -230,6 +233,10 @@ watch(
 );
 
 watch(() => props.selectedObject, () => updateSelectedObjectProjection(true), { deep: true, flush: "post" });
+watch(() => [props.bars, props.originDatasetId, props.structure] as const, () => {
+  hoveredObject.value = null;
+  hoveredSbarMarker.value = null;
+}, { deep: false });
 
 onMounted(() => {
   updateSelectionCoordinates();
