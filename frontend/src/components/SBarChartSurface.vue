@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { createSnapshotBrightCandleGeometry, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
+import { createSnapshotBrightCandleGeometry, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, resolveSnapshotProcessedRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
@@ -774,8 +774,7 @@ function fitContentShortcut(): boolean {
  */
 function updateSnapshotCandleDimming(): void {
   const offset = props.snapshotPlaybackOffset;
-  const liveCount = Math.max(0, props.syncLiveBarCount ?? 0);
-  const processedCount = Math.max(0, Math.min(liveCount, props.snapshotProcessedCount ?? 0));
+  const liveCount = props.syncLiveBarCount ?? 0;
   if (
     !chart ||
     !candleSeries ||
@@ -794,13 +793,17 @@ function updateSnapshotCandleDimming(): void {
   const visible = timeScale.getVisibleLogicalRange();
   const visibleFrom = visible && Number.isFinite(visible.from) ? visible.from - 1 : Number.NEGATIVE_INFINITY;
   const visibleTo = visible && Number.isFinite(visible.to) ? visible.to + 1 : Number.POSITIVE_INFINITY;
-  const anchors = resolveSnapshotLiveRangeIndices(offset, liveCount, props.bars.length);
-  if (!anchors) {
+  const processedRange = resolveSnapshotProcessedRangeIndices({
+    offset,
+    liveCount,
+    processedCount: props.snapshotProcessedCount ?? 0,
+    snapshotCount: props.bars.length,
+  });
+  if (!processedRange) {
     snapshotBrightCandles.value = [];
     return;
   }
-  const firstBright = anchors.start;
-  const lastBright = Math.min(props.bars.length, anchors.start + processedCount);
+  const { start: firstBright, endExclusive: lastBright } = processedRange;
   const overlays: SnapshotBrightCandleGeometry[] = [];
 
   // Brightness progresses candle-by-candle through the processed Live prefix.
