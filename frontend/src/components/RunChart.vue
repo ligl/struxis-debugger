@@ -422,7 +422,10 @@ function scheduleOverlayUpdate(): void {
   // Coalesce rapid wheel-zoom / pan range events to one projection per frame.
   // Lightweight Charts updates its canvas first; sample the public coordinate
   // transforms on the next animation frame so SVG overlays follow that viewport.
-  if (overlayUpdateFrame !== null) cancelAnimationFrame(overlayUpdateFrame);
+  // Keep the already scheduled frame. Its callback reads the latest chart
+  // transforms and pending viewport, so cancelling/restarting it only adds churn
+  // and can starve projection during a continuous stream of input events.
+  if (overlayUpdateFrame !== null) return;
   overlayUpdateFrame = requestAnimationFrame(() => {
     overlayUpdateFrame = null;
     updateStructureOverlays();
