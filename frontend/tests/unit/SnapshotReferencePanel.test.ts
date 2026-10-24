@@ -83,7 +83,7 @@ describe("SnapshotReferencePanel", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_snapshot_reference", { snapshotId: "snapshot-complete-01" });
   });
 
-  it("passes per-candle playback state to a compatible Snapshot without a chart-wide brightness filter", async () => {
+  it("keeps Snapshot brightness aligned with Live progress when continuous Play is inactive", async () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
       props: {
@@ -91,7 +91,7 @@ describe("SnapshotReferencePanel", () => {
         snapshots,
         liveBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
         liveSbarIds: ["100"],
-        isPlaying: true,
+        progressApplies: true,
         processedCount: 6,
       },
     });
@@ -102,7 +102,7 @@ describe("SnapshotReferencePanel", () => {
     expect(chart.attributes("data-sync-eligible")).toBe("true");
     expect(wrapper.get('[data-testid="snapshot-reference-sync-indicator"]').attributes("aria-label"))
       .toBe("Viewport synchronization available");
-    expect(chart.attributes("data-replay-playing")).toBe("true");
+    expect(chart.attributes("data-progress-active")).toBe("true");
     expect(chart.attributes("style") ?? "").not.toContain("brightness(");
     const chartStub = wrapper.get('[data-testid="snapshot-reference-chart-host"]');
     expect(chartStub.attributes("snapshot-playback-enabled")).toBe("true");
@@ -111,6 +111,8 @@ describe("SnapshotReferencePanel", () => {
 
     await wrapper.setProps({ processedCount: 7 } as never);
     expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').attributes("snapshot-processed-count")).toBe("7");
+    expect(wrapper.get('[data-testid="snapshot-reference-chart-host"]').attributes("snapshot-playback-enabled")).toBe("false");
+    expect(chart.attributes("data-progress-active")).toBe("false");
   });
 
   it("keeps Snapshot Reference independent when timeframe or SBar coverage differs", async () => {
@@ -121,7 +123,7 @@ describe("SnapshotReferencePanel", () => {
         snapshots,
         liveBarType: "AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL",
         liveSbarIds: ["100"],
-        isPlaying: true,
+        progressApplies: true,
         processedCount: 1,
       },
     });
