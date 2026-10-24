@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
-import { ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = defineProps<{
@@ -102,6 +102,7 @@ let chartClickListener: ((param: { point?: { x: number; y: number } | undefined 
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
 const viewportSyncGate = new ReplayViewportSyncGate();
+const crosshairSyncGate = new ReplayCrosshairSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
 
 function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
@@ -410,8 +411,8 @@ function handleVisibleRangeChange(): void {
 function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
   if (!chart || !candleSeries || !props.syncEnabled || !sync || sync.source === "live") return;
   if (!sync.sbarId || sync.price === null || !Number.isFinite(sync.price)) {
-    hasSyncedCrosshair = false;
-    applyingSyncedCrosshair = true;
+    crosshairSyncGate.setPeerPositionActive(false);
+    crosshairSyncGate.beginApply();
     chart.clearCrosshairPosition?.();
     queueMicrotask(() => { applyingSyncedCrosshair = false; });
     return;
@@ -422,7 +423,7 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
     chart.clearCrosshairPosition?.();
     return;
   }
-  hasSyncedCrosshair = true;
+  crosshairSyncGate.setPeerPositionActive(true);
   applyingSyncedCrosshair = true;
   chart.setCrosshairPosition?.(sync.price, time, candleSeries);
   queueMicrotask(() => { applyingSyncedCrosshair = false; });
@@ -526,8 +527,6 @@ function updateHoveredObject(point: { x: number; y: number } | undefined): void 
   updateHoverMarker();
 }
 
-let applyingSyncedCrosshair = false;
-let hasSyncedCrosshair = false;
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
   if (!props.syncEnabled || applyingSyncedCrosshair) return;
@@ -856,7 +855,7 @@ watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => props.crosshairSync, (sync) => {
   if (!props.syncEnabled || !sync) {
-    if (hasSyncedCrosshair) {
+    if (crosshairSyncGate.hasPeerPosition) {
       hasSyncedCrosshair = false;
       chart?.clearCrosshairPosition?.();
     }
@@ -865,7 +864,7 @@ watch(() => props.crosshairSync, (sync) => {
   applyCrosshairSync(sync);
 }, { deep: true });
 watch(() => props.syncEnabled, (enabled) => {
-  if (!enabled && hasSyncedCrosshair) {
+  if (!enabled && crosshairSyncGate.hasPeerPosition) {
     hasSyncedCrosshair = false;
     applyingSyncedCrosshair = true;
     chart?.clearCrosshairPosition?.();
@@ -911,6 +910,7 @@ onBeforeUnmount(() => {
   }
   pendingViewportRange = null;
   viewportSyncGate.clear();
+  crosshairSyncGate.clear();
   chart?.remove();
   chart = null;
   candleSeries = null;
