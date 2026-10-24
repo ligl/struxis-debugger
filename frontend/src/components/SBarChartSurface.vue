@@ -172,7 +172,6 @@ function updateSbarCoordinates(): void {
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
   updateCBarRectangles();
   updateSwingSegments();
-  updateSbarMarkers();
 }
 
 function updateSwingSegments(): void {
@@ -644,8 +643,6 @@ onBeforeUnmount(() => {
   volumeSeries = null;
   cbarRectangles.value = [];
   swingSegments.value = [];
-  hoveredObject.value = null;
-  hoveredSbarMarker.value = null;
   sbarIdByLogicalIndex = [];
   indexBySbarId = new Map();
   timeBySbarId = new Map();
