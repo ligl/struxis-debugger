@@ -1,3 +1,4 @@
+import { createChartPrimitiveHost, type ChartPrimitiveHost } from "./sbar-chart-primitive-host";
 import {
   CandlestickSeries,
   ColorType,
@@ -18,12 +19,15 @@ export interface SBarChartRuntime {
   chart: IChartApi;
   candleSeries: ISeriesApi<"Candlestick">;
   volumeSeries: ISeriesApi<"Histogram">;
+  primitiveHost: ChartPrimitiveHost;
 }
 
 /**
  * Creates only the shared Lightweight Charts primitives used by SBar charts.
  * The caller remains responsible for event subscriptions, ResizeObserver,
- * overlay scheduling, business interactions, and disposal.
+ * overlay scheduling, business interactions, and chart disposal. Primitive
+ * adapters are registered with the returned chart-local host and that host
+ * must be disposed before removing the chart.
  */
 export function createSbarChartRuntime(
   host: HTMLElement,
@@ -88,5 +92,8 @@ export function createSbarChartRuntime(
     scaleMargins: { top: 0.82, bottom: 0 },
   });
 
-  return { chart, candleSeries, volumeSeries };
+  const primitiveHost = createChartPrimitiveHost();
+  primitiveHost.attach();
+
+  return { chart, candleSeries, volumeSeries, primitiveHost };
 }
