@@ -723,6 +723,41 @@ describe("RunChart", () => {
     expect(mocks.unsubscribeVisibleRangeChange).toHaveBeenCalled();
   });
 
+  it("preserves a locally moved Crosshair when a peer clear arrives", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+        syncEnabled: true,
+        crosshairSync: {
+          revision: 1,
+          source: "reference",
+          sbarId: originBars[1]!.sbarId,
+          price: 10.5,
+        },
+      },
+    });
+    await nextTick();
+    expect(mocks.setCrosshairPosition).toHaveBeenCalled();
+
+    // Local pointer movement takes ownership away from the peer-installed position.
+    mocks.crosshairMoveListener?.({ point: { x: 60, y: 100 } });
+    mocks.clearCrosshairPosition.mockClear();
+    await wrapper.setProps({
+      crosshairSync: {
+        revision: 2,
+        source: "reference",
+        sbarId: null,
+        price: null,
+      },
+    } as never);
+    await nextTick();
+
+    expect(mocks.clearCrosshairPosition).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("coalesces Live viewport sync to the latest range in the pending render frame", async () => {
     const wrapper = mount(RunChart, {
       props: {
