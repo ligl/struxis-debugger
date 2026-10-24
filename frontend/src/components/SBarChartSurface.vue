@@ -206,7 +206,7 @@ function updateSwingSegments(): void {
     const style = swingStyleByState[swing.state];
     if (!style && !unknownSwingStates.has(swing.state)) {
       unknownSwingStates.add(swing.state);
-      console.warn(`Unknown Struxis SwingState received by OriginChart: ${swing.state}`);
+      console.warn(`Unknown Struxis SwingState received by SBarChartSurface: ${swing.state}`);
     }
     const resolvedStyle = style ?? { color: "#A0A7B0", dasharray: "4 3" };
     return [{
@@ -669,7 +669,7 @@ onBeforeUnmount(() => {
         ref="chartHost"
         class="origin-chart-host"
         data-testid="origin-chart-canvas"
-        :data-origin-dataset-id="sequenceId"
+        :data-sequence-id="sequenceId"
         :data-first-sbar-x="firstSbarX ?? ''"
         :data-second-sbar-x="secondSbarX ?? ''"
         :aria-label="chartLabel"
