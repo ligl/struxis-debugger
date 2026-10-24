@@ -82,7 +82,12 @@ export function projectCBarRectangles(
     const endX = coordinateForSbarId(cbar.sbarEndId);
     const highY = priceToCoordinate(high);
     const lowY = priceToCoordinate(low);
-    if (![startX, endX, highY, lowY].every(isFiniteCoordinate)) return [];
+    if (
+      !isFiniteCoordinate(startX) ||
+      !isFiniteCoordinate(endX) ||
+      !isFiniteCoordinate(highY) ||
+      !isFiniteCoordinate(lowY)
+    ) return [];
 
     const left = Math.min(startX, endX);
     const right = Math.max(startX, endX);
