@@ -12,8 +12,9 @@ const RunChartStub = defineComponent({
   props: {
     syncEnabled: { type: Boolean, default: false },
     syncRequest: { type: Object, default: null },
+    crosshairSync: { type: Object, default: null },
   },
-  template: '<div data-testid="run-chart-stub" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" />',
+  template: '<div data-testid="run-chart-stub" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" :data-crosshair-revision="crosshairSync?.revision ?? \'\'" />',
 });
 const SnapshotReferencePanelStub = defineComponent({
   name: "SnapshotReferencePanel",
@@ -21,13 +22,15 @@ const SnapshotReferencePanelStub = defineComponent({
     progressApplies: { type: Boolean, default: false },
     processedCount: { type: Number, default: 0 },
     syncRequest: { type: Object, default: null },
+    crosshairSync: { type: Object, default: null },
   },
-  emits: ["syncSequence", "viewportChange"],
+  emits: ["syncSequence", "viewportChange", "crosshairChange"],
   template: `
     <div data-testid="snapshot-reference-panel-stub" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
       <button data-testid="sync-enable" @click="$emit('syncSequence', { snapshotId: 'snapshot-1', barType: 'AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL', sbarIds: ['x', '1', '2', '3', '4'] })">enable sync</button>
       <button data-testid="sync-disable" @click="$emit('syncSequence', null)">disable sync</button>
       <button data-testid="snapshot-viewport-change" @click="$emit('viewportChange', { source: 'reference', from: 2, to: 5 })">change viewport</button>
+      <button data-testid="snapshot-crosshair-change" @click="$emit('crosshairChange', { source: 'reference', sbarId: '1', price: 10 })">change crosshair</button>
     </div>
   `,
 });
@@ -87,6 +90,36 @@ describe("ReplayWorkspace", () => {
     expect(live.attributes("data-sync-enabled")).toBe("false");
     expect(live.attributes("data-has-sync-request")).toBe("false");
     expect(snapshot.attributes("data-has-sync-request")).toBe("false");
+  });
+
+  it("keeps Crosshair command revisions monotonic across sequence invalidation", async () => {
+    const Host = defineComponent({
+      components: { ReplayWorkspace },
+      setup() {
+        return {
+          active: true,
+          origin: { originDatasetId: "origin-1", bars: [{ sbarId: "1" }, { sbarId: "2" }, { sbarId: "3" }, { sbarId: "4" }] },
+          testDataset: { testDatasetId: "test-1", originDatasetId: "origin-1", instrumentId: "AUD/USD.SIM", barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", startSbarId: "1", endSbarId: "4", sbarCount: 4 },
+          runState: null,
+        };
+      },
+      template: '<ReplayWorkspace :active="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="null" :selected-object="null" :snapshots="[]" />',
+    });
+    const wrapper = mount(Host, {
+      global: { stubs: { DualChartStack: DualChartStackStub, RunChart: RunChartStub, SnapshotReferencePanel: SnapshotReferencePanelStub } },
+    });
+    const live = wrapper.get('[data-testid="run-chart-stub"]');
+    const snapshot = wrapper.get('[data-testid="snapshot-reference-panel-stub"]');
+
+    await snapshot.get('[data-testid="sync-enable"]').trigger("click");
+    await snapshot.get('[data-testid="snapshot-crosshair-change"]').trigger("click");
+    expect(live.attributes("data-crosshair-revision")).toBe("1");
+
+    await snapshot.get('[data-testid="sync-disable"]').trigger("click");
+    expect(live.attributes("data-crosshair-revision")).toBe("");
+    await snapshot.get('[data-testid="sync-enable"]').trigger("click");
+    await snapshot.get('[data-testid="snapshot-crosshair-change"]').trigger("click");
+    expect(live.attributes("data-crosshair-revision")).toBe("2");
   });
 
   it("keeps the workspace composition mounted while gating the live chart by active mode", async () => {
