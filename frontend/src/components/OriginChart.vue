@@ -150,15 +150,17 @@ function updateHoveredObject(point: { x: number; y: number } | null): void {
   hoveredSbarMarker.value = nextObject?.kind === "sbar" ? surface.value?.getSbarMarker(nextObject.id) ?? null : null;
 }
 
-function handleChartClick(point: { x: number; y: number } | null): void {
+function handleChartClick(point: { x: number; y: number | null } | null): void {
   if (!point) {
     emit("selectionError", "The click did not resolve to a chart coordinate.");
     return;
   }
-  const selectedStructureObject = hitTestStructureObject(point.x, point.y);
-  if (selectedStructureObject) {
-    emit("objectClick", selectedStructureObject);
-    return;
+  if (typeof point.y === "number" && Number.isFinite(point.y)) {
+    const selectedStructureObject = hitTestStructureObject(point.x, point.y);
+    if (selectedStructureObject) {
+      emit("objectClick", selectedStructureObject);
+      return;
+    }
   }
   const sbarId = surface.value?.getSbarIdAtCoordinate(point.x);
   if (!sbarId || !surface.value?.hasSbarId(sbarId)) {
