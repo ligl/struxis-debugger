@@ -118,7 +118,7 @@ describe("Replay Crosshair command resolution", () => {
     }, bars, times, "reference")).toEqual({ kind: "clear" });
     expect(resolveReplayCrosshairCommand({
       source: "live", sbarId: "sbar-a", price: Number.NaN,
-    }, bars, times)).toEqual({ kind: "clear" });
+    }, bars, times, "reference")).toEqual({ kind: "clear" });
     expect(resolveReplayCrosshairCommand({
       source: "live", sbarId: "missing", price: 12,
     }, bars, times)).toEqual({ kind: "clear" });
