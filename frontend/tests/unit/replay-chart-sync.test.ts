@@ -76,11 +76,22 @@ describe("Replay Crosshair sync gate", () => {
     gate.setPeerPositionActive(false);
     expect(gate.hasPeerPosition).toBe(false);
   });
-  it("clear invalidates pending releases and peer position state", () => {
+  it("prevents an earlier microtask from releasing a newer apply", async () => {
+    const gate = new ReplayCrosshairSyncGate();
+    gate.beginApply();
+    gate.beginApply();
+    await Promise.resolve();
+    expect(gate.isApplying).toBe(true);
+    await Promise.resolve();
+    expect(gate.isApplying).toBe(false);
+  });
+
+  it("clear invalidates pending releases and peer position state", async () => {
     const gate = new ReplayCrosshairSyncGate();
     gate.setPeerPositionActive(true);
     gate.beginApply();
     gate.clear();
+    await Promise.resolve();
     expect(gate.isApplying).toBe(false);
     expect(gate.hasPeerPosition).toBe(false);
   });
