@@ -150,10 +150,10 @@ onBeforeUnmount(stopBoundaryDrag);
       @pointer-position="handlePointerPosition"
       @projection-frame="handleProjectionFrame"
     >
-      <template #origin-selection-status>
+      <template #footer-trailing>
         <span class="origin-chart-selection-status" data-testid="origin-chart-selection-status">{{ selectionStatus }}</span>
       </template>
-      <template #origin-selection-overlay>
+      <template #chart-interaction-overlay>
         <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
           <div
             v-if="selectionPending && selectionStartX !== null && previewX !== null"
