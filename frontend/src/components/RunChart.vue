@@ -313,6 +313,8 @@ function updateStructureOverlays(): void {
     hoveredSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
+    cbarPrimitive?.setData([], { timeBySbarId, indexBySbarId });
+    swingPrimitive?.setData([], { timeBySbarId, indexBySbarId });
     targetSbarX.value = null;
     return;
   }
@@ -687,6 +689,8 @@ function updateChart(): void {
     selectedSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
+    cbarPrimitive?.setData([], { timeBySbarId, indexBySbarId });
+    swingPrimitive?.setData([], { timeBySbarId, indexBySbarId });
     targetSbarX.value = null;
     chartError.value = error instanceof Error ? error.message : String(error);
   }
