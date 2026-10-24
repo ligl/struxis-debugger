@@ -201,6 +201,7 @@ describe("OriginChart", () => {
     });
     const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
     vi.spyOn(chartHost, "matches").mockReturnValue(false);
+    chartMocks.getVisibleLogicalRange.mockReturnValue({ from: -0.5, to: 5.5 });
     chartMocks.setVisibleLogicalRange.mockClear();
 
     const ignored = new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true });
