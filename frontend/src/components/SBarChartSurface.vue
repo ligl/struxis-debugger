@@ -965,6 +965,7 @@ onBeforeUnmount(() => {
       <span>SBARS <b>{{ bars.length.toLocaleString() }}</b></span>
       <span v-if="latestBar">VOL <b>{{ latestBar.volume }}</b></span>
       <span v-if="latestBar" class="origin-chart-last-id" :title="latestBar.sbarId">LAST ID <code>{{ latestBar.sbarId }}</code></span>
+      <slot name="origin-selection-status" />
     </div>
   </section>
 </template>
