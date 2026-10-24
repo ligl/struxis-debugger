@@ -36,6 +36,7 @@ const crosshairSync = ref<ReplayChartCrosshairSync | null>(null);
 const activeSyncRequest = computed(() => syncEligible.value ? syncRequest.value : null);
 const activeCrosshairSync = computed(() => syncEligible.value ? crosshairSync.value : null);
 let viewportRevision = 0;
+let crosshairRevision = 0;
 
 const liveBars = computed(() => {
   const originDataset = props.origin;
@@ -64,7 +65,7 @@ function handleViewportChange(change: Omit<ReplayChartViewportSync, "revision" |
 
 function handleCrosshairChange(change: Omit<ReplayChartCrosshairSync, "revision">): void {
   if (!syncEligible.value) return;
-  crosshairSync.value = { ...change, revision: (crosshairSync.value?.revision ?? 0) + 1 };
+  crosshairSync.value = { ...change, revision: ++crosshairRevision };
 }
 
 watch(
