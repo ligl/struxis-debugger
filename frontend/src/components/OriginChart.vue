@@ -22,15 +22,22 @@ const emit = defineEmits<{
   cancelRangeSelection: [];
 }>();
 
+type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
+type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; state: string; color: string; dasharray: string };
+type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
 type SurfacePort = {
   getSbarCoordinate: (sbarId: string) => number | null;
+  getSbarIdAtCoordinate: (x: number, clampToSequence?: boolean) => string | null;
   getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
   hasSbarId: (sbarId: string) => boolean;
-  getSbarMarker: (sbarId: string) => { id: string; x: number; y: number; width: number; height: number } | null;
+  getSbarMarker: (sbarId: string) => SBarMarker | null;
+  getStructureGeometry: () => { cbarRectangles: CBarRectangle[]; swingSegments: SwingSegment[] };
   revealSbarRange: (anchorIds: string[]) => boolean;
 };
 const surface = ref<SurfacePort | null>(null);
-const selectedSbarMarker = ref<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
+const selectedSbarMarker = ref<SBarMarker | null>(null);
+const hoveredObject = ref<OriginObjectSelection | null>(null);
+const hoveredSbarMarker = ref<SBarMarker | null>(null);
 const selectionStartX = ref<number | null>(null);
 const selectionEndX = ref<number | null>(null);
 const previewX = ref<number | null>(null);
@@ -84,6 +91,78 @@ function handleProjectionFrame(): void {
 
 function handlePointerPosition(point: { x: number; y: number } | null): void {
   previewX.value = props.selectionPending && selectionStartX.value !== null ? point?.x ?? null : null;
+  updateHoveredObject(point);
+}
+
+function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" }> | null {
+  const geometry = surface.value?.getStructureGeometry();
+  if (!geometry) return null;
+  const tolerance = 6;
+  type Candidate = { kind: "cbar" | "swing"; id: string; distance: number; priority: number };
+  const chooseCloser = (best: Candidate | null, candidate: Candidate): Candidate | null => {
+    if (candidate.distance > tolerance) return best;
+    if (!best || candidate.distance < best.distance ||
+      (candidate.distance === best.distance && candidate.priority < best.priority) ||
+      (candidate.distance === best.distance && candidate.priority === best.priority && candidate.id.localeCompare(best.id) < 0)) return candidate;
+    return best;
+  };
+  let best: Candidate | null = null;
+  for (const segment of geometry.swingSegments) {
+    const dx = segment.x2 - segment.x1;
+    const dy = segment.y2 - segment.y1;
+    const lengthSquared = dx * dx + dy * dy;
+    const projection = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((x - segment.x1) * dx + (y - segment.y1) * dy) / lengthSquared));
+    best = chooseCloser(best, { kind: "swing", id: segment.id, distance: Math.hypot(x - (segment.x1 + projection * dx), y - (segment.y1 + projection * dy)), priority: 0 });
+  }
+  for (const rectangle of geometry.cbarRectangles) {
+    const left = Math.min(rectangle.x, rectangle.x + rectangle.width);
+    const right = Math.max(rectangle.x, rectangle.x + rectangle.width);
+    const top = Math.min(rectangle.y, rectangle.y + rectangle.height);
+    const bottom = Math.max(rectangle.y, rectangle.y + rectangle.height);
+    const outsideX = x < left ? left - x : x > right ? x - right : 0;
+    const outsideY = y < top ? top - y : y > bottom ? y - bottom : 0;
+    const distance = outsideX > 0 || outsideY > 0 ? Math.hypot(outsideX, outsideY) : Math.min(x - left, right - x, y - top, bottom - y);
+    best = chooseCloser(best, { kind: "cbar", id: rectangle.id, distance, priority: 1 });
+  }
+  return best ? { kind: best.kind, id: best.id, originDatasetId: props.originDatasetId } : null;
+}
+
+function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
+  const sbarId = surface.value?.getSbarIdAtCoordinate(x);
+  if (!sbarId) return null;
+  const marker = surface.value?.getSbarMarker(sbarId);
+  if (!marker) return null;
+  const centerX = marker.x + marker.width / 2;
+  if (Math.abs(x - centerX) > Math.max(3, marker.width / 2 + 1) || y < marker.y - 5 || y > marker.y + marker.height + 5) return null;
+  return { kind: "sbar", id: sbarId, originDatasetId: props.originDatasetId };
+}
+
+function updateHoveredObject(point: { x: number; y: number } | null): void {
+  const nextObject = !point || !Number.isFinite(point.x) || !Number.isFinite(point.y)
+    ? null
+    : hitTestStructureObject(point.x, point.y) ?? hitTestSbar(point.x, point.y);
+  const current = hoveredObject.value;
+  if (current?.kind === nextObject?.kind && current?.id === nextObject?.id && current?.originDatasetId === nextObject?.originDatasetId) return;
+  hoveredObject.value = nextObject;
+  hoveredSbarMarker.value = nextObject?.kind === "sbar" ? surface.value?.getSbarMarker(nextObject.id) ?? null : null;
+}
+
+function handleChartClick(point: { x: number; y: number } | null): void {
+  if (!point) {
+    emit("selectionError", "The click did not resolve to a chart coordinate.");
+    return;
+  }
+  const selectedStructureObject = hitTestStructureObject(point.x, point.y);
+  if (selectedStructureObject) {
+    emit("objectClick", selectedStructureObject);
+    return;
+  }
+  const sbarId = surface.value?.getSbarIdAtCoordinate(point.x);
+  if (!sbarId || !surface.value?.hasSbarId(sbarId)) {
+    emit("selectionError", "The clicked horizontal position does not map to an SBar in the current sequence.");
+    return;
+  }
+  emit("sbarClick", sbarId);
 }
 
 function handleChartInteractionError(message: string): void {
@@ -178,13 +257,35 @@ onBeforeUnmount(stopBoundaryDrag);
       :show-footer="true"
       panel-label="Origin SBar chart"
       :chart-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
-      @sbar-click="emit('sbarClick', $event)"
-      @object-click="emit('objectClick', $event)"
-      @chart-interaction-error="handleChartInteractionError"
+      @chart-click="handleChartClick"
       @pointer-position="handlePointerPosition"
       @projection-frame="handleProjectionFrame"
     >
       <template #chart-structure-overlays="{ cbarRectangles, swingSegments }">
+        <rect
+          v-if="hoveredSbarMarker"
+          class="origin-object-hover-sbar"
+          :x="hoveredSbarMarker.x"
+          :y="hoveredSbarMarker.y"
+          :width="hoveredSbarMarker.width"
+          :height="hoveredSbarMarker.height"
+          data-testid="origin-hover-sbar"
+          :data-sbar-id="hoveredSbarMarker.id"
+        />
+        <line
+          v-for="segment in swingSegments.filter((item) => hoveredObject?.kind === 'swing' && hoveredObject.id === item.id)"
+          :key="`hover-${segment.id}`"
+          :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2"
+          stroke="#C3CBD1" stroke-width="2" stroke-linecap="round"
+          data-testid="origin-hover-swing" :data-swing-id="segment.id"
+        />
+        <rect
+          v-for="rectangle in cbarRectangles.filter((item) => hoveredObject?.kind === 'cbar' && hoveredObject.id === item.id)"
+          :key="`hover-${rectangle.id}`"
+          :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height"
+          fill="none" stroke="#C3CBD1" stroke-width="1.75"
+          data-testid="origin-hover-cbar" :data-cbar-id="rectangle.id"
+        />
         <rect
           v-if="selectedSbarMarker"
           class="origin-object-selected-sbar"
@@ -226,6 +327,7 @@ onBeforeUnmount(stopBoundaryDrag);
         <span class="origin-chart-selection-status" data-testid="origin-chart-selection-status">{{ selectionStatus }}</span>
       </template>
       <template #chart-interaction-overlay>
+        <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="origin-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
         <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
           <div
             v-if="selectionPending && selectionStartX !== null && previewX !== null"
@@ -268,5 +370,6 @@ onBeforeUnmount(stopBoundaryDrag);
 <style scoped>
 .origin-chart-adapter { position: relative; display: contents; }
 .origin-selection-line::before { position: absolute; top: -6px; bottom: -6px; left: -8px; width: 17px; content: ""; background: transparent; cursor: ew-resize; }
+.origin-object-hover-label { position: absolute; z-index: 4; top: 8px; left: 10px; max-width: calc(100% - 20px); padding: 3px 6px; border: 1px solid #626c75; border-radius: 3px; background: rgba(24, 29, 34, 0.92); color: #d7dde1; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
 .origin-chart-selection-status { min-width: 0; margin-left: auto; overflow: hidden; color: #a5b0b7; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
 </style>
