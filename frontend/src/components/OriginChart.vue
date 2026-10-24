@@ -129,7 +129,10 @@ function scheduleOverlayUpdate(): void {
   // Lightweight Charts updates its internal canvases during wheel zoom/pan.
   // Read the final public coordinate transforms on the next paint so SVG
   // overlays never lag one interaction frame behind the SBar series.
-  if (overlayUpdateFrame !== null) cancelAnimationFrame(overlayUpdateFrame);
+  // Keep the already scheduled frame. Its callback reads the latest chart
+  // transforms and pending viewport, so cancelling/restarting it only adds churn
+  // and can starve projection during a continuous stream of input events.
+  if (overlayUpdateFrame !== null) return;
   overlayUpdateFrame = requestAnimationFrame(() => {
     overlayUpdateFrame = null;
     updateSbarCoordinates();
