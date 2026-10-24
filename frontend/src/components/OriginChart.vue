@@ -52,6 +52,9 @@ let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
 let suppressSyncEmit = false;
+let viewportEmitFrame: number | null = null;
+let pendingViewportRange: { from: number; to: number } | null = null;
+let expectedSyncedRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = {
@@ -698,15 +701,29 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
 
 function handleVisibleRangeChange(): void {
   scheduleOverlayUpdate();
-  if (!props.syncEnabled || props.displayContext !== "snapshot-reference" || suppressSyncEmit || !chart || props.bars.length === 0) return;
+  if (!props.syncEnabled || props.displayContext !== "snapshot-reference" || !chart || props.bars.length === 0) return;
   const range = chart.timeScale().getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
-  // Emit the raw logical range. It may extend beyond either data boundary;
-  // clamping to SBar IDs would destroy the invariant Snapshot = Live + offset.
-  emit("viewportChange", {
-    source: "reference",
-    from: range.from,
-    to: range.to,
+
+  // Ignore the asynchronous echo of a range applied from Live. A microtask-only
+  // guard is insufficient if Lightweight Charts publishes its range callback later.
+  if (expectedSyncedRange) {
+    const expected = expectedSyncedRange;
+    expectedSyncedRange = null;
+    if (Math.abs(range.from - expected.from) < 0.01 && Math.abs(range.to - expected.to) < 0.01) return;
+  }
+  if (suppressSyncEmit) return;
+
+  // Zoom/pan can produce many range events in one frame. Publish only the latest
+  // raw fractional range so the peer chart redraws at most once per animation frame.
+  pendingViewportRange = { from: range.from, to: range.to };
+  if (viewportEmitFrame !== null) return;
+  viewportEmitFrame = requestAnimationFrame(() => {
+    viewportEmitFrame = null;
+    const latest = pendingViewportRange;
+    pendingViewportRange = null;
+    if (!latest || !props.syncEnabled || props.displayContext !== "snapshot-reference" || !chart) return;
+    emit("viewportChange", { source: "reference", from: latest.from, to: latest.to });
   });
 }
 
@@ -718,6 +735,7 @@ function applySyncRequest(request: ReplayChartViewportSync | null | undefined): 
   const to = request.to + request.offset;
   if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return;
   if (current && Math.abs(current.from - from) < 0.01 && Math.abs(current.to - to) < 0.01) return;
+  expectedSyncedRange = { from, to };
   suppressSyncEmit = true;
   chart.timeScale().setVisibleLogicalRange({ from, to });
   queueMicrotask(() => { suppressSyncEmit = false; });
@@ -864,10 +882,9 @@ watch(() => [props.bars, props.structure, props.originDatasetId] as const, () =>
 });
 watch(() => props.syncRequest, (request) => {
   applySyncRequest(request);
-  // Viewport requests can arrive rapidly during wheel zoom/pan. Defer overlay
-  // reprojection to the shared animation frame instead of doing it synchronously
-  // here and again from Lightweight Charts' visible-range callback.
-  scheduleOverlayUpdate();
+  // The source chart already scheduled its own overlay refresh from the native
+  // range callback. Only the receiving chart needs this extra projection.
+  if (request?.source !== "reference") scheduleOverlayUpdate();
 }, { deep: true });
 watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, updateSbarCoordinates);
 watch(() => props.selectedObject, () => {
@@ -899,6 +916,12 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(overlayUpdateFrame);
     overlayUpdateFrame = null;
   }
+  if (viewportEmitFrame !== null) {
+    cancelAnimationFrame(viewportEmitFrame);
+    viewportEmitFrame = null;
+  }
+  pendingViewportRange = null;
+  expectedSyncedRange = null;
   chart?.remove();
   chart = null;
   candleSeries = null;
