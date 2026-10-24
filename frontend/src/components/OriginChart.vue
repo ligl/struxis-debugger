@@ -219,11 +219,6 @@ onBeforeUnmount(stopBoundaryDrag);
 
 <style scoped>
 .origin-chart-adapter { position: relative; display: contents; }
-.origin-selection-overlay { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-.origin-selection-shade { position: absolute; top: 0; bottom: 0; background: rgb(198 160 107 / 10%); border-left: 1px solid rgb(198 160 107 / 42%); border-right: 1px solid rgb(198 160 107 / 42%); pointer-events: none; }
-.origin-selection-line { position: absolute; top: 0; bottom: 0; width: 1px; background: #C6A06B; pointer-events: auto; }
 .origin-selection-line::before { position: absolute; top: -6px; bottom: -6px; left: -8px; width: 17px; content: ""; background: transparent; cursor: ew-resize; }
-.origin-selection-line-start, .origin-selection-line-end, .origin-selection-line-preview { border-left: 1px dashed #C6A06B; background: transparent; }
-.origin-selection-line-preview { pointer-events: none; }
 .origin-chart-selection-status { min-width: 0; margin-left: auto; overflow: hidden; color: #a5b0b7; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
 </style>
