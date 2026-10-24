@@ -207,7 +207,8 @@ describe("OriginChart", () => {
     const end = wrapper.get('[data-testid="snapshot-live-range-end"]');
     expect(start.attributes("x1")).toBe("200");
     expect(end.attributes("x1")).toBe("300");
-    expect(start.attributes("opacity")).toBe("0.3");
+    expect(start.attributes("opacity")).toBe("0.42");
+    expect(start.attributes("stroke-width")).toBe("0.9");
     expect(start.attributes("stroke-dasharray")).toBe("3 5");
 
     await wrapper.setProps({ syncEnabled: false });
