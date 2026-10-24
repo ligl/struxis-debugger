@@ -251,7 +251,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
       to: 5.5,
     });
     await nextTick();
-    expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-origin-dataset-id"))
+    expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-sequence-id"))
       .toBe("origin-1");
     expect(wrapper.get('[data-testid="origin-structure-overlay"]').attributes("style")).toContain("width: 700px");
     const chartPanel = wrapper.get('[data-testid="origin-chart-panel"]');
@@ -951,11 +951,11 @@ describe("SBarChartSurface and chart entry adapters", () => {
     const setSequenceProps = (props: Partial<{ bars: SBarDto[]; sequenceId: string }>) =>
       wrapper.setProps(props as never);
 
-    await setOriginChartProps({ bars: [bar()] });
+    await setSequenceProps({ bars: [bar()] });
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
     expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
 
-    await setOriginChartProps({
+    await setSequenceProps({
       bars: [
         bar(),
         bar({
@@ -967,7 +967,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     });
     expect(chartMocks.fitContent).toHaveBeenCalledOnce();
 
-    await setOriginChartProps({
+    await setSequenceProps({
       sequenceId: "origin-2",
       bars: [bar({
         sbarId: "1700000120000000000",
