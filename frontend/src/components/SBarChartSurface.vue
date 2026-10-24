@@ -18,7 +18,7 @@ const props = defineProps<{
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
-  chartClick: [point: { x: number; y: number } | null];
+  chartClick: [point: { x: number; y: number | null } | null];
   pointerPosition: [point: { x: number; y: number } | null];
   logicalRangeChange: [range: { from: number; to: number }];
   crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
@@ -264,8 +264,8 @@ function revealSbarRange(anchorIds: string[]): boolean {
 
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   const point = param.point;
-  emit("chartClick", point && Number.isFinite(point.x) && Number.isFinite(point.y)
-    ? { x: point.x, y: point.y }
+  emit("chartClick", point && Number.isFinite(point.x)
+    ? { x: point.x, y: Number.isFinite(point.y) ? point.y : null }
     : null);
 }
 
