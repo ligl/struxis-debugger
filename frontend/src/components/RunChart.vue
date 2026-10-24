@@ -414,7 +414,6 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
     crosshairSyncGate.setPeerPositionActive(false);
     crosshairSyncGate.beginApply();
     chart.clearCrosshairPosition?.();
-    queueMicrotask(() => { applyingSyncedCrosshair = false; });
     return;
   }
   const bar = bars.value.find((item) => item.sbarId === sync.sbarId);
@@ -424,9 +423,8 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
     return;
   }
   crosshairSyncGate.setPeerPositionActive(true);
-  applyingSyncedCrosshair = true;
+  crosshairSyncGate.beginApply();
   chart.setCrosshairPosition?.(sync.price, time, candleSeries);
-  queueMicrotask(() => { applyingSyncedCrosshair = false; });
 }
 
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
@@ -529,8 +527,8 @@ function updateHoveredObject(point: { x: number; y: number } | undefined): void 
 
 
 function publishCrosshair(param: { point?: { x: number; y: number } | undefined }): void {
-  if (!props.syncEnabled || applyingSyncedCrosshair) return;
-  hasSyncedCrosshair = false;
+  if (!props.syncEnabled || crosshairSyncGate.isApplying) return;
+  crosshairSyncGate.setPeerPositionActive(false);
   const point = param.point;
   if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
     emit("crosshairChange", { source: "live", sbarId: null, price: null });
@@ -856,7 +854,7 @@ watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => props.crosshairSync, (sync) => {
   if (!props.syncEnabled || !sync) {
     if (crosshairSyncGate.hasPeerPosition) {
-      hasSyncedCrosshair = false;
+      crosshairSyncGate.setPeerPositionActive(false);
       chart?.clearCrosshairPosition?.();
     }
     return;
@@ -865,10 +863,9 @@ watch(() => props.crosshairSync, (sync) => {
 }, { deep: true });
 watch(() => props.syncEnabled, (enabled) => {
   if (!enabled && crosshairSyncGate.hasPeerPosition) {
-    hasSyncedCrosshair = false;
-    applyingSyncedCrosshair = true;
+    crosshairSyncGate.setPeerPositionActive(false);
+    crosshairSyncGate.beginApply();
     chart?.clearCrosshairPosition?.();
-    queueMicrotask(() => { applyingSyncedCrosshair = false; });
   }
 });
 watch(() => props.syncRequest, (request) => {
