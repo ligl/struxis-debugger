@@ -57,10 +57,6 @@ function handlePointerPosition(point: { x: number; y: number } | null): void {
   previewX.value = props.selectionPending && selectionStartX.value !== null ? point?.x ?? null : null;
 }
 
-function handleSbarClick(sbarId: string): void {
-  emit("sbarClick", sbarId);
-}
-
 function handleChartInteractionError(message: string): void {
   emit("selectionError", message);
 }
@@ -167,7 +163,7 @@ onBeforeUnmount(stopBoundaryDrag);
       :show-footer="true"
       panel-label="Origin SBar chart"
       :chart-label="`Candlestick and volume chart for Origin ${originDatasetId}`"
-      @sbar-click="handleSbarClick"
+      @sbar-click="emit('sbarClick', $event)"
       @object-click="emit('objectClick', $event)"
       @chart-interaction-error="handleChartInteractionError"
       @pointer-position="handlePointerPosition"
