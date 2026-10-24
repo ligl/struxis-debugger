@@ -121,7 +121,7 @@ describe("Replay Crosshair command resolution", () => {
     }, bars, times, "reference")).toEqual({ kind: "clear" });
     expect(resolveReplayCrosshairCommand({
       source: "live", sbarId: "missing", price: 12,
-    }, bars, times)).toEqual({ kind: "clear" });
+    }, bars, times, "reference")).toEqual({ kind: "clear" });
   });
 
   it("resolves a valid peer message to an exact SBar time and price", () => {
