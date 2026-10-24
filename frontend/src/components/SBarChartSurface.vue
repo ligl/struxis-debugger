@@ -18,8 +18,8 @@ const props = defineProps<{
   showHeader?: boolean;
   showFooter?: boolean;
   panelClass?: string;
-  panelLabel: string;
-  chartLabel: string;
+  panelLabel?: string;
+  chartLabel?: string;
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -905,7 +905,7 @@ onBeforeUnmount(() => {
   <section
     class="origin-chart-panel"
     :class="panelClass"
-    :aria-label="panelLabel"
+    :aria-label="panelLabel ?? 'SBar chart'"
     data-testid="origin-chart-panel"
     @struxis-select-sbar="handleSbarSelectionRequest"
     @contextmenu.prevent.stop="handleChartContextMenu"
