@@ -102,3 +102,93 @@ export function projectCBarRectangles(
     }];
   });
 }
+
+export interface SwingGeometryInput {
+  swingId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  high: string;
+  low: string;
+  direction: string;
+  state: string;
+}
+
+export interface SwingSegmentGeometry {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  state: string;
+}
+
+export interface ProjectSwingSegmentsOptions {
+  swings: readonly SwingGeometryInput[];
+  coordinateForSbarId: (sbarId: string) => number | null | undefined;
+  priceToCoordinate: (price: number) => number | null | undefined;
+  indexBySbarId?: ReadonlyMap<string, number>;
+  visibleRange?: LogicalViewportRange | null;
+  viewportOverscan?: number;
+}
+
+/**
+ * Projects Swing endpoints to screen coordinates without deciding visual style.
+ * Callers own state-to-style mapping and any diagnostics for unknown states.
+ */
+export function projectSwingSegments(
+  options: ProjectSwingSegmentsOptions,
+): SwingSegmentGeometry[] {
+  const {
+    swings,
+    coordinateForSbarId,
+    priceToCoordinate,
+    indexBySbarId,
+    visibleRange,
+    viewportOverscan = 2,
+  } = options;
+  const from = visibleRange && Number.isFinite(visibleRange.from)
+    ? visibleRange.from - viewportOverscan
+    : Number.NEGATIVE_INFINITY;
+  const to = visibleRange && Number.isFinite(visibleRange.to)
+    ? visibleRange.to + viewportOverscan
+    : Number.POSITIVE_INFINITY;
+
+  return swings.flatMap((swing) => {
+    if (visibleRange && indexBySbarId) {
+      const startIndex = indexBySbarId.get(swing.sbarStartId);
+      const endIndex = indexBySbarId.get(swing.sbarEndId);
+      if (
+        startIndex === undefined ||
+        endIndex === undefined ||
+        Math.max(startIndex, endIndex) < from ||
+        Math.min(startIndex, endIndex) > to
+      ) return [];
+    }
+
+    const high = Number(swing.high);
+    const low = Number(swing.low);
+    if (!Number.isFinite(high) || !Number.isFinite(low)) return [];
+
+    const x1 = coordinateForSbarId(swing.sbarStartId);
+    const x2 = coordinateForSbarId(swing.sbarEndId);
+    const startsAtLow = swing.direction === "Up";
+    const y1 = priceToCoordinate(startsAtLow ? low : high);
+    const y2 = priceToCoordinate(startsAtLow ? high : low);
+    if (
+      !isFiniteCoordinate(x1) ||
+      !isFiniteCoordinate(x2) ||
+      !isFiniteCoordinate(y1) ||
+      !isFiniteCoordinate(y2)
+    ) return [];
+
+    return [{
+      id: swing.swingId,
+      x1,
+      y1,
+      x2,
+      y2,
+      state: swing.state,
+    }];
+  });
+}
+
