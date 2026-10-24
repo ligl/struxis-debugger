@@ -25,6 +25,7 @@ const emit = defineEmits<{
 type SurfacePort = {
   getSbarCoordinate: (sbarId: string) => number | null;
   getSbarIdAtCoordinate: (x: number, clampToSequence?: boolean) => string | null;
+  getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
   hasSbarId: (sbarId: string) => boolean;
 };
 const surface = ref<SurfacePort | null>(null);
@@ -79,13 +80,11 @@ function handleContextMenu(): void {
 }
 
 function resolveBoundaryDragSbar(clientX: number): string | null {
-  const chartHost = adapterRoot.value?.querySelector<HTMLElement>('[data-testid="origin-chart-canvas"]');
-  if (!chartHost || !Number.isFinite(clientX) || !surface.value) return null;
-  const bounds = chartHost.getBoundingClientRect();
+  if (!Number.isFinite(clientX) || !surface.value) return null;
   const currentStart = props.bars.findIndex((bar) => bar.sbarId === props.selectionStartSbarId);
   const currentEnd = props.bars.findIndex((bar) => bar.sbarId === props.selectionEndSbarId);
   if (currentStart < 0 || currentEnd < 0) return null;
-  const id = surface.value.getSbarIdAtCoordinate(clientX - bounds.left, true);
+  const id = surface.value.getSbarIdAtClientX(clientX, true);
   if (!id) return null;
   const index = props.bars.findIndex((bar) => bar.sbarId === id);
   if (index < 0) return null;
