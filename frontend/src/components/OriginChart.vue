@@ -811,7 +811,7 @@ function updateSnapshotCandleDimming(): void {
     ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
     const distances = adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0);
     const spacing = distances.length > 0 ? Math.min(...distances) : 8;
-    const width = Math.max(2, Math.min(10, spacing * 0.55));
+    const width = Math.max(2, Math.min(12, spacing * 0.8));
     const top = Math.min(highY as number, lowY as number);
     const bottom = Math.max(highY as number, lowY as number);
     overlays.push({
@@ -1086,7 +1086,7 @@ onBeforeUnmount(() => {
             :width="overlay.width"
             :height="overlay.height"
             fill="#07090B"
-            fill-opacity="0.48"
+            fill-opacity="0.42"
             stroke="none"
             data-testid="snapshot-dimmed-candle"
             :data-sbar-id="overlay.id"
