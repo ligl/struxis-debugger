@@ -7,7 +7,26 @@ import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.
 // avoids creating real canvas observers and animation-frame callbacks in jsdom.
 config.global.stubs = {
   ...config.global.stubs,
-  SnapshotReferenceChart: { template: '<div data-testid="snapshot-reference-chart-host"></div>' },
+  SnapshotReferenceChart: {
+    props: [
+      "bars",
+      "structure",
+      "snapshotId",
+      "syncEnabled",
+      "syncRequest",
+      "crosshairSync",
+      "liveBarCount",
+      "playbackEnabled",
+      "playbackOffset",
+      "processedCount",
+    ],
+    template: `<div
+      data-testid="snapshot-reference-chart-host"
+      :snapshot-playback-enabled="playbackEnabled"
+      :snapshot-playback-offset="playbackOffset"
+      :snapshot-processed-count="processedCount"
+    ></div>`,
+  },
 };
 import type { SnapshotArtifactDto, SnapshotReferenceDto } from "../../src/origin-types";
 
