@@ -106,6 +106,9 @@ describe("chart entry adapters", () => {
     expect(surface.props("showFooter")).toBe(false);
     expect(surface.props("panelClass")).toBe("snapshot-reference-chart");
     expect(surface.props("originDatasetId")).toBe("snapshot-1");
+    expect(surface.props("selectedObject")).toBeUndefined();
+    expect(surface.props("selectionEditable")).toBeUndefined();
+    expect(surface.props("selectionStartSbarId")).toBeUndefined();
     expect(surface.props("syncEnabled")).toBeUndefined();
     expect(surface.props("syncRequest")).toBeUndefined();
     expect(surface.props("crosshairSync")).toBeUndefined();
