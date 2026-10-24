@@ -1,5 +1,4 @@
 import type {
-  IChartApi,
   IPrimitivePaneRenderer,
   ISeriesApi,
   ISeriesPrimitive,
@@ -44,6 +43,7 @@ type PrimitiveDrawTarget = Parameters<IPrimitivePaneRenderer["draw"]>[0];
 type PrimitiveAttachedParameter = Parameters<
   NonNullable<ISeriesPrimitive<Time>["attached"]>
 >[0];
+type PrimitiveChart = PrimitiveAttachedParameter["chart"];
 
 const SWING_STYLE_BY_STATE: Readonly<Record<string, { color: string; dash: readonly number[] }>> = {
   Confirmed: { color: "#B49ACD", dash: [] },
@@ -90,7 +90,7 @@ function isVisibleByIndex(
 }
 
 abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Time> {
-  protected chart: IChartApi | null = null;
+  protected chart: PrimitiveChart | null = null;
   protected series: ISeriesApi<"Candlestick"> | null = null;
   private requestChartUpdate: (() => void) | null = null;
   private readonly paneViewList: readonly IPrimitivePaneView[];
