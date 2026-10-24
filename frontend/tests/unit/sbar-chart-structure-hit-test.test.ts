@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hitTestStructureObject } from "../../src/sbar-chart-structure-hit-test";
-import type { CBarRectangleGeometry, SwingSegmentGeometry } from "../../src/sbar-chart-structure-geometry";
+import type { SwingSegmentGeometry } from "../../src/sbar-chart-structure-geometry";
 
 const swings: SwingSegmentGeometry[] = [
   { id: "swing-2", x1: 10, y1: 10, x2: 90, y2: 90, state: "Confirmed" },
@@ -66,10 +66,10 @@ describe("structure hit-test adapter", () => {
 
     const hit = hitTestStructureObject({
       x: 50,
-      y: 10,
+      y: 5,
       swings: [
         { id: "swing-b", x1: 0, y1: 0, x2: 100, y2: 0, state: "Confirmed" },
-        { id: "swing-a", x1: 0, y1: 20, x2: 100, y2: 20, state: "Confirmed" },
+        { id: "swing-a", x1: 0, y1: 10, x2: 100, y2: 10, state: "Confirmed" },
       ],
       cbars: [],
       swingVisible: true,
