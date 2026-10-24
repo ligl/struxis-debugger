@@ -52,7 +52,6 @@ let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let firstSbarTime: Time | null = null;
 let secondSbarTime: Time | null = null;
 let suppressSyncEmit = false;
-let viewportEmitFrame: number | null = null;
 let pendingViewportRange: { from: number; to: number } | null = null;
 let expectedSyncedRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
@@ -134,6 +133,11 @@ function scheduleOverlayUpdate(): void {
   overlayUpdateFrame = requestAnimationFrame(() => {
     overlayUpdateFrame = null;
     updateSbarCoordinates();
+    const latest = pendingViewportRange;
+    pendingViewportRange = null;
+    if (latest && props.syncEnabled && props.displayContext === "snapshot-reference" && chart) {
+      emit("viewportChange", { source: "reference", from: latest.from, to: latest.to });
+    }
   });
 }
 
@@ -714,17 +718,11 @@ function handleVisibleRangeChange(): void {
   }
   if (suppressSyncEmit) return;
 
-  // Zoom/pan can produce many range events in one frame. Publish only the latest
-  // raw fractional range so the peer chart redraws at most once per animation frame.
+  // Zoom/pan can produce many range events in one frame. Keep only the latest
+  // raw fractional range; scheduleOverlayUpdate publishes it in the same frame
+  // as the overlay projection, so each chart has one viewport RAF pipeline.
   pendingViewportRange = { from: range.from, to: range.to };
-  if (viewportEmitFrame !== null) return;
-  viewportEmitFrame = requestAnimationFrame(() => {
-    viewportEmitFrame = null;
-    const latest = pendingViewportRange;
-    pendingViewportRange = null;
-    if (!latest || !props.syncEnabled || props.displayContext !== "snapshot-reference" || !chart) return;
-    emit("viewportChange", { source: "reference", from: latest.from, to: latest.to });
-  });
+  scheduleOverlayUpdate();
 }
 
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
@@ -915,10 +913,6 @@ onBeforeUnmount(() => {
   if (overlayUpdateFrame !== null) {
     cancelAnimationFrame(overlayUpdateFrame);
     overlayUpdateFrame = null;
-  }
-  if (viewportEmitFrame !== null) {
-    cancelAnimationFrame(viewportEmitFrame);
-    viewportEmitFrame = null;
   }
   pendingViewportRange = null;
   expectedSyncedRange = null;
