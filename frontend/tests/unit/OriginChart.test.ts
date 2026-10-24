@@ -190,6 +190,32 @@ describe("OriginChart", () => {
     wrapper.unmount();
   });
 
+  it("keeps Snapshot keyboard navigation local to the chart under the pointer or focus", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [bar(), bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001" }), bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001" })],
+        structure: null,
+        originDatasetId: "snapshot-1",
+        displayContext: "snapshot-reference",
+      },
+    });
+    const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
+    vi.spyOn(chartHost, "matches").mockReturnValue(false);
+    chartMocks.setVisibleLogicalRange.mockClear();
+
+    const ignored = new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true });
+    document.dispatchEvent(ignored);
+    expect(ignored.defaultPrevented).toBe(false);
+    expect(chartMocks.setVisibleLogicalRange).not.toHaveBeenCalled();
+
+    vi.mocked(chartHost.matches).mockReturnValue(true);
+    const handled = new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true });
+    document.dispatchEvent(handled);
+    expect(handled.defaultPrevented).toBe(true);
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
   it("cancels range selection and prevents chart right-click menus from propagating", async () => {
     const wrapper = mount(OriginChart, {
       attachTo: document.body,
