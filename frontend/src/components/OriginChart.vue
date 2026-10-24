@@ -188,30 +188,50 @@ function updateSyncBoundaryCoordinates(): void {
     return;
   }
 
-  // Resolve the first and last actual Live SBar centers inside the visible
-  // range, then translate those candle indices into Snapshot coordinates.
-  // The logical viewport itself remains fractional for synchronization; only
-  // these visual boundary markers intentionally align to real candles.
+  // Keep the raw fractional viewport transform used by chart synchronization,
+  // then intersect it with the finite Live interval. A narrow zoom can place
+  // the whole overlap between candle centers, so an empty integer-center range
+  // must not make both guide lines disappear.
   const liveFrom = request.source === "live" ? request.from : request.from - request.offset;
   const liveTo = request.source === "live" ? request.to : request.to - request.offset;
-  const firstLiveIndex = Math.max(0, Math.ceil(liveFrom - 1e-6));
-  const lastLiveIndex = Math.min(liveCount - 1, Math.floor(liveTo + 1e-6));
-  if (firstLiveIndex > lastLiveIndex) {
+  const overlapFrom = Math.max(0, liveFrom);
+  const overlapTo = Math.min(liveCount - 1, liveTo);
+  if (!Number.isFinite(overlapFrom) || !Number.isFinite(overlapTo) || overlapFrom > overlapTo) {
     syncBoundaryXs.value = null;
     return;
   }
 
-  const snapshotStart = props.bars[firstLiveIndex + request.offset];
-  const snapshotEnd = props.bars[lastLiveIndex + request.offset];
-  if (!snapshotStart || !snapshotEnd) {
-    syncBoundaryXs.value = null;
-    return;
-  }
-  const start = coordinateForSbarId(snapshotStart.sbarId);
-  const end = coordinateForSbarId(snapshotEnd.sbarId);
+  const firstLiveIndex = Math.max(0, Math.ceil(overlapFrom - 1e-6));
+  const lastLiveIndex = Math.min(liveCount - 1, Math.floor(overlapTo + 1e-6));
+  const timeScale = chart.timeScale();
+  const logicalToX = (liveIndex: number): number | null => {
+    const snapshotIndex = liveIndex + request.offset;
+    const bar = props.bars[snapshotIndex];
+    const byTime = bar ? coordinateForSbarId(bar.sbarId) : null;
+    if (byTime !== null && Number.isFinite(byTime)) return byTime;
+    const byLogical = timeScale.logicalToCoordinate(snapshotIndex);
+    return byLogical !== null && byLogical !== undefined && Number.isFinite(byLogical)
+      ? byLogical
+      : null;
+  };
+
+  // Prefer real candle centers whenever at least one center is visible.
+  // If zoomed into the gap between two centers, project the fractional overlap
+  // edges instead. This preserves the guides without changing viewport sync.
+  const start = firstLiveIndex <= lastLiveIndex
+    ? logicalToX(firstLiveIndex)
+    : (() => {
+        const x = timeScale.logicalToCoordinate(overlapFrom + request.offset);
+        return x !== null && x !== undefined && Number.isFinite(x) ? x : null;
+      })();
+  const end = firstLiveIndex <= lastLiveIndex
+    ? logicalToX(lastLiveIndex)
+    : (() => {
+        const x = timeScale.logicalToCoordinate(overlapTo + request.offset);
+        return x !== null && x !== undefined && Number.isFinite(x) ? x : null;
+      })();
   syncBoundaryXs.value = start === null || end === null ? null : { start, end };
 }
-
 function updateSwingSegments(): void {
   if (!chart || !candleSeries) {
     swingSegments.value = [];
