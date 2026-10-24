@@ -12,7 +12,7 @@ import {
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import { createSnapshotBrightCandleGeometry, resolveSnapshotLiveRangeCoordinates, resolveSnapshotLiveRangeIndices, resolveSnapshotProcessedRangeIndices, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairAnchor, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -860,27 +860,20 @@ function applyCrosshairOptions(): void {
 }
 
 function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
-  if (!chart || !candleSeries || props.displayContext !== "snapshot-reference" || !props.syncEnabled || !sync || sync.source === "reference") return;
-  if (!sync.sbarId || sync.price === null || !Number.isFinite(sync.price)) {
+  if (!chart || !candleSeries || props.displayContext !== "snapshot-reference" || !props.syncEnabled) return;
+  const command = resolveReplayCrosshairCommand(sync, props.bars, timeBySbarId);
+  if (command.kind === "ignore") return;
+  if (command.kind === "clear") {
     crosshairSyncGate.setPeerPositionActive(false);
     crosshairSyncGate.beginApply();
     chart.clearCrosshairPosition?.();
     return;
   }
-  const index = indexBySbarId.get(sync.sbarId);
-  const bar = index === undefined ? undefined : props.bars[index];
-  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
-  if (!bar || time === undefined) {
-    crosshairSyncGate.setPeerPositionActive(false);
-    crosshairSyncGate.beginApply();
-    chart.clearCrosshairPosition?.();
-    return;
-  }
+
   crosshairSyncGate.setPeerPositionActive(true);
   crosshairSyncGate.beginApply();
-  chart.setCrosshairPosition?.(sync.price, time, candleSeries);
+  chart.setCrosshairPosition?.(command.price, command.time, candleSeries);
 }
-
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
