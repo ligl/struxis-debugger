@@ -832,6 +832,7 @@ onMounted(() => {
       height: Math.max(1, Math.floor(entry.contentRect.height)),
     });
     updateSbarCoordinates();
+    emit("projectionFrame");
   });
   resizeObserver.observe(chartHost.value);
   updateChart();
