@@ -431,9 +431,17 @@ describe("SnapshotReferenceChart", () => {
         snapshotId: "snapshot-reference-crosshair-sync",
         structure: null,
         syncEnabled: true,
+        crosshairSync: {
+          revision: 1,
+          source: "live",
+          sbarId: bar().sbarId,
+          price: 10.5,
+        },
       },
     });
     await nextTick();
+
+    expect(chartMocks.setCrosshairPosition).toHaveBeenCalledWith(10.5, 1700000000, expect.anything());
 
     const initialOptions = chartMocks.createChart.mock.calls[0]?.[1] as {
       crosshair?: { mode?: number; vertLine?: { visible?: boolean }; horzLine?: { visible?: boolean } };
@@ -444,7 +452,7 @@ describe("SnapshotReferenceChart", () => {
 
     await wrapper.setProps({ syncEnabled: false });
     await nextTick();
-    expect(chartMocks.clearCrosshairPosition).not.toHaveBeenCalled();
+    expect(chartMocks.clearCrosshairPosition).toHaveBeenCalledTimes(1);
     expect(initialOptions.crosshair?.mode).toBe(0);
     expect(initialOptions.crosshair?.vertLine?.visible).toBe(true);
     expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
