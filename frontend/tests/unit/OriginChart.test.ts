@@ -196,7 +196,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("keeps Snapshot keyboard navigation local to the chart under the pointer or focus", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar(), bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001" }), bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001" })],
         structure: null,
@@ -223,7 +223,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("cancels range selection and prevents chart right-click menus from propagating", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       attachTo: document.body,
       props: {
         bars: [bar()],
@@ -258,7 +258,7 @@ describe("SBarChartSurface", () => {
         tsInit: "1700000060000000001",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "snapshot-reference-sync-late-mount",
@@ -296,7 +296,7 @@ describe("SBarChartSurface", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "snapshot-reference-live-range-guides",
@@ -371,7 +371,7 @@ describe("SBarChartSurface", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "snapshot-reference-live-range-subcandle-zoom",
@@ -396,7 +396,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
-    mount(OriginChart, {
+    mount(SBarChartSurface, {
       props: {
         bars: [bar()],
         originDatasetId: "snapshot-reference-01",
@@ -414,7 +414,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("keeps the Snapshot Reference crosshair locally visible when synchronization is ineligible", () => {
-    mount(OriginChart, {
+    mount(SBarChartSurface, {
       props: {
         bars: [bar()],
         originDatasetId: "snapshot-reference-local-crosshair",
@@ -436,7 +436,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("projects a Live crosshair onto the matching Snapshot SBar", async () => {
-    mount(OriginChart, {
+    mount(SBarChartSurface, {
       props: {
         bars: [bar()],
         originDatasetId: "snapshot-reference-crosshair-target",
@@ -461,7 +461,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("keeps Snapshot crosshair visible while sync eligibility changes", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar()],
         originDatasetId: "snapshot-reference-crosshair-sync",
@@ -492,7 +492,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar()],
         originDatasetId: "snapshot-reference-01",
@@ -508,7 +508,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("projects validated SBar data into candlestick and volume series without grid or branding", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [
           bar(),
@@ -587,7 +587,7 @@ describe("SBarChartSurface", () => {
         low: "10",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-structure",
@@ -658,7 +658,7 @@ describe("SBarChartSurface", () => {
         low: "10",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-object-hit-test",
@@ -755,7 +755,7 @@ describe("SBarChartSurface", () => {
         updatedAt: "1700000000000000000",
       }],
     };
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-hover-state",
@@ -810,7 +810,7 @@ describe("SBarChartSurface", () => {
       createdAt: "1700000000000000000",
       updatedAt: "1700000000000000000",
     };
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-swing-states",
@@ -853,7 +853,7 @@ describe("SBarChartSurface", () => {
         low: "10",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-zoom-overlay",
@@ -904,7 +904,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [
           bar(),
@@ -956,7 +956,7 @@ describe("SBarChartSurface", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-related-navigation",
@@ -985,7 +985,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("accepts an exact SBar ID through the component selection command and emits the normal selection event", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [
           bar(),
@@ -1026,7 +1026,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("previews a full-height range overlay and fixes both boundary lines on completion", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [
           bar(),
@@ -1088,7 +1088,7 @@ describe("SBarChartSurface", () => {
       }),
     ];
     chartMocks.coordinateToLogical.mockImplementation((x: number) => x < 150 ? 0 : x < 250 ? 1 : 2);
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-boundary-drag",
@@ -1129,7 +1129,7 @@ describe("SBarChartSurface", () => {
         tsInit: "1700000120000000001",
       }),
     ];
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars,
         originDatasetId: "origin-boundary-edit",
@@ -1151,7 +1151,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("toggles SBar, volume, CBar and Swing layers independently", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar()],
         originDatasetId: "origin-layer-visibility",
@@ -1210,7 +1210,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("preserves the current viewport for same-dataset updates and fits a new dataset", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [],
         originDatasetId: "origin-1",
@@ -1259,7 +1259,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("rejects invalid chart projection and clears all chart projections", async () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [bar({ close: "NaN" })],
         originDatasetId: "origin-invalid",
@@ -1279,7 +1279,7 @@ describe("SBarChartSurface", () => {
   });
 
   it("releases the chart and resize observer on unmount", () => {
-    const wrapper = mount(OriginChart, {
+    const wrapper = mount(SBarChartSurface, {
       props: {
         bars: [],
         originDatasetId: "origin-empty",
