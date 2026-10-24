@@ -816,7 +816,17 @@ watch(() => props.syncRequest, (request) => {
   if (request?.source !== "live") scheduleOverlayUpdate();
 }, { deep: true });
 watch([() => props.syncEnabled, () => props.syncOffset], ([enabled]) => {
-  if (enabled) handleVisibleRangeChange();
+  if (enabled) {
+    handleVisibleRangeChange();
+    return;
+  }
+
+  // Drop every deferred peer-sync artifact on eligibility loss. A frame
+  // already queued may still reproject this chart, but it cannot publish an
+  // old range or suppress a later, genuinely local viewport change.
+  pendingViewportRange = null;
+  expectedSyncedRange = null;
+  suppressSyncEmit = false;
 });
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
