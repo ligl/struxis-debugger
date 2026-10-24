@@ -16,8 +16,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision">];
-  syncEligibility: [eligible: boolean];
+  viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
+  syncEligibility: [eligible: boolean, offset: number | null];
 }>();
 
 const selectedSnapshotId = ref<string | null>(null);
@@ -50,26 +50,28 @@ function timeframeKey(barType: string | null | undefined): string | null {
   return match ? match[1] + ":" + match[2]!.toUpperCase() : null;
 }
 
-const syncEligible = computed(() => {
+const syncOffset = computed<number | null>(() => {
   const snapshot = selectedSnapshot.value;
   const bars = reference.value?.bars;
   const liveIds = props.liveSbarIds ?? [];
-  if (!snapshot || !bars || liveIds.length === 0) return false;
+  if (!snapshot || !bars || liveIds.length === 0) return null;
   const liveTimeframe = timeframeKey(props.liveBarType);
   const snapshotTimeframe = timeframeKey(snapshot.barType);
-  if (!liveTimeframe || liveTimeframe !== snapshotTimeframe) return false;
+  if (!liveTimeframe || liveTimeframe !== snapshotTimeframe) return null;
   const indexById = new Map(bars.map((bar, index) => [bar.sbarId, index] as const));
   const first = indexById.get(liveIds[0]!);
-  if (first === undefined) return false;
-  return liveIds.every((sbarId, offset) => indexById.get(sbarId) === first + offset);
+  if (first === undefined) return null;
+  const coversLiveSequence = liveIds.every((sbarId, liveIndex) => indexById.get(sbarId) === first + liveIndex);
+  return coversLiveSequence ? first : null;
 });
+const syncEligible = computed(() => syncOffset.value !== null);
 const syncBrightnessFilter = computed(() =>
   syncEligible.value && props.isPlaying
     ? "brightness(" + (0.55 + 0.45 * Math.max(0, Math.min(1, props.replayProgress ?? 0))) + ")"
     : "none",
 );
 
-watch(syncEligible, (eligible) => emit("syncEligibility", eligible), { immediate: true });
+watch([syncEligible, syncOffset], ([eligible, offset]) => emit("syncEligibility", eligible, offset), { immediate: true });
 
 
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
