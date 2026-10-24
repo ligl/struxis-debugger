@@ -60,6 +60,11 @@ function handleViewportChange(change: Omit<ReplayChartViewportSync, "revision" |
 }
 
 watch(() => props.testDataset?.testDatasetId, () => {
+  // A new Test Dataset invalidates the previous coordinate transform
+  // immediately; never let the old pair synchronize while Snapshot rechecks
+  // its SBar coverage against the new Live sequence.
+  syncEligible.value = false;
+  syncOffset.value = null;
   syncRequest.value = null;
 });
 
