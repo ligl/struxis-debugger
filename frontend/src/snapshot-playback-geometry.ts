@@ -130,3 +130,60 @@ export function createSnapshotBrightCandleGeometry(input: {
     height: Math.max(1, bottom - top),
   };
 }
+
+
+export interface SnapshotBrightCandleProjectionInput {
+  offset: number | null | undefined;
+  liveCount: number;
+  processedCount: number;
+  bars: readonly { sbarId: string; high: number | string; low: number | string }[];
+  visibleFrom: number;
+  visibleTo: number;
+  coordinateForSbarId: (sbarId: string) => number | null | undefined;
+  priceToCoordinate: (price: number) => number | null | undefined;
+}
+
+/**
+ * Project the processed Live prefix into Snapshot candle cutouts.
+ * The caller provides chart-library transforms; this function owns index
+ * validation, visible-range filtering, and the geometry projection sequence.
+ */
+export function projectSnapshotBrightCandles(
+  input: SnapshotBrightCandleProjectionInput,
+): SnapshotBrightCandleGeometry[] {
+  const processedRange = resolveSnapshotProcessedRangeIndices({
+    offset: input.offset,
+    liveCount: input.liveCount,
+    processedCount: input.processedCount,
+    snapshotCount: input.bars.length,
+  });
+  if (!processedRange) return [];
+
+  const overlays: SnapshotBrightCandleGeometry[] = [];
+  for (let index = processedRange.start; index < processedRange.endExclusive; index += 1) {
+    if (index < input.visibleFrom || index > input.visibleTo) continue;
+    const bar = input.bars[index];
+    if (!bar) continue;
+    const x = input.coordinateForSbarId(bar.sbarId);
+    const high = Number(bar.high);
+    const low = Number(bar.low);
+    if (!Number.isFinite(high) || !Number.isFinite(low)) continue;
+    const highY = input.priceToCoordinate(high);
+    const lowY = input.priceToCoordinate(low);
+    if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) continue;
+
+    const adjacentXs = [
+      index > 0 ? input.coordinateForSbarId(input.bars[index - 1]!.sbarId) : null,
+      index + 1 < input.bars.length ? input.coordinateForSbarId(input.bars[index + 1]!.sbarId) : null,
+    ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
+    const geometry = createSnapshotBrightCandleGeometry({
+      id: bar.sbarId,
+      x: x as number,
+      highY: highY as number,
+      lowY: lowY as number,
+      adjacentXs,
+    });
+    if (geometry) overlays.push(geometry);
+  }
+  return overlays;
+}
