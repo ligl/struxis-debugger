@@ -156,17 +156,16 @@ describe("OriginChart", () => {
         syncRequest: {
           revision: 1,
           source: "live",
-          fromSbarId: bars[0]!.sbarId,
-          fromOffset: 0.25,
-          toSbarId: bars[1]!.sbarId,
-          toOffset: 0.75,
+          from: 0.25,
+          to: 1.75,
+          offset: 100,
         },
       },
     });
 
     expect(chartMocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({
-      from: 0.25,
-      to: 1.75,
+      from: 100.25,
+      to: 101.75,
     });
     wrapper.unmount();
   });
