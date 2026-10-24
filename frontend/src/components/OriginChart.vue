@@ -889,7 +889,7 @@ function applyCrosshairOptions(): void {
 
 function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
   if (!chart || !candleSeries || props.displayContext !== "snapshot-reference" || !props.syncEnabled || !sync || sync.source === "reference") return;
-  if (!sync.sbarId) {
+  if (!sync.sbarId || sync.price === null || !Number.isFinite(sync.price)) {
     hasSyncedCrosshair = false;
     applyingSyncedCrosshair = true;
     chart.clearCrosshairPosition?.();
@@ -905,11 +905,7 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
   }
   hasSyncedCrosshair = true;
   applyingSyncedCrosshair = true;
-  chart.setCrosshairPosition?.(
-    sync.price !== null && Number.isFinite(sync.price) ? sync.price : Number(bar.close),
-    time,
-    candleSeries,
-  );
+  chart.setCrosshairPosition?.(sync.price, time, candleSeries);
   queueMicrotask(() => { applyingSyncedCrosshair = false; });
 }
 
