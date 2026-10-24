@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
+import { projectCBarRectangles } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -114,31 +115,19 @@ function updateCBarRectangles(): void {
     cbarRectangles.value = [];
     return;
   }
-  const visible = chart.timeScale().getVisibleLogicalRange();
-  const from = visible && Number.isFinite(visible.from) ? visible.from - 2 : Number.NEGATIVE_INFINITY;
-  const to = visible && Number.isFinite(visible.to) ? visible.to + 2 : Number.POSITIVE_INFINITY;
   const timeScale = chart.timeScale();
-  cbarRectangles.value = layerVisibility.value.cbar ? (props.structure?.cbars ?? []).flatMap((cbar) => {
-    const startIndex = indexBySbarId.get(cbar.sbarStartId);
-    const endIndex = indexBySbarId.get(cbar.sbarEndId);
-    if (startIndex === undefined || endIndex === undefined ||
-        Math.max(startIndex, endIndex) < from || Math.min(startIndex, endIndex) > to) return [];
-    const startTime = timeBySbarId.get(cbar.sbarStartId);
-    const endTime = timeBySbarId.get(cbar.sbarEndId);
-    const high = Number(cbar.high);
-    const low = Number(cbar.low);
-    if (startTime === undefined || endTime === undefined || !Number.isFinite(high) || !Number.isFinite(low)) return [];
-    const startX = timeScale.timeToCoordinate(startTime);
-    const endX = timeScale.timeToCoordinate(endTime);
-    const highY = candleSeries.priceToCoordinate(high);
-    const lowY = candleSeries.priceToCoordinate(low);
-    if ([startX, endX, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return [];
-    const left = Math.min(startX as number, endX as number);
-    const right = Math.max(startX as number, endX as number);
-    const top = Math.min(highY as number, lowY as number);
-    const bottom = Math.max(highY as number, lowY as number);
-    return [{ id: cbar.cbarId, x: left, y: top, width: right - left, height: bottom - top }];
-  }) : [];
+  cbarRectangles.value = layerVisibility.value.cbar
+    ? projectCBarRectangles({
+      cbars: props.structure?.cbars ?? [],
+      indexBySbarId,
+      visibleRange: timeScale.getVisibleLogicalRange(),
+      coordinateForSbarId: (sbarId) => {
+        const time = timeBySbarId.get(sbarId);
+        return time === undefined ? null : timeScale.timeToCoordinate(time);
+      },
+      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
+    })
+    : [];
 }
 
 function scheduleOverlayUpdate(): void {
