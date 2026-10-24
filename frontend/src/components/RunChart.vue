@@ -97,6 +97,7 @@ let visibleRangeListener: (() => void) | null = null;
 let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
+let crosshairUpdateFrame: number | null = null;
 const viewportSyncGate = new ReplayViewportSyncGate();
 const crosshairSyncGate = new ReplayCrosshairSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
@@ -179,7 +180,11 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
     chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
   };
   applySelectedCrosshair();
-  requestAnimationFrame(applySelectedCrosshair);
+  if (crosshairUpdateFrame !== null) cancelAnimationFrame(crosshairUpdateFrame);
+  crosshairUpdateFrame = requestAnimationFrame(() => {
+    crosshairUpdateFrame = null;
+    applySelectedCrosshair();
+  });
   return true;
 }
 
@@ -819,6 +824,10 @@ watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibi
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleChartKeyboard);
   crosshairLogicalIndex = null;
+  if (crosshairUpdateFrame !== null) {
+    cancelAnimationFrame(crosshairUpdateFrame);
+    crosshairUpdateFrame = null;
+  }
   visibleRangeListener?.();
   visibleRangeListener = null;
   if (chart && chartClickListener) chart.unsubscribeClick?.(chartClickListener);
