@@ -977,12 +977,18 @@ onMounted(() => {
   queueMicrotask(() => { suppressSyncEmit = false; });
 });
 
-watch(() => [props.bars, props.structure, props.originDatasetId] as const, () => {
+watch(() => [props.bars, props.originDatasetId] as const, () => {
   suppressSyncEmit = true;
   updateChart();
   queueMicrotask(() => { suppressSyncEmit = false; });
   updateHoveredObject(undefined);
 });
+watch(() => props.structure, () => {
+  // A Snapshot checkpoint advances its structure projection without rebuilding
+  // immutable candle/volume series. Reproject only SVG structure geometry.
+  updateSbarCoordinates();
+  updateHoveredObject(undefined);
+}, { deep: true });
 watch(() => props.syncRequest, (request) => {
   applySyncRequest(request);
   // The source chart already scheduled its own overlay refresh from the native
@@ -1113,6 +1119,32 @@ onBeforeUnmount(() => {
               fill="black"
               data-testid="snapshot-bright-candle-cutout"
               :data-sbar-id="overlay.id"
+            />
+            <rect
+              v-for="rectangle in cbarRectangles"
+              :key="`bright-cbar-${rectangle.id}`"
+              :x="rectangle.x"
+              :y="rectangle.y"
+              :width="rectangle.width"
+              :height="rectangle.height"
+              fill="white"
+              stroke="black"
+              stroke-width="3"
+              data-testid="snapshot-bright-cbar-cutout"
+              :data-cbar-id="rectangle.id"
+            />
+            <line
+              v-for="segment in swingSegments"
+              :key="`bright-swing-${segment.id}`"
+              :x1="segment.x1"
+              :y1="segment.y1"
+              :x2="segment.x2"
+              :y2="segment.y2"
+              stroke="black"
+              stroke-width="5"
+              stroke-linecap="round"
+              data-testid="snapshot-bright-swing-cutout"
+              :data-swing-id="segment.id"
             />
           </mask>
         </defs>
