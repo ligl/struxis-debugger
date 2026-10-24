@@ -11,6 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
+import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import type { OriginObjectSelection, ReplayChartCrosshairSync, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
 const props = defineProps<{
@@ -1203,48 +1204,12 @@ onBeforeUnmount(() => {
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
-        <defs v-if="props.snapshotPlaybackEnabled === true && props.syncEnabled === true">
-          <mask id="snapshot-playback-brightness-mask" maskUnits="userSpaceOnUse">
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            <rect
-              v-for="overlay in snapshotBrightCandles"
-              :key="overlay.id"
-              :x="overlay.x"
-              :y="overlay.y"
-              :width="overlay.width"
-              :height="overlay.height"
-              fill="black"
-              data-testid="snapshot-bright-candle-cutout"
-              :data-sbar-id="overlay.id"
-            />
-            <rect
-              v-for="rectangle in cbarRectangles"
-              :key="`bright-cbar-${rectangle.id}`"
-              :x="rectangle.x"
-              :y="rectangle.y"
-              :width="rectangle.width"
-              :height="rectangle.height"
-              fill="white"
-              stroke="black"
-              stroke-width="3"
-              data-testid="snapshot-bright-cbar-cutout"
-              :data-cbar-id="rectangle.id"
-            />
-            <line
-              v-for="segment in swingSegments"
-              :key="`bright-swing-${segment.id}`"
-              :x1="segment.x1"
-              :y1="segment.y1"
-              :x2="segment.x2"
-              :y2="segment.y2"
-              stroke="black"
-              stroke-width="5"
-              stroke-linecap="round"
-              data-testid="snapshot-bright-swing-cutout"
-              :data-swing-id="segment.id"
-            />
-          </mask>
-        </defs>
+        <SnapshotPlaybackOverlay
+          :enabled="props.snapshotPlaybackEnabled === true && props.syncEnabled === true"
+          :bright-candles="snapshotBrightCandles"
+          :cbar-rectangles="cbarRectangles"
+          :swing-segments="swingSegments"
+        />
 
         <g v-if="syncBoundaryXs" class="snapshot-live-range-markers" data-testid="snapshot-live-range-markers">
           <line
@@ -1392,18 +1357,7 @@ onBeforeUnmount(() => {
           data-testid="origin-selected-cbar"
           :data-cbar-id="rectangle.id"
         />
-        <rect
-          v-if="props.snapshotPlaybackEnabled === true && props.syncEnabled === true"
-          class="snapshot-playback-dimming"
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="#050709"
-          fill-opacity="0.68"
-          mask="url(#snapshot-playback-brightness-mask)"
-          data-testid="snapshot-playback-dimming"
-        />
+
       </svg>
       <div
         v-if="hoveredObject"
