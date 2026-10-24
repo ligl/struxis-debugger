@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createSnapshotBrightCandleGeometry,
+  projectSnapshotBrightCandles,
   resolveSnapshotLiveRangeCoordinates,
   resolveSnapshotLiveRangeIndices,
   resolveSnapshotProcessedRangeIndices,
@@ -118,5 +119,49 @@ describe("Snapshot bright candle geometry", () => {
       lowY: 2,
       adjacentXs: [3],
     })).toBeNull();
+  });
+});
+
+
+describe("Snapshot processed candle projection", () => {
+  const bars = [
+    { sbarId: "s0", high: 12, low: 8 },
+    { sbarId: "s1", high: 15, low: 10 },
+    { sbarId: "s2", high: 18, low: 13 },
+    { sbarId: "s3", high: 20, low: 16 },
+  ];
+  const xById: Record<string, number> = { s0: 0, s1: 10, s2: 20, s3: 30 };
+
+  it("projects only the processed Live prefix within the visible range", () => {
+    expect(projectSnapshotBrightCandles({
+      offset: 1,
+      liveCount: 3,
+      processedCount: 2,
+      bars,
+      visibleFrom: 1,
+      visibleTo: 2,
+      coordinateForSbarId: (id) => xById[id],
+      priceToCoordinate: (price) => price * -2,
+    }).map(({ id }) => id)).toEqual(["s1", "s2"]);
+  });
+
+  it("returns no geometry for an invalid overlap or unmappable coordinates", () => {
+    const input = {
+      offset: 3,
+      liveCount: 2,
+      processedCount: 2,
+      bars,
+      visibleFrom: -Infinity,
+      visibleTo: Infinity,
+      coordinateForSbarId: (id: string) => xById[id],
+      priceToCoordinate: (price: number) => price,
+    };
+    expect(projectSnapshotBrightCandles(input)).toEqual([]);
+    expect(projectSnapshotBrightCandles({
+      ...input,
+      offset: 0,
+      liveCount: 2,
+      coordinateForSbarId: () => null,
+    })).toEqual([]);
   });
 });
