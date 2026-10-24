@@ -87,17 +87,20 @@ function applyCrosshairRequest(sync: ReplayChartCrosshairSync | null | undefined
 
   const validBar = sync.sbarId !== null && props.bars.some((bar) => bar.sbarId === sync.sbarId);
   if (!validBar || sync.price === null || !Number.isFinite(sync.price)) {
-    crosshairGate.setPeerPositionActive(false);
-    crosshairGate.beginApply();
-    surface.value?.clearCrosshairPosition();
+    if (crosshairGate.hasPeerPosition) {
+      crosshairGate.setPeerPositionActive(false);
+      crosshairGate.beginApply();
+      surface.value?.clearCrosshairPosition();
+    }
     return;
   }
 
+  const replacingPeerPosition = crosshairGate.hasPeerPosition;
   crosshairGate.setPeerPositionActive(true);
   crosshairGate.beginApply();
   if (!surface.value?.applyCrosshairPosition(sync.sbarId!, sync.price)) {
     crosshairGate.setPeerPositionActive(false);
-    surface.value?.clearCrosshairPosition();
+    if (replacingPeerPosition) surface.value?.clearCrosshairPosition();
   }
 }
 
