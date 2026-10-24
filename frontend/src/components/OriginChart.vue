@@ -9,6 +9,8 @@ import {
   type IChartApi,
   type ISeriesApi,
   type Time,
+  type CandlestickData,
+  type UTCTimestamp,
 } from "lightweight-charts";
 import { mapOriginBarsToChart } from "../origin-chart-data";
 import type { OriginObjectSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -26,6 +28,9 @@ const props = defineProps<{
   syncEnabled?: boolean;
   syncRequest?: ReplayChartViewportSync | null;
   syncLiveBarCount?: number;
+  snapshotPlaybackEnabled?: boolean;
+  snapshotPlaybackOffset?: number | null;
+  snapshotProcessedCount?: number;
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -42,6 +47,7 @@ const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
+let baseCandleData: CandlestickData<UTCTimestamp>[] = [];
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let overlayUpdateFrame: number | null = null;
@@ -756,11 +762,48 @@ function fitContentShortcut(): boolean {
   return true;
 }
 
+
+/**
+ * Playback dims only the unprocessed suffix of the Live/Snapshot overlap.
+ * The Snapshot OHLC/time sequence remains unchanged. Lightweight Charts has no
+ * public setter for the colors of arbitrary historical points, so the existing
+ * candle data is re-submitted with per-point colors; no Snapshot data is fetched.
+ */
+function updateSnapshotPlaybackBrightness(): void {
+  if (!candleSeries || baseCandleData.length === 0) return;
+  const offset = props.snapshotPlaybackOffset;
+  const liveCount = Math.max(0, props.syncLiveBarCount ?? 0);
+  const processedCount = Math.max(0, Math.min(liveCount, props.snapshotProcessedCount ?? 0));
+  const shouldDimOverlap = props.displayContext === "snapshot-reference"
+    && props.snapshotPlaybackEnabled === true
+    && props.syncEnabled === true
+    && offset !== null
+    && offset !== undefined
+    && liveCount > 0;
+  if (!shouldDimOverlap) {
+    candleSeries.setData(baseCandleData);
+    return;
+  }
+  const dimStart = offset + processedCount;
+  const dimEnd = Math.min(baseCandleData.length, offset + liveCount);
+  const candles = baseCandleData.map((candle, index) => {
+    if (index < dimStart || index >= dimEnd) return candle;
+    const dimColor = candle.close > candle.open
+      ? "#3D5D49"
+      : candle.close < candle.open
+        ? "#694343"
+        : "#454A50";
+    return { ...candle, color: dimColor, borderColor: dimColor, wickColor: dimColor };
+  });
+  candleSeries.setData(candles);
+}
+
 function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
     const projection = mapOriginBarsToChart(props.bars);
-    candleSeries.setData(projection.candles);
+    baseCandleData = projection.candles;
+    updateSnapshotPlaybackBrightness();
     volumeSeries.setData(projection.volume);
     sbarIdByLogicalIndex = props.bars.map((bar) => bar.sbarId);
     indexBySbarId = new Map(sbarIdByLogicalIndex.map((sbarId, index) => [sbarId, index] as const));
@@ -786,6 +829,7 @@ function updateChart(): void {
     }
     updateSbarCoordinates();
   } catch (error) {
+    baseCandleData = [];
     sbarIdByLogicalIndex = [];
     indexBySbarId = new Map();
     timeBySbarId = new Map();
@@ -897,6 +941,10 @@ watch(() => props.syncRequest, (request) => {
   if (request?.source !== "reference") scheduleOverlayUpdate();
 }, { deep: true });
 watch(() => [props.syncEnabled, props.syncLiveBarCount] as const, updateSbarCoordinates);
+watch(
+  () => [props.snapshotPlaybackEnabled, props.snapshotPlaybackOffset, props.snapshotProcessedCount, props.syncLiveBarCount, props.syncEnabled] as const,
+  updateSnapshotPlaybackBrightness,
+);
 watch(() => props.selectedObject, () => {
   updateSbarMarkers();
   revealSelectedObject();
@@ -931,6 +979,7 @@ onBeforeUnmount(() => {
   chart?.remove();
   chart = null;
   candleSeries = null;
+  baseCandleData = [];
   volumeSeries = null;
   cbarRectangles.value = [];
   swingSegments.value = [];
