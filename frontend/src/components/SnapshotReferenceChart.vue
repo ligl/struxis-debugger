@@ -103,8 +103,11 @@ function applyCrosshairRequest(sync: ReplayChartCrosshairSync | null | undefined
 
 function invalidatePeerState(): void {
   viewportGate.clear();
+  const hadPeerPosition = crosshairGate.hasPeerPosition;
   crosshairGate.clear();
-  surface.value?.clearCrosshairPosition();
+  // Eligibility loss may remove only a position installed by the peer. Never
+  // clear a user's local Crosshair as a side effect of synchronization state.
+  if (hadPeerPosition) surface.value?.clearCrosshairPosition();
 }
 
 watch(() => props.syncRequest, (request) => {
@@ -125,13 +128,9 @@ watch(() => props.syncEnabled, (enabled) => {
 });
 
 watch(() => [props.snapshotId, props.bars.map((bar) => bar.sbarId).join("\\u0000")] as const, () => {
-  // Snapshot identity / sequence changes invalidate peer commands and echo
-  // guards, but never disable the chart's local pan, zoom or Crosshair.
+  // Sequence transitions invalidate peer commands immediately. The workspace
+  // coordinator must publish fresh commands for the new qualified sequence.
   invalidatePeerState();
-  if (props.syncEnabled) {
-    applyViewportRequest(props.syncRequest);
-    applyCrosshairRequest(props.crosshairSync);
-  }
 });
 
 onMounted(() => {
