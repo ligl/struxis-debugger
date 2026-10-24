@@ -99,7 +99,6 @@ let chartClickListener: ((param: { point?: { x: number; y: number } | undefined 
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
 let suppressSyncEmit = false;
-let viewportEmitFrame: number | null = null;
 let pendingViewportRange: { from: number; to: number } | null = null;
 let expectedSyncedRange: { from: number; to: number } | null = null;
 
@@ -399,17 +398,10 @@ function handleVisibleRangeChange(): void {
   }
   if (suppressSyncEmit) return;
 
-  // Coalesce high-frequency wheel/pan events; the peer chart receives only the
-  // latest fractional viewport once per frame, instead of redrawing per event.
+  // Coalesce high-frequency wheel/pan events; publish the latest fractional
+  // viewport in the same frame as the overlay projection.
   pendingViewportRange = { from: range.from, to: range.to };
-  if (viewportEmitFrame !== null) return;
-  viewportEmitFrame = requestAnimationFrame(() => {
-    viewportEmitFrame = null;
-    const latest = pendingViewportRange;
-    pendingViewportRange = null;
-    if (!latest || !props.syncEnabled || !chart) return;
-    emit("viewportChange", { source: "live", from: latest.from, to: latest.to });
-  });
+  scheduleOverlayUpdate();
 }
 
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
@@ -434,6 +426,11 @@ function scheduleOverlayUpdate(): void {
   overlayUpdateFrame = requestAnimationFrame(() => {
     overlayUpdateFrame = null;
     updateStructureOverlays();
+    const latest = pendingViewportRange;
+    pendingViewportRange = null;
+    if (latest && props.syncEnabled && chart) {
+      emit("viewportChange", { source: "live", from: latest.from, to: latest.to });
+    }
   });
 }
 
@@ -831,10 +828,6 @@ onBeforeUnmount(() => {
   if (overlayUpdateFrame !== null) {
     cancelAnimationFrame(overlayUpdateFrame);
     overlayUpdateFrame = null;
-  }
-  if (viewportEmitFrame !== null) {
-    cancelAnimationFrame(viewportEmitFrame);
-    viewportEmitFrame = null;
   }
   pendingViewportRange = null;
   expectedSyncedRange = null;
