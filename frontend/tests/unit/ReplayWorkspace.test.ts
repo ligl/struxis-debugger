@@ -14,14 +14,14 @@ const RunChartStub = defineComponent({
 const SnapshotReferencePanelStub = defineComponent({
   name: "SnapshotReferencePanel",
   props: {
-    isPlaying: { type: Boolean, default: false },
-    replayProgress: { type: Number, default: 0 },
+    progressApplies: { type: Boolean, default: false },
+    processedCount: { type: Number, default: 0 },
   },
-  template: '<div data-testid="snapshot-reference-panel-stub" :data-is-playing="isPlaying" :data-replay-progress="replayProgress" />',
+  template: '<div data-testid="snapshot-reference-panel-stub" :data-progress-applies="progressApplies" :data-processed-count="processedCount" />',
 });
 
 describe("ReplayWorkspace", () => {
-  it("passes frontend playback state and authoritative Run progress to Snapshot Reference", () => {
+  it("passes Live progress applicability and authoritative processed count to Snapshot Reference", () => {
     const Host = defineComponent({
       components: { ReplayWorkspace },
       setup() {
@@ -39,8 +39,8 @@ describe("ReplayWorkspace", () => {
       global: { stubs: { DualChartStack: DualChartStackStub, RunChart: RunChartStub, SnapshotReferencePanel: SnapshotReferencePanelStub } },
     });
     const referencePanel = wrapper.get('[data-testid="snapshot-reference-panel-stub"]');
-    expect(referencePanel.attributes("data-is-playing")).toBe("true");
-    expect(referencePanel.attributes("data-replay-progress")).toBe("0.25");
+    expect(referencePanel.attributes("data-progress-applies")).toBe("true");
+    expect(referencePanel.attributes("data-processed-count")).toBe("2");
   });
   it("keeps the workspace composition mounted while gating the live chart by active mode", async () => {
     const active = ref(false);
@@ -74,8 +74,8 @@ describe("ReplayWorkspace", () => {
     expect(wrapper.get('[data-testid="replay-workspace"]').isVisible()).toBe(false);
     expect(wrapper.find('[data-testid="run-chart-stub"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-is-playing")).toBe("false");
-    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-replay-progress")).toBe("0");
+    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-progress-applies")).toBe("false");
+    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-processed-count")).toBe("0");
 
     active.value = true;
     await nextTick();
