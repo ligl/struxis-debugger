@@ -211,7 +211,7 @@ describe("OriginChart", () => {
     expect(start.attributes("stroke-width")).toBe("0.9");
     expect(start.attributes("stroke-dasharray")).toBe("3 5");
 
-    await wrapper.setProps({ syncEnabled: false });
+    await wrapper.setProps({ syncEnabled: false } as never);
     await nextTick();
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
