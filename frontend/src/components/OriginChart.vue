@@ -1116,18 +1116,7 @@ onBeforeUnmount(() => {
             />
           </mask>
         </defs>
-        <rect
-          v-if="props.snapshotPlaybackEnabled === true && props.syncEnabled === true"
-          class="snapshot-playback-dimming"
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="#050709"
-          fill-opacity="0.68"
-          mask="url(#snapshot-playback-brightness-mask)"
-          data-testid="snapshot-playback-dimming"
-        />
+
         <g v-if="syncBoundaryXs" class="snapshot-live-range-markers" data-testid="snapshot-live-range-markers">
           <line
             :x1="syncBoundaryXs.start"
@@ -1251,6 +1240,18 @@ onBeforeUnmount(() => {
           stroke-width="2"
           data-testid="origin-selected-cbar"
           :data-cbar-id="rectangle.id"
+        />
+        <rect
+          v-if="props.snapshotPlaybackEnabled === true && props.syncEnabled === true"
+          class="snapshot-playback-dimming"
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="#050709"
+          fill-opacity="0.68"
+          mask="url(#snapshot-playback-brightness-mask)"
+          data-testid="snapshot-playback-dimming"
         />
       </svg>
       <div
