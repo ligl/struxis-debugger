@@ -24,16 +24,16 @@ describe("DualChartStack", () => {
     // Hovering focuses the splitter, so keyboard resizing works without a preliminary click.
     await splitter.trigger("mouseenter");
     expect(document.activeElement).toBe(splitter.element);
-    await splitter.trigger("keydown", { key: "ArrowDown" });
-    expect(splitter.attributes("aria-valuenow")).toBe("75");
-
     await splitter.trigger("keydown", { key: "ArrowUp" });
     expect(splitter.attributes("aria-valuenow")).toBe("73");
 
     await splitter.trigger("keydown", { key: "Home" });
     expect(splitter.attributes("aria-valuenow")).toBe("25");
+    await splitter.trigger("keydown", { key: "ArrowDown" });
+    expect(splitter.attributes("aria-valuenow")).toBe("27");
 
     // ArrowUp cannot reduce the upper share below its 25% minimum.
+    await splitter.trigger("keydown", { key: "Home" });
     await splitter.trigger("keydown", { key: "ArrowUp" });
     expect(splitter.attributes("aria-valuenow")).toBe("25");
 
