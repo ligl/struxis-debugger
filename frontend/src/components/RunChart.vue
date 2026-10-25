@@ -441,32 +441,53 @@ function updateStructureOverlays(): void {
   updateHoverMarker();
 }
 
+function candlestickBodyWidth(barSpacing: number, pixelRatio: number): number {
+  if (!Number.isFinite(barSpacing) || barSpacing <= 0) return Number.NaN;
+  const specialCaseFrom = 2.5;
+  const specialCaseTo = 4;
+  let width: number;
+  if (barSpacing >= specialCaseFrom && barSpacing <= specialCaseTo) {
+    width = Math.floor(3 * pixelRatio);
+  } else {
+    const coefficient = 1 - (0.2 * Math.atan(Math.max(specialCaseTo, barSpacing) - specialCaseTo)) / (Math.PI * 0.5);
+    const optimal = Math.min(Math.floor(barSpacing * coefficient * pixelRatio), Math.floor(barSpacing * pixelRatio));
+    width = Math.max(Math.floor(pixelRatio), optimal);
+  }
+  if (width >= 2) {
+    const wickWidth = Math.floor(pixelRatio);
+    if (wickWidth % 2 !== width % 2) width--;
+  }
+  return width / pixelRatio;
+}
+
 function markerForSbar(sbarId: string | null | undefined): SBarSelectionMarker | null {
   if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
   const index = bars.value.findIndex((bar) => bar.sbarId === sbarId);
   const bar = index >= 0 ? bars.value[index] : undefined;
-  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
   const timeScale = chart.timeScale();
+  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
   if (!bar || index < 0 || time === undefined) return null;
 
-  // Anchor the frame to the exact timestamp used by the rendered candle and
-  // other chart projections. Logical slot bounds determine width only; they
-  // must not determine the frame's absolute X position.
+  // Match the built-in candlestick body's width, not the full logical slot.
+  // Lightweight Charts calculates width from barSpacing and horizontal pixel
+  // ratio, including its narrow-spacing and pixel-parity rules.
   const center = timeScale.timeToCoordinate(time);
-  const left = timeScale.logicalToCoordinate(index - 0.5);
-  const right = timeScale.logicalToCoordinate(index + 0.5);
+  const barSpacing = Number(timeScale.options().barSpacing);
+  const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
+    ? Math.max(1, window.devicePixelRatio)
+    : 1;
+  const bodyWidth = candlestickBodyWidth(barSpacing, pixelRatio);
   const highY = candleSeries.priceToCoordinate(Number(bar.high));
   const lowY = candleSeries.priceToCoordinate(Number(bar.low));
-  if ([center, left, right, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
+  if ([center, barSpacing, bodyWidth, highY, lowY].some((value) => !Number.isFinite(value)) || center === null || highY === null || lowY === null) return null;
 
-  const slotWidth = Math.abs((right as number) - (left as number));
-  const top = Math.min(highY as number, lowY as number);
-  const bottom = Math.max(highY as number, lowY as number);
+  const top = Math.min(highY, lowY);
+  const bottom = Math.max(highY, lowY);
   return {
     id: sbarId,
-    x: (center as number) - slotWidth / 2,
+    x: center - bodyWidth / 2,
     y: top,
-    width: Math.max(1, slotWidth),
+    width: Math.max(1, bodyWidth),
     height: Math.max(1, bottom - top),
   };
 }
