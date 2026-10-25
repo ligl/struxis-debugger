@@ -74,16 +74,21 @@ const snapshots: SnapshotArtifactDto[] = [
 enableAutoUnmount(afterEach);
 
 describe("SnapshotReferencePanel", () => {
-  it("blurs the Snapshot selector after a selection change", async () => {
+  it("blurs the Snapshot selector after the native change event completes", async () => {
     const wrapper = mount(SnapshotReferencePanel, {
       props: { instrumentId: "AUD/USD.SIM", snapshots },
     });
     const select = wrapper.get('[data-testid="replay-reference-select"]');
-    const blur = vi.spyOn(select.element as HTMLSelectElement, "blur");
+    const element = select.element as HTMLSelectElement;
+    const blur = vi.spyOn(element, "blur");
+    element.focus();
+    expect(document.activeElement).toBe(element);
 
     await select.setValue("snapshot-complete-01");
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
     expect(blur).toHaveBeenCalledOnce();
+    expect(document.activeElement).not.toBe(element);
   });
 
   it("resolves a selected Snapshot SBar to immutable Snapshot data", async () => {
