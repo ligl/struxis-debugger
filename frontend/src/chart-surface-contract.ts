@@ -1,4 +1,4 @@
-import type { CandlestickData, HistogramData, UTCTimestamp } from "lightweight-charts";
+import type { CandlestickData, HistogramData, ISeriesPrimitive, Time, UTCTimestamp } from "lightweight-charts";
 
 /**
  * Neutral imperative port exposed by ChartSurface to its business adapters.
@@ -56,6 +56,16 @@ export interface ChartSurfaceStructureInteraction {
 }
 
 export interface ChartSurfacePort {
+  /**
+   * Injects a chart-local Series Primitive without exposing the chart or series.
+   * The Surface owns attachment and teardown; the caller owns the Primitive's
+   * implementation and domain-specific state. IDs must be unique per Surface.
+   */
+  registerPrimitive(
+    id: string,
+    primitive: ISeriesPrimitive<Time>,
+    dispose?: () => void,
+  ): () => void;
   /**
    * Policy-free series operations. The caller chooses full replacement versus
    * incremental update; the Surface owns the actual chart series.
