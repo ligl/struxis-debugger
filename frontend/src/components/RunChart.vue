@@ -265,7 +265,7 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   if (props.keyboardActive === false) return;
   if (
     props.keyboardActive === undefined &&
-    (!document.querySelector(".run-chart-surface")?.matches(":hover") && !document.querySelector(".run-chart-surface")?.contains(document.activeElement))
+    (!document.querySelector(".run-chart-surface .origin-chart-host")?.matches(":hover") && !document.querySelector(".run-chart-surface .origin-chart-host")?.contains(document.activeElement))
   ) return;
 
   // Vim normal-mode navigation aliases: h/ j/ k/ l behave exactly like the
