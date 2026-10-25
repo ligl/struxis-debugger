@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
-import SBarChartSurface from "./SBarChartSurface.vue";
+import ChartSurface from "./ChartSurface.vue";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import {
@@ -230,7 +230,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <SBarChartSurface
+  <ChartSurface
     ref="surface"
     :bars="bars"
     :structure="structure"
@@ -256,7 +256,7 @@ onMounted(() => {
       />
       <SnapshotLiveRangeMarkers :boundaries="boundaries" />
     </template>
-  </SBarChartSurface>
+  </ChartSurface>
 </template>
 
 <style scoped>
