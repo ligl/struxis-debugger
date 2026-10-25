@@ -23,6 +23,7 @@ const props = withDefaults(defineProps<{
   showFooter?: boolean;
   showLegend?: boolean;
   showEmptyState?: boolean;
+  showErrorState?: boolean;
   showStructureOverlay?: boolean;
   canvasTestId?: string;
   structureOverlayTestId?: string;
@@ -743,7 +744,7 @@ onBeforeUnmount(() => {
         <button class="chart-tool-button" type="button" :disabled="bars.length === 0" @click="fitContent">FIT</button>
       </div>
     </div>
-    <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="origin-chart-error">
+    <div v-if="chartError && showErrorState !== false" class="error-message chart-error" role="alert" data-testid="origin-chart-error">
       <strong>Chart projection rejected</strong>
       <span>{{ chartError }}</span>
     </div>
