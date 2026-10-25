@@ -75,9 +75,11 @@ watch(
     liveBars.value.map((bar) => bar.sbarId),
   ]),
   () => {
-    // Re-evaluate qualification from the new Live identity, but never carry a
-    // viewport or Crosshair command across a sequence transition—even when the
-    // recomputed numeric Offset happens to be unchanged.
+    // A reference sequence is qualified against one specific Live Dataset
+    // identity and SBar sequence. Invalidate that qualification as well as
+    // both peer commands; otherwise an old Snapshot could remain sync-eligible
+    // when a replacement Dataset happens to have the same bar IDs / Offset.
+    referenceSequence.value = null;
     syncRequest.value = null;
     crosshairSync.value = null;
   },
