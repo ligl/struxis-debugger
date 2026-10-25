@@ -76,8 +76,8 @@ function formatReplayField(field: string, value: unknown): string {
         <dl class="inspector-market-grid">
           <div><dt>OPEN</dt><dd data-testid="inspector-sbar-open">{{ selectedSbar.open }}</dd></div>
           <div><dt>HIGH</dt><dd data-testid="inspector-sbar-high">{{ selectedSbar.high }}</dd></div>
-          <div><dt>LOW</dt><dd data-testid="inspector-sbar-low">{{ selectedSbar.low }}</dd></div>
           <div><dt>CLOSE</dt><dd data-testid="inspector-sbar-close">{{ selectedSbar.close }}</dd></div>
+          <div><dt>LOW</dt><dd data-testid="inspector-sbar-low">{{ selectedSbar.low }}</dd></div>
           <div class="inspector-volume"><dt>VOLUME</dt><dd data-testid="inspector-sbar-volume">{{ selectedSbar.volume }}</dd></div>
         </dl>
       </div>
@@ -118,8 +118,8 @@ function formatReplayField(field: string, value: unknown): string {
             <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsInit, timeframe)" :copy-value="endpoint.object.tsInit" wide />
             <InspectorPropertyField label="Open" :value="endpoint.object.open" />
             <InspectorPropertyField label="High" :value="endpoint.object.high" />
-            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
             <InspectorPropertyField label="Close" :value="endpoint.object.close" />
+            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
             <InspectorPropertyField label="Volume" :value="endpoint.object.volume" />
           </dl>
         </details>
