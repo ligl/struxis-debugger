@@ -168,19 +168,19 @@ function applyPlaybackSeriesStyles(): void {
 
 function syncStructureInteractionState(): void {
   const geometry = surface.value?.getStructureGeometry();
-  const hovered = hoveredObject.value
-    && (hoveredObject.value.kind === "cbar" || hoveredObject.value.kind === "swing")
-    && (hoveredObject.value.kind === "cbar"
-      ? geometry?.cbarRectangles.some((item) => item.id === hoveredObject.value?.id)
-      : geometry?.swingSegments.some((item) => item.id === hoveredObject.value?.id))
-    ? { kind: hoveredObject.value.kind, id: hoveredObject.value.id }
+  const hoveredValue = hoveredObject.value;
+  const hovered = hoveredValue && (hoveredValue.kind === "cbar" || hoveredValue.kind === "swing")
+    && (hoveredValue.kind === "cbar"
+      ? geometry?.cbarRectangles.some((item) => item.id === hoveredValue.id)
+      : geometry?.swingSegments.some((item) => item.id === hoveredValue.id))
+    ? { kind: hoveredValue.kind, id: hoveredValue.id }
     : null;
-  const selected = selectedObject.value
-    && (selectedObject.value.kind === "cbar" || selectedObject.value.kind === "swing")
-    && (selectedObject.value.kind === "cbar"
-      ? geometry?.cbarRectangles.some((item) => item.id === selectedObject.value?.id)
-      : geometry?.swingSegments.some((item) => item.id === selectedObject.value?.id))
-    ? { kind: selectedObject.value.kind, id: selectedObject.value.id }
+  const selectedValue = selectedObject.value;
+  const selected = selectedValue && (selectedValue.kind === "cbar" || selectedValue.kind === "swing")
+    && (selectedValue.kind === "cbar"
+      ? geometry?.cbarRectangles.some((item) => item.id === selectedValue.id)
+      : geometry?.swingSegments.some((item) => item.id === selectedValue.id))
+    ? { kind: selectedValue.kind, id: selectedValue.id }
     : null;
   surface.value?.setStructureInteractionState(hovered, selected);
 }
