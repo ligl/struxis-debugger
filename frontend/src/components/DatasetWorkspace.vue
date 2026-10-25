@@ -62,7 +62,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
 </script>
 
 <template>
-  <div v-if="active" class="dataset-controls-host" data-testid="dataset-workspace">
+  <div v-show="active" class="dataset-controls-host" data-testid="dataset-workspace">
     <TestDatasetPanel
       :origin="origin"
       :test-dataset="testDataset"
@@ -102,7 +102,8 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
     </TestDatasetPanel>
   </div>
   <OriginChart
-    v-if="active && origin"
+    v-if="origin"
+    v-show="active"
     :bars="origin.bars"
     :structure="origin.structure"
     :origin-dataset-id="origin.originDatasetId"
