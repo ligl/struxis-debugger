@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData } from "../sbar-chart-runtime";
+import { CrosshairMode, type CandlestickData, type HistogramData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from "lightweight-charts";
+import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
@@ -547,6 +547,51 @@ function getVisibleLogicalRange(): { from: number; to: number } | null {
     : null;
 }
 
+function replaceSeriesData(
+  candles: readonly CandlestickData<UTCTimestamp>[],
+  volume: readonly HistogramData<UTCTimestamp>[],
+): boolean {
+  return replaceSbarChartSeriesData(candleSeries, volumeSeries, candles, volume);
+}
+
+function updateSeriesData(
+  candle: CandlestickData<UTCTimestamp>,
+  volume: HistogramData<UTCTimestamp>,
+  historicalUpdate = false,
+): boolean {
+  return updateSbarChartSeriesData(candleSeries, volumeSeries, candle, volume, historicalUpdate);
+}
+
+function fitContentPort(): boolean {
+  if (!chart) return false;
+  chart.timeScale().fitContent();
+  scheduleOverlayUpdate.flush();
+  return true;
+}
+
+function getTimeCoordinate(time: UTCTimestamp): number | null {
+  const value = chart?.timeScale().timeToCoordinate(time);
+  return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
+}
+
+function getTimeAtCoordinate(x: number): UTCTimestamp | null {
+  if (!chart || !Number.isFinite(x)) return null;
+  const value = chart.timeScale().coordinateToTime(x);
+  return typeof value === "number" && Number.isFinite(value) ? value as UTCTimestamp : null;
+}
+
+function getLogicalIndexAtCoordinate(x: number): number | null {
+  if (!chart || !Number.isFinite(x)) return null;
+  const value = chart.timeScale().coordinateToLogical(x);
+  return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
+}
+
+function getPriceAtCoordinate(y: number): number | null {
+  if (!candleSeries || !Number.isFinite(y)) return null;
+  const value = candleSeries.coordinateToPrice(y);
+  return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
+}
+
 function applyViewportRange(range: { from: number; to: number }): boolean {
   if (!chart || !Number.isFinite(range.from) || !Number.isFinite(range.to) || range.to <= range.from) return false;
   chart.timeScale().setVisibleLogicalRange(range);
@@ -584,7 +629,7 @@ function setStructureInteractionState(
   });
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
+defineExpose({ replaceSeriesData, updateSeriesData, fitContent: fitContentPort, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
