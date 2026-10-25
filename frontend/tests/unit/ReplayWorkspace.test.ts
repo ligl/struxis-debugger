@@ -9,24 +9,26 @@ const DualChartStackStub = defineComponent({
 });
 const RunChartStub = defineComponent({
   name: "RunChart",
+  emits: ["activate"],
   props: {
     syncEnabled: { type: Boolean, default: false },
     syncRequest: { type: Object, default: null },
     crosshairSync: { type: Object, default: null },
   },
-  template: '<div data-testid="run-chart-stub" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" :data-crosshair-revision="crosshairSync?.revision ?? \'\'" />',
+  template: '<div data-testid="run-chart-stub" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'activate\')" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" :data-crosshair-revision="crosshairSync?.revision ?? \'\'" />',
 });
 const SnapshotReferencePanelStub = defineComponent({
   name: "SnapshotReferencePanel",
   props: {
-    progressApplies: { type: Boolean, default: false },
+    keyboardActive: { type: Boolean, default: false },
+  progressApplies: { type: Boolean, default: false },
     processedCount: { type: Number, default: 0 },
     syncRequest: { type: Object, default: null },
     crosshairSync: { type: Object, default: null },
   },
-  emits: ["syncSequence", "viewportChange", "crosshairChange"],
+  emits: ["chartActivate", "syncSequence", "viewportChange", "crosshairChange"],
   template: `
-    <div data-testid="snapshot-reference-panel-stub" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
+    <div data-testid="snapshot-reference-panel-stub" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'chartActivate\')" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
       <button data-testid="sync-enable" @click="$emit('syncSequence', { snapshotId: 'snapshot-1', barType: 'AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL', sbarIds: ['x', '1', '2', '3', '4'] })">enable sync</button>
       <button data-testid="sync-disable" @click="$emit('syncSequence', null)">disable sync</button>
       <button data-testid="snapshot-viewport-change" @click="$emit('viewportChange', { source: 'reference', from: 2, to: 5 })">change viewport</button>
@@ -36,6 +38,39 @@ const SnapshotReferencePanelStub = defineComponent({
 });
 
 describe("ReplayWorkspace", () => {
+  it("routes chart-local keyboard ownership to only the activated chart", async () => {
+    const Host = defineComponent({
+      components: { ReplayWorkspace },
+      setup() {
+        return {
+          active: true,
+          origin: { originDatasetId: "origin-1", bars: [{ sbarId: "1" }, { sbarId: "2" }, { sbarId: "3" }, { sbarId: "4" }] },
+          testDataset: { testDatasetId: "test-1", originDatasetId: "origin-1", instrumentId: "AUD/USD.SIM", barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", startSbarId: "1", endSbarId: "4", sbarCount: 4 },
+          runState: null,
+        };
+      },
+      template: '<ReplayWorkspace :active="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="null" :selected-object="null" :snapshots="[]" />',
+    });
+    const wrapper = mount(Host, {
+      global: { stubs: { DualChartStack: DualChartStackStub, RunChart: RunChartStub, SnapshotReferencePanel: SnapshotReferencePanelStub } },
+    });
+    const live = wrapper.get('[data-testid="run-chart-stub"]');
+    const snapshot = wrapper.get('[data-testid="snapshot-reference-panel-stub"]');
+
+    expect(live.attributes("data-keyboard-active")).toBe("true");
+    expect(snapshot.attributes("data-keyboard-active")).toBe("false");
+
+    await snapshot.trigger("mouseenter");
+    await nextTick();
+    expect(live.attributes("data-keyboard-active")).toBe("false");
+    expect(snapshot.attributes("data-keyboard-active")).toBe("true");
+
+    await live.trigger("mouseenter");
+    await nextTick();
+    expect(live.attributes("data-keyboard-active")).toBe("true");
+    expect(snapshot.attributes("data-keyboard-active")).toBe("false");
+    wrapper.unmount();
+  });
   it("passes Live progress applicability and authoritative processed count to Snapshot Reference", () => {
     const Host = defineComponent({
       components: { ReplayWorkspace },
