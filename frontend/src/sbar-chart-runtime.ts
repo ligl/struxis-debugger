@@ -10,6 +10,25 @@ import {
   type ISeriesApi,
 } from "lightweight-charts";
 
+export interface SBarChartLayerVisibility {
+  sbar: boolean;
+  volume: boolean;
+}
+
+/**
+ * Applies chart-layer visibility without rewriting historical point styling.
+ * Replay progress colors belong to the Replay adapter; visibility is a
+ * series-level presentation concern shared by every SBar chart.
+ */
+export function applySbarChartSeriesVisibility(
+  candleSeries: ISeriesApi<"Candlestick"> | null | undefined,
+  volumeSeries: ISeriesApi<"Histogram"> | null | undefined,
+  visibility: SBarChartLayerVisibility,
+): void {
+  candleSeries?.applyOptions({ visible: visibility.sbar });
+  volumeSeries?.applyOptions({ visible: visibility.volume });
+}
+
 export interface SBarChartRuntimeOptions {
   width: number;
   height: number;
