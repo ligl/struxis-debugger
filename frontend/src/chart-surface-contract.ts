@@ -67,7 +67,6 @@ export interface ChartSurfacePort {
   getTimeAtCoordinate(x: number): UTCTimestamp | null;
   getLogicalIndexAtCoordinate(x: number): number | null;
   getPriceAtCoordinate(y: number): number | null;
-  getPriceCoordinate(price: number): number | null;
   getVisibleLogicalRange(): ChartSurfaceLogicalRange | null;
   applyViewportRange(range: ChartSurfaceLogicalRange): boolean;
   applyCrosshairPosition(sbarId: string, price: number): boolean;
