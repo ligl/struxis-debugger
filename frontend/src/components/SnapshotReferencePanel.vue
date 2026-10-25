@@ -10,6 +10,7 @@ const props = defineProps<{
   snapshots: SnapshotArtifactDto[];
   liveSbarIds?: string[];
   syncEligible?: boolean;
+  keyboardActive?: boolean;
   syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
   crosshairSync?: ReplayChartCrosshairSync | null;
@@ -133,23 +134,6 @@ watch(
   { flush: "post" },
 );
 
-watch(
-  () => props.syncIdentity,
-  () => {
-    // The workspace invalidates qualification at every Live identity boundary.
-    // Re-publish only the already-loaded immutable sequence after that invalidation;
-    // the workspace must still resolve compatibility against the new Live sequence.
-    const current = reference.value;
-    if (!current || selectedSnapshotId.value !== current.snapshotId) return;
-    emit("syncSequence", {
-      snapshotId: current.snapshotId,
-      barType: current.barType,
-      sbarIds: current.bars.map((bar) => bar.sbarId),
-    });
-  },
-  { flush: "post" },
-);
-
 watch(availableSnapshots, (available) => {
   if (!available.some((snapshot) => snapshot.snapshotId === selectedSnapshotId.value)) {
     selectedSnapshotId.value = null;
@@ -249,12 +233,14 @@ function handleSelection(event: Event): void {
           :structure="playbackStructure"
           :snapshot-id="reference.snapshotId"
           :sync-enabled="syncEligible"
+          :keyboard-active="keyboardActive"
           :sync-request="syncRequest"
           :crosshair-sync="crosshairSync"
           :live-bar-count="liveSbarIds?.length ?? 0"
           :playback-enabled="snapshotPlaybackEnabled"
           :playback-offset="syncOffset"
           :processed-count="processedCount ?? 0"
+          @activate="emit('chartActivate')"
           @viewport-change="emit('viewportChange', $event)"
           @crosshair-change="emit('crosshairChange', $event)"
         />
