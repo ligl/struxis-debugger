@@ -47,45 +47,6 @@ export function isSameLogicalRange(
 }
 
 
-export type ReplayViewportRangeObservation = "echo" | "suppressed" | "publish";
-
-/** Per-chart gate for peer-range echoes and transient suppression windows. */
-export class ReplayViewportSyncGate {
-  private expectedRange: LogicalViewportRange | null = null;
-  private suppressionRevision = 0;
-  private suppressed = false;
-
-  expectPeerRange(range: LogicalViewportRange): void {
-    this.expectedRange = { from: range.from, to: range.to };
-  }
-
-  beginSuppression(): number {
-    this.suppressionRevision += 1;
-    this.suppressed = true;
-    return this.suppressionRevision;
-  }
-
-  endSuppression(revision: number): void {
-    if (revision === this.suppressionRevision) this.suppressed = false;
-  }
-
-  observeRange(range: LogicalViewportRange): ReplayViewportRangeObservation {
-    if (this.expectedRange) {
-      const expected = this.expectedRange;
-      this.expectedRange = null;
-      if (isSameLogicalRange(range, expected)) return "echo";
-    }
-    return this.suppressed ? "suppressed" : "publish";
-  }
-
-  clear(): void {
-    this.expectedRange = null;
-    this.suppressed = false;
-    this.suppressionRevision += 1;
-  }
-}
-
-
 /** Owns transient Crosshair-sync state; chart APIs remain with each chart. */
 export class ReplayCrosshairSyncGate {
   private applyRevision = 0;
