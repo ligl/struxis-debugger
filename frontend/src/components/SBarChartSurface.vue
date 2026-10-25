@@ -343,6 +343,9 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
     if (!chart || !candleSeries || crosshairLogicalIndex !== selectedIndex) return;
     chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
   };
+  // Keyboard navigation is a local Crosshair change even when the chart API
+  // does not emit subscribeCrosshairMove for setCrosshairPosition.
+  emit("crosshairAnchorChange", { sbarId: bar.sbarId, price: Number(bar.close) });
   applySelectedCrosshair();
   if (crosshairUpdateFrame !== null) cancelAnimationFrame(crosshairUpdateFrame);
   crosshairUpdateFrame = requestAnimationFrame(() => {
