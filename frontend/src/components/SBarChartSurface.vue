@@ -212,22 +212,29 @@ function markerForSbar(sbarId: string | null | undefined): SBarMarker | null {
   const index = indexBySbarId.get(sbarId);
   const bar = index === undefined ? undefined : props.bars[index];
   const timeScale = chart.timeScale();
-  if (!bar || index === undefined) return null;
+  const time = timeBySbarId.get(sbarId);
+  if (!bar || index === undefined || time === undefined) return null;
 
-  // Lightweight Charts defines each bar's horizontal slot in logical space.
-  // Project both slot boundaries through the same scale used to render candles;
-  // never infer width from neighboring timestamp pixel distances.
+  // Anchor the frame to the same timestamp projection used by the candles and
+  // all other structure overlays. Logical slot bounds are used only to derive
+  // the current slot width, never as the frame's absolute X position.
+  const center = timeScale.timeToCoordinate(time);
   const left = timeScale.logicalToCoordinate(index - 0.5);
   const right = timeScale.logicalToCoordinate(index + 0.5);
   const highY = candleSeries.priceToCoordinate(Number(bar.high));
   const lowY = candleSeries.priceToCoordinate(Number(bar.low));
-  if ([left, right, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
+  if ([center, left, right, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
 
-  const x1 = Math.min(left as number, right as number);
-  const x2 = Math.max(left as number, right as number);
+  const slotWidth = Math.abs((right as number) - (left as number));
   const top = Math.min(highY as number, lowY as number);
   const bottom = Math.max(highY as number, lowY as number);
-  return { id: sbarId, x: x1, y: top, width: Math.max(1, x2 - x1), height: Math.max(1, bottom - top) };
+  return {
+    id: sbarId,
+    x: (center as number) - slotWidth / 2,
+    y: top,
+    width: Math.max(1, slotWidth),
+    height: Math.max(1, bottom - top),
+  };
 }
 
 function sbarRangeHighlight(sbarId: string | null | undefined): SBarMarker | null {
