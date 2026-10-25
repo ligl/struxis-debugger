@@ -162,6 +162,29 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.get('[data-testid="snapshot-reference-chart"]').attributes("style") ?? "").not.toContain("brightness(");
   });
 
+  it("re-publishes the loaded Snapshot sequence after Live identity changes", async () => {
+    invokeMock.mockResolvedValueOnce(reference);
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: { instrumentId: "AUD/USD.SIM", snapshots, syncIdentity: "test-1" },
+    });
+
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
+    await flushPromises();
+    const initialEventCount = wrapper.emitted("syncSequence")?.length ?? 0;
+    expect(initialEventCount).toBe(2); // null on selection, then the loaded sequence
+
+    await wrapper.setProps({ syncIdentity: "test-2" } as never);
+    await flushPromises();
+    const events = wrapper.emitted("syncSequence") ?? [];
+    expect(events).toHaveLength(initialEventCount + 1);
+    expect(events.at(-1)?.[0]).toEqual({
+      snapshotId: reference.snapshotId,
+      barType: reference.barType,
+      sbarIds: ["100"],
+    });
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
+  });
+
   it("ignores a stale async result when Snapshot selection changes rapidly", async () => {
     let resolveFirst!: (value: SnapshotReferenceDto) => void;
     let resolveSecond!: (value: SnapshotReferenceDto) => void;
