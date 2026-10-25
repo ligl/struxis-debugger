@@ -5,7 +5,7 @@ import { describeIpcError, getSnapshotReference } from "../origin-bridge";
 import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplaySnapshotInspectorSelection, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   /** Mirrors Live Replay chart lifecycle; panel state stays mounted while its chart runtime is recreated. */
   active?: boolean;
   instrumentId: string | null;
@@ -21,7 +21,9 @@ const props = defineProps<{
   processedCount?: number;
   /** Changes whenever the Live sequence identity is replaced. */
   syncIdentity?: string | null;
-}>();
+}>(), {
+  active: true,
+});
 
 const emit = defineEmits<{
   chartActivate: [];
