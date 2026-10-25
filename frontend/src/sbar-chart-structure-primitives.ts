@@ -411,6 +411,14 @@ export interface StructurePrimitiveObjectReference {
   id: string;
 }
 
+export interface StructurePrimitiveInteractionOptions {
+  hovered?: StructurePrimitiveObjectReference | null;
+  selected?: StructurePrimitiveObjectReference | null;
+  selectedColor?: string;
+  cbarSelectedWidth?: number;
+  swingSelectedWidth?: number;
+}
+
 export interface StructurePrimitiveSyncOptions {
   cbar: StructurePrimitiveController | null | undefined;
   swing: StructurePrimitiveController | null | undefined;
@@ -419,11 +427,7 @@ export interface StructurePrimitiveSyncOptions {
   projection: StructurePrimitiveProjection;
   cbarVisible: boolean;
   swingVisible: boolean;
-  hovered?: StructurePrimitiveObjectReference | null;
-  selected?: StructurePrimitiveObjectReference | null;
-  selectedColor?: string;
-  cbarSelectedWidth?: number;
-  swingSelectedWidth?: number;
+  interaction?: StructurePrimitiveInteractionOptions;
 }
 
 /**
@@ -432,7 +436,7 @@ export interface StructurePrimitiveSyncOptions {
  * This always replaces both object lists, rather than trying to infer changes
  * from object counts or array identity. That is required because Struxis
  * structure can backtrack, remove objects, and update an existing ID in place.
- * Visibility and interaction are applied in the same synchronization pass.
+ * Visibility and optional interaction state are applied in the same pass.
  */
 export function syncStructurePrimitiveControllers(
   options: StructurePrimitiveSyncOptions,
@@ -445,6 +449,24 @@ export function syncStructurePrimitiveControllers(
     projection,
     cbarVisible,
     swingVisible,
+    interaction,
+  } = options;
+
+  cbar?.setData(cbars, projection);
+  swing?.setData(swings, projection);
+  cbar?.setVisible(cbarVisible);
+  swing?.setVisible(swingVisible);
+  if (interaction) {
+    setStructurePrimitiveInteractionState({ cbar, swing, ...interaction });
+  }
+}
+
+export function setStructurePrimitiveInteractionState(
+  options: Pick<StructurePrimitiveSyncOptions, "cbar" | "swing"> & StructurePrimitiveInteractionOptions,
+): void {
+  const {
+    cbar,
+    swing,
     hovered = null,
     selected = null,
     selectedColor = "#D6A85D",
@@ -452,10 +474,6 @@ export function syncStructurePrimitiveControllers(
     swingSelectedWidth = 2.25,
   } = options;
 
-  cbar?.setData(cbars, projection);
-  swing?.setData(swings, projection);
-  cbar?.setVisible(cbarVisible);
-  swing?.setVisible(swingVisible);
   cbar?.setInteractionState({
     hoveredId: hovered?.kind === "cbar" ? hovered.id : null,
     selectedId: selected?.kind === "cbar" ? selected.id : null,
