@@ -445,22 +445,30 @@ function markerForSbar(sbarId: string | null | undefined): SBarSelectionMarker |
   if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
   const index = bars.value.findIndex((bar) => bar.sbarId === sbarId);
   const bar = index >= 0 ? bars.value[index] : undefined;
+  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
   const timeScale = chart.timeScale();
-  if (!bar || index < 0) return null;
+  if (!bar || index < 0 || time === undefined) return null;
 
-  // Use Lightweight Charts' actual logical slot boundaries, which track wheel
-  // zoom, range zoom, pan and resize without a pixel-width heuristic.
+  // Anchor the frame to the exact timestamp used by the rendered candle and
+  // other chart projections. Logical slot bounds determine width only; they
+  // must not determine the frame's absolute X position.
+  const center = timeScale.timeToCoordinate(time);
   const left = timeScale.logicalToCoordinate(index - 0.5);
   const right = timeScale.logicalToCoordinate(index + 0.5);
   const highY = candleSeries.priceToCoordinate(Number(bar.high));
   const lowY = candleSeries.priceToCoordinate(Number(bar.low));
-  if ([left, right, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
+  if ([center, left, right, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
 
-  const x1 = Math.min(left as number, right as number);
-  const x2 = Math.max(left as number, right as number);
+  const slotWidth = Math.abs((right as number) - (left as number));
   const top = Math.min(highY as number, lowY as number);
   const bottom = Math.max(highY as number, lowY as number);
-  return { id: sbarId, x: x1, y: top, width: Math.max(1, x2 - x1), height: Math.max(1, bottom - top) };
+  return {
+    id: sbarId,
+    x: (center as number) - slotWidth / 2,
+    y: top,
+    width: Math.max(1, slotWidth),
+    height: Math.max(1, bottom - top),
+  };
 }
 
 function sbarRangeHighlight(sbarId: string | null | undefined): SBarSelectionMarker | null {
