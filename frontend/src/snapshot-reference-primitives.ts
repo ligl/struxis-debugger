@@ -11,6 +11,10 @@ import { resolveSnapshotLiveRangeIndices } from "./snapshot-playback-geometry";
 type AttachedParameter = Parameters<NonNullable<ISeriesPrimitive<Time>["attached"]>>[0];
 type DrawTarget = Parameters<IPrimitivePaneRenderer["draw"]>[0];
 
+function finite(value: number | null | undefined): value is number {
+  return value !== null && value !== undefined && Number.isFinite(value);
+}
+
 /**
  * Snapshot range guides are a separate background-layer Primitive. Keeping
  * them separate from playback dimming lets the dashed guides sit behind the
