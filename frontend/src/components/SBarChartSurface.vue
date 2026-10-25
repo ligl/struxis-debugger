@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import { registerCBarPrimitive, registerSwingPrimitive, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
+import { registerCBarPrimitive, registerSwingPrimitive, type StructurePrimitiveController, type StructurePrimitiveInteractionState } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
@@ -559,7 +559,19 @@ function getStructureGeometry() {
   return { cbarRectangles: cbarRectangles.value, swingSegments: swingSegments.value };
 }
 
-defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, revealSbarRange, getStructureGeometry });
+function setStructureInteractionState(
+  hovered: { kind: "cbar" | "swing"; id: string } | null,
+  selected: { kind: "cbar" | "swing"; id: string } | null,
+): void {
+  const stateFor = (kind: "cbar" | "swing"): StructurePrimitiveInteractionState => ({
+    hoveredId: hovered?.kind === kind ? hovered.id : null,
+    selectedId: selected?.kind === kind ? selected.id : null,
+  });
+  cbarPrimitive?.setInteractionState(stateFor("cbar"));
+  swingPrimitive?.setInteractionState(stateFor("swing"));
+}
+
+defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, revealSbarRange, getStructureGeometry, setStructureInteractionState });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
