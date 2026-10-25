@@ -151,13 +151,13 @@ function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelec
   return hit ? { kind: hit.kind, id: hit.id, originDatasetId: props.originDatasetId } : null;
 }
 
-function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
+function hitTestSbar(x: number, y: number): Extract<OriginObjectSelection, { kind: "sbar" }> | null {
   const sbarId = surface.value?.getSbarIdAtCoordinate(x);
   if (!sbarId) return null;
   const marker = surface.value?.getSbarMarker(sbarId);
   if (!marker) return null;
-  const centerX = marker.x + marker.width / 2;
-  if (Math.abs(x - centerX) > Math.max(3, marker.width / 2 + 1) || y < marker.y - 5 || y > marker.y + marker.height + 5) return null;
+  // Keep the tolerance minimal and tied to the visible candle body bounds.
+  if (x < marker.x || x > marker.x + marker.width || y < marker.y || y > marker.y + marker.height) return null;
   return { kind: "sbar", id: sbarId, originDatasetId: props.originDatasetId };
 }
 
@@ -184,12 +184,12 @@ function handleChartClick(point: { x: number; y: number | null } | null): void {
       return;
     }
   }
-  const sbarId = surface.value?.getSbarIdAtCoordinate(point.x);
-  if (!sbarId || !surface.value?.hasSbarId(sbarId)) {
-    emit("selectionError", "The clicked horizontal position does not map to an SBar in the current sequence.");
-    return;
-  }
-  emit("sbarClick", sbarId);
+  // SBar selection must use the same visible OHLC marker bounds as hover.
+  // A click elsewhere in the same logical column (or elsewhere vertically
+  // across the chart) must not select the candle.
+  const selectedSbar = hitTestSbar(point.x, point.y ?? Number.NaN);
+  if (!selectedSbar || !surface.value?.hasSbarId(selectedSbar.id)) return;
+  emit("sbarClick", selectedSbar.id);
 }
 
 function handleSelectionRequest(event: Event): void {
