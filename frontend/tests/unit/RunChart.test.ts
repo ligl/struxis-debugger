@@ -216,11 +216,11 @@ describe("RunChart", () => {
     expect(mocks.candleSetData).toHaveBeenCalledWith([
       {
         time: 1700000060, open: 10, high: 12, low: 9, close: 11,
-        color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B",
+        color: "#557E65", borderColor: "#557E65", wickColor: "#557E65",
       },
       {
         time: 1700000120, open: 10, high: 12, low: 9, close: 11,
-        color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B",
+        color: "#557E65", borderColor: "#557E65", wickColor: "#557E65",
       },
     ]);
     expect(mocks.volumeSetData).toHaveBeenCalledWith([
@@ -517,7 +517,7 @@ describe("RunChart", () => {
     expect(mocks.candleSetData).toHaveBeenLastCalledWith([
       {
         time: 1700000060, open: 10, high: 12, low: 9, close: 11,
-        color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B",
+        color: "#557E65", borderColor: "#557E65", wickColor: "#557E65",
       },
       {
         time: 1700000120,
@@ -606,9 +606,9 @@ describe("RunChart", () => {
       high: 12,
       low: 9,
       close: 11,
-      color: "#79B58B",
-      borderColor: "#79B58B",
-      wickColor: "#79B58B",
+      color: "#557E65",
+      borderColor: "#557E65",
+      wickColor: "#557E65",
     }, true);
     expect(mocks.volumeUpdate).toHaveBeenCalledWith({
       time: 1700000120,
@@ -656,9 +656,9 @@ describe("RunChart", () => {
       high: 12,
       low: 9,
       close: 11,
-      color: "#79B58B",
-      borderColor: "#79B58B",
-      wickColor: "#79B58B",
+      color: "#557E65",
+      borderColor: "#557E65",
+      wickColor: "#557E65",
     }, true);
     expect(mocks.volumeUpdate).toHaveBeenCalledWith({
       time: 1700000120,
@@ -813,9 +813,9 @@ describe("RunChart", () => {
       high: 12,
       low: 9,
       close: 11,
-      color: "#79B58B",
-      borderColor: "#79B58B",
-      wickColor: "#79B58B",
+      color: "#557E65",
+      borderColor: "#557E65",
+      wickColor: "#557E65",
     }, true);
     expect(wrapper.findAll('[data-testid="run-cbar-rectangle"]')).toHaveLength(2);
     expect(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').attributes("y")).toBe("187");
