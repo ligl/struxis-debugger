@@ -848,8 +848,16 @@ onBeforeUnmount(() => {
           :data-testid="cbarTestId ?? 'cbar-range-rectangle'"
           :data-cbar-id="rectangle.id"
         />
-        <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
 
+
+      </svg>
+      <svg
+        v-if="bars.length > 0"
+        class="origin-structure-overlay origin-structure-interaction-overlay"
+        :style="{ width: `${structureOverlayWidth}px` }"
+        aria-hidden="true"
+      >
+        <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
       </svg>
       <slot name="chart-interaction-overlay" />
       <div v-if="showLegend !== false" class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
