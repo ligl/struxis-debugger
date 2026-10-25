@@ -227,6 +227,10 @@ describe("RunChart", () => {
       { time: 1700000060, value: 100, color: "#557E65" },
       { time: 1700000120, value: 100, color: "#557E65" },
     ]);
+    // ChartSurface is in external-data mode: the Replay adapter performs the
+    // only authoritative series replacement for this initial projection.
+    expect(mocks.candleSetData).toHaveBeenCalledTimes(1);
+    expect(mocks.volumeSetData).toHaveBeenCalledTimes(1);
     expect(wrapper.get('[data-testid="run-chart-panel"]').attributes("data-sbar-count")).toBe("2");
     expect(wrapper.get('[data-testid="run-structure-overlay"]').attributes("style")).toContain("width: 700px");
     expect(mocks.fitContent).toHaveBeenCalledOnce();
