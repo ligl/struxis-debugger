@@ -849,6 +849,7 @@ onBeforeUnmount(() => {
         cbar-test-id="run-cbar-rectangle"
         swing-test-id="run-swing-segment"
         :show-empty-state="false"
+        :show-error-state="false"
         :show-structure-overlay="!projectionMessage"
         :chart-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"
         @chart-activate="emit('activate')"
