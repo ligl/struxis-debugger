@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   volumeSetData: vi.fn(),
   candleUpdate: vi.fn(),
   volumeUpdate: vi.fn(),
+  candleApplyOptions: vi.fn(),
+  volumeApplyOptions: vi.fn(),
   chartRemove: vi.fn(),
   fitContent: vi.fn(),
   setVisibleLogicalRange: vi.fn(),
@@ -124,8 +126,8 @@ function installResizeObserverMock(): void {
 function installChartMock(): void {
   mocks.createChart.mockReturnValue({
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: mocks.candleSetData, update: mocks.candleUpdate, priceToCoordinate: (price: number) => 200 - price, coordinateToPrice: (y: number) => 200 - y, applyOptions: vi.fn(), attachPrimitive: vi.fn(), detachPrimitive: vi.fn() })
-      .mockReturnValueOnce({ setData: mocks.volumeSetData, update: mocks.volumeUpdate, applyOptions: vi.fn() }),
+      .mockReturnValueOnce({ setData: mocks.candleSetData, update: mocks.candleUpdate, priceToCoordinate: (price: number) => 200 - price, coordinateToPrice: (y: number) => 200 - y, applyOptions: mocks.candleApplyOptions, attachPrimitive: vi.fn(), detachPrimitive: vi.fn() })
+      .mockReturnValueOnce({ setData: mocks.volumeSetData, update: mocks.volumeUpdate, applyOptions: mocks.volumeApplyOptions }),
     priceScale: vi.fn(() => ({ applyOptions: mocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
       width: () => 700,
@@ -532,6 +534,52 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+
+  it("keeps Replay point styling independent from layer visibility during incremental progress", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+      },
+    });
+    await nextTick();
+
+    await wrapper.get('[data-testid="run-layer-toggle-sbar"]').trigger("click");
+    await wrapper.get('[data-testid="run-layer-toggle-volume"]').trigger("click");
+    expect(mocks.candleApplyOptions).toHaveBeenCalledWith({ visible: false });
+    expect(mocks.volumeApplyOptions).toHaveBeenCalledWith({ visible: false });
+
+    await wrapper.setProps({
+      runState: runState({
+        processedCount: 2,
+        cursorSbarId: originBars[2]!.sbarId,
+        status: "completed",
+      }),
+    });
+    await nextTick();
+
+    expect(mocks.candleUpdate).toHaveBeenCalledWith({
+      time: 1700000120,
+      open: 10,
+      high: 12,
+      low: 9,
+      close: 11,
+      color: "#79B58B",
+      borderColor: "#79B58B",
+      wickColor: "#79B58B",
+    }, true);
+    expect(mocks.volumeUpdate).toHaveBeenCalledWith({
+      time: 1700000120,
+      value: 100,
+      color: "#557E65",
+    }, true);
+    expect(mocks.candleUpdate.mock.calls.flat().some((value) =>
+      typeof value === "object" && value !== null &&
+      "color" in value && value.color === "rgba(0,0,0,0)",
+    )).toBe(false);
+    wrapper.unmount();
+  });
 
   it("updates only the newly confirmed candle and volume point during a normal Step", async () => {
     const wrapper = mount(RunChart, {
