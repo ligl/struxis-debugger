@@ -159,6 +159,14 @@ describe("SBarChartSurface and chart entry adapters", () => {
     document.dispatchEvent(handled);
     expect(handled.defaultPrevented).toBe(true);
     expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+
+    const moved = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+    document.dispatchEvent(moved);
+    expect(moved.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("crosshairAnchorChange")?.at(-1)?.[0]).toEqual({
+      sbarId: "1700000060000000000",
+      price: 10,
+    });
     wrapper.unmount();
   });
 
