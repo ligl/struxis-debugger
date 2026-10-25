@@ -73,6 +73,12 @@ const snapshots: SnapshotArtifactDto[] = [
 enableAutoUnmount(afterEach);
 
 describe("SnapshotReferencePanel", () => {
+  it("has a Snapshot selection event contract", () => {
+    const wrapper = mount(SnapshotReferencePanel, { props: { instrumentId: "AUD/USD.SIM", snapshots } });
+    expect(wrapper.emitted("objectSelect")).toBeUndefined();
+  });
+
+
   it("renders the verified historical chart for a selected completed Snapshot", async () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
