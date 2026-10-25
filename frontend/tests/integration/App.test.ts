@@ -443,6 +443,9 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-replay-sbar-id"]').text()).toBe("100");
     expect(wrapper.get('[data-testid="inspector-replay-ts-event"]').text()).toBe("1970-01-01 00:00");
     expect(wrapper.get('[data-testid="inspector-replay-ts-init"]').text()).toBe("1970-01-01 00:00");
+    expect(Array.from(wrapper.get('[data-testid="inspector-replay-sbar-id"]').element.closest(".inspector-object")!.querySelector(".inspector-market-grid")!.querySelectorAll("dt")).map((field) => field.textContent ?? "")).toEqual([
+      "OPEN", "HIGH", "CLOSE", "LOW",
+    ]);
     expect(wrapper.get('[data-testid="inspector-replay-cbar-count"]').text()).toBe("1");
     expect(wrapper.get('[data-testid="inspector-replay-swing-count"]').text()).toBe("1");
     expect(wrapper.find('[data-testid="inspector-select-swing-100"]').exists()).toBe(false);
