@@ -295,9 +295,9 @@ onBeforeUnmount(stopBoundaryDrag);
           :height="hoveredSbarMarker.height"
           data-testid="origin-hover-sbar"
           :data-sbar-id="hoveredSbarMarker.id"
-          fill="rgb(195 203 209 / 8%)"
-          stroke="rgb(195 203 209 / 48%)"
-          stroke-width="1"
+          fill="none"
+          stroke="#C3CBD1"
+          stroke-width="1.25"
         />
         <line
           v-for="segment in swingSegments.filter((item) => hoveredObject?.kind === 'swing' && hoveredObject.id === item.id)"
