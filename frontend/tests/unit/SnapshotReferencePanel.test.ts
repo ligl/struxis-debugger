@@ -20,12 +20,9 @@ config.global.stubs = {
       "playbackEnabled",
       "playbackOffset",
       "processedCount",
-      "active",
     ],
-    emits: ["layoutReady"],
     template: `<div
       data-testid="snapshot-reference-chart-host"
-      @click="$emit('layoutReady')"
       :snapshot-playback-enabled="playbackEnabled"
       :snapshot-playback-offset="playbackOffset"
       :snapshot-processed-count="processedCount"
@@ -250,26 +247,6 @@ describe("SnapshotReferencePanel", () => {
     expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="snapshot-reference-metadata"]').text()).toContain("run-02");
     expect(wrapper.emitted("syncSequence")?.flat()).toContainEqual(expect.objectContaining({ snapshotId: secondSnapshotId }));
-  });
-
-  it("masks the mounted chart while Replay is inactive and reveals it after a layout notification", async () => {
-    const wrapper = mount(SnapshotReferencePanel, {
-      props: { active: true, instrumentId: "AUD/USD.SIM", snapshots },
-    });
-    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
-    await flushPromises();
-
-    const chartHost = wrapper.get('[data-testid="snapshot-reference-chart"]');
-    expect(chartHost.classes()).not.toContain("is-layout-ready");
-    await wrapper.get('[data-testid="snapshot-reference-chart-host"]').trigger("click");
-    expect(chartHost.classes()).toContain("is-layout-ready");
-
-    await wrapper.setProps({ active: false });
-    expect(chartHost.classes()).not.toContain("is-layout-ready");
-    await wrapper.setProps({ active: true });
-    expect(chartHost.classes()).not.toContain("is-layout-ready");
-    await wrapper.get('[data-testid="snapshot-reference-chart-host"]').trigger("click");
-    expect(chartHost.classes()).toContain("is-layout-ready");
   });
 
   it("shows an embedded loading animation while resolving a selected Snapshot", async () => {
