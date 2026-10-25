@@ -105,11 +105,25 @@ function applyPlaybackSeriesStyles(): void {
     && previous.processedCount === nextState.processedCount
   ) return;
 
+  // The Surface already loaded original DTO colors when playback is initially
+  // inactive. Do not redundantly call setData on mount or while stopped.
+  if (!nextState.playbackEnabled && (!previous || !previous.playbackEnabled)) {
+    appliedPlaybackStyleState = nextState;
+    return;
+  }
+
   if (baseSeriesBars !== props.bars || !baseSeriesProjection) {
     baseSeriesProjection = projectSnapshotPlaybackSeries({
       bars: props.bars, playbackEnabled: false, offset: null, liveCount: 0, processedCount: 0,
     });
     baseSeriesBars = props.bars;
+  }
+
+  if (!nextState.playbackEnabled && previous?.playbackEnabled) {
+    if (port.replaceSeriesData(baseSeriesProjection.candles, baseSeriesProjection.volume)) {
+      appliedPlaybackStyleState = nextState;
+    }
+    return;
   }
 
   const samePlaybackSequence = previous !== null
