@@ -192,3 +192,68 @@ export function projectSwingSegments(
   });
 }
 
+
+export interface ProjectStructureOverlayOptions {
+  cbars: readonly CBarGeometryInput[];
+  swings: readonly SwingGeometryInput[];
+  indexBySbarId: ReadonlyMap<string, number>;
+  visibleRange: LogicalViewportRange | null;
+  coordinateForSbarId: (sbarId: string) => number | null | undefined;
+  priceToCoordinate: (price: number) => number | null | undefined;
+  cbarVisible: boolean;
+  swingVisible: boolean;
+  resolveSwingStyle: (state: string) => { color: string; dasharray: string };
+}
+
+export interface StructureOverlayGeometry {
+  cbarRectangles: CBarRectangleGeometry[];
+  swingSegments: Array<SwingSegmentGeometry & { color: string; dasharray: string }>;
+}
+
+/**
+ * The shared projection entry point for all chart adapters.
+ *
+ * Callers supply chart-local coordinate functions and presentation policy;
+ * this function owns the consistent CBar / Swing projection and visibility
+ * gating. It deliberately has no chart instance, DTO state, or interaction
+ * semantics, so each chart can safely retain its own runtime.
+ */
+export function projectStructureOverlayGeometry(
+  options: ProjectStructureOverlayOptions,
+): StructureOverlayGeometry {
+  const {
+    cbars,
+    swings,
+    indexBySbarId,
+    visibleRange,
+    coordinateForSbarId,
+    priceToCoordinate,
+    cbarVisible,
+    swingVisible,
+    resolveSwingStyle,
+  } = options;
+
+  return {
+    cbarRectangles: cbarVisible
+      ? projectCBarRectangles({
+        cbars,
+        indexBySbarId,
+        visibleRange,
+        coordinateForSbarId,
+        priceToCoordinate,
+      })
+      : [],
+    swingSegments: swingVisible
+      ? projectSwingSegments({
+        swings,
+        indexBySbarId,
+        visibleRange,
+        coordinateForSbarId,
+        priceToCoordinate,
+      }).map((segment) => ({
+        ...segment,
+        ...resolveSwingStyle(segment.state),
+      }))
+      : [],
+  };
+}
