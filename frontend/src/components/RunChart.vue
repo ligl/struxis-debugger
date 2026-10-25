@@ -152,7 +152,7 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
         }
       }
       if (Math.abs(from - range.from) > 0.001 || Math.abs(to - range.to) > 0.001) {
-        surface.value?.applyViewportRange({ from, to: to ?? (from + nextWidth) });
+        surface.value?.applyViewportRange({ from, to: from + nextWidth });
       }
     }
   }
