@@ -578,6 +578,11 @@ describe("RunChart", () => {
       typeof value === "object" && value !== null &&
       "color" in value && value.color === "rgba(0,0,0,0)",
     )).toBe(false);
+
+    await wrapper.get('[data-testid="run-layer-toggle-sbar"]').trigger("click");
+    await wrapper.get('[data-testid="run-layer-toggle-volume"]').trigger("click");
+    expect(mocks.candleApplyOptions).toHaveBeenLastCalledWith({ visible: true });
+    expect(mocks.volumeApplyOptions).toHaveBeenLastCalledWith({ visible: true });
     wrapper.unmount();
   });
 
