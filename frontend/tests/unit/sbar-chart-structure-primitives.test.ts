@@ -83,7 +83,7 @@ describe("CBar and Swing Series Primitives", () => {
     const renderer = view?.renderer();
     expect(renderer).not.toBeNull();
     renderer!.draw(h.target as never);
-    expect(h.context.strokeRect).toHaveBeenCalledWith(10, 80, 20, 10);
+    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 80, 27, 10);
 
     const rectangleStyles: Array<{ color: string; width: number }> = [];
     h.context.strokeRect.mockImplementation(() => {
@@ -110,7 +110,7 @@ describe("CBar and Swing Series Primitives", () => {
     }], h.projection);
     primitive.updateAllViews?.();
     view?.renderer()?.draw(h.target as never);
-    expect(h.context.strokeRect).toHaveBeenCalledWith(10, 70, 30, 20);
+    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 70, 37, 20);
 
     controller.setData([], h.projection);
     primitive.updateAllViews?.();
