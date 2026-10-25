@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { SnapshotReferencePrimitive, type SnapshotPrimitiveState } from "../snapshot-reference-primitives";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
 import type { ChartSurfacePort } from "../chart-surface-contract";
 import ChartSurface from "./ChartSurface.vue";
-import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
-import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import {
   ReplayCrosshairSyncGate,
   isSameLogicalRange,
@@ -44,8 +42,8 @@ const emit = defineEmits<{
 
 const surface = ref<ChartSurfacePort | null>(null);
 const crosshairGate = new ReplayCrosshairSyncGate();
-const brightCandles = ref<SnapshotBrightCandleGeometry[]>([]);
-const boundaries = ref<{ start: number; end: number } | null>(null);
+const snapshotPrimitive = new SnapshotReferencePrimitive();
+let unregisterSnapshotPrimitive: (() => void) | null = null;
 const playbackOverlayEnabled = computed(() =>
   props.syncEnabled
   && props.playbackEnabled
@@ -53,38 +51,20 @@ const playbackOverlayEnabled = computed(() =>
   && props.playbackOffset !== undefined,
 );
 
-function refreshSnapshotGeometry(): void {
-  const port = surface.value;
-  const offset = props.playbackOffset;
-  if (!port || !props.syncEnabled || offset === null || offset === undefined || props.liveBarCount <= 0) {
-    brightCandles.value = [];
-    boundaries.value = null;
-    return;
-  }
-
-  boundaries.value = resolveSnapshotLiveRangeCoordinates({
-    offset,
-    liveCount: props.liveBarCount,
-    barIds: props.bars.map((bar) => bar.sbarId),
-    coordinateForSbarId: (sbarId) => port.getSbarCoordinate(sbarId),
-    logicalToCoordinate: (index) => port.getLogicalCoordinate(index),
-  });
-
-  if (!props.playbackEnabled) {
-    brightCandles.value = [];
-    return;
-  }
-  const visible = port.getVisibleLogicalRange();
-  brightCandles.value = projectSnapshotBrightCandles({
-    offset,
+function currentPrimitiveState(): SnapshotPrimitiveState {
+  return {
+    bars: props.bars,
+    structure: props.structure,
+    enabled: props.syncEnabled && props.playbackOffset !== null && props.playbackOffset !== undefined && props.liveBarCount > 0,
+    playbackEnabled: playbackOverlayEnabled.value,
+    offset: props.playbackOffset,
     liveCount: props.liveBarCount,
     processedCount: props.processedCount,
-    bars: props.bars,
-    visibleFrom: visible ? visible.from - 1 : Number.NEGATIVE_INFINITY,
-    visibleTo: visible ? visible.to + 1 : Number.POSITIVE_INFINITY,
-    coordinateForSbarId: (sbarId) => port.getSbarCoordinate(sbarId),
-    priceToCoordinate: (price) => port.getPriceCoordinate(price),
-  });
+  };
+}
+
+function refreshSnapshotGeometry(): void {
+  snapshotPrimitive.update(currentPrimitiveState());
 }
 
 function handleViewportChange(range: { from: number; to: number }): void {
@@ -210,11 +190,22 @@ watch(() => [props.snapshotId, props.bars.map((bar) => bar.sbarId).join("\\u0000
 });
 
 onMounted(() => {
-  // The Surface's chart and SBar index are ready only after mount.
+  // The child Surface has initialized its chart and Primitive host by this point.
+  unregisterSnapshotPrimitive = surface.value?.registerPrimitive(
+    "snapshot-reference:" + props.snapshotId + ":overlays",
+    snapshotPrimitive,
+    () => snapshotPrimitive.dispose(),
+  ) ?? null;
   refreshSnapshotGeometry();
   applyViewportRequest(props.syncRequest);
   applyCrosshairRequest(props.crosshairSync);
 });
+onBeforeUnmount(() => {
+  unregisterSnapshotPrimitive?.();
+  unregisterSnapshotPrimitive = null;
+  snapshotPrimitive.dispose();
+});
+
 </script>
 
 <template>
@@ -236,15 +227,6 @@ onMounted(() => {
     @crosshair-anchor-change="handleCrosshairChange"
     @chart-click="handleChartClick"
   >
-    <template #chart-structure-overlays="{ cbarRectangles, swingSegments }">
-      <SnapshotPlaybackOverlay
-        :enabled="playbackOverlayEnabled"
-        :bright-candles="brightCandles"
-        :cbar-rectangles="cbarRectangles"
-        :swing-segments="swingSegments"
-      />
-      <SnapshotLiveRangeMarkers :boundaries="boundaries" />
-    </template>
   </ChartSurface>
 </template>
 
