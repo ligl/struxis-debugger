@@ -15,6 +15,7 @@ function createHarness() {
   ]);
   const chart = {
     timeScale: () => ({
+      options: () => ({ barSpacing: 10 }),
       getVisibleLogicalRange: () => ({ from: 0, to: 2 }),
       timeToCoordinate: (time: Time) => times.get(time) ?? null,
     }),
