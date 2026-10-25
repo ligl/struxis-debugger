@@ -90,6 +90,17 @@ describe("ReplayToolbarControls", () => {
     expect(playing.get('[data-testid="run-play-pause"]').text()).toContain("PAUSE");
   });
 
+  it("reflects keyboard-driven speed changes in the toolbar trigger", async () => {
+    const wrapper = mountControls();
+    expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("倍速");
+
+    await wrapper.setProps({ playbackDelayMs: 100 });
+    expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("2x");
+
+    await wrapper.setProps({ playbackDelayMs: 0 });
+    expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("MAX");
+  });
+
   it("keeps STOP enabled while each playback Step is busy", async () => {
     const wrapper = mountControls({ runBusy: true, playbackStatus: "playing" });
     const stop = wrapper.get('[data-testid="run-start-stop"]');
