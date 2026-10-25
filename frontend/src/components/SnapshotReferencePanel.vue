@@ -177,12 +177,8 @@ watch(selectedSnapshotId, async (snapshotId) => {
 });
 
 function handleSelection(event: Event): void {
-  const select = event.currentTarget as HTMLSelectElement;
-  selectedSnapshotId.value = select.value || null;
-
-  // Blur after the native select change event finishes so the WebView does not
-  // leave the dropdown focused after closing its native option popup.
-  window.setTimeout(() => select.blur(), 0);
+  const value = (event.target as HTMLSelectElement).value;
+  selectedSnapshotId.value = value || null;
 }
 
 function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
