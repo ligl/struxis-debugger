@@ -1397,7 +1397,8 @@ body,
 .origin-chart-panel {
   min-width: 0;
   margin-top: 2px;
-  border: 1px solid var(--dbg-border);
+  border: 0;
+  border-bottom: 1px solid var(--dbg-border);
   background: var(--dbg-surface-1);
 }
 
@@ -1608,7 +1609,6 @@ body,
   min-height: 0;
   place-items: center;
   padding: clamp(16px, 3vw, 36px);
-  border-top: 1px solid #252c32;
   background:
     radial-gradient(ellipse at 50% 42%, rgb(198 160 107 / 6%), transparent 58%),
     #121619;

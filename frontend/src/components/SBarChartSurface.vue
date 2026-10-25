@@ -751,7 +751,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   margin: 0;
   overflow: hidden;
-  border: 1px solid #30383f;
+  border: 0;
   border-radius: 0;
   background: #121619;
 }
@@ -1002,7 +1002,7 @@ onBeforeUnmount(() => {
   font-size: 9px;
 }
 
- 
+
 @media (max-width: 1180px) {
   .chart-desc {
     display: none;

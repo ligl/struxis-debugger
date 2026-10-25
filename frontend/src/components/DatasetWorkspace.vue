@@ -152,7 +152,8 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px solid #30383f;
+  border:0;
+  border-bottom: 1px solid #30383f;
   background: radial-gradient(ellipse at center, rgb(214 168 93 / 3%), transparent 68%), #121619;
 }
 
