@@ -94,10 +94,10 @@ describe("ReplayToolbarControls", () => {
     const wrapper = mountControls();
     expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("倍速");
 
-    await wrapper.setProps({ playbackDelayMs: 100 });
+    await wrapper.setProps({ playbackDelayMs: 100 } as never);
     expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("2x");
 
-    await wrapper.setProps({ playbackDelayMs: 0 });
+    await wrapper.setProps({ playbackDelayMs: 0 } as never);
     expect(wrapper.get('[data-testid="replay-speed"]').text()).toBe("MAX");
   });
 
