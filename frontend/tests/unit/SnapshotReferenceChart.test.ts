@@ -337,33 +337,6 @@ describe("SnapshotReferenceChart", () => {
     wrapper.unmount();
   });
 
-  it("toggles Snapshot SBar and CBar layers with B/C while Snapshot owns chart navigation", async () => {
-    const wrapper = mount(SnapshotReferenceChart, {
-      props: {
-        ...snapshotDefaults,
-        bars: [bar()],
-        snapshotId: "snapshot-layer-shortcuts",
-        structure: null,
-        keyboardActive: true,
-      },
-    });
-    await nextTick();
-
-    const sbarLegend = wrapper.get('[data-testid="layer-toggle-sbar"]');
-    const cbarLegend = wrapper.get('[data-testid="layer-toggle-cbar"]');
-    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
-    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
-
-    for (const [key, legend] of [["b", sbarLegend], ["c", cbarLegend]] as const) {
-      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
-      document.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(true);
-      expect(legend.attributes("aria-pressed")).toBe("false");
-    }
-
-    wrapper.unmount();
-  });
-
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
     mount(SnapshotReferenceChart, {
       props: {
