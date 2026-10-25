@@ -102,3 +102,15 @@ export function createSbarChartRuntime(
 
   return { chart, candleSeries, volumeSeries, primitiveHost, cbarPrimitive, swingPrimitive };
 }
+
+/**
+ * Releases chart-local drawing resources in dependency order. Adapters must
+ * unsubscribe their business-specific chart listeners before calling this.
+ */
+export function disposeSbarChartRuntime(
+  chart: IChartApi | null | undefined,
+  primitiveHost: ChartPrimitiveHost | null | undefined,
+): void {
+  primitiveHost?.dispose();
+  chart?.remove();
+}
