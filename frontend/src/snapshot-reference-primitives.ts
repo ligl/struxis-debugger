@@ -239,3 +239,114 @@ export class SnapshotReferencePrimitive implements ISeriesPrimitive<Time> {
     });
   }
 }
+
+/**
+ * Snapshot-only companion Primitive for the independent Volume pane.
+ * It mirrors the same SBar-identity anchors as the candle-pane Primitive,
+ * but only dims volume and draws the continuation of the range guides.
+ */
+export interface SnapshotVolumePrimitiveState {
+  bars: readonly SBarDto[];
+  enabled: boolean;
+  playbackEnabled: boolean;
+  offset: number | null;
+  liveCount: number;
+}
+
+export class SnapshotVolumePrimitive implements ISeriesPrimitive<Time> {
+  private chart: AttachedParameter["chart"] | null = null;
+  private requestUpdate: (() => void) | null = null;
+  private state: SnapshotVolumePrimitiveState = {
+    bars: [], enabled: false, playbackEnabled: false, offset: null, liveCount: 0,
+  };
+  private markers: { start: number; end: number } | null = null;
+  private readonly views: readonly IPrimitivePaneView[] = [this];
+  private readonly paneRenderer: IPrimitivePaneRenderer = { draw: (target) => this.draw(target) };
+
+  attached(param: AttachedParameter): void {
+    this.chart = param.chart;
+    this.requestUpdate = param.requestUpdate;
+    this.updateAllViews();
+  }
+
+  detached(): void {
+    this.chart = null;
+    this.requestUpdate = null;
+    this.markers = null;
+  }
+
+  paneViews(): readonly IPrimitivePaneView[] { return this.views; }
+  renderer(): IPrimitivePaneRenderer { return this.paneRenderer; }
+  zOrder(): "top" { return "top"; }
+
+  update(state: SnapshotVolumePrimitiveState): void {
+    this.state = state;
+    this.updateAllViews();
+    this.requestUpdate?.();
+  }
+
+  updateAllViews(): void {
+    this.markers = null;
+    const { bars, enabled, offset, liveCount } = this.state;
+    if (!this.chart || !enabled || offset === null || liveCount <= 0) return;
+    const anchors = resolveSnapshotLiveRangeIndices(offset, liveCount, bars.length);
+    if (!anchors) return;
+    const timeScale = this.chart.timeScale();
+    const coordinateFor = (bar: SBarDto | undefined): number | null => {
+      if (!bar) return null;
+      const seconds = Number(BigInt(bar.tsEvent) / 1_000_000_000n);
+      if (!Number.isSafeInteger(seconds)) return null;
+      const coordinate = timeScale.timeToCoordinate(seconds as Time);
+      return finite(coordinate) ? coordinate : null;
+    };
+    const start = coordinateFor(bars[anchors.start]);
+    const end = coordinateFor(bars[anchors.end]);
+    if (finite(start) && finite(end)) this.markers = { start, end };
+  }
+
+  dispose(): void {
+    this.state = { bars: [], enabled: false, playbackEnabled: false, offset: null, liveCount: 0 };
+    this.markers = null;
+    this.chart = null;
+    this.requestUpdate = null;
+  }
+
+  private draw(target: DrawTarget): void {
+    const { enabled, playbackEnabled } = this.state;
+    if (!enabled || !this.chart) return;
+    target.useMediaCoordinateSpace(({ context, mediaSize }) => {
+      context.save();
+      try {
+        if (playbackEnabled) {
+          context.fillStyle = "rgba(5, 7, 9, 0.68)";
+          context.fillRect(0, 0, mediaSize.width, mediaSize.height);
+        }
+        if (!this.markers) return;
+        const { start, end } = this.markers;
+        context.strokeStyle = "rgba(119, 131, 140, 0.42)";
+        context.lineWidth = 0.9;
+        context.setLineDash([3, 5]);
+        for (const x of [start, end]) {
+          context.beginPath();
+          context.moveTo(x, 0);
+          context.lineTo(x, mediaSize.height);
+          context.stroke();
+        }
+        context.setLineDash([]);
+        context.strokeStyle = "rgba(119, 131, 140, 0.55)";
+        context.lineWidth = 0.9;
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.beginPath();
+        context.moveTo(start + 2, 7); context.lineTo(start + 8, 7);
+        context.moveTo(start + 5, 4); context.lineTo(start + 8, 7); context.lineTo(start + 5, 10);
+        context.moveTo(end - 2, 7); context.lineTo(end - 8, 7);
+        context.moveTo(end - 5, 4); context.lineTo(end - 8, 7); context.lineTo(end - 5, 10);
+        context.stroke();
+      } finally {
+        context.restore();
+      }
+    });
+  }
+}
+
