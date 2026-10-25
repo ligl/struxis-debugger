@@ -267,6 +267,7 @@ onBeforeUnmount(stopBoundaryDrag);
       :sequence-id="originDatasetId"
       :show-header="true"
       :show-footer="true"
+      :show-legend="true"
       :header-title="`ORIGIN · ${bars[bars.length - 1]?.barType ?? originDatasetId}`"
       header-tag="CATALOG SOURCE"
       empty-message="No SBar data is available in this Origin projection."
