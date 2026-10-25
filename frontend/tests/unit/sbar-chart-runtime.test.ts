@@ -22,7 +22,7 @@ vi.mock("lightweight-charts", () => ({
   createChart: mocks.createChart,
 }));
 
-import { createSbarChartRuntime } from "../../src/sbar-chart-runtime";
+import { createSbarChartRuntime, disposeSbarChartRuntime } from "../../src/sbar-chart-runtime";
 
 describe("createSbarChartRuntime", () => {
   beforeEach(() => {
@@ -36,6 +36,7 @@ describe("createSbarChartRuntime", () => {
     mocks.createChart.mockReturnValue({
       addSeries: mocks.addSeries,
       priceScale: mocks.priceScale,
+      remove: vi.fn(),
     });
   });
 
@@ -73,5 +74,26 @@ describe("createSbarChartRuntime", () => {
     expect(runtime.swingPrimitive).toEqual({ kind: "swing-primitive" });
     expect(mocks.registerCBarPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
     expect(mocks.registerSwingPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
+  });
+});
+
+describe("disposeSbarChartRuntime", () => {
+  it("disposes the Primitive host before removing the chart", () => {
+    const hostElement = document.createElement("div");
+    const runtime = createSbarChartRuntime(hostElement, {
+      width: 320,
+      height: 240,
+      candleLastValueVisible: true,
+    });
+    const disposeHost = vi.spyOn(runtime.primitiveHost, "dispose");
+    const removeChart = vi.mocked(runtime.chart.remove);
+
+    disposeSbarChartRuntime(runtime.chart, runtime.primitiveHost);
+
+    expect(disposeHost).toHaveBeenCalledOnce();
+    expect(removeChart).toHaveBeenCalledOnce();
+    expect(disposeHost.mock.invocationCallOrder[0]).toBeLessThan(
+      removeChart.mock.invocationCallOrder[0],
+    );
   });
 });
