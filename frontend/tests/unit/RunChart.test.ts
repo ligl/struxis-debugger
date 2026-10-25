@@ -401,6 +401,56 @@ describe("RunChart", () => {
     );
   });
 
+  it("uses the synchronized Snapshot Crosshair SBar as the T target", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: null,
+        syncEnabled: true,
+        syncOwner: "snapshot",
+        crosshairSync: {
+          revision: 1,
+          source: "reference",
+          sbarId: originBars[2]!.sbarId,
+          price: 10.5,
+        },
+      },
+    });
+    await nextTick();
+
+    const targetEvent = new KeyboardEvent("keydown", {
+      key: "t", bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(targetEvent);
+
+    expect(targetEvent.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("targetSelect")?.at(-1)?.[0]).toBe(originBars[2]!.sbarId);
+    wrapper.unmount();
+  });
+
+  it("does not use a stale Live Crosshair as T target when Snapshot owns an ineligible sync", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: null,
+        syncEnabled: false,
+        syncOwner: "snapshot",
+      },
+    });
+    await nextTick();
+
+    const targetEvent = new KeyboardEvent("keydown", {
+      key: "t", bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(targetEvent);
+
+    expect(targetEvent.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("targetSelect")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("publishes the hovered SBar identity and price for eligible crosshair synchronization", async () => {
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: null, syncEnabled: true },
