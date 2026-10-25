@@ -225,6 +225,7 @@ onMounted(() => {
     :sequence-id="snapshotId"
     :show-header="false"
     :show-footer="false"
+    :show-legend="true"
     panel-class="snapshot-reference-chart"
     panel-label="Snapshot Reference chart"
     :chart-label="`Candlestick and volume chart for Snapshot ${snapshotId}`"
