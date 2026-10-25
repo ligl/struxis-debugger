@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { SnapshotReferencePrimitive, type SnapshotPrimitiveState } from "../snapshot-reference-primitives";
+import { SnapshotReferencePrimitive, SnapshotVolumePrimitive, type SnapshotPrimitiveState, type SnapshotVolumePrimitiveState } from "../snapshot-reference-primitives";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
 import type { ChartSurfacePort } from "../chart-surface-contract";
@@ -43,7 +43,9 @@ const emit = defineEmits<{
 const surface = ref<ChartSurfacePort | null>(null);
 const crosshairGate = new ReplayCrosshairSyncGate();
 const snapshotPrimitive = new SnapshotReferencePrimitive();
+const snapshotVolumePrimitive = new SnapshotVolumePrimitive();
 let unregisterSnapshotPrimitive: (() => void) | null = null;
+let unregisterSnapshotVolumePrimitive: (() => void) | null = null;
 const playbackOverlayEnabled = computed(() =>
   props.syncEnabled
   && props.playbackEnabled
@@ -63,8 +65,19 @@ function currentPrimitiveState(): SnapshotPrimitiveState {
   };
 }
 
+function currentVolumePrimitiveState(): SnapshotVolumePrimitiveState {
+  return {
+    bars: props.bars,
+    enabled: props.syncEnabled && props.playbackOffset !== null && props.playbackOffset !== undefined && props.liveBarCount > 0,
+    playbackEnabled: playbackOverlayEnabled.value,
+    offset: props.playbackOffset,
+    liveCount: props.liveBarCount,
+  };
+}
+
 function refreshSnapshotGeometry(): void {
   snapshotPrimitive.update(currentPrimitiveState());
+  snapshotVolumePrimitive.update(currentVolumePrimitiveState());
 }
 
 function handleViewportChange(range: { from: number; to: number }): void {
@@ -192,9 +205,14 @@ watch(() => [props.snapshotId, props.bars.map((bar) => bar.sbarId).join("\\u0000
 onMounted(() => {
   // The child Surface has initialized its chart and Primitive host by this point.
   unregisterSnapshotPrimitive = surface.value?.registerPrimitive(
-    "snapshot-reference:" + props.snapshotId + ":overlays",
+    "snapshot-reference:" + props.snapshotId + ":candle-overlays",
     snapshotPrimitive,
-    () => snapshotPrimitive.dispose(),
+    { target: "candles", dispose: () => snapshotPrimitive.dispose() },
+  ) ?? null;
+  unregisterSnapshotVolumePrimitive = surface.value?.registerPrimitive(
+    "snapshot-reference:" + props.snapshotId + ":volume-overlays",
+    snapshotVolumePrimitive,
+    { target: "volume", dispose: () => snapshotVolumePrimitive.dispose() },
   ) ?? null;
   refreshSnapshotGeometry();
   applyViewportRequest(props.syncRequest);
@@ -203,7 +221,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   unregisterSnapshotPrimitive?.();
   unregisterSnapshotPrimitive = null;
+  unregisterSnapshotVolumePrimitive?.();
+  unregisterSnapshotVolumePrimitive = null;
   snapshotPrimitive.dispose();
+  snapshotVolumePrimitive.dispose();
 });
 
 </script>
