@@ -449,11 +449,11 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
     candleSeries?.applyOptions({ visible: layerVisibility.value.sbar });
   } else if (layer === "volume") {
     volumeSeries?.applyOptions({ visible: layerVisibility.value.volume });
-  } else {
-    // Structure overlays are projections of authoritative DTOs. Recompute
-    // their screen coordinates on both hide and restore; never mutate domain data.
-    updateSbarCoordinates();
   }
+
+  // Flush the shared scheduler so the legend's visual state and the hit-test
+  // geometry become consistent in the same interaction turn.
+  scheduleOverlayUpdate.flush();
   emit("projectionFrame");
 }
 
