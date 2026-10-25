@@ -187,7 +187,7 @@ describe("SnapshotReferenceChart", () => {
     chartMocks.candleSetData.mockClear();
     chartMocks.volumeSetData.mockClear();
 
-    await wrapper.setProps({ processedCount: 1 });
+    await wrapper.setProps({ processedCount: 1 } as never);
     await nextTick();
 
     expect(chartMocks.candleUpdate).toHaveBeenCalledTimes(1);
@@ -456,7 +456,7 @@ describe("SnapshotReferenceChart", () => {
       },
     });
 
-    expect(wrapper.get('[aria-label="Chart layer visibility"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Chart layer visibility"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="layer-toggle-sbar"]').text()).toContain("SBar");
     expect(wrapper.get('[data-testid="layer-toggle-volume"]').text()).toContain("Volume");
     wrapper.unmount();
