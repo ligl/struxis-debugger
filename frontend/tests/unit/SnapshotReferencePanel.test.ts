@@ -96,6 +96,28 @@ describe("SnapshotReferencePanel", () => {
   });
 
 
+  it("destroys only the chart runtime while inactive and recreates it without reloading the selected Snapshot", async () => {
+    invokeMock.mockResolvedValueOnce(reference);
+    const wrapper = mount(SnapshotReferencePanel, {
+      props: { active: true, instrumentId: "AUD/USD.SIM", snapshots },
+    });
+
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
+    await flushPromises();
+    expect(wrapper.findComponent({ name: "SnapshotReferenceChart" }).exists()).toBe(true);
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+
+    await wrapper.setProps({ active: false } as never);
+    expect(wrapper.findComponent({ name: "SnapshotReferenceChart" }).exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
+    expect((wrapper.get('[data-testid="replay-reference-select"]').element as HTMLSelectElement).value).toBe("snapshot-complete-01");
+
+    await wrapper.setProps({ active: true } as never);
+    expect(wrapper.findComponent({ name: "SnapshotReferenceChart" }).exists()).toBe(true);
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-testid="snapshot-reference-metadata"]').text()).toContain("run-01");
+  });
+
   it("renders the verified historical chart for a selected completed Snapshot", async () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
