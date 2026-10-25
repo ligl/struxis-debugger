@@ -170,6 +170,35 @@ describe("SBarChartSurface and chart entry adapters", () => {
     wrapper.unmount();
   });
 
+  it("allows shared-chart keyboard zoom-out beyond fit-content", async () => {
+    const wrapper = mount(SBarChartSurface, {
+      props: {
+        bars: [
+          bar(),
+          bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001" }),
+          bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001" }),
+        ],
+        structure: null,
+        sequenceId: "keyboard-zoom-out",
+      },
+    });
+    const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
+    vi.spyOn(chartHost, "matches").mockReturnValue(true);
+    chartMocks.getVisibleLogicalRange.mockReturnValue({ from: -4, to: 7 });
+    chartMocks.setVisibleLogicalRange.mockClear();
+
+    const event = new KeyboardEvent("keydown", {
+      key: "ArrowDown", bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(chartMocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+    const range = chartMocks.setVisibleLogicalRange.mock.calls[0]![0] as { from: number; to: number };
+    expect(range.to - range.from).toBeCloseTo(13.75);
+    wrapper.unmount();
+  });
+
   it("cancels range selection and prevents chart right-click menus from propagating", async () => {
     const wrapper = mount(OriginChart, {
       attachTo: document.body,
