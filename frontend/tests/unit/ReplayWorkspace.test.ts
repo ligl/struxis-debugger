@@ -52,7 +52,7 @@ describe("ReplayWorkspace", () => {
       global: { stubs: { DualChartStack: DualChartStackStub, RunChart: RunChartStub, SnapshotReferencePanel: SnapshotReferencePanelStub } },
     });
     const panel = wrapper.get('[data-testid="snapshot-reference-panel-stub"]');
-    expect(panel.exists()).toBe(true);
+    expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
     active.value = false;
     await nextTick();
     expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
