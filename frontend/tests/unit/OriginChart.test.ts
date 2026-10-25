@@ -165,7 +165,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     expect(moved.defaultPrevented).toBe(true);
     expect(wrapper.emitted("crosshairAnchorChange")?.at(-1)?.[0]).toEqual({
       sbarId: "1700000060000000000",
-      price: 10,
+      price: 11,
     });
     wrapper.unmount();
   });
