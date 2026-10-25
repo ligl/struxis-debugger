@@ -118,7 +118,7 @@ describe("SnapshotReferencePrimitive", () => {
     expect(h.context.moveTo).toHaveBeenCalledWith(100, 80);
     expect(h.context.lineTo).toHaveBeenCalledWith(100, 110);
     expect(h.context.fillRect).toHaveBeenCalledWith(0, 0, 700, 360);
-    expect(h.context.fillRect).toHaveBeenCalledWith(96, 90, 8, 10);
+    expect(h.context.fillRect).toHaveBeenCalledWith(94, 90, 12, 10);
     h.primitive.dispose();
   });
 
