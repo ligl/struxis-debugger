@@ -749,8 +749,7 @@ function updateChart(): void {
     }
     applyCrosshairSync(props.crosshairSync);
   } catch (error) {
-    candleSeries.setData([]);
-    volumeSeries.setData([]);
+    replaceSbarChartSeriesData(candleSeries, volumeSeries, [], []);
     cachedProjection = null;
     lastProcessedCount = null;
     lastRunId = props.runState?.runId ?? null;
