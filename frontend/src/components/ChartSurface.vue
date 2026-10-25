@@ -10,6 +10,7 @@ import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometr
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { ChartSurfaceLayerVisibility } from "../chart-surface-contract";
 
 const props = withDefaults(defineProps<{
   bars: SBarDto[];
@@ -20,6 +21,7 @@ const props = withDefaults(defineProps<{
   emptyMessage?: string;
   showHeader?: boolean;
   showFooter?: boolean;
+  showLegend?: boolean;
   panelClass?: string;
   panelLabel?: string;
   chartLabel?: string;
@@ -440,6 +442,13 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   if (handled) event.preventDefault();
 }
 
+function setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void {
+  layerVisibility.value = { ...visibility };
+  applySbarChartSeriesVisibility(candleSeries, volumeSeries, visibility);
+  syncStructurePrimitives();
+  scheduleOverlayUpdate.flush();
+}
+
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
 
@@ -635,7 +644,7 @@ function setStructureInteractionState(
   });
 }
 
-defineExpose({ replaceSeriesData, updateSeriesData, fitContent: fitContentPort, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
+defineExpose({ replaceSeriesData, updateSeriesData, fitContent: fitContentPort, setLayerVisibility, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
@@ -787,7 +796,7 @@ onBeforeUnmount(() => {
 
       </svg>
       <slot name="chart-interaction-overlay" />
-      <div class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
+      <div v-if="showLegend !== false" class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
