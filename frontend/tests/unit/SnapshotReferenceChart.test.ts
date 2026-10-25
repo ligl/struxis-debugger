@@ -2,13 +2,15 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
-import { SnapshotReferencePrimitive, SnapshotVolumePrimitive } from "../../src/snapshot-reference-primitives";
+import { SnapshotRangeMarkerPrimitive } from "../../src/snapshot-reference-primitives";
 import type { SBarDto } from "../../src/origin-types";
 
 const chartMocks = vi.hoisted(() => ({
   createChart: vi.fn(),
   candleSetData: vi.fn(),
   volumeSetData: vi.fn(),
+  candleUpdate: vi.fn(),
+  volumeUpdate: vi.fn(),
   candleApplyOptions: vi.fn(),
   volumeApplyOptions: vi.fn(),
   attachPrimitive: vi.fn(),
@@ -89,8 +91,8 @@ const snapshotDefaults = {
 function installChartMock() {
   const chart = {
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: chartMocks.candleSetData, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate, coordinateToPrice: chartMocks.coordinateToPrice, attachPrimitive: chartMocks.attachPrimitive, detachPrimitive: chartMocks.detachPrimitive })
-      .mockReturnValueOnce({ setData: chartMocks.volumeSetData, applyOptions: chartMocks.volumeApplyOptions, attachPrimitive: chartMocks.attachVolumePrimitive, detachPrimitive: chartMocks.detachVolumePrimitive }),
+      .mockReturnValueOnce({ setData: chartMocks.candleSetData, update: chartMocks.candleUpdate, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate, coordinateToPrice: chartMocks.coordinateToPrice, attachPrimitive: chartMocks.attachPrimitive, detachPrimitive: chartMocks.detachPrimitive })
+      .mockReturnValueOnce({ setData: chartMocks.volumeSetData, update: chartMocks.volumeUpdate, applyOptions: chartMocks.volumeApplyOptions, attachPrimitive: chartMocks.attachVolumePrimitive, detachPrimitive: chartMocks.detachVolumePrimitive }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
       width: () => 700,
@@ -117,35 +119,80 @@ function installChartMock() {
 }
 
 describe("SnapshotReferenceChart", () => {
-  it("injects Snapshot-owned drawing Primitive instead of rendering private SVG overlays", async () => {
+  it("keeps range markers as background Primitives and uses native series for playback styling", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         ...snapshotDefaults,
-        snapshotId: "snapshot-private-primitive",
+        snapshotId: "snapshot-native-playback",
         syncEnabled: true,
         playbackOffset: 0,
         liveBarCount: 1,
         playbackEnabled: true,
-        processedCount: 1,
+        processedCount: 0,
       },
     });
     await nextTick();
 
-    const injected = chartMocks.attachPrimitive.mock.calls
+    const candleMarker = chartMocks.attachPrimitive.mock.calls
       .map((call) => call[0])
-      .find((primitive) => primitive instanceof SnapshotReferencePrimitive);
-    expect(injected).toBeDefined();
-    const volumeInjected = chartMocks.attachVolumePrimitive.mock.calls
+      .find((primitive) => primitive instanceof SnapshotRangeMarkerPrimitive);
+    const volumeMarker = chartMocks.attachVolumePrimitive.mock.calls
       .map((call) => call[0])
-      .find((primitive) => primitive instanceof SnapshotVolumePrimitive);
-    expect(volumeInjected).toBeDefined();
+      .find((primitive) => primitive instanceof SnapshotRangeMarkerPrimitive);
+    expect(candleMarker).toBeDefined();
+    expect(volumeMarker).toBeDefined();
+    expect(chartMocks.candleSetData).toHaveBeenCalled();
+    expect(chartMocks.volumeSetData).toHaveBeenCalled();
+    const candleData = chartMocks.candleSetData.mock.calls.at(-1)?.[0] as Array<{ color: string }>;
+    expect(candleData[0]?.color).not.toBe("#79B58B");
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
 
     wrapper.unmount();
-    expect(chartMocks.detachPrimitive).toHaveBeenCalledWith(injected);
-    expect(chartMocks.detachVolumePrimitive).toHaveBeenCalledWith(volumeInjected);
+    expect(chartMocks.detachPrimitive).toHaveBeenCalledWith(candleMarker);
+    expect(chartMocks.detachVolumePrimitive).toHaveBeenCalledWith(volumeMarker);
+  });
+
+  it("restores only the newly processed native candle and volume point on a one-SBar advance", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        open: "10",
+        close: "9",
+      }),
+    ];
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        ...snapshotDefaults,
+        bars,
+        snapshotId: "snapshot-incremental-native-style",
+        syncEnabled: true,
+        playbackOffset: 0,
+        liveBarCount: 2,
+        playbackEnabled: true,
+        processedCount: 0,
+      },
+    });
+    await nextTick();
+    chartMocks.candleUpdate.mockClear();
+    chartMocks.volumeUpdate.mockClear();
+    chartMocks.candleSetData.mockClear();
+    chartMocks.volumeSetData.mockClear();
+
+    await wrapper.setProps({ processedCount: 1 });
+    await nextTick();
+
+    expect(chartMocks.candleUpdate).toHaveBeenCalledTimes(1);
+    expect(chartMocks.volumeUpdate).toHaveBeenCalledTimes(1);
+    expect(chartMocks.candleUpdate).toHaveBeenCalledWith(expect.objectContaining({ time: 1700000000, color: "#79B58B" }), true);
+    expect(chartMocks.volumeUpdate).toHaveBeenCalledWith(expect.objectContaining({ time: 1700000000 }), true);
+    expect(chartMocks.candleSetData).not.toHaveBeenCalled();
+    expect(chartMocks.volumeSetData).not.toHaveBeenCalled();
+    wrapper.unmount();
   });
 
   it("exposes generic Primitive injection and owns attachment cleanup", async () => {
