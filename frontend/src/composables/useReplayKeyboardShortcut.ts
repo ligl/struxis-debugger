@@ -42,7 +42,7 @@ export function useReplayKeyboardShortcut(
   restartToTarget: () => Promise<void>,
   executeCommand: (command: RunCommand) => Promise<void>,
   canUseReplayShortcuts: Readonly<Ref<boolean>> = canControlPlayback,
-  playbackDelayMs: Readonly<Ref<number>> = { value: 200 },
+  playbackDelayMs?: Readonly<Ref<number>>,
   setPlaybackDelay: (milliseconds: number) => void = () => undefined,
 ): void {
   function handleKeydown(event: KeyboardEvent): void {
@@ -81,13 +81,13 @@ export function useReplayKeyboardShortcut(
     // stable: pressing beyond either end does not wrap around.
     const speedDelays = [500, 200, 100, 65, 0];
     if (!event.shiftKey && (event.key === "-" || event.code === "Minus")) {
-      const currentIndex = speedDelays.indexOf(playbackDelayMs.value);
+      const currentIndex = speedDelays.indexOf(playbackDelayMs?.value ?? 200);
       if (currentIndex > 0) setPlaybackDelay(speedDelays[currentIndex - 1]!);
       event.preventDefault();
       return;
     }
     if (!event.shiftKey && (event.key === "=" || event.code === "Equal")) {
-      const currentIndex = speedDelays.indexOf(playbackDelayMs.value);
+      const currentIndex = speedDelays.indexOf(playbackDelayMs?.value ?? 200);
       if (currentIndex >= 0 && currentIndex < speedDelays.length - 1) {
         setPlaybackDelay(speedDelays[currentIndex + 1]!);
       }
