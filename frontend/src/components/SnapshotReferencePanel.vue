@@ -21,6 +21,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  chartActivate: [];
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
   syncSequence: [sequence: { snapshotId: string; barType: string; sbarIds: string[] } | null];
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
