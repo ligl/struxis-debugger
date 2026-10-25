@@ -85,6 +85,7 @@ describe("SnapshotReferencePanel", () => {
     const selections = wrapper.emitted("objectSelect");
     expect(selections?.[selections.length - 1]?.[0]).toMatchObject({
       snapshotId: "snapshot-complete-01",
+      snapshotLabel: expect.stringContaining("5m · "),
       checkpointSbarId: "100",
       timeframe: "5m",
       kind: "sbar",
