@@ -937,7 +937,12 @@ onBeforeUnmount(() => {
 
 .origin-structure-overlay {
   position: absolute;
-  z-index: 1;
+  /*
+   * Lightweight Charts creates its own positioned canvas layers. Keep shared
+   * structure and Snapshot playback SVG overlays above those canvases so the
+   * range guides, arrows and masked Live-progress brightness remain visible.
+   */
+  z-index: 4;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -964,7 +969,7 @@ onBeforeUnmount(() => {
 
 .origin-chart-legend {
   position: absolute;
-  z-index: 2;
+  z-index: 5;
   top: 7px;
   left: 10px;
   display: flex;
