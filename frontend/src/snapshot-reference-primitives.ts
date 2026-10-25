@@ -171,20 +171,15 @@ export class SnapshotReferencePrimitive implements ISeriesPrimitive<Time> {
           // Repaint the processed candles in the foreground so they remain
           // readable above the dimming layer. The same fixed SBar identities
           // are used after every viewport projection.
-          const processedEnd = Math.min(offset + Math.max(0, Math.floor(processedCount)), offset + liveCount, bars.length);
-          for (let i = Math.max(0, offset); i < processedEnd; i += 1) {
-            const bar = bars[i]!;
-            const x = this.chart.timeScale().timeToCoordinate((Number(BigInt(bar.tsEvent) / 1_000_000_000n)) as Time);
+          for (const bright of this.brightCandles) {
+            const bar = bars.find(candidate => candidate.sbarId === bright.id);
+            if (!bar) continue;
+            const x = bright.x + bright.width / 2;
             const high = this.series.priceToCoordinate(Number(bar.high));
             const low = this.series.priceToCoordinate(Number(bar.low));
             const open = this.series.priceToCoordinate(Number(bar.open));
             const close = this.series.priceToCoordinate(Number(bar.close));
-            if (![x, high, low, open, close].every(finite)) continue;
-            const neighbors = [
-              i > 0 ? this.chart.timeScale().timeToCoordinate((Number(BigInt(bars[i - 1]!.tsEvent) / 1_000_000_000n)) as Time) : null,
-              i + 1 < bars.length ? this.chart.timeScale().timeToCoordinate((Number(BigInt(bars[i + 1]!.tsEvent) / 1_000_000_000n)) as Time) : null,
-            ].filter(finite).map(value => Math.abs(value - x));
-            const width = Math.max(2, Math.min(12, (neighbors.length ? Math.min(...neighbors) : 8) * 0.8));
+            if (![high, low, open, close].every(finite)) continue;
             const color = Number(bar.close) > Number(bar.open) ? "#79B58B" : Number(bar.close) < Number(bar.open) ? "#D98282" : "#858D97";
             context.strokeStyle = color;
             context.fillStyle = color;
@@ -193,7 +188,7 @@ export class SnapshotReferencePrimitive implements ISeriesPrimitive<Time> {
             context.moveTo(x, high);
             context.lineTo(x, low);
             context.stroke();
-            context.fillRect(x - width / 2, Math.min(open, close), width, Math.max(1, Math.abs(close - open)));
+            context.fillRect(x - bright.width / 2, Math.min(open, close), bright.width, Math.max(1, Math.abs(close - open)));
           }
 
           // Restore structure visibility over the darkened plot. These are
