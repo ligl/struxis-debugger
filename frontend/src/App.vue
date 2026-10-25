@@ -586,11 +586,13 @@ watch(workspaceMode, (mode) => {
 useReplayKeyboardShortcut(
   playbackStatus,
   canControlPlaybackShortcut,
+  playbackDelayMs,
   runBusy,
   targetSbarId,
   handleRestartToSBar,
   handleRunCommand,
   canUseReplayKeyboardShortcuts,
+  setPlaybackDelay,
 );
 
 async function startLoad(): Promise<void> {
