@@ -103,7 +103,7 @@ watch(
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-owner="activeChartOwner" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel
@@ -113,6 +113,7 @@ watch(
           :sync-identity="JSON.stringify([testDataset?.testDatasetId, testDataset?.barType, liveBars.map((bar) => bar.sbarId)])"
           :sync-eligible="syncEligible"
           :keyboard-active="activeChartOwner === 'snapshot'"
+          :sync-owner="activeChartOwner"
           :sync-offset="syncOffset"
           :sync-request="activeSyncRequest"
           :crosshair-sync="activeCrosshairSync"
