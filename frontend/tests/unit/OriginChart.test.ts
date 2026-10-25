@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import SBarChartSurface from "../../src/components/SBarChartSurface.vue";
+import ChartSurface from "../../src/components/ChartSurface.vue";
 import OriginChart from "../../src/components/OriginChart.vue";
 import type { SBarDto } from "../../src/origin-types";
 
@@ -99,9 +99,9 @@ function installChartMock() {
   return chart;
 }
 
-describe("SBarChartSurface and chart entry adapters", () => {
+describe("ChartSurface and chart entry adapters", () => {
   it("keeps the shared Surface interaction API neutral", () => {
-    const surfaceContract = SBarChartSurface as unknown as {
+    const surfaceContract = ChartSurface as unknown as {
       props: Record<string, unknown>;
       emits: string[];
     };
@@ -138,7 +138,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
 
 
   it("keeps chart keyboard navigation local to the chart under the pointer or focus", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [bar(), bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001" }), bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001" })],
         structure: null,
@@ -172,7 +172,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   });
 
   it("allows shared-chart keyboard zoom-out beyond fit-content", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [
           bar(),
@@ -236,7 +236,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
 
 
   it("projects validated SBar data into candlestick and volume series without grid or branding", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [
           bar(),
@@ -315,7 +315,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
         low: "10",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars,
         sequenceId: "origin-structure",
@@ -546,7 +546,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
       createdAt: "1700000000000000000",
       updatedAt: "1700000000000000000",
     };
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars,
         sequenceId: "origin-swing-states",
@@ -589,7 +589,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
         low: "10",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars,
         sequenceId: "origin-zoom-overlay",
@@ -731,7 +731,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
         tsInit: "1700000060000000001",
       }),
     ];
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: { bars, sequenceId: "surface-client-coordinate", structure: null },
     });
     const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
@@ -917,7 +917,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   });
 
   it("toggles SBar, volume, CBar and Swing layers independently", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [bar()],
         sequenceId: "origin-layer-visibility",
@@ -976,7 +976,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   });
 
   it("preserves the current viewport for same-sequence updates and fits a new sequence", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [],
         sequenceId: "origin-1",
@@ -1025,7 +1025,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   });
 
   it("rejects invalid chart projection and clears all chart projections", async () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [bar({ close: "NaN" })],
         sequenceId: "origin-invalid",
@@ -1050,7 +1050,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
     vi.stubGlobal("requestAnimationFrame", requestFrame);
     vi.stubGlobal("cancelAnimationFrame", cancelFrame);
 
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [
           bar(),
@@ -1081,7 +1081,7 @@ describe("SBarChartSurface and chart entry adapters", () => {
   });
 
   it("releases the chart and resize observer on unmount", () => {
-    const wrapper = mount(SBarChartSurface, {
+    const wrapper = mount(ChartSurface, {
       props: {
         bars: [],
         sequenceId: "origin-empty",
