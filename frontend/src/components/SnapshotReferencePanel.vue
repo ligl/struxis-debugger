@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import SnapshotReferenceChart from "./SnapshotReferenceChart.vue";
 import { describeIpcError, getSnapshotReference } from "../origin-bridge";
-import type { ReplayChartCrosshairSync, ReplayChartViewportSync, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
+import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplaySnapshotInspectorSelection, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
@@ -26,6 +26,7 @@ const emit = defineEmits<{
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
   syncSequence: [sequence: { snapshotId: string; barType: string; sbarIds: string[] } | null];
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
+  objectSelect: [selection: ReplaySnapshotInspectorSelection | null];
 }>();
 
 const selectedSnapshotId = ref<string | null>(null);
@@ -149,6 +150,7 @@ watch(selectedSnapshotId, async (snapshotId) => {
   reference.value = null;
   referenceError.value = "";
   emit("syncSequence", null);
+  emit("objectSelect", null);
   if (!snapshotId) {
     referenceLoading.value = false;
     return;
@@ -175,6 +177,49 @@ watch(selectedSnapshotId, async (snapshotId) => {
 function handleSelection(event: Event): void {
   const value = (event.target as HTMLSelectElement).value;
   selectedSnapshotId.value = value || null;
+}
+
+function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
+  const current = reference.value;
+  if (!current || current.snapshotId !== selectedSnapshotId.value) return;
+
+  if (selection.kind === "sbar") {
+    const bar = current.bars.find((item) => item.sbarId === selection.id);
+    if (!bar) return;
+    const checkpoint = current.structureTimeline.find((item) => item.sbarId === bar.sbarId);
+    emit("objectSelect", {
+      snapshotId: current.snapshotId,
+      checkpointSbarId: bar.sbarId,
+      timeframe: current.timeframe,
+      kind: "sbar",
+      object: bar,
+      bars: current.bars,
+      structure: checkpoint?.structure ?? null,
+    });
+    return;
+  }
+
+  // Resolve structure details only from a Snapshot timeline checkpoint that
+  // contains the selected stable ID; never borrow a Live checkpoint object.
+  for (const checkpoint of [...current.structureTimeline].reverse()) {
+    const structure = checkpoint.structure;
+    const object = selection.kind === "cbar"
+      ? structure?.cbars.find((item) => item.cbarId === selection.id)
+      : structure?.swings.find((item) => item.swingId === selection.id);
+    if (object) {
+      emit("objectSelect", {
+        snapshotId: current.snapshotId,
+        checkpointSbarId: checkpoint.sbarId,
+        timeframe: current.timeframe,
+        kind: selection.kind,
+        object,
+        bars: current.bars,
+        structure,
+      });
+      return;
+    }
+  }
+  emit("objectSelect", null);
 }
 </script>
 
@@ -246,6 +291,7 @@ function handleSelection(event: Event): void {
           @activate="emit('chartActivate')"
           @viewport-change="emit('viewportChange', $event)"
           @crosshair-change="emit('crosshairChange', $event)"
+          @object-select="handleSnapshotObjectSelect"
         />
       </div>
       <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">
