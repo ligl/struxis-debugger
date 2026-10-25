@@ -290,13 +290,6 @@ describe("SnapshotReferenceChart", () => {
     const port = surface.vm as unknown as ChartSurfacePort;
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
-    vi.spyOn(port, "getSbarRangeHighlight").mockReturnValue({
-      id: "1700000000000000000",
-      x: 90,
-      y: 30,
-      width: 20,
-      height: 40,
-    });
 
     surface.vm.$emit("pointerPosition", { x: 100, y: 50 });
     await nextTick();
@@ -328,13 +321,6 @@ describe("SnapshotReferenceChart", () => {
     const port = surface.vm as unknown as ChartSurfacePort;
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
-    vi.spyOn(port, "getSbarMarker").mockReturnValue({
-      id: "1700000000000000000",
-      x: 90,
-      y: 30,
-      width: 20,
-      height: 40,
-    });
 
     const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
       ((param: { point?: { x: number; y: number } }) => void) | undefined;
