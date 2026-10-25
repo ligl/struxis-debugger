@@ -203,23 +203,37 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
   // contains the selected stable ID; never borrow a Live checkpoint object.
   for (const checkpoint of [...current.structureTimeline].reverse()) {
     const structure = checkpoint.structure;
-    const object = selection.kind === "cbar"
-      ? structure?.cbars.find((item) => item.cbarId === selection.id)
-      : structure?.swings.find((item) => item.swingId === selection.id);
-    if (object) {
-      emit("objectSelect", {
-        snapshotId: current.snapshotId,
-        checkpointSbarId: checkpoint.sbarId,
-        timeframe: current.timeframe,
-        kind: selection.kind,
-        object,
-        bars: current.bars,
-        structure,
-      });
-      return;
+    if (selection.kind === "cbar") {
+      const object = structure?.cbars.find((item) => item.cbarId === selection.id);
+      if (object) {
+        emit("objectSelect", {
+          snapshotId: current.snapshotId,
+          checkpointSbarId: checkpoint.sbarId,
+          timeframe: current.timeframe,
+          kind: "cbar",
+          object,
+          bars: current.bars,
+          structure,
+        });
+        return;
+      }
+    } else {
+      const object = structure?.swings.find((item) => item.swingId === selection.id);
+      if (object) {
+        emit("objectSelect", {
+          snapshotId: current.snapshotId,
+          checkpointSbarId: checkpoint.sbarId,
+          timeframe: current.timeframe,
+          kind: "swing",
+          object,
+          bars: current.bars,
+          structure,
+        });
+        return;
+      }
     }
   }
-  emit("objectSelect", null);
+  emit("objectSelect", null);;
 }
 </script>
 
