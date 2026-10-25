@@ -24,8 +24,10 @@ const props = withDefaults(defineProps<{
   panelLabel?: string;
   chartLabel?: string;
   keyboardActive?: boolean;
+  dataMode?: "props" | "external";
 }>(), {
   keyboardActive: undefined,
+  dataMode: "props",
 });
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
@@ -504,7 +506,9 @@ function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
     const projection = mapSBarsToChart(props.bars);
-    replaceSbarChartSeriesData(candleSeries, volumeSeries, projection.candles, projection.volume);
+    if (props.dataMode === "props") {
+      replaceSbarChartSeriesData(candleSeries, volumeSeries, projection.candles, projection.volume);
+    }
     const sbarIndex = createSbarChartIndex(props.bars, projection.candles.map((candle) => candle.time));
     sbarIdByLogicalIndex = sbarIndex.sbarIdByLogicalIndex;
     indexBySbarId = sbarIndex.indexBySbarId;
@@ -513,7 +517,7 @@ function updateChart(): void {
     firstSbarTime = projection.candles[0]?.time ?? null;
     secondSbarTime = projection.candles[1]?.time ?? null;
     chartError.value = "";
-    if (props.bars.length > 0 && fittedSequenceId !== props.sequenceId) {
+    if (props.dataMode === "props" && props.bars.length > 0 && fittedSequenceId !== props.sequenceId) {
       const timeScale = chart.timeScale();
       timeScale.fitContent();
       // Keep the established fixed logical padding. Selection correctness
@@ -533,7 +537,9 @@ function updateChart(): void {
     secondSbarTime = null;
     syncStructurePrimitives();
     updateSbarCoordinates();
-    replaceSbarChartSeriesData(candleSeries, volumeSeries, [], []);
+    if (props.dataMode === "props") {
+      replaceSbarChartSeriesData(candleSeries, volumeSeries, [], []);
+    }
     cbarRectangles.value = [];
     swingSegments.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
@@ -656,7 +662,7 @@ onMounted(() => {
   applyCrosshairOptions();
 });
 
-watch(() => [props.bars, props.sequenceId] as const, () => {
+watch(() => [props.bars, props.sequenceId, props.dataMode] as const, () => {
   updateChart();
 });
 watch(() => props.structure, () => {
