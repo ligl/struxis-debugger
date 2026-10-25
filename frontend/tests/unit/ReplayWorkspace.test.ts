@@ -156,7 +156,10 @@ describe("ReplayWorkspace", () => {
     expect(live.attributes("data-has-sync-request")).toBe("true");
     expect(live.attributes("data-crosshair-revision")).toBe("1");
 
-    wrapper.vm.$.setupState.testDataset.testDatasetId = "test-2";
+    testDataset.value = {
+      ...testDataset.value,
+      testDatasetId: "test-2",
+    };
     await nextTick();
     expect(live.attributes("data-has-sync-request")).toBe("false");
     expect(live.attributes("data-crosshair-revision")).toBe("");
