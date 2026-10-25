@@ -13,7 +13,7 @@ import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-inde
 import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   origin: OriginDatasetDto | null;
   testDataset: TestDatasetDto | null;
   runState: RunStateDto | null;
