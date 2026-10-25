@@ -29,31 +29,6 @@ export function resolveSnapshotLiveRangeIndices(
 }
 
 
-export interface SnapshotProcessedRangeIndices {
-  start: number;
-  endExclusive: number;
-}
-
-/** Resolve the processed Live prefix projected onto the fixed Snapshot sequence. */
-export function resolveSnapshotProcessedRangeIndices(input: {
-  offset: number | null | undefined;
-  liveCount: number;
-  processedCount: number;
-  snapshotCount: number;
-}): SnapshotProcessedRangeIndices | null {
-  const anchors = resolveSnapshotLiveRangeIndices(
-    input.offset,
-    input.liveCount,
-    input.snapshotCount,
-  );
-  if (!anchors || !Number.isFinite(input.processedCount)) return null;
-  const processedCount = Math.max(0, Math.min(input.liveCount, Math.floor(input.processedCount)));
-  return {
-    start: anchors.start,
-    endExclusive: anchors.start + processedCount,
-  };
-}
-
 export interface SnapshotLiveRangeCoordinates {
   start: number;
   end: number;
