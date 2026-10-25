@@ -141,6 +141,20 @@ describe("CBar and Swing Series Primitives", () => {
     expect(h.context.strokeStyle).toBe("#D6A85D");
     expect(h.context.setLineDash).toHaveBeenCalledWith([6, 3]);
 
+    // Confirmed Swing uses the normative default Swing token and a solid stroke.
+    controller.setData([{
+      swingId: "swing-1",
+      sbarStartId: "s1",
+      sbarEndId: "s3",
+      high: "30",
+      low: "10",
+      direction: "Up",
+      state: "Confirmed",
+    }], h.projection);
+    view?.renderer()?.draw(h.target as never);
+    expect(h.context.strokeStyle).toBe("#C6A06B");
+    expect(h.context.setLineDash).toHaveBeenCalledWith([]);
+
     const segmentStyles: Array<{ color: string; width: number }> = [];
     h.context.stroke.mockImplementation(() => {
       segmentStyles.push({ color: h.context.strokeStyle, width: h.context.lineWidth });
