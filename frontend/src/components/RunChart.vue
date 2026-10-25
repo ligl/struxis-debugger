@@ -840,6 +840,7 @@ onBeforeUnmount(() => {
         :show-header="false"
         :show-footer="false"
         :show-legend="false"
+        :keyboard-active="false"
         data-mode="external"
         panel-class="run-chart-surface"
         panel-label="Live Replay SBar chart"
