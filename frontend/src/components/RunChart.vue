@@ -857,7 +857,7 @@ onBeforeUnmount(() => {
         @chart-click="handleSurfaceClick"
         @pointer-position="handleSurfacePointer"
         @logical-range-change="handleVisibleRangeChange"
-        @projection-frame="scheduleOverlayUpdate"
+        @projection-frame="updateStructureOverlays"
       >
         <template #chart-structure-overlays>
           <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
