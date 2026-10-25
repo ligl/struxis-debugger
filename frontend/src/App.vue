@@ -436,7 +436,7 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
   if (workspaceMode.value === "replay") {
     return {
       workspace: "replay",
-      timeframe: testDataset.value?.timeframe ?? origin.value?.timeframe ?? null,
+      timeframe: selectedReplaySnapshotObject.value?.timeframe ?? testDataset.value?.timeframe ?? origin.value?.timeframe ?? null,
       checkpoint: replayInspector.value,
       selectedObject: selectedReplayInspectorObject.value,
       snapshotId: selectedReplaySnapshotObject.value?.snapshotId ?? null,
