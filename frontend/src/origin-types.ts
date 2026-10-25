@@ -171,10 +171,13 @@ export type InspectorWorkspaceContext =
       timeframe: string | null;
       checkpoint: ReplayInspectorDto | null;
       selectedObject:
-        | { kind: "sbar"; object: SBarDto | ReplayInspectorSBarDto; source: "input" | "checkpoint" }
-        | { kind: "cbar"; object: ReplayInspectorCBarDto }
-        | { kind: "swing"; object: ReplayInspectorSwingDto }
+        | { kind: "sbar"; object: SBarDto | ReplayInspectorSBarDto; source: "input" | "checkpoint" | "snapshot" }
+        | { kind: "cbar"; object: ReplayInspectorCBarDto; source?: "checkpoint" | "snapshot" }
+        | { kind: "swing"; object: ReplayInspectorSwingDto; source?: "checkpoint" | "snapshot" }
         | null;
+      snapshotId: string | null;
+      snapshotBars: SBarDto[];
+      snapshotStructure: ReplayInspectorStructureDto | null;
       error: string;
     }
   | {
@@ -196,6 +199,19 @@ export type ReplayChartSelection = {
   id: string;
   checkpointSbarId: string | null;
 };
+
+type ReplaySnapshotSelectionContext = {
+  snapshotId: string;
+  checkpointSbarId: string;
+  timeframe: string;
+  bars: SBarDto[];
+  structure: ReplayInspectorStructureDto | null;
+};
+
+export type ReplaySnapshotInspectorSelection =
+  | (ReplaySnapshotSelectionContext & { kind: "sbar"; object: SBarDto })
+  | (ReplaySnapshotSelectionContext & { kind: "cbar"; object: ReplayInspectorCBarDto })
+  | (ReplaySnapshotSelectionContext & { kind: "swing"; object: ReplayInspectorSwingDto });
 
 export interface ReplayInspectorDto {
   stateKey: string;
