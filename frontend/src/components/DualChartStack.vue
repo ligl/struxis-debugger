@@ -42,6 +42,11 @@ function startPointerResize(event: PointerEvent): void {
   window.addEventListener("pointercancel", stopPointerResize);
 }
 
+function focusSplitter(event: MouseEvent): void {
+  // Hovering the splitter should make its arrow-key resize affordance immediately usable.
+  (event.currentTarget as HTMLElement).focus({ preventScroll: true });
+}
+
 function handleSplitterKey(event: KeyboardEvent): void {
   if (event.key === "ArrowUp") upperShare.value = clampShare(upperShare.value - 2);
   else if (event.key === "ArrowDown") upperShare.value = clampShare(upperShare.value + 2);
@@ -79,6 +84,7 @@ onBeforeUnmount(stopPointerResize);
       aria-valuemax="75"
       tabindex="0"
       @pointerdown="startPointerResize"
+      @mouseenter="focusSplitter"
       @keydown="handleSplitterKey"
     >
     </div>
