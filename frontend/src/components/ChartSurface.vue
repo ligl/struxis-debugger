@@ -6,7 +6,7 @@ import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
-import { candlestickBodyWidth, projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
+import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -152,12 +152,6 @@ function updateStructureGeometry(): void {
     indexBySbarId,
     visibleRange: timeScale.getVisibleLogicalRange(),
     coordinateForSbarId: (sbarId) => coordinateForSbarId(sbarId),
-    sbarBodyWidth: candlestickBodyWidth(
-      Number(timeScale.options().barSpacing),
-      typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
-        ? Math.max(1, window.devicePixelRatio)
-        : 1,
-    ),
     priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
     cbarVisible: layerVisibility.value.cbar,
     swingVisible: layerVisibility.value.swing,
