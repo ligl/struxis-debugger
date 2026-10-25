@@ -3,6 +3,7 @@ import type { ISeriesApi, Time } from "lightweight-charts";
 import type { SBarDto } from "../../src/origin-types";
 import {
   SnapshotReferencePrimitive,
+  SnapshotVolumePrimitive,
   type SnapshotPrimitiveState,
 } from "../../src/snapshot-reference-primitives";
 
@@ -75,7 +76,7 @@ function createHarness() {
     liveCount: 2,
     processedCount: 0,
   };
-  return { primitive, state, context, target, coordinates };
+  return { primitive, state, context, target, coordinates, chart };
 }
 
 describe("SnapshotReferencePrimitive", () => {
@@ -135,4 +136,26 @@ describe("SnapshotReferencePrimitive", () => {
     h.primitive.detached();
     h.primitive.dispose();
   });
+
+  it("dims the independent Volume pane and continues the fixed range guides", () => {
+    const h = createHarness();
+    const volume = new SnapshotVolumePrimitive();
+    volume.attached({ chart: h.chart as never, requestUpdate: vi.fn() } as never);
+    volume.update({
+      bars: h.state.bars,
+      enabled: true,
+      playbackEnabled: true,
+      offset: 0,
+      liveCount: 2,
+    });
+    volume.paneViews()[0]!.renderer()!.draw(h.target as never);
+
+    expect(h.context.fillRect).toHaveBeenCalledWith(0, 0, 700, 360);
+    expect(h.context.moveTo).toHaveBeenCalledWith(100, 0);
+    expect(h.context.lineTo).toHaveBeenCalledWith(100, 360);
+    expect(h.context.moveTo).toHaveBeenCalledWith(200, 0);
+    expect(h.context.lineTo).toHaveBeenCalledWith(200, 360);
+    volume.dispose();
+  });
+
 });
