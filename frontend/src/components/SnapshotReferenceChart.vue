@@ -233,6 +233,16 @@ function handlePointerPosition(point: { x: number; y: number } | null): void {
 
 function handleProjectionFrame(): void {
   refreshSnapshotGeometry();
+  const hovered = hoveredObject.value;
+  if (hovered?.kind === "sbar") {
+    if (!surface.value?.getSbarRangeHighlight(hovered.id)) hoveredObject.value = null;
+  } else if (hovered?.kind === "cbar" || hovered?.kind === "swing") {
+    const geometry = surface.value?.getStructureGeometry();
+    const stillProjected = hovered.kind === "cbar"
+      ? geometry?.cbarRectangles.some((item) => item.id === hovered.id)
+      : geometry?.swingSegments.some((item) => item.id === hovered.id);
+    if (!stillProjected) hoveredObject.value = null;
+  }
   updateSbarInteractionMarkers();
   syncStructureInteractionState();
 }
