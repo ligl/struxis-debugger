@@ -358,14 +358,11 @@ export class SnapshotVolumePrimitive implements ISeriesPrimitive<Time> {
   }
 
   updateAllViews(): void {
-    this.markers = null;
-    const { bars, enabled, offset, liveCount } = this.state;
-    if (!this.chart || !enabled || offset === null || liveCount <= 0) return;
+    // Volume pane dimming does not own range-marker projection.
   }
 
   dispose(): void {
     this.state = { bars: [], enabled: false, playbackEnabled: false, offset: null, liveCount: 0 };
-    this.markers = null;
     this.chart = null;
     this.requestUpdate = null;
   }
