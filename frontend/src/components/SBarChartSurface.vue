@@ -381,8 +381,13 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
-  // ReplayWorkspace owns which chart receives chart-local keyboard commands.
+  // ReplayWorkspace owns keyboard routing when a chart is embedded in Replay.
+  // Standalone Dataset surfaces retain their local hover/focus activation behavior.
   if (props.keyboardActive === false) return;
+  if (
+    props.keyboardActive === undefined &&
+    (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement)))
+  ) return;
 
   const key = ({ h: "ArrowLeft", j: "ArrowDown", k: "ArrowUp", l: "ArrowRight" } as const)[
     event.key as "h" | "j" | "k" | "l"
