@@ -108,13 +108,16 @@ describe("DatasetWorkspace", () => {
 
   it("keeps the Origin chart mounted while Dataset is inactive", async () => {
     const wrapper = mountDatasetWorkspace(origin, "loaded", false);
+    const chart = wrapper.get('[data-testid="origin-chart-stub"]');
 
-    expect(wrapper.find('[data-testid="origin-chart-stub"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="origin-chart-stub"]').isVisible()).toBe(false);
+    expect(chart.exists()).toBe(true);
+    expect((chart.element as HTMLElement).style.display).toBe("none");
 
     await wrapper.setProps({ active: true });
 
-    expect(wrapper.get('[data-testid="origin-chart-stub"]').isVisible()).toBe(true);
+    // Assert the component's own v-show state rather than computed visibility,
+    // which can be affected by unrelated wrapper styles in the test DOM.
+    expect((chart.element as HTMLElement).style.display).not.toBe("none");
   });
 
   it("forwards catalog and Test Dataset actions to the composition root", () => {
