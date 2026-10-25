@@ -831,6 +831,10 @@ watch(() => props.crosshairSync, (sync) => {
   if (!props.syncEnabled || !sync) {
     if (crosshairSyncGate.hasPeerPosition) {
       crosshairSyncGate.setPeerPositionActive(false);
+      // Clearing a peer-installed position is still a programmatic chart
+      // mutation. Suppress its synchronous Crosshair callback so it cannot
+      // be re-published as a fresh local command during identity invalidation.
+      crosshairSyncGate.beginApply();
       chart?.clearCrosshairPosition?.();
     }
     return;
