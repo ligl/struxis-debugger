@@ -264,6 +264,13 @@ function handleChartKeyboard(event: KeyboardEvent): void {
       return;
     }
     if (!chartError.value && !projectionMessage.value && bars.value.length > 0) {
+      // If Snapshot owns the workspace, only a qualified synchronized
+      // Crosshair can be mapped back to the Live Test Dataset. Never use a
+      // stale Live-local index when the two sequences are not sync-eligible.
+      if (props.syncOwner === "snapshot" && !props.syncEnabled) {
+        event.preventDefault();
+        return;
+      }
       const bar = crosshairLogicalIndex === null ? null : barAtLogicalIndex(crosshairLogicalIndex);
       if (bar) {
         emit("targetSelect", bar.sbarId);
@@ -467,6 +474,13 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
     }
     return;
   }
+
+  // A synchronized Snapshot Crosshair is also the authoritative target
+  // anchor while Snapshot owns the Replay workspace. Lightweight Charts does
+  // not guarantee a Crosshair-move callback for programmatic positioning, so
+  // update the logical SBar anchor from the resolved peer identity directly.
+  const mappedIndex = bars.value.findIndex((bar) => bar.sbarId === command.sbarId);
+  if (mappedIndex >= 0) crosshairLogicalIndex = mappedIndex;
 
   crosshairSyncGate.setPeerPositionActive(true);
   crosshairSyncGate.beginApply();
