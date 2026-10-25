@@ -25,7 +25,9 @@ const props = withDefaults(defineProps<{
   syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
   crosshairSync?: ReplayChartCrosshairSync | null;
-}>();
+}>(), {
+  keyboardActive: undefined,
+});
 const emit = defineEmits<{
   activate: [];
   objectSelect: [selection: ReplayChartSelection];
