@@ -681,12 +681,16 @@ onMounted(() => {
 
 watch(() => [props.bars, props.sequenceId, props.dataMode] as const, () => {
   updateChart();
+  // Dataset identity changes rebuild both the index and series; publish their
+  // geometry before the next interaction can hit-test the previous projection.
+  scheduleOverlayUpdate.flush();
 });
 watch(() => props.structure, () => {
   // A Snapshot checkpoint replaces the authoritative structure snapshot without
-  // rebuilding immutable candle/volume series.
+  // rebuilding immutable candle/volume series. Structure hit-testing must see
+  // that authoritative snapshot in the same turn, not one animation frame later.
   syncStructurePrimitives();
-  updateSbarCoordinates();
+  scheduleOverlayUpdate.flush();
 }, { deep: true });
 
 onBeforeUnmount(() => {
