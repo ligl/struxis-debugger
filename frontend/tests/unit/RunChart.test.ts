@@ -267,7 +267,7 @@ describe("RunChart", () => {
     expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(11, 1700000120, expect.anything());
     expect(wrapper.emitted("crosshairChange")?.at(-1)?.[0]).toEqual({
       source: "live",
-      sbarId: originBars[1]!.sbarId,
+      sbarId: originBars[2]!.sbarId,
       price: 11,
     });
 
