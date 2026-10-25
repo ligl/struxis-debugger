@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import SBarChartSurface from "./SBarChartSurface.vue";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 
 const props = defineProps<{
   bars: SBarDto[];
@@ -135,34 +136,18 @@ function handlePointerPosition(point: { x: number; y: number } | null): void {
 function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" }> | null {
   const geometry = surface.value?.getStructureGeometry();
   if (!geometry) return null;
-  const tolerance = 6;
-  type Candidate = { kind: "cbar" | "swing"; id: string; distance: number; priority: number };
-  const chooseCloser = (best: Candidate | null, candidate: Candidate): Candidate | null => {
-    if (candidate.distance > tolerance) return best;
-    if (!best || candidate.distance < best.distance ||
-      (candidate.distance === best.distance && candidate.priority < best.priority) ||
-      (candidate.distance === best.distance && candidate.priority === best.priority && candidate.id.localeCompare(best.id) < 0)) return candidate;
-    return best;
-  };
-  let best: Candidate | null = null;
-  for (const segment of geometry.swingSegments) {
-    const dx = segment.x2 - segment.x1;
-    const dy = segment.y2 - segment.y1;
-    const lengthSquared = dx * dx + dy * dy;
-    const projection = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((x - segment.x1) * dx + (y - segment.y1) * dy) / lengthSquared));
-    best = chooseCloser(best, { kind: "swing", id: segment.id, distance: Math.hypot(x - (segment.x1 + projection * dx), y - (segment.y1 + projection * dy)), priority: 0 });
-  }
-  for (const rectangle of geometry.cbarRectangles) {
-    const left = Math.min(rectangle.x, rectangle.x + rectangle.width);
-    const right = Math.max(rectangle.x, rectangle.x + rectangle.width);
-    const top = Math.min(rectangle.y, rectangle.y + rectangle.height);
-    const bottom = Math.max(rectangle.y, rectangle.y + rectangle.height);
-    const outsideX = x < left ? left - x : x > right ? x - right : 0;
-    const outsideY = y < top ? top - y : y > bottom ? y - bottom : 0;
-    const distance = outsideX > 0 || outsideY > 0 ? Math.hypot(outsideX, outsideY) : Math.min(x - left, right - x, y - top, bottom - y);
-    best = chooseCloser(best, { kind: "cbar", id: rectangle.id, distance, priority: 1 });
-  }
-  return best ? { kind: best.kind, id: best.id, originDatasetId: props.originDatasetId } : null;
+
+  // The Surface publishes only currently projected geometry. The shared hit
+  // tester owns deterministic distance ranking and Swing-before-CBar tie breaks.
+  const hit = resolveStructureHit({
+    x,
+    y,
+    swings: geometry.swingSegments,
+    cbars: geometry.cbarRectangles,
+    swingVisible: true,
+    cbarVisible: true,
+  });
+  return hit ? { kind: hit.kind, id: hit.id, originDatasetId: props.originDatasetId } : null;
 }
 
 function hitTestSbar(x: number, y: number): OriginObjectSelection | null {
