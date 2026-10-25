@@ -33,6 +33,7 @@ const props = withDefaults(defineProps<{
   panelLabel?: string;
   chartLabel?: string;
   keyboardActive?: boolean;
+  candleLastValueVisible?: boolean;
   dataMode?: "props" | "external";
 }>(), {
   keyboardActive: undefined,
@@ -659,7 +660,7 @@ onMounted(() => {
   const runtime = createSbarChartRuntime(chartHost.value, {
     width: chartHost.value.clientWidth,
     height: Math.max(1, chartHost.value.clientHeight),
-    candleLastValueVisible: true,
+    candleLastValueVisible: props.candleLastValueVisible ?? true,
   });
   chart = runtime.chart;
   candleSeries = runtime.candleSeries;
