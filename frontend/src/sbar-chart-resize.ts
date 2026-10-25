@@ -14,10 +14,14 @@ export function observeSbarChartResize(
     const entry = entries[0];
     if (!entry) return;
 
-    chart.applyOptions({
-      width: Math.max(1, Math.floor(entry.contentRect.width)),
-      height: Math.max(1, Math.floor(entry.contentRect.height)),
-    });
+    // Hidden workspaces report a zero-sized host. Do not resize Lightweight
+    // Charts to a synthetic 1x1 viewport: that clears/reflows the canvas and
+    // causes a visible flash when the workspace becomes visible again.
+    const width = Math.floor(entry.contentRect.width);
+    const height = Math.floor(entry.contentRect.height);
+    if (width <= 0 || height <= 0) return;
+
+    chart.applyOptions({ width, height });
     onResized();
   });
 
