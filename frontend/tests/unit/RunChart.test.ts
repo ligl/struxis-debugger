@@ -976,8 +976,13 @@ describe("RunChart", () => {
     liveRunState.value = runState({ testDatasetId: "test-2", runId: "run-2" });
     await nextTick();
 
-    mocks.animationFrameCallback?.(0);
-    await nextTick();
+    for (let frame = 0; frame < 4; frame += 1) {
+      const callback = mocks.animationFrameCallback;
+      mocks.animationFrameCallback = null;
+      if (!callback) break;
+      callback(0);
+      await nextTick();
+    }
     const published = wrapper.emitted("viewportChange")?.map(([value]) => value);
     expect(published).not.toContainEqual({ source: "live", from: 1.25, to: 4.25 });
     expect(published).toContainEqual({ source: "live", from: 6.5, to: 9.75 });
@@ -1019,8 +1024,13 @@ describe("RunChart", () => {
     await wrapper.setProps({ syncOwner: "live" } as never);
     mocks.getVisibleLogicalRange.mockReturnValue({ from: 1.5, to: 5.25 });
     mocks.visibleRangeListener?.();
-    mocks.animationFrameCallback?.(0);
-    await nextTick();
+    for (let frame = 0; frame < 4; frame += 1) {
+      const callback = mocks.animationFrameCallback;
+      mocks.animationFrameCallback = null;
+      if (!callback) break;
+      callback(0);
+      await nextTick();
+    }
     expect(wrapper.emitted("viewportChange")).toEqual([[
       { source: "live", from: 1.5, to: 5.25 },
     ]]);
@@ -1044,8 +1054,13 @@ describe("RunChart", () => {
     mocks.visibleRangeListener?.();
 
     // The one pending frame publishes the latest raw fractional range only.
-    mocks.animationFrameCallback?.(0);
-    await nextTick();
+    for (let frame = 0; frame < 4; frame += 1) {
+      const callback = mocks.animationFrameCallback;
+      mocks.animationFrameCallback = null;
+      if (!callback) break;
+      callback(0);
+      await nextTick();
+    }
     expect(wrapper.emitted("viewportChange")).toEqual([[
       { source: "live", from: 2.5, to: 5.75 },
     ]]);
@@ -1099,6 +1114,10 @@ describe("RunChart", () => {
       checkpointSbarId: originBars[1]!.sbarId,
     });
 
+    // The CBar intentionally has hit-test priority over the SBar beneath it.
+    // Clear structure for the independent SBar-selection assertion.
+    await wrapper.setProps({ structure: null } as never);
+    await nextTick();
     clickHandler({ point: { x: 90, y: 100 } });
     expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toEqual({
       kind: "sbar",
@@ -1106,6 +1125,8 @@ describe("RunChart", () => {
       checkpointSbarId: originBars[1]!.sbarId,
     });
 
+    await wrapper.setProps({ structure } as never);
+    await nextTick();
     clickHandler({ point: { x: 90, y: 189.5 } });
     expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toEqual({
       kind: "swing",
