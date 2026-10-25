@@ -16,6 +16,8 @@ function mountShortcut(
   const playbackStatus = ref<PlaybackStatus>(playback);
   const canControlPlayback = ref(canControl);
   const runBusy = ref(busy);
+  const playbackDelayMs = ref(200);
+  const setPlaybackDelay = vi.fn((delayMs: number) => { playbackDelayMs.value = delayMs; });
   const targetSbarId = ref<string | null>(target);
   const restartToTarget = vi.fn(async () => undefined);
   const executeCommand = vi.fn(async () => undefined);
@@ -29,12 +31,14 @@ function mountShortcut(
         restartToTarget,
         executeCommand,
         ref(canUseShortcuts),
+        playbackDelayMs,
+        setPlaybackDelay,
       );
       return () => null;
     },
   }));
   cleanup.push(() => wrapper.unmount());
-  return { playbackStatus, canControlPlayback, runBusy, targetSbarId, restartToTarget, executeCommand, wrapper };
+  return { playbackStatus, canControlPlayback, runBusy, playbackDelayMs, setPlaybackDelay, targetSbarId, restartToTarget, executeCommand, wrapper };
 }
 
 function pressSpace(target: EventTarget = document): KeyboardEvent {
@@ -150,6 +154,33 @@ describe("useReplayKeyboardShortcut", () => {
     expect(pressKey("r").defaultPrevented).toBe(true);
     await Promise.resolve();
     expect(state.executeCommand.mock.calls).toEqual([["stop"], ["start"]]);
+  });
+
+  it("changes playback speed with - and = without wrapping at either endpoint", () => {
+    const state = mountShortcut("playing", true, true, null, true);
+
+    const slower = pressKey("-");
+    expect(slower.defaultPrevented).toBe(true);
+    expect(state.setPlaybackDelay).toHaveBeenCalledWith(500);
+    expect(state.playbackDelayMs.value).toBe(500);
+
+    state.setPlaybackDelay.mockClear();
+    const slowBoundary = pressKey("-");
+    expect(slowBoundary.defaultPrevented).toBe(true);
+    expect(state.setPlaybackDelay).not.toHaveBeenCalled();
+    expect(state.playbackDelayMs.value).toBe(500);
+
+    state.playbackDelayMs.value = 65;
+    const faster = pressKey("=");
+    expect(faster.defaultPrevented).toBe(true);
+    expect(state.setPlaybackDelay).toHaveBeenCalledWith(0);
+    expect(state.playbackDelayMs.value).toBe(0);
+
+    state.setPlaybackDelay.mockClear();
+    const fastBoundary = pressKey("=");
+    expect(fastBoundary.defaultPrevented).toBe(true);
+    expect(state.setPlaybackDelay).not.toHaveBeenCalled();
+    expect(state.playbackDelayMs.value).toBe(0);
   });
 
   it("allows Stop to interrupt active playback while a Step is in flight", () => {
