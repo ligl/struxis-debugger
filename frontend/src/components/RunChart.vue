@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
-import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import { syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
-import { observeSbarChartResize } from "../sbar-chart-resize";
+import type { Time } from "lightweight-charts";
+import ChartSurface from "./ChartSurface.vue";
+import type { ChartSurfacePort } from "../chart-surface-contract";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
-import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
@@ -38,8 +35,7 @@ const emit = defineEmits<{
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
 
-const chartHost = ref<HTMLDivElement | null>(null);
-const structureOverlayWidth = ref(0);
+const surface = ref<ChartSurfacePort | null>(null);
 const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
@@ -52,13 +48,7 @@ const hoveredObject = ref<ReplayChartSelection | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
-let indexBySbarId: ReadonlyMap<string, number> = new Map();
 let cachedProjection: ReturnType<typeof mapSBarsToChart> | null = null;
-const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
-  Confirmed: { color: "#B49ACD", dasharray: "" },
-  Tentative: { color: "#D6A85D", dasharray: "6 3" },
-  Extending: { color: "#8FA9C4", dasharray: "2 3" },
-};
 const bars = computed<SBarDto[]>(() => {
   const origin = props.origin;
   const test = props.testDataset;
@@ -93,21 +83,10 @@ const displayedBar = computed(() => {
   return processedCount > 0 ? bars.value[processedCount - 1] : null;
 });
 
-let chart: IChartApi | null = null;
-let candleSeries: ISeriesApi<"Candlestick"> | null = null;
-let volumeSeries: ISeriesApi<"Histogram"> | null = null;
-let primitiveHost: ChartPrimitiveHost | null = null;
-let cbarPrimitive: StructurePrimitiveController | null = null;
-let swingPrimitive: StructurePrimitiveController | null = null;
-let stopObservingResize: (() => void) | null = null;
-
 let fittedTestDatasetId: string | null = null;
 let lastProcessedCount: number | null = null;
 let lastRunId: string | null = null;
 let lastProgressApplies: boolean | null = null;
-let visibleRangeListener: (() => void) | null = null;
-let chartClickListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
-let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
 let crosshairUpdateFrame: number | null = null;
 const crosshairSyncGate = new ReplayCrosshairSyncGate();
@@ -126,20 +105,18 @@ function barAtLogicalIndex(logical: number): SBarDto | null {
 }
 
 function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
-  if (!chart || !candleSeries || bars.value.length === 0) return false;
+  if (!surface.value || bars.value.length === 0) return false;
   const nextIndex = Math.max(0, Math.min(bars.value.length - 1, index));
   const bar = bars.value[nextIndex];
   if (!bar) return false;
-  const time = timeBySbarId.get(bar.sbarId);
-  if (time === undefined) return false;
+  if (!timeBySbarId.has(bar.sbarId)) return false;
   crosshairLogicalIndex = nextIndex;
 
   // Keep the selected candle inside the viewport without scrolling the
   // logical range beyond the Test Dataset's first/last candle. A simple
   // edge shift can push the range past index 0 or the final index, making
   // Ctrl+Left / Ctrl+Right appear to land outside the dataset.
-  const timeScale = chart.timeScale();
-  const range = timeScale.getVisibleLogicalRange?.();
+  const range = surface.value?.getVisibleLogicalRange();
   if (range && Number.isFinite(range.from) && Number.isFinite(range.to)) {
     const width = range.to - range.from;
     if (width > 0) {
@@ -175,7 +152,7 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
         }
       }
       if (Math.abs(from - range.from) > 0.001 || Math.abs(to - range.to) > 0.001) {
-        timeScale.setVisibleLogicalRange({ from, to });
+        surface.value?.applyViewportRange({ from, to: to ?? (from + nextWidth) });
       }
     }
   }
@@ -187,11 +164,11 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
   // leave the crosshair at its previous pointer-derived position.
   const selectedIndex = nextIndex;
   const applySelectedCrosshair = () => {
-    if (!chart || !candleSeries || crosshairLogicalIndex !== selectedIndex) return;
+    if (!surface.value || crosshairLogicalIndex !== selectedIndex) return;
     // Suppress the chart callback caused by our own programmatic positioning,
     // including the deferred re-application after the viewport layout pass.
     if (props.syncEnabled) crosshairSyncGate.beginApply();
-    chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
+    surface.value?.applyCrosshairPosition(bar.sbarId, Number(bar.close));
   };
   // Programmatic keyboard navigation does not reliably produce a
   // subscribeCrosshairMove notification. Publish the selected SBar explicitly
@@ -224,9 +201,8 @@ function moveCrosshairBy(delta: number): boolean {
 }
 
 function zoomTimeScale(direction: "in" | "out"): boolean {
-  if (!chart || bars.value.length === 0) return false;
-  const timeScale = chart.timeScale();
-  const range = timeScale.getVisibleLogicalRange?.();
+  if (!surface.value || bars.value.length === 0) return false;
+  const range = surface.value.getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return false;
   const width = range.to - range.from;
   if (width <= 0) return false;
@@ -243,7 +219,7 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
     : (range.from + range.to) / 2;
   const anchorRatio = (anchor - range.from) / width;
   const from = anchor - nextWidth * anchorRatio;
-  timeScale.setVisibleLogicalRange({ from, to: from + nextWidth });
+  surface.value?.applyViewportRange({ from, to: to ?? (from + nextWidth) });
   return true;
 }
 
@@ -289,7 +265,7 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   if (props.keyboardActive === false) return;
   if (
     props.keyboardActive === undefined &&
-    (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement)))
+    (!document.querySelector(".run-chart-surface")?.matches(":hover") && !document.querySelector(".run-chart-surface")?.contains(document.activeElement))
   ) return;
 
   // Vim normal-mode navigation aliases: h/ j/ k/ l behave exactly like the
@@ -326,18 +302,18 @@ function handleChartKeyboard(event: KeyboardEvent): void {
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
-  applySbarChartSeriesVisibility(candleSeries, volumeSeries, layerVisibility.value);
-  syncStructurePrimitives();
+  surface.value?.setLayerVisibility(layerVisibility.value);
+  updateHoveredObject(undefined);
   // Keep layer state and geometry consumed by hit-testing in the same turn.
   scheduleOverlayUpdate.flush();
 }
 
 function fitContent(): void {
-  chart?.timeScale().fitContent();
+  surface.value?.fitContent();
 }
 
 function fitContentShortcut(): boolean {
-  if (!chart || bars.value.length === 0) return false;
+  if (!surface.value || bars.value.length === 0) return false;
   fitContent();
   updateStructureOverlays();
   return true;
@@ -357,130 +333,35 @@ function syncStructurePrimitives(): void {
     (selectedObjectValue.kind === "cbar" || selectedObjectValue.kind === "swing")
     ? { kind: selectedObjectValue.kind, id: selectedObjectValue.id }
     : null;
-
-  syncStructurePrimitiveControllers({
-    cbar: cbarPrimitive,
-    swing: swingPrimitive,
-    cbars: props.structure?.cbars ?? [],
-    swings: props.structure?.swings ?? [],
-    projection: { timeBySbarId, indexBySbarId },
-    cbarVisible: layerVisibility.value.cbar,
-    swingVisible: layerVisibility.value.swing,
-    interaction: {
-      hovered,
-      selected,
-      selectedColor: "#D6A85D",
-      cbarSelectedWidth: 2,
-      swingSelectedWidth: 2.25,
-    },
-  });
+  surface.value?.setStructureInteractionState(hovered, selected);
 }
 
 function updateStructureOverlays(): void {
-  if (!chart || !candleSeries || typeof chart.timeScale().timeToCoordinate !== "function" || typeof candleSeries.priceToCoordinate !== "function") {
+  const port = surface.value;
+  if (!port) {
     selectedSbarMarker.value = null;
     hoveredSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
-    syncStructurePrimitiveControllers({
-      cbar: cbarPrimitive,
-      swing: swingPrimitive,
-      cbars: [],
-      swings: [],
-      projection: { timeBySbarId, indexBySbarId },
-      cbarVisible: layerVisibility.value.cbar,
-      swingVisible: layerVisibility.value.swing,
-    });
     targetSbarX.value = null;
     return;
   }
-  const timeScale = chart.timeScale();
-  // Clip the SVG overlay to the plot area so it cannot cover the right price scale.
-  structureOverlayWidth.value = typeof timeScale.width === "function"
-    ? timeScale.width()
-    : chartHost.value?.clientWidth ?? 0;
-  const structure = props.structure;
-  const selected = props.selectedObject;
-  if (layerVisibility.value.sbar && selected?.kind === "sbar" && ((selected.checkpointSbarId === null && !props.runState) || selected.checkpointSbarId === props.runState?.cursorSbarId)) {
-    selectedSbarMarker.value = markerForSbar(selected.id);
-  } else selectedSbarMarker.value = null;
-  const visibleRange = timeScale.getVisibleLogicalRange?.();
-  const projectionRange = visibleRange && Number.isFinite(visibleRange.from) && Number.isFinite(visibleRange.to)
-    ? { from: visibleRange.from, to: visibleRange.to }
-    : null;
-  const geometry = projectStructureOverlayGeometry({
-    cbars: structure?.cbars ?? [],
-    swings: structure?.swings ?? [],
-    indexBySbarId,
-    visibleRange: projectionRange,
-    coordinateForSbarId: (sbarId) => {
-      const time = timeBySbarId.get(sbarId);
-      return time === undefined ? null : timeScale.timeToCoordinate(time);
-    },
-    priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
-    cbarVisible: layerVisibility.value.cbar,
-    swingVisible: layerVisibility.value.swing,
-    resolveSwingStyle: (state) => swingStyleByState[state] ?? { color: "#A0A7B0", dasharray: "4 3" },
-  });
+  const geometry = port.getStructureGeometry();
   cbarRectangles.value = geometry.cbarRectangles;
   swingSegments.value = geometry.swingSegments;
-  const targetTime = props.targetSbarId ? timeBySbarId.get(props.targetSbarId) : undefined;
-  const targetX = targetTime === undefined ? null : timeScale.timeToCoordinate(targetTime);
-  targetSbarX.value = targetX !== null && targetX !== undefined && Number.isFinite(targetX)
-    ? targetX
+  const selected = props.selectedObject;
+  selectedSbarMarker.value = layerVisibility.value.sbar
+    && selected?.kind === "sbar"
+    && ((selected.checkpointSbarId === null && !props.runState) || selected.checkpointSbarId === props.runState?.cursorSbarId)
+    ? port.getSbarMarker(selected.id)
     : null;
+  targetSbarX.value = props.targetSbarId ? port.getSbarCoordinate(props.targetSbarId) : null;
   updateHoverMarker();
 }
 
-function candlestickBodyWidth(barSpacing: number, pixelRatio: number): number {
-  if (!Number.isFinite(barSpacing) || barSpacing <= 0) return Number.NaN;
-  const specialCaseFrom = 2.5;
-  const specialCaseTo = 4;
-  let width: number;
-  if (barSpacing >= specialCaseFrom && barSpacing <= specialCaseTo) {
-    width = Math.floor(3 * pixelRatio);
-  } else {
-    const coefficient = 1 - (0.2 * Math.atan(Math.max(specialCaseTo, barSpacing) - specialCaseTo)) / (Math.PI * 0.5);
-    const optimal = Math.min(Math.floor(barSpacing * coefficient * pixelRatio), Math.floor(barSpacing * pixelRatio));
-    width = Math.max(Math.floor(pixelRatio), optimal);
-  }
-  if (width >= 2) {
-    const wickWidth = Math.floor(pixelRatio);
-    if (wickWidth % 2 !== width % 2) width--;
-  }
-  return width / pixelRatio;
-}
-
 function markerForSbar(sbarId: string | null | undefined): SBarSelectionMarker | null {
-  if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
-  const index = bars.value.findIndex((bar) => bar.sbarId === sbarId);
-  const bar = index >= 0 ? bars.value[index] : undefined;
-  const timeScale = chart.timeScale();
-  const time = bar ? timeBySbarId.get(bar.sbarId) : undefined;
-  if (!bar || index < 0 || time === undefined) return null;
-
-  // Match the built-in candlestick body's width, not the full logical slot.
-  // Lightweight Charts calculates width from barSpacing and horizontal pixel
-  // ratio, including its narrow-spacing and pixel-parity rules.
-  const center = timeScale.timeToCoordinate(time);
-  const barSpacing = Number(timeScale.options().barSpacing);
-  const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
-    ? Math.max(1, window.devicePixelRatio)
-    : 1;
-  const bodyWidth = candlestickBodyWidth(barSpacing, pixelRatio);
-  const highY = candleSeries.priceToCoordinate(Number(bar.high));
-  const lowY = candleSeries.priceToCoordinate(Number(bar.low));
-  if ([center, barSpacing, bodyWidth, highY, lowY].some((value) => !Number.isFinite(value)) || center === null || highY === null || lowY === null) return null;
-
-  const top = Math.min(highY, lowY);
-  const bottom = Math.max(highY, lowY);
-  return {
-    id: sbarId,
-    x: center - bodyWidth / 2,
-    y: top,
-    width: Math.max(1, bodyWidth),
-    height: Math.max(1, bottom - top),
-  };
+  if (!layerVisibility.value.sbar || !sbarId) return null;
+  return surface.value?.getSbarMarker(sbarId) ?? null;
 }
 
 function sbarRangeHighlight(sbarId: string | null | undefined): SBarSelectionMarker | null {
@@ -497,17 +378,17 @@ function updateHoverMarker(): void {
 function handleVisibleRangeChange(): void {
   scheduleOverlayUpdate();
   if (!props.syncEnabled || (props.syncOwner !== undefined && props.syncOwner !== "live") || !chart || bars.value.length === 0) return;
-  const range = chart.timeScale().getVisibleLogicalRange();
-  if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
+  const range = surface.value?.getVisibleLogicalRange();
+  if (!currentRange || !Number.isFinite(currentRange.from) || !Number.isFinite(currentRange.to)) return;
 
   // Coalesce high-frequency wheel/pan events; publish the latest fractional
   // viewport in the same frame as the overlay projection.
-  pendingViewportRange = { from: range.from, to: range.to };
+  pendingViewportRange = { from: currentRange.from, to: currentRange.to };
   scheduleOverlayUpdate();
 }
 
 function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): void {
-  if (!chart || !candleSeries || !props.syncEnabled) return;
+  if (!surface.value || !props.syncEnabled) return;
   const command = resolveReplayCrosshairCommand(sync, bars.value, timeBySbarId, "live");
   if (command.kind === "ignore") return;
   if (command.kind === "clear") {
@@ -516,7 +397,7 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
     if (crosshairSyncGate.hasPeerPosition) {
       crosshairSyncGate.setPeerPositionActive(false);
       crosshairSyncGate.beginApply();
-      chart.clearCrosshairPosition?.();
+      surface.value?.clearCrosshairPosition();
     }
     return;
   }
@@ -530,24 +411,24 @@ function applyCrosshairSync(sync: ReplayChartCrosshairSync | null | undefined): 
 
   crosshairSyncGate.setPeerPositionActive(true);
   crosshairSyncGate.beginApply();
-  chart.setCrosshairPosition?.(command.price, command.time, candleSeries);
+  surface.value.applyCrosshairPosition(command.sbarId, command.price);
 }
 function applySyncRequest(request: ReplayChartViewportSync | null | undefined): void {
-  if (!request || request.source === "live" || !props.syncEnabled || !chart) return;
-  const current = chart.timeScale().getVisibleLogicalRange();
+  if (!request || request.source === "live" || !props.syncEnabled || !surface.value) return;
+  const current = surface.value.getVisibleLogicalRange();
   // Snapshot = Live + offset: the shared protocol owns the inverse transform.
   const target = translateReplayViewportRange(request, "reference-to-live");
   if (!target) return;
   if (current && isSameLogicalRange(current, target)) return;
   const { from, to } = target;
-  chart.timeScale().setVisibleLogicalRange({ from, to });
+  surface.value.applyViewportRange({ from, to });
 }
 
 const scheduleOverlayUpdate = createStructureProjectionScheduler(() => {
   updateStructureOverlays();
   const latest = pendingViewportRange;
   pendingViewportRange = null;
-  if (latest && props.syncEnabled && (props.syncOwner === undefined || props.syncOwner === "live") && chart) {
+  if (latest && props.syncEnabled && (props.syncOwner === undefined || props.syncOwner === "live") && surface.value) {
     emit("viewportChange", { source: "live", from: latest.from, to: latest.to });
   }
 });
@@ -566,8 +447,8 @@ function hitTestStructureObject(x: number, y: number): { kind: "swing" | "cbar";
 }
 
 function hitTestSbar(x: number, y: number): string | null {
-  if (!chart || !candleSeries || !layerVisibility.value.sbar || bars.value.length === 0) return null;
-  const logical = chart.timeScale().coordinateToLogical?.(x);
+  if (!surface.value || !layerVisibility.value.sbar || bars.value.length === 0) return null;
+  const logical = surface.value.getLogicalIndexAtCoordinate(x);
   if (logical === null || logical === undefined || !Number.isFinite(logical)) return null;
   const index = Math.round(logical);
   const bar = bars.value[index];
@@ -602,19 +483,28 @@ function publishCrosshair(param: { point?: { x: number; y: number } | undefined 
   if (!props.syncEnabled || crosshairSyncGate.isApplying) return;
   crosshairSyncGate.setPeerPositionActive(false);
   const point = param.point;
-  if (!point || !chart || !candleSeries || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+  if (!point || !surface.value || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
     emit("crosshairChange", { source: "live", sbarId: null, price: null });
     return;
   }
-  const logical = chart.timeScale().coordinateToLogical?.(point.x);
+  const logical = surface.value.getLogicalIndexAtCoordinate(point.x);
   const anchor = resolveSbarChartAnchor(bars.value, logical);
   const bar = anchor ? bars.value[anchor.index] : undefined;
-  const price = candleSeries.coordinateToPrice(point.y);
+  const price = surface.value.getPriceAtCoordinate(point.y);
   emit("crosshairChange", {
     source: "live",
     sbarId: bar?.sbarId ?? null,
     price: price !== null && price !== undefined && Number.isFinite(price) ? price : null,
   });
+}
+
+function handleSurfacePointer(point: { x: number; y: number } | null): void {
+  handleChartMove({ point: point ?? undefined });
+}
+
+function handleSurfaceClick(point: { x: number; y: number | null } | null): void {
+  if (!point || point.y === null) return;
+  handleChartClick({ point: { x: point.x, y: point.y } });
 }
 
 function handleChartMove(param: { point?: { x: number; y: number } | undefined }): void {
@@ -623,7 +513,7 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
   // A leave event clears hover, but retains the last logical crosshair anchor
   // so T still targets the position the user was inspecting.
   if (typeof x === "number") {
-    const logical = chart?.timeScale().coordinateToLogical?.(x);
+    const logical = surface.value?.getLogicalIndexAtCoordinate(x);
     // Only adopt a real candle under the pointer. When the pointer/crosshair
     // is outside the Test Dataset, retain the last valid navigation anchor;
     // clearing it makes the next keypress fall back to the backend cursor and
@@ -637,7 +527,7 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   const x = param.point?.x;
   const y = param.point?.y;
-  if (!chart || chartError.value || typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) return;
+  if (!surface.value || chartError.value || typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) return;
   const structureHit = hitTestStructureObject(x, y);
   const checkpointSbarId = props.runState?.cursorSbarId;
   if (structureHit && checkpointSbarId) {
@@ -658,19 +548,14 @@ function handleChartDoubleClick(event: MouseEvent): void {
   // not affect which SBar is targeted.
   const target = event.target;
   if (
-    !chart ||
+    !surface.value ||
     chartError.value ||
     !(target instanceof Element) ||
     target.closest(".run-chart-legend, button, .run-chart-heading")
   ) return;
-  const hostLeft = chartHost.value?.getBoundingClientRect().left ?? 0;
-  const x = event.clientX - hostLeft;
-  if (!Number.isFinite(x)) return;
-  const logical = chart.timeScale().coordinateToLogical?.(x);
-  if (logical === null || logical === undefined || !Number.isFinite(logical)) return;
-  const bar = barAtLogicalIndex(logical);
-  if (!bar) return;
-  emit("targetSelect", bar.sbarId);
+  const sbarId = surface.value.getSbarIdAtClientX(event.clientX);
+  if (!sbarId) return;
+  emit("targetSelect", sbarId);
 }
 
 function handleContextMenu(event: MouseEvent): void {
@@ -681,12 +566,11 @@ function handleContextMenu(event: MouseEvent): void {
 }
 
 function updateChart(): void {
-  if (!chart || !candleSeries || !volumeSeries) return;
+  if (!surface.value) return;
   try {
     if (projectionMessage.value) {
-      replaceSbarChartSeriesData(candleSeries, volumeSeries, [], []);
+      surface.value.replaceSeriesData([], []);
       timeBySbarId = new Map();
-      indexBySbarId = new Map();
       cachedProjection = null;
       lastProcessedCount = null;
       lastRunId = props.runState?.runId ?? null;
@@ -694,15 +578,7 @@ function updateChart(): void {
       selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
-      syncStructurePrimitiveControllers({
-        cbar: cbarPrimitive,
-        swing: swingPrimitive,
-        cbars: [],
-        swings: [],
-        projection: { timeBySbarId, indexBySbarId },
-        cbarVisible: layerVisibility.value.cbar,
-        swingVisible: layerVisibility.value.swing,
-      });
+      surface.value.setStructureInteractionState(null, null);
       targetSbarX.value = null;
       chartError.value = "";
       return;
@@ -717,7 +593,6 @@ function updateChart(): void {
       projection.candles.map((candle) => candle.time),
     );
     timeBySbarId = chartIndex.timeBySbarId;
-    indexBySbarId = chartIndex.indexBySbarId;
     const candles = projection.candles.map((candle, index) => {
       if (!replayProgressApplies.value || index < processedCount) return candle;
       return {
@@ -732,7 +607,7 @@ function updateChart(): void {
         ? { ...bar, color: "#454b53" }
         : bar,
     );
-    replaceSbarChartSeriesData(candleSeries, volumeSeries, candles, volume);
+    surface.value.replaceSeriesData(candles, volume);
     syncStructurePrimitives();
     lastProcessedCount = processedCount;
     lastRunId = props.runState?.runId ?? null;
@@ -740,8 +615,8 @@ function updateChart(): void {
     chartError.value = "";
     updateStructureOverlays();
     if (props.testDataset && fittedTestDatasetId !== props.testDataset.testDatasetId) {
-      chart.timeScale().fitContent();
-      chart.timeScale().setVisibleLogicalRange({
+      surface.value.fitContent();
+      surface.value.applyViewportRange({
         from: -0.5,
         to: projection.candles.length + 3.5,
       });
@@ -749,7 +624,7 @@ function updateChart(): void {
     }
     applyCrosshairSync(props.crosshairSync);
   } catch (error) {
-    replaceSbarChartSeriesData(candleSeries, volumeSeries, [], []);
+    surface.value.replaceSeriesData([], []);
     cachedProjection = null;
     lastProcessedCount = null;
     lastRunId = props.runState?.runId ?? null;
@@ -757,22 +632,14 @@ function updateChart(): void {
     selectedSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
-    syncStructurePrimitiveControllers({
-      cbar: cbarPrimitive,
-      swing: swingPrimitive,
-      cbars: [],
-      swings: [],
-      projection: { timeBySbarId, indexBySbarId },
-      cbarVisible: layerVisibility.value.cbar,
-      swingVisible: layerVisibility.value.swing,
-    });
+    surface.value.setStructureInteractionState(null, null);
     targetSbarX.value = null;
     chartError.value = error instanceof Error ? error.message : String(error);
   }
 }
 
 function updateProgressSeries(): void {
-  if (!chart || !candleSeries || !volumeSeries || projectionMessage.value) return;
+  if (!surface.value || projectionMessage.value) return;
   const processedCount = replayProgressApplies.value
     ? Math.min(props.runState?.processedCount ?? 0, bars.value.length)
     : bars.value.length;
@@ -813,7 +680,7 @@ function updateProgressSeries(): void {
     // them transparent after the layer is shown again.
     // Future candles are already dimmed, so promote only the newly confirmed
     // SBar and volume bar instead of replacing the complete historical series.
-    updateSbarChartSeriesData(candleSeries, volumeSeries, candle, volume, true);
+    surface.value.updateSeriesData(candle, volume, true);
     lastProcessedCount = processedCount;
     updateStructureOverlays();
     return;
@@ -826,44 +693,11 @@ function updateProgressSeries(): void {
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
-  if (!chartHost.value) return;
-  const runtime = createSbarChartRuntime(chartHost.value, {
-    width: Math.max(1, Math.floor(chartHost.value.clientWidth)),
-    height: Math.max(1, Math.floor(chartHost.value.clientHeight)),
-    candleLastValueVisible: false,
-  });
-  chart = runtime.chart;
-  candleSeries = runtime.candleSeries;
-  volumeSeries = runtime.volumeSeries;
-  primitiveHost = runtime.primitiveHost;
-  cbarPrimitive = runtime.cbarPrimitive;
-  swingPrimitive = runtime.swingPrimitive;
-  const timeScale = chart.timeScale();
-  if (typeof chart.subscribeClick === "function") {
-    chartClickListener = handleChartClick;
-    chart.subscribeClick(chartClickListener);
-  }
-  if (typeof chart.subscribeCrosshairMove === "function") {
-    chartMoveListener = handleChartMove;
-    chart.subscribeCrosshairMove(chartMoveListener);
-  }
-  if (typeof timeScale.subscribeVisibleLogicalRangeChange === "function") {
-    timeScale.subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
-    visibleRangeListener = () => timeScale.unsubscribeVisibleLogicalRangeChange?.(handleVisibleRangeChange);
-  }
-  stopObservingResize = observeSbarChartResize(chartHost.value, chart, () => {
-    scheduleOverlayUpdate();
-  });
   updateChart();
+  surface.value?.setLayerVisibility(layerVisibility.value);
   if (props.syncEnabled) {
-    // The syncRequest watcher may run before the chart instance exists on
-    // initial mount. Apply the initial peer command after chart setup, and do
-    // not sample that peer-controlled viewport as a local Live gesture.
-    if (props.syncRequest?.source === "reference") {
-      applySyncRequest(props.syncRequest);
-    } else {
-      handleVisibleRangeChange();
-    }
+    if (props.syncRequest?.source === "reference") applySyncRequest(props.syncRequest);
+    else handleVisibleRangeChange();
   }
 });
 
@@ -917,7 +751,7 @@ watch(() => props.crosshairSync, (sync) => {
       // mutation. Suppress its synchronous Crosshair callback so it cannot
       // be re-published as a fresh local command during identity invalidation.
       crosshairSyncGate.beginApply();
-      chart?.clearCrosshairPosition?.();
+      surface.value?.clearCrosshairPosition();
     }
     return;
   }
@@ -927,7 +761,7 @@ watch(() => props.syncEnabled, (enabled) => {
   if (!enabled && crosshairSyncGate.hasPeerPosition) {
     crosshairSyncGate.setPeerPositionActive(false);
     crosshairSyncGate.beginApply();
-    chart?.clearCrosshairPosition?.();
+    surface.value?.clearCrosshairPosition();
   }
 });
 watch(() => props.syncRequest, (request) => {
@@ -945,7 +779,10 @@ watch([() => props.syncEnabled, () => props.syncOffset], ([enabled]) => {
   // Drop any deferred source range when synchronization eligibility is lost.
   pendingViewportRange = null;
 });
-watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
+watch(() => ({ ...layerVisibility.value }), (visibility) => {
+  surface.value?.setLayerVisibility(visibility);
+  updateHoveredObject(undefined);
+}, { deep: true });
 
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleChartKeyboard);
@@ -954,27 +791,12 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(crosshairUpdateFrame);
     crosshairUpdateFrame = null;
   }
-  visibleRangeListener?.();
-  visibleRangeListener = null;
-  if (chart && chartClickListener) chart.unsubscribeClick?.(chartClickListener);
-  if (chart && chartMoveListener) chart.unsubscribeCrosshairMove?.(chartMoveListener);
-  chartClickListener = null;
-  chartMoveListener = null;
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
-  stopObservingResize?.();
-  stopObservingResize = null;
   scheduleOverlayUpdate.cancel();
   pendingViewportRange = null;
   crosshairSyncGate.clear();
-  disposeSbarChartRuntime(chart, primitiveHost);
-  primitiveHost = null;
-  cbarPrimitive = null;
-  swingPrimitive = null;
-  chart = null;
-  candleSeries = null;
-  volumeSeries = null;
-});
+});;
 </script>
 
 <template>
@@ -1010,20 +832,37 @@ onBeforeUnmount(() => {
       <div v-if="chartError" class="error-message chart-error" role="alert" data-testid="run-chart-error">
         <strong>Chart projection rejected</strong><span>{{ chartError }}</span>
       </div>
-      <div ref="chartHost" class="run-chart-host" :class="{ 'is-empty': Boolean(projectionMessage) }" data-testid="run-chart-canvas"
-        :aria-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"></div>
-      <svg v-if="!projectionMessage" class="run-structure-overlay" :style="{ width: `${structureOverlayWidth}px` }" data-testid="run-structure-overlay" aria-hidden="true">
-        <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
-          <line :x1="targetSbarX" y1="0" :x2="targetSbarX" y2="100%" stroke="#C6A06B" stroke-width="1.25" stroke-dasharray="5 4" />
-          <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
-          <circle :cx="targetSbarX" cy="98%" r="3" fill="#C6A06B" />
-        </g>
-        <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="none" stroke="#C3CBD1" stroke-width="1.25" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
-        <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
-         <line v-for="segment in swingSegments" :key="segment.id" :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2" :stroke="segment.color" stroke-width="1.25" :stroke-dasharray="segment.dasharray || undefined" stroke-linecap="round" visibility="hidden" data-testid="run-swing-segment" :data-swing-id="segment.id" :data-swing-state="segment.state" />
-         <rect v-for="rectangle in cbarRectangles" :key="rectangle.id" :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height" fill="none" visibility="hidden" stroke="#A0A7B0" stroke-width="1" data-testid="run-cbar-rectangle" :data-cbar-id="rectangle.id" />
-      </svg>
-      <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="run-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
+      <ChartSurface
+        ref="surface"
+        :bars="bars"
+        :structure="structure ?? null"
+        :sequence-id="testDataset?.testDatasetId ?? 'empty'"
+        :show-header="false"
+        :show-footer="false"
+        :show-legend="false"
+        data-mode="external"
+        panel-class="run-chart-surface"
+        panel-label="Live Replay SBar chart"
+        :chart-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"
+        @chart-activate="emit('activate')"
+        @chart-click="handleSurfaceClick"
+        @pointer-position="handleSurfacePointer"
+        @logical-range-change="handleVisibleRangeChange"
+        @projection-frame="scheduleOverlayUpdate"
+      >
+        <template #chart-structure-overlays>
+          <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
+            <line :x1="targetSbarX" y1="0" :x2="targetSbarX" y2="100%" stroke="#C6A06B" stroke-width="1.25" stroke-dasharray="5 4" />
+            <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
+            <circle :cx="targetSbarX" cy="98%" r="3" fill="#C6A06B" />
+          </g>
+          <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="none" stroke="#C3CBD1" stroke-width="1.25" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
+          <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
+        </template>
+        <template #chart-interaction-overlay>
+          <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="run-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
+        </template>
+      </ChartSurface>
       <div v-if="!projectionMessage" class="run-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="run-layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="run-layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
