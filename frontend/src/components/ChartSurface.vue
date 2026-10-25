@@ -37,6 +37,12 @@ const props = withDefaults(defineProps<{
   dataMode?: "props" | "external";
 }>(), {
   keyboardActive: undefined,
+  showHeader: true,
+  showFooter: true,
+  showLegend: true,
+  showEmptyState: true,
+  showErrorState: true,
+  showStructureOverlay: true,
   dataMode: "props",
 });
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
