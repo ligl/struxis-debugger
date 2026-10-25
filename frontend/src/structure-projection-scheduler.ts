@@ -14,15 +14,14 @@ export function createStructureProjectionScheduler(
   project: () => void,
 ): StructureProjectionScheduler {
   const schedule = createAnimationFrameCoalescer(project);
+  const cancelScheduledFrame = schedule.cancel.bind(schedule);
   const scheduler = schedule as unknown as StructureProjectionScheduler;
 
   scheduler.flush = () => {
-    schedule.cancel();
+    cancelScheduledFrame();
     project();
   };
-  scheduler.cancel = () => {
-    schedule.cancel();
-  };
+  scheduler.cancel = cancelScheduledFrame;
 
   return scheduler;
 }
