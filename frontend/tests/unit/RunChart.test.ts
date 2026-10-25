@@ -1212,6 +1212,28 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("continues keyboard zoom-out beyond the fitted dataset range", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+    });
+    await nextTick();
+
+    // This viewport already spans wider than the complete Test Dataset plus
+    // the old padding cap. Keyboard zoom-out must still behave like wheel zoom.
+    mocks.getVisibleLogicalRange.mockReturnValue({ from: -4, to: 7 });
+    mocks.setVisibleLogicalRange.mockClear();
+    const event = new KeyboardEvent("keydown", {
+      key: "ArrowDown", bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(mocks.setVisibleLogicalRange).toHaveBeenCalledOnce();
+    const range = mocks.setVisibleLogicalRange.mock.calls[0]![0] as { from: number; to: number };
+    expect(range.to - range.from).toBeCloseTo(13.75);
+    wrapper.unmount();
+  });
+
   it("renders a stable default empty state when no Test Dataset is selected", async () => {
     const wrapper = mount(RunChart, {
       props: {
