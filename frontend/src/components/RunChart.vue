@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import type { StructurePrimitiveController } from "../sbar-chart-structure-primitives";
+import { syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
@@ -347,11 +347,6 @@ function fitContentShortcut(): boolean {
 }
 
 function syncStructurePrimitives(): void {
-  const projection = { timeBySbarId, indexBySbarId };
-  cbarPrimitive?.setData(props.structure?.cbars ?? [], projection);
-  swingPrimitive?.setData(props.structure?.swings ?? [], projection);
-  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
-  swingPrimitive?.setVisible(layerVisibility.value.swing);
   const cursorSbarId = props.runState?.cursorSbarId ?? null;
   const hoveredObjectValue = hoveredObject.value;
   const selectedObjectValue = props.selectedObject;
@@ -365,17 +360,22 @@ function syncStructurePrimitives(): void {
     (selectedObjectValue.kind === "cbar" || selectedObjectValue.kind === "swing")
     ? { kind: selectedObjectValue.kind, id: selectedObjectValue.id }
     : null;
-  cbarPrimitive?.setInteractionState({
-    hoveredId: hovered?.kind === "cbar" ? hovered.id : null,
-    selectedId: selected?.kind === "cbar" ? selected.id : null,
-    selectedColor: "#D6A85D",
-    selectedWidth: 2,
-  });
-  swingPrimitive?.setInteractionState({
-    hoveredId: hovered?.kind === "swing" ? hovered.id : null,
-    selectedId: selected?.kind === "swing" ? selected.id : null,
-    selectedColor: "#D6A85D",
-    selectedWidth: 2.25,
+
+  syncStructurePrimitiveControllers({
+    cbar: cbarPrimitive,
+    swing: swingPrimitive,
+    cbars: props.structure?.cbars ?? [],
+    swings: props.structure?.swings ?? [],
+    projection: { timeBySbarId, indexBySbarId },
+    cbarVisible: layerVisibility.value.cbar,
+    swingVisible: layerVisibility.value.swing,
+    interaction: {
+      hovered,
+      selected,
+      selectedColor: "#D6A85D",
+      cbarSelectedWidth: 2,
+      swingSelectedWidth: 2.25,
+    },
   });
 }
 
