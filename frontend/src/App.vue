@@ -10,7 +10,7 @@ import Diagnostics from "./components/Diagnostics.vue";
 import DatasetWorkspace from "./components/DatasetWorkspace.vue";
 import ReplayWorkspace from "./components/ReplayWorkspace.vue";
 import CompareWorkspace from "./components/CompareWorkspace.vue";
-import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayChartSelection } from "./origin-types";
+import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayChartSelection, ReplaySnapshotInspectorSelection } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { hasCompletedRunResult, isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -110,6 +110,7 @@ watch(lastStepResult, (result) => {
 
 const selectedCompareDifference = ref<ObjectDifferenceDto | null>(null);
 const selectedReplayChartObject = ref<ReplayChartSelection | null>(null);
+const selectedReplaySnapshotObject = ref<ReplaySnapshotInspectorSelection | null>(null);
 const targetSbarId = ref<string | null>(null);
 const fastForwarding = ref(false);
 const restartToSBarPending = ref(false);
@@ -194,6 +195,7 @@ function handleReplayObjectSelection(selection: ReplayChartSelection): void {
     if (selectedIndex < start || selectedIndex > end) return;
     if (selection.checkpointSbarId === null) {
       if (currentRun?.cursorSbarId) return;
+      selectedReplaySnapshotObject.value = null;
       selectedReplayChartObject.value = selection;
       return;
     }
@@ -215,11 +217,27 @@ function handleReplayObjectSelection(selection: ReplayChartSelection): void {
       : structure?.swings.some((item) => item.swingId === selection.id);
     if (!exists) return;
   }
+  selectedReplaySnapshotObject.value = null;
   selectedReplayChartObject.value = selection;
+}
+
+function handleReplaySnapshotSelection(selection: ReplaySnapshotInspectorSelection | null): void {
+  selectedReplaySnapshotObject.value = selection;
+  if (selection) selectedReplayChartObject.value = null;
 }
 
 type ReplayInspectorSelection = Extract<InspectorWorkspaceContext, { workspace: "replay" }>["selectedObject"];
 const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
+  const snapshotSelection = selectedReplaySnapshotObject.value;
+  if (snapshotSelection) {
+    if (snapshotSelection.kind === "sbar") {
+      return { kind: "sbar", object: snapshotSelection.object, source: "snapshot" };
+    }
+    if (snapshotSelection.kind === "cbar") {
+      return { kind: "cbar", object: snapshotSelection.object, source: "snapshot" };
+    }
+    return { kind: "swing", object: snapshotSelection.object, source: "snapshot" };
+  }
   const selection = selectedReplayChartObject.value;
   const checkpoint = replayInspector.value;
   const currentRun = runState.value;
@@ -421,6 +439,9 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
       timeframe: testDataset.value?.timeframe ?? origin.value?.timeframe ?? null,
       checkpoint: replayInspector.value,
       selectedObject: selectedReplayInspectorObject.value,
+      snapshotId: selectedReplaySnapshotObject.value?.snapshotId ?? null,
+      snapshotBars: selectedReplaySnapshotObject.value?.bars ?? [],
+      snapshotStructure: selectedReplaySnapshotObject.value?.structure ?? null,
       error: replayInspectorError.value,
     };
   }
@@ -433,7 +454,10 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
 });
 watch(workspaceMode, (mode) => {
   if (mode !== "compare") selectedCompareDifference.value = null;
-  if (mode !== "replay") selectedReplayChartObject.value = null;
+  if (mode !== "replay") {
+    selectedReplayChartObject.value = null;
+    selectedReplaySnapshotObject.value = null;
+  }
   if (mode === "replay") void refreshReplayInspector();
 });
 
@@ -733,6 +757,7 @@ onMounted(async () => {
               :fast-forwarding="fastForwarding"
               :snapshots="snapshots"
               @object-select="handleReplayObjectSelection"
+              @snapshot-select="handleReplaySnapshotSelection"
               @target-select="handleReplayTargetSelection"
               @target-cancel="cancelReplayTarget"
             />
