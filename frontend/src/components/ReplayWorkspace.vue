@@ -108,7 +108,6 @@ watch(
       </template>
       <template #lower>
         <SnapshotReferencePanel
-          :active="active"
           :instrument-id="testDataset?.instrumentId ?? null"
           :snapshots="snapshots"
           :live-sbar-ids="liveBars.map((bar) => bar.sbarId)"
