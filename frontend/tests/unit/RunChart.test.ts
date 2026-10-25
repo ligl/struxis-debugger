@@ -436,10 +436,16 @@ describe("RunChart", () => {
         testDataset: testDataset(),
         runState: null,
         syncEnabled: false,
-        syncOwner: "snapshot",
+        syncOwner: "live",
       },
     });
     await nextTick();
+
+    // Establish a valid Live-local anchor before ownership moves to Snapshot.
+    document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowRight", bubbles: true, cancelable: true,
+    }));
+    await wrapper.setProps({ syncOwner: "snapshot" });
 
     const targetEvent = new KeyboardEvent("keydown", {
       key: "t", bubbles: true, cancelable: true,
