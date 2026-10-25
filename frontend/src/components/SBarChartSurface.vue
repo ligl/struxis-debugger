@@ -384,12 +384,15 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   // ReplayWorkspace owns which chart receives chart-local keyboard commands.
   if (props.keyboardActive === false) return;
 
-  const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
-    event.key === "ArrowLeft" || event.key === "ArrowRight";
+  const key = ({ h: "ArrowLeft", j: "ArrowDown", k: "ArrowUp", l: "ArrowRight" } as const)[
+    event.key as "h" | "j" | "k" | "l"
+  ] ?? event.key;
+  const isArrowKey = key === "ArrowUp" || key === "ArrowDown" ||
+    key === "ArrowLeft" || key === "ArrowRight";
   const isFitShortcut = event.ctrlKey && !event.altKey && !event.metaKey &&
-    !event.shiftKey && event.key === "0";
+    !event.shiftKey && key === "0";
   const isBoundaryNavigation = event.ctrlKey && !event.altKey && !event.metaKey &&
-    !event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight");
+    !event.shiftKey && (key === "ArrowLeft" || key === "ArrowRight");
   if (
     (event.repeat && !isArrowKey) ||
     event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation && !isFitShortcut) ||
@@ -403,10 +406,10 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   if (isFitShortcut) handled = fitContentShortcut();
   else if (isBoundaryNavigation) {
     handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : props.bars.length - 1, true);
-  } else if (event.key === "ArrowUp") handled = zoomTimeScale("in");
-  else if (event.key === "ArrowDown") handled = zoomTimeScale("out");
-  else if (event.key === "ArrowLeft") handled = moveCrosshairBy(-1);
-  else if (event.key === "ArrowRight") handled = moveCrosshairBy(1);
+  } else if (key === "ArrowUp") handled = zoomTimeScale("in");
+  else if (key === "ArrowDown") handled = zoomTimeScale("out");
+  else if (key === "ArrowLeft") handled = moveCrosshairBy(-1);
+  else if (key === "ArrowRight") handled = moveCrosshairBy(1);
 
   if (handled) event.preventDefault();
 }
@@ -622,6 +625,7 @@ onBeforeUnmount(() => {
     :class="panelClass"
     :aria-label="panelLabel ?? 'SBar chart'"
     data-testid="origin-chart-panel"
+    @focusin="emit('chartActivate')"
     :data-sbar-count="bars.length"
     :data-first-sbar-id="bars[0]?.sbarId ?? ''"
     :data-second-sbar-id="bars[1]?.sbarId ?? ''"
