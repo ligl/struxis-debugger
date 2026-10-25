@@ -15,9 +15,9 @@ function finite(value: number | null | undefined): value is number {
 }
 
 /**
- * Snapshot range guides are a separate background-layer Primitive. Keeping
- * them separate from playback dimming lets the dashed guides sit behind the
- * native candles instead of being painted over candle bodies and wicks.
+ * Snapshot range guides are a separate background-layer Primitive. Playback
+ * brightness is expressed through native series point colors, so these guides
+ * remain behind native candle bodies and wicks.
  */
 export interface SnapshotRangeMarkerState {
   bars: readonly SBarDto[];
