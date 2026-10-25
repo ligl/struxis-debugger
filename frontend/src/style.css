@@ -2749,11 +2749,6 @@ th, td { padding: 6px 8px; }
   background: var(--dbg-surface-3);
 }
 
-.dual-chart-splitter:focus-visible {
-  outline: 1px solid var(--dbg-accent);
-  outline-offset: -1px;
-}
-
 .snapshot-reference-panel,
 .comparison-chart-panel {
   display: flex;
