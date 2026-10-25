@@ -72,6 +72,36 @@ describe("useOriginRangeSelection", () => {
     expect(state.rangeSelectionStatus.value).toContain("3 SBars");
   });
 
+  it("selects the complete Origin SBar sequence as one inclusive interval", () => {
+    const state = useOriginRangeSelection(ref<OriginDatasetDto | null>(origin), computed(() => true), ref(false));
+
+    state.handleRangeSbarClick("200");
+    state.selectAllOriginRange();
+
+    expect(state.rangeSelectionPendingStart.value).toBeNull();
+    expect(state.rangeSelectionReady.value).toBe(true);
+    expect(state.startSbarId.value).toBe(origin.firstSbarId);
+    expect(state.endSbarId.value).toBe(origin.lastSbarId);
+    expect(state.selectedRangeCount.value).toBe(origin.bars.length);
+    expect(state.rangeSelectionStatus.value).toContain("Selected all Origin SBars");
+  });
+
+  it("does not select all when mutation is blocked or Origin is absent", () => {
+    const canMutate = ref(false);
+    const originRef = ref<OriginDatasetDto | null>(origin);
+    const state = useOriginRangeSelection(originRef, computed(() => canMutate.value), ref(false));
+
+    state.selectAllOriginRange();
+    expect(state.rangeSelectionReady.value).toBe(false);
+    expect(state.startSbarId.value).toBe("");
+
+    canMutate.value = true;
+    originRef.value = null;
+    state.selectAllOriginRange();
+    expect(state.rangeSelectionReady.value).toBe(false);
+    expect(state.startSbarId.value).toBe("");
+  });
+
   it("updates inclusive count for boundary edits and prevents boundaries from crossing", () => {
     const state = useOriginRangeSelection(ref<OriginDatasetDto | null>(origin), computed(() => true), ref(false));
     state.handleRangeSbarClick("100");
