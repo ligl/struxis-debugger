@@ -68,7 +68,7 @@ describe("paired SBar / Volume data application", () => {
     expect(replaceSbarChartSeriesData(
       { setData: candleSetData } as never,
       { setData: volumeSetData } as never,
-      candles,
+      candles as never,
       volume,
     )).toBe(true);
 
@@ -85,7 +85,7 @@ describe("paired SBar / Volume data application", () => {
     expect(updateSbarChartSeriesData(
       { update: candleUpdate } as never,
       { update: volumeUpdate } as never,
-      candle,
+      candle as never,
       volume,
       true,
     )).toBe(true);
