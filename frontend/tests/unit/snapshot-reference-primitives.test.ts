@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ISeriesApi, Time } from "lightweight-charts";
 import type { SBarDto } from "../../src/origin-types";
 import {
+  SnapshotRangeMarkerPrimitive,
   SnapshotReferencePrimitive,
   SnapshotVolumePrimitive,
   type SnapshotPrimitiveState,
@@ -82,8 +83,10 @@ function createHarness() {
 describe("SnapshotReferencePrimitive", () => {
   it("anchors range markers to stable SBar identities and reprojects them after viewport changes", () => {
     const h = createHarness();
-    h.primitive.update(h.state);
-    const renderer = h.primitive.paneViews()[0]!.renderer();
+    const markers = new SnapshotRangeMarkerPrimitive();
+    markers.attached({ chart: h.chart as never, requestUpdate: vi.fn() } as never);
+    markers.update({ bars: h.state.bars, enabled: true, offset: 0, liveCount: 2, showArrows: true });
+    const renderer = markers.paneViews()[0]!.renderer();
     expect(renderer).not.toBeNull();
 
     renderer!.draw(h.target as never);
@@ -96,12 +99,13 @@ describe("SnapshotReferencePrimitive", () => {
     h.context.lineTo.mockClear();
     h.coordinates.set(1_700_000_000, 125);
     h.coordinates.set(1_700_000_060, 245);
-    h.primitive.updateAllViews();
-    h.primitive.paneViews()[0]!.renderer()!.draw(h.target as never);
+    markers.updateAllViews();
+    markers.paneViews()[0]!.renderer()!.draw(h.target as never);
     expect(h.context.moveTo).toHaveBeenCalledWith(125, 0);
     expect(h.context.lineTo).toHaveBeenCalledWith(125, 360);
     expect(h.context.moveTo).toHaveBeenCalledWith(245, 0);
     expect(h.context.lineTo).toHaveBeenCalledWith(245, 360);
+    markers.dispose();
     h.primitive.dispose();
   });
 
@@ -151,11 +155,26 @@ describe("SnapshotReferencePrimitive", () => {
     volume.paneViews()[0]!.renderer()!.draw(h.target as never);
 
     expect(h.context.fillRect).toHaveBeenCalledWith(0, 0, 700, 360);
+    expect(h.context.moveTo).not.toHaveBeenCalled();
+    const markers = new SnapshotRangeMarkerPrimitive();
+    markers.attached({ chart: h.chart as never, requestUpdate: vi.fn() } as never);
+    markers.update({ bars: h.state.bars, enabled: true, offset: 0, liveCount: 2, showArrows: false });
+    markers.paneViews()[0]!.renderer()!.draw(h.target as never);
     expect(h.context.moveTo).toHaveBeenCalledWith(100, 0);
     expect(h.context.lineTo).toHaveBeenCalledWith(100, 360);
     expect(h.context.moveTo).toHaveBeenCalledWith(200, 0);
     expect(h.context.lineTo).toHaveBeenCalledWith(200, 360);
+    markers.dispose();
     volume.dispose();
   });
 
+});
+
+
+describe("SnapshotRangeMarkerPrimitive layer", () => {
+  it("declares background z-order so range guides render behind native candles", () => {
+    const markers = new SnapshotRangeMarkerPrimitive();
+    expect(markers.zOrder()).toBe("bottom");
+    markers.dispose();
+  });
 });
