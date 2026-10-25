@@ -275,8 +275,8 @@ describe("ChartSurface and chart entry adapters", () => {
     expect(wrapper.find(".chart-attribution").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("TradingView");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([
-      { time: 1700000000, open: 10, high: 12, low: 9, close: 11, color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B" },
-      { time: 1700000060, open: 11, high: 13, low: 10, close: 12, color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B" },
+      { time: 1700000000, open: 10, high: 12, low: 9, close: 11, color: "#557E65", borderColor: "#557E65", wickColor: "#557E65" },
+      { time: 1700000060, open: 11, high: 13, low: 10, close: 12, color: "#557E65", borderColor: "#557E65", wickColor: "#557E65" },
     ]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([
       { time: 1700000000, value: 100, color: "#557E65" },
