@@ -47,7 +47,6 @@ const emit = defineEmits<{
   logicalRangeChange: [range: { from: number; to: number }];
   crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
   projectionFrame: [];
-  layoutReady: [];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const structureOverlayWidth = ref(0);
@@ -717,7 +716,6 @@ onMounted(() => {
   stopObservingResize = observeSbarChartResize(chartHost.value, chart, () => {
     updateSbarCoordinates();
     emit("projectionFrame");
-    emit("layoutReady");
   });
   updateChart();
   applyCrosshairOptions();
