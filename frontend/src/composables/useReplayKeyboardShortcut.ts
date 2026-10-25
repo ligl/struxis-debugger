@@ -38,10 +38,12 @@ export function useReplayKeyboardShortcut(
   playbackStatus: Readonly<Ref<PlaybackStatus>>,
   canControlPlayback: Readonly<Ref<boolean>>,
   runBusy: Readonly<Ref<boolean>>,
+  playbackDelayMs: Readonly<Ref<number>>,
   targetSbarId: Readonly<Ref<string | null>>,
   restartToTarget: () => Promise<void>,
   executeCommand: (command: RunCommand) => Promise<void>,
   canUseReplayShortcuts: Readonly<Ref<boolean>> = canControlPlayback,
+  setPlaybackDelay: (milliseconds: number) => void = () => undefined,
 ): void {
   function handleKeydown(event: KeyboardEvent): void {
     if (event.repeat) return;
@@ -74,6 +76,24 @@ export function useReplayKeyboardShortcut(
     }
 
     if (!canUseReplayShortcuts.value) return;
+
+    // Playback speeds are ordered slowest to fastest. The endpoints are
+    // stable: pressing beyond either end does not wrap around.
+    const speedDelays = [500, 200, 100, 65, 0];
+    if (event.key === "-" || event.code === "Minus") {
+      const currentIndex = speedDelays.indexOf(playbackDelayMs.value);
+      if (currentIndex > 0) setPlaybackDelay(speedDelays[currentIndex - 1]!);
+      event.preventDefault();
+      return;
+    }
+    if (event.key === "=" || event.code === "Equal") {
+      const currentIndex = speedDelays.indexOf(playbackDelayMs.value);
+      if (currentIndex >= 0 && currentIndex < speedDelays.length - 1) {
+        setPlaybackDelay(speedDelays[currentIndex + 1]!);
+      }
+      event.preventDefault();
+      return;
+    }
 
     const isStopShortcut = event.key.toLowerCase() === "s" && event.shiftKey;
     const isStopStartShortcut = !event.shiftKey && event.key.toLowerCase() === "r";
