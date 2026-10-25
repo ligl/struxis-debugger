@@ -190,6 +190,14 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
     if (!chart || !candleSeries || crosshairLogicalIndex !== selectedIndex) return;
     chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
   };
+  // Programmatic keyboard navigation does not reliably produce a
+  // subscribeCrosshairMove notification. Publish the selected SBar explicitly
+  // so the synchronized Snapshot chart follows the same keyboard command.
+  if (props.syncEnabled) {
+    crosshairSyncGate.setPeerPositionActive(false);
+    crosshairSyncGate.beginApply();
+    emit("crosshairChange", { source: "live", sbarId: bar.sbarId, price: Number(bar.close) });
+  }
   applySelectedCrosshair();
   if (crosshairUpdateFrame !== null) cancelAnimationFrame(crosshairUpdateFrame);
   crosshairUpdateFrame = requestAnimationFrame(() => {
