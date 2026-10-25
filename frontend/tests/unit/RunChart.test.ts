@@ -1,5 +1,5 @@
 import { enableAutoUnmount, mount, type VueWrapper } from "@vue/test-utils";
-import { nextTick } from "vue";
+import { defineComponent, nextTick, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RunChart from "../../src/components/RunChart.vue";
 import type { OriginDatasetDto, RunStateDto, SBarDto, TestDatasetDto } from "../../src/origin-types";
