@@ -259,7 +259,7 @@ describe("RunChart", () => {
 
   it("maps Vim h/j/k/l keys to the existing Replay chart navigation commands", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: null, syncEnabled: true },
+      props: { origin: origin(), testDataset: testDataset(), runState: null, syncEnabled: true, keyboardActive: true },
     });
     await nextTick();
 
@@ -459,6 +459,7 @@ describe("RunChart", () => {
         runState: null,
         syncEnabled: false,
         syncOwner: "live",
+        keyboardActive: true,
       },
     });
     await nextTick();
@@ -831,7 +832,7 @@ describe("RunChart", () => {
 
   it("cancels the pending selected-crosshair frame when the chart unmounts", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), keyboardActive: true },
     });
     await nextTick();
 
@@ -1126,7 +1127,7 @@ describe("RunChart", () => {
 
   it("moves the crosshair with left/right arrows and uses it as the Restart target with T", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), keyboardActive: true },
     });
     await nextTick();
 
@@ -1179,6 +1180,7 @@ describe("RunChart", () => {
         origin: origin(),
         testDataset: testDataset(),
         runState: runState({ cursorSbarId: originBars[2]!.sbarId }),
+        keyboardActive: true,
       },
     });
     await nextTick();
@@ -1211,7 +1213,7 @@ describe("RunChart", () => {
 
   it("Ctrl+Left and Ctrl+Right locate the first and last Test Dataset candles", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), keyboardActive: true },
     });
     await nextTick();
 
@@ -1263,7 +1265,7 @@ describe("RunChart", () => {
 
   it("keeps Ctrl boundary navigation inside the dataset when only part of it is visible", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), keyboardActive: true },
     });
     await nextTick();
 
@@ -1300,7 +1302,7 @@ describe("RunChart", () => {
 
   it("zooms the visible logical range with up/down arrows", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), keyboardActive: true },
     });
     await nextTick();
     mocks.setVisibleLogicalRange.mockClear();
@@ -1323,7 +1325,7 @@ describe("RunChart", () => {
 
   it("continues keyboard zoom-out beyond the fitted dataset range", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: runState() },
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), keyboardActive: true },
     });
     await nextTick();
 
