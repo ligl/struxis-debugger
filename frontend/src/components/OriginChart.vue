@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import SBarChartSurface from "./SBarChartSurface.vue";
+import ChartSurface from "./ChartSurface.vue";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 
@@ -276,7 +276,7 @@ onBeforeUnmount(stopBoundaryDrag);
     @struxis-select-sbar="handleSelectionRequest"
     @contextmenu.prevent.stop="handleContextMenu"
   >
-    <SBarChartSurface
+    <ChartSurface
       ref="surface"
       :bars="bars"
       :structure="structure"
@@ -360,7 +360,7 @@ onBeforeUnmount(stopBoundaryDrag);
           </template>
         </div>
       </template>
-    </SBarChartSurface>
+    </ChartSurface>
   </section>
 </template>
 
