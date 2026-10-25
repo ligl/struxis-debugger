@@ -2,6 +2,8 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
+import ChartSurface from "../../src/components/ChartSurface.vue";
+import type { ChartSurfacePort } from "../../src/chart-surface-contract";
 import { SnapshotRangeMarkerPrimitive } from "../../src/snapshot-reference-primitives";
 import type { SBarDto } from "../../src/origin-types";
 
@@ -269,6 +271,44 @@ describe("SnapshotReferenceChart", () => {
       from: 100.25,
       to: 101.75,
     });
+    wrapper.unmount();
+  });
+
+  it("shows a local SBar hover highlight and label on pointer movement", async () => {
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        ...snapshotDefaults,
+        bars: [bar()],
+        snapshotId: "snapshot-hover-selection",
+        structure: null,
+      },
+    });
+    await nextTick();
+
+    const surface = wrapper.getComponent(ChartSurface);
+    const port = surface.vm as unknown as ChartSurfacePort;
+    vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
+    vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
+    vi.spyOn(port, "getSbarRangeHighlight").mockReturnValue({
+      id: "1700000000000000000",
+      x: 90,
+      y: 30,
+      width: 20,
+      height: 40,
+    });
+
+    surface.vm.$emit("pointerPosition", { x: 100, y: 50 });
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="snapshot-hover-sbar"]').attributes("data-sbar-id"))
+      .toBe("1700000000000000000");
+    expect(wrapper.get('[data-testid="snapshot-object-hover-label"]').text())
+      .toBe("SBAR · 1700000000000000000");
+
+    surface.vm.$emit("pointerPosition", null);
+    await nextTick();
+    expect(wrapper.find('[data-testid="snapshot-hover-sbar"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-object-hover-label"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
