@@ -98,6 +98,7 @@ watch(
           :instrument-id="testDataset?.instrumentId ?? null"
           :snapshots="snapshots"
           :live-sbar-ids="liveBars.map((bar) => bar.sbarId)"
+          :sync-identity="JSON.stringify([testDataset?.testDatasetId, testDataset?.barType, liveBars.map((bar) => bar.sbarId)])"
           :sync-eligible="syncEligible"
           :sync-offset="syncOffset"
           :sync-request="activeSyncRequest"
