@@ -5,6 +5,7 @@ import { mapSBarsToChart } from "./sbar-chart-data";
 export interface SnapshotPlaybackSeriesProjection {
   candles: CandlestickData<UTCTimestamp>[];
   volume: HistogramData<UTCTimestamp>[];
+  processedStart: number;
   processedEndExclusive: number;
 }
 
@@ -50,18 +51,15 @@ export function projectSnapshotPlaybackSeries(input: {
   const offset = input.offset;
   const liveCount = Math.max(0, Math.floor(input.liveCount));
   const processedCount = Math.max(0, Math.min(liveCount, Math.floor(input.processedCount)));
-  const processedEndExclusive = input.playbackEnabled && offset !== null && Number.isInteger(offset) && offset >= 0
+  const validOffset = offset !== null && Number.isInteger(offset) && offset >= 0;
+  const processedStart = input.playbackEnabled && validOffset ? Math.min(input.bars.length, offset) : 0;
+  const processedEndExclusive = input.playbackEnabled && validOffset
     ? Math.min(input.bars.length, offset + processedCount)
     : 0;
 
   if (input.playbackEnabled) {
     for (let index = 0; index < candles.length; index += 1) {
-      if (index >= processedEndExclusive) continue;
-      // The processed prefix must remain native-colored, including bars before
-      // the Snapshot's Live anchor only when that prefix actually starts there.
-    }
-    for (let index = 0; index < candles.length; index += 1) {
-      if (index < processedEndExclusive) continue;
+      if (index >= processedStart && index < processedEndExclusive) continue;
       const candle = candles[index]!;
       if (candle.color) {
         const color = dimColor(candle.color);
@@ -74,5 +72,5 @@ export function projectSnapshotPlaybackSeries(input: {
     }
   }
 
-  return { candles, volume, processedEndExclusive };
+  return { candles, volume, processedStart, processedEndExclusive };
 }
