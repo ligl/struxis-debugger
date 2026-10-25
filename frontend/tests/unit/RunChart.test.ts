@@ -827,13 +827,14 @@ describe("RunChart", () => {
     host.unmount();
   });
 
-  it("suppresses the applied Snapshot viewport echo but publishes the next local Live range", async () => {
+  it("does not publish viewport changes while Live is the follower, then publishes when ownership switches to Live", async () => {
     const wrapper = mount(RunChart, {
       props: {
         origin: origin(),
         testDataset: testDataset(),
         runState: runState(),
         syncEnabled: true,
+        syncOwner: "snapshot",
         syncOffset: 10,
         syncRequest: {
           revision: 1,
@@ -848,15 +849,17 @@ describe("RunChart", () => {
 
     expect(mocks.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 0.25, to: 4.75 });
 
-    // Lightweight Charts reports the peer-applied range back through the same
-    // listener. It must be consumed as an echo, not sent back to the workspace.
+    // Live is currently the follower. Applying or observing its peer range
+    // must never publish a reverse command, regardless of chart callback timing.
     mocks.getVisibleLogicalRange.mockReturnValue({ from: 0.25, to: 4.75 });
     mocks.visibleRangeListener?.();
     mocks.animationFrameCallback?.(0);
     await nextTick();
     expect(wrapper.emitted("viewportChange")).toBeUndefined();
 
-    // A subsequent real Live gesture must still publish normally.
+    // Ownership switches explicitly; the same chart may now publish its own
+    // local range changes as the synchronization source.
+    await wrapper.setProps({ syncOwner: "live" });
     mocks.getVisibleLogicalRange.mockReturnValue({ from: 1.5, to: 5.25 });
     mocks.visibleRangeListener?.();
     mocks.animationFrameCallback?.(0);
