@@ -368,12 +368,13 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
   const range = timeScale.getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return false;
   const width = range.to - range.from;
-  const maximumWidth = props.bars.length + 8;
   if (width <= 0) return false;
-  if ((direction === "in" && width <= 2) || (direction === "out" && width >= maximumWidth)) return false;
+  if (direction === "in" && width <= 2) return false;
+  // Match continuous wheel zoom: zooming out is not capped at fit-content.
+  // The visible logical range may extend beyond the dataset at either end.
   const nextWidth = direction === "in"
     ? Math.max(2, width * 0.8)
-    : Math.min(maximumWidth, width * 1.25);
+    : width * 1.25;
   if (Math.abs(nextWidth - width) < 0.01) return false;
   const anchor = crosshairLogicalIndex !== null &&
     crosshairLogicalIndex >= range.from && crosshairLogicalIndex <= range.to
