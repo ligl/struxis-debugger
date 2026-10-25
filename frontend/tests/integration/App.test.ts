@@ -198,6 +198,9 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-sbar-high"]').text()).toBe("13.00");
     expect(wrapper.get('[data-testid="inspector-sbar-low"]').text()).toBe("10.00");
     expect(wrapper.get('[data-testid="inspector-sbar-close"]').text()).toBe("12.00");
+    expect(Array.from(wrapper.get('[data-testid="inspector-sbar-open"]').element.closest(".inspector-market-grid")!.querySelectorAll("dt")).map((field) => field.textContent ?? "")).toEqual([
+      "OPEN", "HIGH", "CLOSE", "LOW", "VOLUME",
+    ]);
     expect(wrapper.get('[data-testid="inspector-sbar-volume"]').text()).toBe("120");
     expect(wrapper.text()).toContain("Values shown verbatim from the validated Origin SBar projection");
 
