@@ -6,7 +6,7 @@ import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import type { StructurePrimitiveController, StructurePrimitiveInteractionState } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
-import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
+import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -121,25 +121,35 @@ function hasSbarId(sbarId: string): boolean {
   return sbarIdByLogicalIndex.includes(sbarId);
 }
 
-function updateCBarRectangles(): void {
+function updateStructureGeometry(): void {
   if (!chart || !candleSeries) {
     cbarRectangles.value = [];
+    swingSegments.value = [];
     return;
   }
   const timeScale = chart.timeScale();
-  cbarRectangles.value = layerVisibility.value.cbar
-    ? projectCBarRectangles({
-      cbars: props.structure?.cbars ?? [],
-      indexBySbarId,
-      visibleRange: timeScale.getVisibleLogicalRange(),
-      coordinateForSbarId: (sbarId) => {
-        const time = timeBySbarId.get(sbarId);
-        return time === undefined ? null : timeScale.timeToCoordinate(time);
-      },
-      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
-    })
-    : [];
+  const geometry = projectStructureOverlayGeometry({
+    cbars: props.structure?.cbars ?? [],
+    swings: props.structure?.swings ?? [],
+    indexBySbarId,
+    visibleRange: timeScale.getVisibleLogicalRange(),
+    coordinateForSbarId: (sbarId) => coordinateForSbarId(sbarId),
+    priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
+    cbarVisible: layerVisibility.value.cbar,
+    swingVisible: layerVisibility.value.swing,
+    resolveSwingStyle: (state) => {
+      const style = swingStyleByState[state];
+      if (!style && !unknownSwingStates.has(state)) {
+        unknownSwingStates.add(state);
+        console.warn(`Unknown Struxis SwingState received by ChartSurface: ${state}`);
+      }
+      return style ?? { color: "#A0A7B0", dasharray: "4 3" };
+    },
+  });
+  cbarRectangles.value = geometry.cbarRectangles;
+  swingSegments.value = geometry.swingSegments;
   cbarPrimitive?.setVisible(layerVisibility.value.cbar);
+  swingPrimitive?.setVisible(layerVisibility.value.swing);
 }
 
 const scheduleOverlayUpdate = createAnimationFrameCoalescer(() => {
@@ -159,45 +169,13 @@ function updateSbarCoordinates(): void {
     return;
   }
   const timeScale = chart.timeScale();
-  // Clip the SVG overlay to the plot area so it cannot cover the right price scale.
   structureOverlayWidth.value = typeof timeScale.width === "function"
     ? timeScale.width()
     : chartHost.value?.clientWidth ?? 0;
   firstSbarX.value = firstSbarTime === null ? null : timeScale.timeToCoordinate(firstSbarTime);
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
-  updateCBarRectangles();
-  updateSwingSegments();
+  updateStructureGeometry();
 }
-
-function updateSwingSegments(): void {
-  if (!chart || !candleSeries) {
-    swingSegments.value = [];
-    return;
-  }
-  const timeScale = chart.timeScale();
-  swingSegments.value = layerVisibility.value.swing
-    ? projectSwingSegments({
-      swings: props.structure?.swings ?? [],
-      indexBySbarId,
-      visibleRange: timeScale.getVisibleLogicalRange(),
-      coordinateForSbarId: (sbarId) => {
-        const time = timeBySbarId.get(sbarId);
-        return time === undefined ? null : timeScale.timeToCoordinate(time);
-      },
-      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
-    }).map((segment) => {
-      const style = swingStyleByState[segment.state];
-      if (!style && !unknownSwingStates.has(segment.state)) {
-        unknownSwingStates.add(segment.state);
-        console.warn(`Unknown Struxis SwingState received by ChartSurface: ${segment.state}`);
-      }
-      const resolvedStyle = style ?? { color: "#A0A7B0", dasharray: "4 3" };
-      return { ...segment, color: resolvedStyle.color, dasharray: resolvedStyle.dasharray };
-    })
-    : [];
-  swingPrimitive?.setVisible(layerVisibility.value.swing);
-}
-
 
 function syncStructurePrimitives(): void {
   const projection = { timeBySbarId, indexBySbarId };
