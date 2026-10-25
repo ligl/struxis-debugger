@@ -11,6 +11,7 @@ const props = defineProps<{
   liveSbarIds?: string[];
   syncEligible?: boolean;
   keyboardActive?: boolean;
+  syncOwner?: "live" | "snapshot";
   syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
   crosshairSync?: ReplayChartCrosshairSync | null;
@@ -235,6 +236,7 @@ function handleSelection(event: Event): void {
           :snapshot-id="reference.snapshotId"
           :sync-enabled="syncEligible"
           :keyboard-active="keyboardActive"
+          :sync-owner="syncOwner"
           :sync-request="syncRequest"
           :crosshair-sync="crosshairSync"
           :live-bar-count="liveSbarIds?.length ?? 0"
