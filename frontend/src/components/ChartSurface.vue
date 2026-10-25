@@ -477,8 +477,7 @@ function fitContent(): void {
 function fitContentShortcut(): boolean {
   if (!chart || props.bars.length === 0) return false;
   fitContent();
-  updateSbarCoordinates();
-  updateStructureOverlays();
+  scheduleOverlayUpdate.flush();
   return true;
 }
 
