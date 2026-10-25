@@ -6,7 +6,7 @@ import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.
 import type { SBarDto } from "../../src/origin-types";
 
 const bars: SBarDto[] = [{
-  sbarId: "sbar-1",
+  sbarId: "1700000000000000000",
   barType: "TEST-1-MINUTE-LAST-EXTERNAL",
   tsEvent: "1700000000000000000",
   tsInit: "1700000000000000001",
@@ -39,15 +39,15 @@ const SurfaceStub = defineComponent({
       applyViewportRange: (range: { from: number; to: number }) => { surfacePortCalls.viewportRanges.push(range); return true; },
       applyCrosshairPosition: (sbarId: string, price: number) => { surfacePortCalls.crosshairs.push({ sbarId, price }); return true; },
       clearCrosshairPosition: () => { surfacePortCalls.clears += 1; },
-      getSbarCoordinate: (sbarId: string) => sbarId === "sbar-1" ? 10 : null,
-      getSbarMarker: (sbarId: string) => sbarId === "sbar-1" ? { id: sbarId, x: 5, y: 10, width: 6, height: 8 } : null,
+      getSbarCoordinate: (sbarId: string) => sbarId === "1700000000000000000" ? 10 : null,
+      getSbarMarker: (sbarId: string) => sbarId === "1700000000000000000" ? { id: sbarId, x: 5, y: 10, width: 6, height: 8 } : null,
       getStructureGeometry: () => ({ cbarRectangles: [], swingSegments: [] }),
       setStructureInteractionState: () => {},
       getLogicalCoordinate: (index: number) => index * 10,
       getPriceCoordinate: (price: number) => price * 2,
-      getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "sbar-1" : null,
-      getSbarIdAtClientX: (clientX: number, clampToSequence = false) => clientX >= 0 && clientX <= 10 || clampToSequence ? "sbar-1" : null,
-      hasSbarId: (sbarId: string) => sbarId === "sbar-1",
+      getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "1700000000000000000" : null,
+      getSbarIdAtClientX: (clientX: number, clampToSequence = false) => clientX >= 0 && clientX <= 10 || clampToSequence ? "1700000000000000000" : null,
+      hasSbarId: (sbarId: string) => sbarId === "1700000000000000000",
       replaceSeriesData: (candles: readonly unknown[], volume: readonly unknown[]) => {
         surfacePortCalls.replacements.push({ candles, volume });
         return true;
@@ -177,7 +177,7 @@ describe("chart entry adapters", () => {
         snapshotId: "snapshot-1",
         syncEnabled: true,
         syncRequest: null,
-        crosshairSync: { source: "live", sbarId: "sbar-1", price: 11, revision: 1 },
+        crosshairSync: { source: "live", sbarId: "1700000000000000000", price: 11, revision: 1 },
         liveBarCount: 1,
         playbackEnabled: true,
         playbackOffset: 0,
@@ -187,7 +187,7 @@ describe("chart entry adapters", () => {
     });
 
     await Promise.resolve();
-    expect(surfacePortCalls.crosshairs).toEqual([{ sbarId: "sbar-1", price: 11 }]);
+    expect(surfacePortCalls.crosshairs).toEqual([{ sbarId: "1700000000000000000", price: 11 }]);
   });
 
   it("does not clear a local Crosshair for an unmappable peer anchor", async () => {
