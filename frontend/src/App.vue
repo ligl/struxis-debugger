@@ -91,7 +91,7 @@ const canLoadOrigin = computed(
 
 const {
   startSbarId, endSbarId, rangeSelectionPendingStart, rangeSelectionReady,
-  selectedRangeCount, rangeSelectionStatus, handleRangeSbarClick,
+  selectedRangeCount, rangeSelectionStatus, handleRangeSbarClick, selectAllOriginRange,
   handleRangeBoundaryChange, handleRangeSelectionError, cancelOriginRangeSelection,
   resetForOrigin, initializeFromTestDataset,
 } = useOriginRangeSelection(origin, canMutateTest, testLoading);
@@ -740,6 +740,7 @@ onMounted(async () => {
               @update-enable-structure="enableStructure = $event"
               @load-origin="handleLoadOrigin"
               @create-test-dataset="createSelectedTestDataset"
+              @select-all-sbars="selectAllOriginRange"
               @sbar-click="handleOriginSbarClick"
               @object-click="handleOriginObjectClick"
               @range-boundary-change="handleRangeBoundaryChange"
