@@ -541,7 +541,7 @@ describe("RunChart", () => {
   });
 
 
-  it("toggles the Live Replay SBar layer with B only while Live owns chart navigation", async () => {
+  it("leaves B/C layer toggles to the chart legend in Live Replay", async () => {
     const wrapper = mount(RunChart, {
       props: {
         origin: origin(),
@@ -553,27 +553,17 @@ describe("RunChart", () => {
     await nextTick();
 
     const sbarLegend = wrapper.get('[data-testid="run-layer-toggle-sbar"]');
+    const cbarLegend = wrapper.get('[data-testid="run-layer-toggle-cbar"]');
     expect(sbarLegend.attributes("aria-pressed")).toBe("true");
+    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
 
-    const dispatchKey = (key: string, init: KeyboardEventInit = {}) => {
-      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
+    for (const key of ["b", "c"]) {
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
       document.dispatchEvent(event);
-      return event;
-    };
-
-    const toggleOff = dispatchKey("b");
-    expect(toggleOff.defaultPrevented).toBe(true);
-    expect(sbarLegend.attributes("aria-pressed")).toBe("false");
-    expect(mocks.candleApplyOptions).toHaveBeenLastCalledWith({ visible: false });
-
-    const toggleOn = dispatchKey("b");
-    expect(toggleOn.defaultPrevented).toBe(true);
+      expect(event.defaultPrevented).toBe(false);
+    }
     expect(sbarLegend.attributes("aria-pressed")).toBe("true");
-    expect(mocks.candleApplyOptions).toHaveBeenLastCalledWith({ visible: true });
-
-    const modified = dispatchKey("b", { ctrlKey: true });
-    expect(modified.defaultPrevented).toBe(false);
-    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
+    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
     wrapper.unmount();
   });
 
