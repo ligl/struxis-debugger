@@ -29,6 +29,7 @@ const hasSelectedSpeed = ref(false);
 const selectedPlaybackDelayMs = ref(props.playbackDelayMs);
 watch(() => props.playbackDelayMs, (delayMs) => {
   selectedPlaybackDelayMs.value = delayMs;
+  hasSelectedSpeed.value = true;
 });
 const speedOptions = [
   { label: "0.5x", delayMs: 500 },
