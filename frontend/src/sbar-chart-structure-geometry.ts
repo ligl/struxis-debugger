@@ -30,10 +30,33 @@ export interface ProjectCBarRectanglesOptions {
   cbars: readonly CBarGeometryInput[];
   coordinateForSbarId: (sbarId: string) => number | null | undefined;
   priceToCoordinate: (price: number) => number | null | undefined;
+  /** Width of the rendered candlestick body in CSS pixels. */
+  sbarBodyWidth?: number;
   /** Optional logical index map/range enables viewport culling for large sequences. */
   indexBySbarId?: ReadonlyMap<string, number>;
   visibleRange?: LogicalViewportRange | null;
   viewportOverscan?: number;
+}
+
+
+/** Mirrors Lightweight Charts 5.x candlestick body-width calculation. */
+export function candlestickBodyWidth(barSpacing: number, pixelRatio: number): number {
+  if (!Number.isFinite(barSpacing) || barSpacing <= 0 || !Number.isFinite(pixelRatio) || pixelRatio <= 0) return Number.NaN;
+  const specialCaseFrom = 2.5;
+  const specialCaseTo = 4;
+  let width: number;
+  if (barSpacing >= specialCaseFrom && barSpacing <= specialCaseTo) {
+    width = Math.floor(3 * pixelRatio);
+  } else {
+    const coefficient = 1 - (0.2 * Math.atan(Math.max(specialCaseTo, barSpacing) - specialCaseTo)) / (Math.PI * 0.5);
+    const optimal = Math.min(Math.floor(barSpacing * coefficient * pixelRatio), Math.floor(barSpacing * pixelRatio));
+    width = Math.max(Math.floor(pixelRatio), optimal);
+  }
+  if (width >= 2) {
+    const wickWidth = Math.floor(pixelRatio);
+    if (wickWidth % 2 !== width % 2) width--;
+  }
+  return width / pixelRatio;
 }
 
 function isFiniteCoordinate(value: number | null | undefined): value is number {
@@ -51,6 +74,7 @@ export function projectCBarRectangles(
     cbars,
     coordinateForSbarId,
     priceToCoordinate,
+    sbarBodyWidth = 0,
     indexBySbarId,
     visibleRange,
     viewportOverscan = 2,
@@ -89,8 +113,13 @@ export function projectCBarRectangles(
       !isFiniteCoordinate(lowY)
     ) return [];
 
-    const left = Math.min(startX, endX);
-    const right = Math.max(startX, endX);
+    const halfBodyWidth = Number.isFinite(sbarBodyWidth) && sbarBodyWidth > 0
+      ? sbarBodyWidth / 2
+      : 0;
+    // Anchor the CBar range to the outside edges of the first and last
+    // candlestick bodies, not to their center coordinates.
+    const left = Math.min(startX, endX) - halfBodyWidth;
+    const right = Math.max(startX, endX) + halfBodyWidth;
     const top = Math.min(highY, lowY);
     const bottom = Math.max(highY, lowY);
     return [{
