@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectCBarRectangles, projectSwingSegments, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectSwingSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
 
 function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
   return {
@@ -164,3 +164,44 @@ describe("projectSwingSegments", () => {
   });
 });
 
+
+describe("projectStructureOverlayGeometry", () => {
+  it("projects CBar and Swing through one entry point and applies caller-owned Swing style", () => {
+    const result = projectStructureOverlayGeometry({
+      cbars: [cbar()],
+      swings: [swing()],
+      indexBySbarId: new Map([["sbar-1", 0], ["sbar-3", 2]]),
+      visibleRange: null,
+      coordinateForSbarId: (id) => id === "sbar-1" ? 10 : 30,
+      priceToCoordinate: (price) => price === 15 ? 10 : 50,
+      cbarVisible: true,
+      swingVisible: true,
+      resolveSwingStyle: (state) => state === "Confirmed"
+        ? { color: "#B49ACD", dasharray: "" }
+        : { color: "#A0A7B0", dasharray: "4 3" },
+    });
+
+    expect(result.cbarRectangles).toEqual([
+      { id: "cbar-1", x: 10, y: 10, width: 20, height: 40 },
+    ]);
+    expect(result.swingSegments).toEqual([
+      { id: "swing-1", x1: 10, y1: 50, x2: 30, y2: 10, state: "Confirmed", color: "#B49ACD", dasharray: "" },
+    ]);
+  });
+
+  it("keeps visibility gating consistent for both structure layers", () => {
+    const result = projectStructureOverlayGeometry({
+      cbars: [cbar()],
+      swings: [swing()],
+      indexBySbarId: new Map([["sbar-1", 0], ["sbar-3", 2]]),
+      visibleRange: null,
+      coordinateForSbarId: () => 10,
+      priceToCoordinate: () => 20,
+      cbarVisible: false,
+      swingVisible: false,
+      resolveSwingStyle: () => ({ color: "#A0A7B0", dasharray: "4 3" }),
+    });
+
+    expect(result).toEqual({ cbarRectangles: [], swingSegments: [] });
+  });
+});
