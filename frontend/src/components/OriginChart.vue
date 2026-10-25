@@ -32,6 +32,10 @@ type SurfacePort = {
   hasSbarId: (sbarId: string) => boolean;
   getSbarMarker: (sbarId: string) => SBarMarker | null;
   getStructureGeometry: () => { cbarRectangles: CBarRectangle[]; swingSegments: SwingSegment[] };
+  setStructureInteractionState: (
+    hovered: { kind: "cbar" | "swing"; id: string } | null,
+    selected: { kind: "cbar" | "swing"; id: string } | null,
+  ) => void;
   revealSbarRange: (anchorIds: string[]) => boolean;
 };
 const surface = ref<SurfacePort | null>(null);
@@ -52,6 +56,18 @@ const selectionStatus = computed(() => {
   return props.selectionStartSbarId ? "SELECT END ON CHART" : "CLICK CHART TO SELECT START";
 });
 
+function syncStructureInteractionState(): void {
+  const hovered = hoveredObject.value && (hoveredObject.value.kind === "cbar" || hoveredObject.value.kind === "swing")
+    ? { kind: hoveredObject.value.kind, id: hoveredObject.value.id }
+    : null;
+  const selected = props.selectedObject &&
+    (props.selectedObject.kind === "cbar" || props.selectedObject.kind === "swing") &&
+    props.selectedObject.originDatasetId === props.originDatasetId
+    ? { kind: props.selectedObject.kind, id: props.selectedObject.id }
+    : null;
+  surface.value?.setStructureInteractionState(hovered, selected);
+}
+
 function updateSelectionCoordinates(): void {
   selectionStartX.value = surface.value?.getSbarCoordinate(props.selectionStartSbarId ?? "") ?? null;
   selectionEndX.value = surface.value?.getSbarCoordinate(props.selectionEndSbarId ?? "") ?? null;
@@ -62,11 +78,13 @@ function updateSelectedObjectProjection(reveal = false): void {
   const selected = props.selectedObject;
   if (!selected || selected.originDatasetId !== props.originDatasetId) {
     selectedSbarMarker.value = null;
+    syncStructureInteractionState();
     return;
   }
   selectedSbarMarker.value = selected.kind === "sbar"
     ? surface.value?.getSbarMarker(selected.id) ?? null
     : null;
+  syncStructureInteractionState();
   if (!reveal || !surface.value) return;
 
   let anchorIds: string[];
@@ -106,6 +124,7 @@ function handleProjectionFrame(): void {
     ? geometry?.cbarRectangles.some((item) => item.id === hovered.id)
     : geometry?.swingSegments.some((item) => item.id === hovered.id);
   if (!stillProjected) hoveredObject.value = null;
+  syncStructureInteractionState();
 }
 
 function handlePointerPosition(point: { x: number; y: number } | null): void {
@@ -164,6 +183,7 @@ function updateHoveredObject(point: { x: number; y: number } | null): void {
   if (current?.kind === nextObject?.kind && current?.id === nextObject?.id && current?.originDatasetId === nextObject?.originDatasetId) return;
   hoveredObject.value = nextObject;
   hoveredSbarMarker.value = nextObject?.kind === "sbar" ? surface.value?.getSbarMarker(nextObject.id) ?? null : null;
+  syncStructureInteractionState();
 }
 
 function handleChartClick(point: { x: number; y: number | null } | null): void {
@@ -254,6 +274,7 @@ watch(() => props.selectedObject, () => updateSelectedObjectProjection(true), { 
 watch(() => [props.bars, props.originDatasetId, props.structure] as const, () => {
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
+  syncStructureInteractionState();
 }, { deep: false });
 
 onMounted(() => {
@@ -285,7 +306,7 @@ onBeforeUnmount(stopBoundaryDrag);
       @pointer-position="handlePointerPosition"
       @projection-frame="handleProjectionFrame"
     >
-      <template #chart-structure-overlays="{ cbarRectangles, swingSegments }">
+      <template #chart-structure-overlays>
         <rect
           v-if="hoveredSbarMarker"
           class="origin-object-hover-sbar"
@@ -299,20 +320,6 @@ onBeforeUnmount(stopBoundaryDrag);
           stroke="#C3CBD1"
           stroke-width="1.25"
         />
-        <line
-          v-for="segment in swingSegments.filter((item) => hoveredObject?.kind === 'swing' && hoveredObject.id === item.id)"
-          :key="`hover-${segment.id}`"
-          :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2"
-          stroke="#C3CBD1" stroke-width="2" stroke-linecap="round"
-          data-testid="origin-hover-swing" :data-swing-id="segment.id"
-        />
-        <rect
-          v-for="rectangle in cbarRectangles.filter((item) => hoveredObject?.kind === 'cbar' && hoveredObject.id === item.id)"
-          :key="`hover-${rectangle.id}`"
-          :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height"
-          fill="none" stroke="#C3CBD1" stroke-width="1.75"
-          data-testid="origin-hover-cbar" :data-cbar-id="rectangle.id"
-        />
         <rect
           v-if="selectedSbarMarker"
           class="origin-object-selected-sbar"
@@ -325,32 +332,6 @@ onBeforeUnmount(stopBoundaryDrag);
           fill="rgb(217 154 69 / 10%)"
           stroke="#D99A45"
           stroke-width="1.25"
-        />
-        <line
-          v-for="segment in swingSegments.filter((item) => props.selectedObject?.kind === 'swing' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
-          :key="segment.id"
-          :x1="segment.x1"
-          :y1="segment.y1"
-          :x2="segment.x2"
-          :y2="segment.y2"
-          stroke="#D99A45"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          data-testid="origin-selected-swing"
-          :data-swing-id="segment.id"
-        />
-        <rect
-          v-for="rectangle in cbarRectangles.filter((item) => props.selectedObject?.kind === 'cbar' && props.selectedObject.id === item.id && props.selectedObject.originDatasetId === originDatasetId)"
-          :key="rectangle.id"
-          :x="rectangle.x"
-          :y="rectangle.y"
-          :width="rectangle.width"
-          :height="rectangle.height"
-          fill="none"
-          stroke="#D99A45"
-          stroke-width="2"
-          data-testid="origin-selected-cbar"
-          :data-cbar-id="rectangle.id"
         />
       </template>
       <template #footer-trailing>
