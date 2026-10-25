@@ -405,7 +405,7 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   let handled = false;
   if (isFitShortcut) handled = fitContentShortcut();
   else if (isBoundaryNavigation) {
-    handled = moveCrosshairTo(event.key === "ArrowLeft" ? 0 : props.bars.length - 1, true);
+    handled = moveCrosshairTo(key === "ArrowLeft" ? 0 : props.bars.length - 1, true);
   } else if (key === "ArrowUp") handled = zoomTimeScale("in");
   else if (key === "ArrowDown") handled = zoomTimeScale("out");
   else if (key === "ArrowLeft") handled = moveCrosshairBy(-1);
