@@ -586,8 +586,8 @@ watch(workspaceMode, (mode) => {
 useReplayKeyboardShortcut(
   playbackStatus,
   canControlPlaybackShortcut,
-  playbackDelayMs,
   runBusy,
+  playbackDelayMs,
   targetSbarId,
   handleRestartToSBar,
   handleRunCommand,
