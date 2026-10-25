@@ -43,6 +43,13 @@ export interface ChartSurfaceStructureGeometry {
   swingSegments: ChartSurfaceSwingSegment[];
 }
 
+export interface ChartSurfaceLayerVisibility {
+  sbar: boolean;
+  volume: boolean;
+  cbar: boolean;
+  swing: boolean;
+}
+
 export interface ChartSurfaceStructureInteraction {
   kind: "cbar" | "swing";
   id: string;
@@ -81,6 +88,7 @@ export interface ChartSurfacePort {
   getSbarRangeHighlight(sbarId: string): ChartSurfaceSBarMarker | null;
   revealSbarRange(anchorIds: string[]): boolean;
   getStructureGeometry(): ChartSurfaceStructureGeometry;
+  setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void;
   setStructureInteractionState(
     hovered: ChartSurfaceStructureInteraction | null,
     selected: ChartSurfaceStructureInteraction | null,
