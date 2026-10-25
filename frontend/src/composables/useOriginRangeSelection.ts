@@ -42,6 +42,20 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     rangeSelectionStatus.value = "Click anywhere in the chart plot to select the start time of your Test interval.";
   }
 
+  function selectAllOriginRange(): void {
+    const currentOrigin = origin.value;
+    if (!currentOrigin || !canMutate.value || testLoading.value || currentOrigin.bars.length === 0) return;
+    const firstBar = currentOrigin.bars[0];
+    const lastBar = currentOrigin.bars[currentOrigin.bars.length - 1];
+    if (!firstBar || !lastBar) return;
+    rangeSelectionPendingStart.value = null;
+    startSbarId.value = firstBar.sbarId;
+    endSbarId.value = lastBar.sbarId;
+    rangeSelectionReady.value = true;
+    selectedRangeCount.value = currentOrigin.bars.length;
+    rangeSelectionStatus.value = `Selected all Origin SBars: ${selectedRangeCount.value.toLocaleString()} SBars.`;
+  }
+
   function handleRangeSbarClick(sbarId: string): void {
     const currentOrigin = origin.value;
     if (!currentOrigin || !canMutate.value || testLoading.value) return;
@@ -104,5 +118,5 @@ export function useOriginRangeSelection(origin: Ref<OriginDatasetDto | null>, ca
     rangeSelectionStatus.value = "Range selection cancelled. Click the chart to choose a new start SBar.";
   }
 
-  return { startSbarId, endSbarId, rangeSelectionPendingStart, rangeSelectionReady, selectedRangeCount, rangeSelectionStatus, resetForOrigin, initializeFromTestDataset, handleRangeSbarClick, handleRangeBoundaryChange, handleRangeSelectionError, cancelOriginRangeSelection };
+  return { startSbarId, endSbarId, rangeSelectionPendingStart, rangeSelectionReady, selectedRangeCount, rangeSelectionStatus, resetForOrigin, initializeFromTestDataset, handleRangeSbarClick, selectAllOriginRange, handleRangeBoundaryChange, handleRangeSelectionError, cancelOriginRangeSelection };
 }
