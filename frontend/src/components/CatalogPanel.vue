@@ -222,6 +222,7 @@ const emit = defineEmits<{
   border-radius: 3px;
   color: #89949d;
   font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  line-height: 1;
   letter-spacing: .045em;
   white-space: nowrap;
   cursor: pointer;
@@ -245,6 +246,7 @@ const emit = defineEmits<{
   width: 12px;
   height: 12px;
   flex: 0 0 12px;
+  align-self: center;
   place-items: center;
   margin: 0;
   appearance: none;
