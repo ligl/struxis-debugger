@@ -22,7 +22,7 @@ vi.mock("lightweight-charts", () => ({
   createChart: mocks.createChart,
 }));
 
-import { createSbarChartRuntime, disposeSbarChartRuntime } from "../../src/sbar-chart-runtime";
+import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime } from "../../src/sbar-chart-runtime";
 
 describe("createSbarChartRuntime", () => {
   beforeEach(() => {
@@ -74,6 +74,24 @@ describe("createSbarChartRuntime", () => {
     expect(runtime.swingPrimitive).toEqual({ kind: "swing-primitive" });
     expect(mocks.registerCBarPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
     expect(mocks.registerSwingPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
+  });
+});
+
+describe("applySbarChartSeriesVisibility", () => {
+  it("applies visibility at the series level without rewriting point data", () => {
+    const candleApplyOptions = vi.fn();
+    const volumeApplyOptions = vi.fn();
+    const candleSeries = { applyOptions: candleApplyOptions } as never;
+    const volumeSeries = { applyOptions: volumeApplyOptions } as never;
+
+    applySbarChartSeriesVisibility(candleSeries, volumeSeries, { sbar: false, volume: true });
+
+    expect(candleApplyOptions).toHaveBeenCalledWith({ visible: false });
+    expect(volumeApplyOptions).toHaveBeenCalledWith({ visible: true });
+  });
+
+  it("tolerates series not yet created or already released", () => {
+    expect(() => applySbarChartSeriesVisibility(null, undefined, { sbar: true, volume: false })).not.toThrow();
   });
 });
 
