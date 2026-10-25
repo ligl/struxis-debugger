@@ -83,6 +83,18 @@ describe("CBar and Swing Series Primitives", () => {
     renderer!.draw(h.target as never);
     expect(h.context.strokeRect).toHaveBeenCalledWith(10, 80, 20, 10);
 
+    const rectangleStyles: Array<{ color: string; width: number }> = [];
+    h.context.strokeRect.mockImplementation(() => {
+      rectangleStyles.push({ color: h.context.strokeStyle, width: h.context.lineWidth });
+    });
+    controller.setInteractionState({ hoveredId: "cbar-1", selectedId: null });
+    renderer!.draw(h.target as never);
+    expect(rectangleStyles).toContainEqual({ color: "#C3CBD1", width: 1.75 });
+    rectangleStyles.length = 0;
+    controller.setInteractionState({ hoveredId: "cbar-1", selectedId: "cbar-1" });
+    renderer!.draw(h.target as never);
+    expect(rectangleStyles).toContainEqual({ color: "#D99A45", width: 2 });
+
     // Replacing the authoritative snapshot with a revised object of the same
     // stable ID must reproject its new anchors/prices, not append or retain old geometry.
     h.context.strokeRect.mockClear();
@@ -127,6 +139,18 @@ describe("CBar and Swing Series Primitives", () => {
     expect(h.context.lineTo).toHaveBeenCalledWith(50, 70);
     expect(h.context.strokeStyle).toBe("#D6A85D");
     expect(h.context.setLineDash).toHaveBeenCalledWith([6, 3]);
+
+    const segmentStyles: Array<{ color: string; width: number }> = [];
+    h.context.stroke.mockImplementation(() => {
+      segmentStyles.push({ color: h.context.strokeStyle, width: h.context.lineWidth });
+    });
+    controller.setInteractionState({ hoveredId: "swing-1", selectedId: null });
+    view?.renderer()?.draw(h.target as never);
+    expect(segmentStyles).toContainEqual({ color: "#C3CBD1", width: 2 });
+    segmentStyles.length = 0;
+    controller.setInteractionState({ hoveredId: "swing-1", selectedId: "swing-1" });
+    view?.renderer()?.draw(h.target as never);
+    expect(segmentStyles).toContainEqual({ color: "#D99A45", width: 2.5 });
 
     controller.setVisible(false);
     expect(view?.renderer()).toBeNull();
