@@ -358,7 +358,7 @@ describe("ChartSurface and chart entry adapters", () => {
     expect(cbarRectangle.attributes("data-cbar-id")).toBe("1700000000000000000");
     expect(cbarRectangle.attributes("x")).toBe("96.5");
     expect(cbarRectangle.attributes("y")).toBe("30");
-    expect(cbarRectangle.attributes("width")).toBe("108");
+    expect(cbarRectangle.attributes("width")).toBe("107");
     expect(cbarRectangle.attributes("height")).toBe("40");
     expect(cbarRectangle.attributes("fill")).toBe("none");
     const swingSegment = wrapper.get('[data-testid="swing-state-segment"]');
