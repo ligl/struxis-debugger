@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { createSbarChartRuntime } from "../sbar-chart-runtime";
+import { createSbarChartRuntime, disposeSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
@@ -641,11 +641,10 @@ onBeforeUnmount(() => {
     crosshairUpdateFrame = null;
   }
   pendingViewportRange = null;
-  primitiveHost?.dispose();
+  disposeSbarChartRuntime(chart, primitiveHost);
   primitiveHost = null;
   cbarPrimitive = null;
   swingPrimitive = null;
-  chart?.remove();
   chart = null;
   candleSeries = null;
   volumeSeries = null;
