@@ -34,7 +34,7 @@ describe("mapSBarsToChart", () => {
     const result = mapSBarsToChart([first, second]);
     expect(result.candles.map((candle) => candle.time)).toEqual([1700000000, 1700000001]);
     expect(result.candles[0]).toMatchObject({ open: 10.25, high: 12, low: 9.5, close: 11.75 });
-    expect(result.candles[0]).toMatchObject({ color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B" });
+    expect(result.candles[0]).toMatchObject({ color: "#557E65", borderColor: "#557E65", wickColor: "#557E65" });
     expect(result.candles[1]).toMatchObject({ color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B" });
     expect(result.volume.map((point) => point.color)).toEqual(["#557E65", "#557E65"]);
     expect(result.volume.map((point) => point.value)).toEqual([123, 88]);
@@ -42,14 +42,14 @@ describe("mapSBarsToChart", () => {
     expect(result.sbarIdByTime.get(1700000001)).toBe("1700000001000000000");
   });
 
-  it("uses the brighter normative candle palette while keeping volume subordinate", () => {
+  it("uses the established directional palette for candles and volume", () => {
     const bearish = bar({ close: "9.75" });
     const result = mapSBarsToChart([bearish]);
 
     expect(result.candles[0]).toMatchObject({
-      color: "#D98282",
-      borderColor: "#D98282",
-      wickColor: "#D98282",
+      color: "#8D555B",
+      borderColor: "#8D555B",
+      wickColor: "#8D555B",
     });
     expect(result.volume[0]?.color).toBe("#8D555B");
   });
