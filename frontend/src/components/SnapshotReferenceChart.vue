@@ -208,7 +208,7 @@ function updateHoveredObject(point: { x: number; y: number } | null): void {
       cbarVisible: true,
     });
     const sbarId = port.getSbarIdAtCoordinate(point.x);
-    if (hit && sbarId) {
+    if (hit) {
       next = { kind: hit.kind, id: hit.id, checkpointSbarId: sbarId };
     } else if (sbarId) {
       const marker = port.getSbarRangeHighlight(sbarId);
@@ -461,7 +461,7 @@ onBeforeUnmount(() => {
       />
     </template>
     <template #chart-interaction-overlay>
-      <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="snapshot-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
+      <div v-if="hoveredObject" class="snapshot-object-hover-label" data-testid="snapshot-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
     </template>
   </ChartSurface>
 </template>
@@ -470,5 +470,23 @@ onBeforeUnmount(() => {
 /* The Snapshot panel already supplies its outer frame. */
 :deep(.snapshot-reference-chart) {
   border: 0;
+}
+
+.snapshot-object-hover-label {
+  position: absolute;
+  z-index: 4;
+  top: 7px;
+  right: 10px;
+  max-width: 42%;
+  overflow: hidden;
+  padding: 3px 5px;
+  border: 1px solid #394149;
+  border-radius: 2px;
+  background: rgb(18 22 25 / 92%);
+  color: #b9c2c8;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
 }
 </style>
