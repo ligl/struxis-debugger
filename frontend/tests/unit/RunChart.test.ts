@@ -758,6 +758,37 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("does not republish a peer Crosshair clear as a local observation", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+        syncEnabled: true,
+        crosshairSync: {
+          revision: 1,
+          source: "reference",
+          sbarId: originBars[1]!.sbarId,
+          price: 10.5,
+        },
+      },
+    });
+    await nextTick();
+    expect(mocks.setCrosshairPosition).toHaveBeenCalled();
+
+    // Simulate Lightweight Charts synchronously notifying subscribers when
+    // clearCrosshairPosition is called by the adapter.
+    mocks.clearCrosshairPosition.mockImplementationOnce(() => {
+      mocks.crosshairMoveListener?.({});
+    });
+    await wrapper.setProps({ crosshairSync: null } as never);
+    await nextTick();
+
+    expect(mocks.clearCrosshairPosition).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted("crosshairChange")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("does not publish a queued viewport from the previous Replay identity", async () => {
     const liveTestDataset = ref(testDataset());
     const liveRunState = ref(runState());
