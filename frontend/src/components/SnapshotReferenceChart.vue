@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { SnapshotReferencePrimitive, SnapshotVolumePrimitive, type SnapshotPrimitiveState, type SnapshotVolumePrimitiveState } from "../snapshot-reference-primitives";
+import { SnapshotRangeMarkerPrimitive, SnapshotReferencePrimitive, SnapshotVolumePrimitive, type SnapshotPrimitiveState, type SnapshotRangeMarkerState, type SnapshotVolumePrimitiveState } from "../snapshot-reference-primitives";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
 import type { ChartSurfacePort } from "../chart-surface-contract";
@@ -44,8 +44,12 @@ const surface = ref<ChartSurfacePort | null>(null);
 const crosshairGate = new ReplayCrosshairSyncGate();
 const snapshotPrimitive = new SnapshotReferencePrimitive();
 const snapshotVolumePrimitive = new SnapshotVolumePrimitive();
+const snapshotRangeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
+const snapshotVolumeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
 let unregisterSnapshotPrimitive: (() => void) | null = null;
 let unregisterSnapshotVolumePrimitive: (() => void) | null = null;
+let unregisterSnapshotMarkerPrimitive: (() => void) | null = null;
+let unregisterSnapshotVolumeMarkerPrimitive: (() => void) | null = null;
 const playbackOverlayEnabled = computed(() =>
   props.syncEnabled
   && props.playbackEnabled
@@ -75,9 +79,21 @@ function currentVolumePrimitiveState(): SnapshotVolumePrimitiveState {
   };
 }
 
+function currentRangeMarkerState(showArrows: boolean): SnapshotRangeMarkerState {
+  return {
+    bars: props.bars,
+    enabled: props.syncEnabled && props.playbackOffset !== null && props.playbackOffset !== undefined && props.liveBarCount > 0,
+    offset: props.playbackOffset,
+    liveCount: props.liveBarCount,
+    showArrows,
+  };
+}
+
 function refreshSnapshotGeometry(): void {
   snapshotPrimitive.update(currentPrimitiveState());
   snapshotVolumePrimitive.update(currentVolumePrimitiveState());
+  snapshotRangeMarkerPrimitive.update(currentRangeMarkerState(true));
+  snapshotVolumeMarkerPrimitive.update(currentRangeMarkerState(false));
 }
 
 function handleViewportChange(range: { from: number; to: number }): void {
@@ -214,6 +230,16 @@ onMounted(() => {
     snapshotVolumePrimitive,
     { target: "volume", dispose: () => snapshotVolumePrimitive.dispose() },
   ) ?? null;
+  unregisterSnapshotMarkerPrimitive = surface.value?.registerPrimitive(
+    "snapshot-reference:" + props.snapshotId + ":background-range-markers",
+    snapshotRangeMarkerPrimitive,
+    { target: "candles", dispose: () => snapshotRangeMarkerPrimitive.dispose() },
+  ) ?? null;
+  unregisterSnapshotVolumeMarkerPrimitive = surface.value?.registerPrimitive(
+    "snapshot-reference:" + props.snapshotId + ":volume-background-range-markers",
+    snapshotVolumeMarkerPrimitive,
+    { target: "volume", dispose: () => snapshotVolumeMarkerPrimitive.dispose() },
+  ) ?? null;
   refreshSnapshotGeometry();
   applyViewportRequest(props.syncRequest);
   applyCrosshairRequest(props.crosshairSync);
@@ -223,8 +249,14 @@ onBeforeUnmount(() => {
   unregisterSnapshotPrimitive = null;
   unregisterSnapshotVolumePrimitive?.();
   unregisterSnapshotVolumePrimitive = null;
+  unregisterSnapshotMarkerPrimitive?.();
+  unregisterSnapshotMarkerPrimitive = null;
+  unregisterSnapshotVolumeMarkerPrimitive?.();
+  unregisterSnapshotVolumeMarkerPrimitive = null;
   snapshotPrimitive.dispose();
   snapshotVolumePrimitive.dispose();
+  snapshotRangeMarkerPrimitive.dispose();
+  snapshotVolumeMarkerPrimitive.dispose();
 });
 
 </script>
