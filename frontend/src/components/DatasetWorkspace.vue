@@ -48,6 +48,7 @@ const emit = defineEmits<{
   updateEnableStructure: [value: boolean];
   loadOrigin: [];
   createTestDataset: [];
+  selectAllSbars: [];
   sbarClick: [sbarId: string];
   objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
@@ -75,6 +76,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
       :can-mutate-test="canMutateTest"
       :test-error="testError"
       @create="emit('createTestDataset')"
+      @select-all="emit('selectAllSbars')"
     >
       <template #source>
         <CatalogPanel
