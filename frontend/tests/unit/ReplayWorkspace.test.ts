@@ -11,6 +11,7 @@ const RunChartStub = defineComponent({
   name: "RunChart",
   emits: ["activate"],
   props: {
+    keyboardActive: { type: Boolean, default: true },
     syncEnabled: { type: Boolean, default: false },
     syncRequest: { type: Object, default: null },
     crosshairSync: { type: Object, default: null },
@@ -21,7 +22,7 @@ const SnapshotReferencePanelStub = defineComponent({
   name: "SnapshotReferencePanel",
   props: {
     keyboardActive: { type: Boolean, default: false },
-  progressApplies: { type: Boolean, default: false },
+    progressApplies: { type: Boolean, default: false },
     processedCount: { type: Number, default: 0 },
     syncRequest: { type: Object, default: null },
     crosshairSync: { type: Object, default: null },
