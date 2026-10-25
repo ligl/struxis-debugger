@@ -20,12 +20,14 @@ const props = defineProps<{
   structure?: ReplayInspectorStructureDto | null;
   selectedObject?: ReplayChartSelection | null;
   targetSbarId?: string | null;
+  keyboardActive?: boolean;
   syncEnabled?: boolean;
   syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
   crosshairSync?: ReplayChartCrosshairSync | null;
 }>();
 const emit = defineEmits<{
+  activate: [];
   objectSelect: [selection: ReplayChartSelection];
   targetSelect: [sbarId: string];
   targetCancel: [];
@@ -233,10 +235,34 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
-  // The document listener is shared with the Snapshot chart. Keyboard
-  // navigation must belong to the chart currently under the pointer or
-  // containing keyboard focus; otherwise one keypress can mutate both charts.
-  if (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement))) return;
+  // Replay target control has higher priority than chart-local navigation.
+  // RunChart is mounted only while Replay is active, so T works regardless
+  // of whether Live or Snapshot currently owns chart-navigation keys.
+  const isTargetShortcut = event.key.toLowerCase() === "t" && !event.ctrlKey &&
+    !event.altKey && !event.metaKey && !event.shiftKey;
+  if (
+    isTargetShortcut &&
+    !event.repeat &&
+    !isInteractiveKeyboardTarget(event.target) &&
+    !isInteractiveKeyboardTarget(document.activeElement)
+  ) {
+    if (props.targetSbarId) {
+      emit("targetCancel");
+      event.preventDefault();
+      return;
+    }
+    if (!chartError.value && !projectionMessage.value && bars.value.length > 0) {
+      const bar = crosshairLogicalIndex === null ? null : barAtLogicalIndex(crosshairLogicalIndex);
+      if (bar) {
+        emit("targetSelect", bar.sbarId);
+        event.preventDefault();
+      }
+    }
+    return;
+  }
+
+  // ReplayWorkspace is the sole owner of chart-local keyboard routing.
+  if (props.keyboardActive === false) return;
 
   // Vim normal-mode navigation aliases: h/ j/ k/ l behave exactly like the
   // corresponding arrow keys, without changing the existing chart commands.
@@ -257,14 +283,6 @@ function handleChartKeyboard(event: KeyboardEvent): void {
     isInteractiveKeyboardTarget(document.activeElement)
   ) return;
 
-  // T is a toggle for the pending target: while a target exists, cancellation
-  // must remain available even if the chart projection is temporarily invalid.
-  if (event.key.toLowerCase() === "t" && props.targetSbarId) {
-    emit("targetCancel");
-    event.preventDefault();
-    return;
-  }
-
   if (chartError.value || projectionMessage.value || bars.value.length === 0) return;
 
   let handled = false;
@@ -275,14 +293,6 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   else if (key === "ArrowDown") handled = zoomTimeScale("out");
   else if (key === "ArrowLeft") handled = moveCrosshairBy(-1);
   else if (key === "ArrowRight") handled = moveCrosshairBy(1);
-  else if (event.key.toLowerCase() === "t") {
-    const bar = crosshairLogicalIndex === null ? null : barAtLogicalIndex(crosshairLogicalIndex);
-    if (bar) {
-      emit("targetSelect", bar.sbarId);
-      handled = true;
-    }
-  }
-
   if (handled) event.preventDefault();
 }
 
@@ -901,7 +911,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="run-chart-panel" aria-label="Live Replay SBar chart" data-testid="run-chart-panel"
+  <section class="run-chart-panel" aria-label="Live Replay SBar chart" data-testid="run-chart-panel" @pointerenter="emit('activate')" @focusin="emit('activate')"
     :data-test-dataset-id="testDataset?.testDatasetId ?? ''" :data-sbar-count="bars.length">
     <header class="run-chart-heading">
       <div class="run-chart-title">
