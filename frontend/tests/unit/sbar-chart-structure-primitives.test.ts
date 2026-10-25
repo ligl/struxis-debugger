@@ -3,6 +3,7 @@ import { createChartPrimitiveHost } from "../../src/sbar-chart-primitive-host";
 import {
   registerCBarPrimitive,
   registerSwingPrimitive,
+  syncStructurePrimitiveControllers,
 } from "../../src/sbar-chart-structure-primitives";
 import type { ISeriesApi, ISeriesPrimitive, Time } from "lightweight-charts";
 
@@ -157,5 +158,82 @@ describe("CBar and Swing Series Primitives", () => {
     controller.setVisible(true);
     expect(view?.renderer()).not.toBeNull();
     h.host.dispose();
+  });
+});
+
+describe("syncStructurePrimitiveControllers", () => {
+  it("replaces complete snapshots and applies visibility plus interaction state in one pass", () => {
+    const cbar = {
+      setData: vi.fn(),
+      setVisible: vi.fn(),
+      setInteractionState: vi.fn(),
+    };
+    const swing = {
+      setData: vi.fn(),
+      setVisible: vi.fn(),
+      setInteractionState: vi.fn(),
+    };
+    const cbars = [{ cbarId: "c1", sbarStartId: "s1", sbarEndId: "s2", high: "12", low: "8" }];
+    const swings = [{
+      swingId: "sw1",
+      sbarStartId: "s1",
+      sbarEndId: "s2",
+      high: "12",
+      low: "8",
+      direction: "Up",
+      state: "Confirmed",
+    }];
+    const projection = {
+      timeBySbarId: new Map<string, Time>(),
+      indexBySbarId: new Map<string, number>(),
+    };
+
+    syncStructurePrimitiveControllers({
+      cbar: cbar as never,
+      swing: swing as never,
+      cbars,
+      swings,
+      projection,
+      cbarVisible: false,
+      swingVisible: true,
+      interaction: {
+        hovered: { kind: "swing", id: "sw1" },
+        selected: { kind: "cbar", id: "c1" },
+        selectedColor: "#D6A85D",
+        cbarSelectedWidth: 2,
+        swingSelectedWidth: 2.25,
+      },
+    });
+
+    expect(cbar.setData).toHaveBeenCalledWith(cbars, projection);
+    expect(swing.setData).toHaveBeenCalledWith(swings, projection);
+    expect(cbar.setVisible).toHaveBeenCalledWith(false);
+    expect(swing.setVisible).toHaveBeenCalledWith(true);
+    expect(cbar.setInteractionState).toHaveBeenCalledWith({
+      hoveredId: null,
+      selectedId: "c1",
+      selectedColor: "#D6A85D",
+      selectedWidth: 2,
+    });
+    expect(swing.setInteractionState).toHaveBeenCalledWith({
+      hoveredId: "sw1",
+      selectedId: null,
+      selectedColor: "#D6A85D",
+      selectedWidth: 2.25,
+    });
+
+    // A subsequent snapshot can remove every object. It must be applied even
+    // when callers reuse the same projection map.
+    syncStructurePrimitiveControllers({
+      cbar: cbar as never,
+      swing: swing as never,
+      cbars: [],
+      swings: [],
+      projection,
+      cbarVisible: false,
+      swingVisible: false,
+    });
+    expect(cbar.setData).toHaveBeenLastCalledWith([], projection);
+    expect(swing.setData).toHaveBeenLastCalledWith([], projection);
   });
 });
