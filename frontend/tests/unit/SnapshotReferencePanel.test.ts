@@ -170,18 +170,26 @@ describe("SnapshotReferencePanel", () => {
 
     await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
     await flushPromises();
-    const initialEventCount = wrapper.emitted("syncSequence")?.length ?? 0;
-    expect(initialEventCount).toBe(2); // null on selection, then the loaded sequence
+    const initialEvents = wrapper.emitted("syncSequence") ?? [];
+    expect(initialEvents).toHaveLength(2); // null on selection, then the loaded sequence
+    const sequenceDescriptor = {
+      snapshotId: reference.snapshotId,
+      barType: reference.barType,
+      sbarIds: ["100"],
+    };
+    const countPublished = (events: unknown[][]) =>
+      events.filter(([event]) => JSON.stringify(event) === JSON.stringify(sequenceDescriptor)).length;
+    const initialDescriptorCount = countPublished(initialEvents);
+    expect(initialDescriptorCount).toBe(1);
 
     await wrapper.setProps({ syncIdentity: "test-2" } as never);
     await flushPromises();
     const events = wrapper.emitted("syncSequence") ?? [];
-    expect(events).toHaveLength(initialEventCount + 1);
-    expect(events.at(-1)?.[0]).toEqual({
-      snapshotId: reference.snapshotId,
-      barType: reference.barType,
-      sbarIds: ["100"],
-    });
+    // The qualification event may be accompanied by a null invalidation event
+    // when Vue flushes the selection/availability watchers; the descriptor itself
+    // must be republished exactly once for the new Live identity.
+    expect(countPublished(events)).toBe(initialDescriptorCount + 1);
+    expect(events.at(-1)?.[0]).toEqual(sequenceDescriptor);
     expect(wrapper.find('[data-testid="snapshot-reference-chart"]').exists()).toBe(true);
   });
 
