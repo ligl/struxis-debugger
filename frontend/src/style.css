@@ -2749,6 +2749,15 @@ th, td { padding: 6px 8px; }
   background: var(--dbg-surface-3);
 }
 
+/* The splitter is programmatically focused on hover for immediate arrow-key resizing.
+   Suppress browser/user-agent focus rings so moving across the chart boundary never
+   flashes a border, including after keyboard input makes :focus-visible match. */
+.dual-chart-splitter:focus,
+.dual-chart-splitter:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .snapshot-reference-panel,
 .comparison-chart-panel {
   display: flex;
