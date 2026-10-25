@@ -3069,7 +3069,6 @@ th, td { padding: 6px 8px; }
   gap: 8px;
   padding: 0 8px;
   overflow: hidden;
-  border-top: 1px solid var(--dbg-border);
   background: #191e22;
   color: var(--dbg-text-muted);
   font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
