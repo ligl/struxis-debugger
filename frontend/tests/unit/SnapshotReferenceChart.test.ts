@@ -23,6 +23,7 @@ const chartMocks = vi.hoisted(() => ({
   coordinateToLogical: vi.fn(),
   subscribeCrosshairMove: vi.fn(),
   unsubscribeCrosshairMove: vi.fn(),
+  crosshairMoveListener: null as ((param: { point?: { x: number; y: number } }) => void) | null,
   subscribeVisibleLogicalRangeChange: vi.fn(),
   unsubscribeVisibleLogicalRangeChange: vi.fn(),
   applyChartOptions: vi.fn(),
@@ -425,6 +426,9 @@ describe("SnapshotReferenceChart", () => {
   });
 
   it("clears the stale peer Crosshair without changing local Crosshair options when sync becomes ineligible", async () => {
+    chartMocks.subscribeCrosshairMove.mockImplementation((listener) => {
+      chartMocks.crosshairMoveListener = listener as (param: { point?: { x: number; y: number } }) => void;
+    });
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         ...snapshotDefaults,
@@ -452,9 +456,13 @@ describe("SnapshotReferenceChart", () => {
     expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
     const chartOptionsCallCount = chartMocks.applyChartOptions.mock.calls.length;
 
+    chartMocks.clearCrosshairPosition.mockImplementationOnce(() => {
+      chartMocks.crosshairMoveListener?.({});
+    });
     await wrapper.setProps({ syncEnabled: false } as never);
     await nextTick();
     expect(chartMocks.clearCrosshairPosition).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted("crosshairChange")).toBeUndefined();
     expect(initialOptions.crosshair?.mode).toBe(0);
     expect(initialOptions.crosshair?.vertLine?.visible).toBe(true);
     expect(initialOptions.crosshair?.horzLine?.visible).toBe(true);
