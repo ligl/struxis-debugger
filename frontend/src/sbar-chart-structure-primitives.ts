@@ -31,8 +31,6 @@ export interface StructurePrimitiveProjection {
   readonly indexBySbarId: ReadonlyMap<string, number>;
 }
 
-export type StructureObjectKind = "cbar" | "swing";
-
 export interface StructurePrimitiveInteractionState {
   hoveredId: string | null;
   selectedId: string | null;
