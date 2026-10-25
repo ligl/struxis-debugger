@@ -759,23 +759,28 @@ describe("RunChart", () => {
   });
 
   it("does not publish a queued viewport from the previous Replay identity", async () => {
-    const wrapper = mount(RunChart, {
-      props: {
-        origin: origin(),
-        testDataset: testDataset(),
-        runState: runState(),
-        syncEnabled: true,
+    const liveTestDataset = ref(testDataset());
+    const liveRunState = ref(runState());
+    const Host = defineComponent({
+      components: { RunChart },
+      setup() {
+        return {
+          origin: origin(),
+          testDataset: liveTestDataset,
+          runState: liveRunState,
+        };
       },
+      template: '<RunChart :origin="origin" :test-dataset="testDataset" :run-state="runState" :sync-enabled="true" />',
     });
+    const host = mount(Host);
+    const wrapper = host.getComponent(RunChart);
     await nextTick();
 
     mocks.getVisibleLogicalRange.mockReturnValue({ from: 1.25, to: 4.25 });
     mocks.visibleRangeListener?.();
     mocks.getVisibleLogicalRange.mockReturnValue({ from: 6.5, to: 9.75 });
-    await wrapper.setProps({
-      testDataset: testDataset({ testDatasetId: "test-2" }),
-      runState: runState({ testDatasetId: "test-2", runId: "run-2" }),
-    });
+    liveTestDataset.value = testDataset({ testDatasetId: "test-2" });
+    liveRunState.value = runState({ testDatasetId: "test-2", runId: "run-2" });
     await nextTick();
 
     mocks.animationFrameCallback?.(0);
@@ -783,7 +788,7 @@ describe("RunChart", () => {
     const published = wrapper.emitted("viewportChange")?.map(([value]) => value);
     expect(published).not.toContainEqual({ source: "live", from: 1.25, to: 4.25 });
     expect(published).toContainEqual({ source: "live", from: 6.5, to: 9.75 });
-    wrapper.unmount();
+    host.unmount();
   });
 
   it("suppresses the applied Snapshot viewport echo but publishes the next local Live range", async () => {
