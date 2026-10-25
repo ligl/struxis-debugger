@@ -188,6 +188,9 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
   const selectedIndex = nextIndex;
   const applySelectedCrosshair = () => {
     if (!chart || !candleSeries || crosshairLogicalIndex !== selectedIndex) return;
+    // Suppress the chart callback caused by our own programmatic positioning,
+    // including the deferred re-application after the viewport layout pass.
+    if (props.syncEnabled) crosshairSyncGate.beginApply();
     chart.setCrosshairPosition?.(Number(bar.close), time, candleSeries);
   };
   // Programmatic keyboard navigation does not reliably produce a
@@ -195,7 +198,6 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
   // so the synchronized Snapshot chart follows the same keyboard command.
   if (props.syncEnabled) {
     crosshairSyncGate.setPeerPositionActive(false);
-    crosshairSyncGate.beginApply();
     emit("crosshairChange", { source: "live", sbarId: bar.sbarId, price: Number(bar.close) });
   }
   applySelectedCrosshair();
