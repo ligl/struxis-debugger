@@ -562,7 +562,7 @@ describe("RunChart", () => {
         cursorSbarId: originBars[2]!.sbarId,
         status: "completed",
       }),
-    });
+    } as never);
     await nextTick();
 
     expect(mocks.candleUpdate).toHaveBeenCalledWith({
