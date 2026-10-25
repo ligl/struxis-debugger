@@ -659,7 +659,6 @@ onBeforeUnmount(() => {
         :data-second-sbar-x="secondSbarX ?? ''"
         :aria-label="chartLabel"
         @pointerenter="emit('chartActivate')"
-        @focusin="emit('chartActivate')"
       ></div>
       <svg
         class="origin-structure-overlay"
