@@ -366,6 +366,9 @@ describe("RunChart", () => {
     await nextTick();
 
     expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("data-sbar-id")).toBe(originBars[1]!.sbarId);
+    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("fill")).toBe("none");
+    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("stroke")).toBe("#C3CBD1");
+    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("stroke-width")).toBe("1.25");
     expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe(`SBAR · ${originBars[1]!.sbarId}`);
     expect(wrapper.emitted("objectSelect")).toBeUndefined();
 
