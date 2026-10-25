@@ -333,7 +333,8 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
     volumeSeries.applyOptions?.({ visible: layerVisibility.value.volume });
   }
   syncStructurePrimitives();
-  updateStructureOverlays();
+  // Keep layer state and geometry consumed by hit-testing in the same turn.
+  scheduleOverlayUpdate.flush();
 }
 
 function fitContent(): void {
