@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBarDto, SBarDto } from "../origin-types";
+import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBarDto, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import { formatInspectorValue } from "../inspector-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
@@ -12,6 +12,8 @@ const props = defineProps<{
   selectedObject: NonNullable<ReplaySelectedObject>;
   timeframe: string | null;
   checkpoint: ReplayInspectorDto | null;
+  snapshotStructure?: ReplayInspectorStructureDto | null;
+  snapshotId?: string | null;
   bars: SBarDto[];
 }>();
 
@@ -19,6 +21,7 @@ type InspectorRow = { label: string; value: string; copyValue?: string };
 
 const title = computed(() => props.selectedObject.kind.toUpperCase());
 const sourceLabel = computed(() => {
+  if (props.selectedObject.source === "snapshot") return `SNAPSHOT · ${props.snapshotId ?? "REFERENCE"}`;
   if (props.selectedObject.kind === "sbar") {
     return props.selectedObject.source === "checkpoint" ? "CONFIRMED CHECKPOINT" : "TEST INPUT";
   }
@@ -27,7 +30,9 @@ const sourceLabel = computed(() => {
 
 const relatedObjects = computed(() => {
   const selected = props.selectedObject;
-  const structure = props.checkpoint?.structure;
+  const structure = selected.source === "snapshot"
+    ? props.snapshotStructure
+    : props.checkpoint?.structure;
   if (selected.kind === "cbar") {
     return [
       { kind: "sbar" as const, label: "Start SBar", id: selected.object.sbarStartId },
@@ -176,6 +181,9 @@ const rows = computed<InspectorRow[]>(() => {
   </section>
   <p v-if="selectedObject.kind === 'sbar' && selectedObject.source === 'input'" class="inspector-provenance">
     Market fields are from the validated Test Dataset input sequence. This historical input bar is not represented as a backend-confirmed checkpoint.
+  </p>
+  <p v-else-if="selectedObject.source === 'snapshot'" class="inspector-provenance">
+    Object fields are resolved only from the selected immutable Snapshot and its validated historical structure timeline. Live Replay state is not used.
   </p>
   <p v-else class="inspector-provenance">
     Object fields are from the currently backend-confirmed Replay checkpoint. The UI does not infer or mutate Struxis state.
