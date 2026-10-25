@@ -22,6 +22,10 @@ const props = withDefaults(defineProps<{
   showHeader?: boolean;
   showFooter?: boolean;
   showLegend?: boolean;
+  showEmptyState?: boolean;
+  showStructureOverlay?: boolean;
+  canvasTestId?: string;
+  structureOverlayTestId?: string;
   panelClass?: string;
   panelLabel?: string;
   chartLabel?: string;
@@ -741,14 +745,15 @@ onBeforeUnmount(() => {
       <strong>Chart projection rejected</strong>
       <span>{{ chartError }}</span>
     </div>
-    <div v-else-if="bars.length === 0" class="origin-chart-empty">
+    <div v-else-if="bars.length === 0 && showEmptyState !== false" class="origin-chart-empty">
       {{ emptyMessage ?? 'No SBar data is available.' }}
     </div>
     <div class="origin-chart-viewport" data-testid="origin-chart-viewport">
       <div
         ref="chartHost"
         class="origin-chart-host"
-        data-testid="origin-chart-canvas"
+        :class="{ 'is-empty': bars.length === 0 }"
+        :data-testid="canvasTestId ?? 'origin-chart-canvas'"
         :data-sequence-id="sequenceId"
         :data-first-sbar-x="firstSbarX ?? ''"
         :data-second-sbar-x="secondSbarX ?? ''"
@@ -756,9 +761,10 @@ onBeforeUnmount(() => {
         @pointerenter="emit('chartActivate')"
       ></div>
       <svg
+        v-if="showStructureOverlay !== false && bars.length > 0"
+        :data-testid="structureOverlayTestId ?? 'origin-structure-overlay'"
         class="origin-structure-overlay"
         :style="{ width: `${structureOverlayWidth}px` }"
-        data-testid="origin-structure-overlay"
         :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
         aria-hidden="true"
       >
