@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import ChartSurface from "./ChartSurface.vue";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { ChartSurfacePort, ChartSurfaceSBarMarker } from "../chart-surface-contract";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 
 const props = defineProps<{
@@ -23,27 +24,10 @@ const emit = defineEmits<{
   cancelRangeSelection: [];
 }>();
 
-type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
-type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; state: string; color: string; dasharray: string };
-type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
-type SurfacePort = {
-  getSbarCoordinate: (sbarId: string) => number | null;
-  getSbarIdAtCoordinate: (x: number, clampToSequence?: boolean) => string | null;
-  getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
-  hasSbarId: (sbarId: string) => boolean;
-  getSbarMarker: (sbarId: string) => SBarMarker | null;
-  getSbarRangeHighlight: (sbarId: string) => SBarMarker | null;
-  getStructureGeometry: () => { cbarRectangles: CBarRectangle[]; swingSegments: SwingSegment[] };
-  setStructureInteractionState: (
-    hovered: { kind: "cbar" | "swing"; id: string } | null,
-    selected: { kind: "cbar" | "swing"; id: string } | null,
-  ) => void;
-  revealSbarRange: (anchorIds: string[]) => boolean;
-};
-const surface = ref<SurfacePort | null>(null);
-const selectedSbarMarker = ref<SBarMarker | null>(null);
+const surface = ref<ChartSurfacePort | null>(null);
+const selectedSbarMarker = ref<ChartSurfaceSBarMarker | null>(null);
 const hoveredObject = ref<OriginObjectSelection | null>(null);
-const hoveredSbarMarker = ref<SBarMarker | null>(null);
+const hoveredSbarMarker = ref<ChartSurfaceSBarMarker | null>(null);
 const selectionStartX = ref<number | null>(null);
 const selectionEndX = ref<number | null>(null);
 const previewX = ref<number | null>(null);
