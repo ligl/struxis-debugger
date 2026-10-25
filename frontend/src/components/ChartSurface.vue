@@ -26,6 +26,8 @@ const props = withDefaults(defineProps<{
   showStructureOverlay?: boolean;
   canvasTestId?: string;
   structureOverlayTestId?: string;
+  cbarTestId?: string;
+  swingTestId?: string;
   panelClass?: string;
   panelLabel?: string;
   chartLabel?: string;
@@ -780,7 +782,7 @@ onBeforeUnmount(() => {
           :stroke-dasharray="segment.dasharray || undefined"
           visibility="hidden"
           stroke-linecap="round"
-          data-testid="swing-state-segment"
+          :data-testid="swingTestId ?? 'swing-state-segment'"
           :data-swing-id="segment.id"
           :data-swing-state="segment.state"
         />
@@ -795,7 +797,7 @@ onBeforeUnmount(() => {
           visibility="hidden"
           stroke="#A0A7B0"
           stroke-width="1"
-          data-testid="cbar-range-rectangle"
+          :data-testid="cbarTestId ?? 'cbar-range-rectangle'"
           :data-cbar-id="rectangle.id"
         />
         <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
