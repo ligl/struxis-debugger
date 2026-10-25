@@ -295,6 +295,42 @@ describe("SnapshotReferenceChart", () => {
     wrapper.unmount();
   });
 
+  it("toggles the Snapshot CBar layer with C only while Snapshot owns chart navigation", async () => {
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        ...snapshotDefaults,
+        bars: [bar()],
+        snapshotId: "snapshot-cbar-keyboard",
+        structure: null,
+        keyboardActive: true,
+      },
+    });
+    await nextTick();
+
+    const cbarLegend = wrapper.get('[data-testid="layer-toggle-cbar"]');
+    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
+
+    const dispatchKey = (key: string, init: KeyboardEventInit = {}) => {
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
+      document.dispatchEvent(event);
+      return event;
+    };
+
+    const toggleOff = dispatchKey("c");
+    expect(toggleOff.defaultPrevented).toBe(true);
+    expect(cbarLegend.attributes("aria-pressed")).toBe("false");
+
+    const toggleOn = dispatchKey("c");
+    expect(toggleOn.defaultPrevented).toBe(true);
+    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
+
+    const modified = dispatchKey("c", { ctrlKey: true });
+    expect(modified.defaultPrevented).toBe(false);
+    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
+
+    wrapper.unmount();
+  });
+
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
     mount(SnapshotReferenceChart, {
       props: {
