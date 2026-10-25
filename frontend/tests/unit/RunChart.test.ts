@@ -133,6 +133,7 @@ function installChartMock(): void {
       setVisibleLogicalRange: mocks.setVisibleLogicalRange,
       getVisibleLogicalRange: mocks.getVisibleLogicalRange,
       timeToCoordinate: (time: number) => time - 1700000000 + mocks.coordinateOffset,
+      logicalToCoordinate: (logical: number) => logical * 60 + mocks.coordinateOffset,
       coordinateToLogical: mocks.coordinateToLogical,
       subscribeVisibleLogicalRangeChange: (listener: () => void) => { mocks.visibleRangeListener = listener; mocks.subscribeVisibleRangeChange(); },
       unsubscribeVisibleLogicalRangeChange: mocks.unsubscribeVisibleRangeChange,
