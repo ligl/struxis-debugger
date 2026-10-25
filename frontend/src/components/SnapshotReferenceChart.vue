@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { SnapshotRangeMarkerPrimitive, SnapshotReferencePrimitive, SnapshotVolumePrimitive, type SnapshotPrimitiveState, type SnapshotRangeMarkerState, type SnapshotVolumePrimitiveState } from "../snapshot-reference-primitives";
+import { SnapshotRangeMarkerPrimitive, type SnapshotRangeMarkerState } from "../snapshot-reference-primitives";
+import { projectSnapshotPlaybackSeries } from "../snapshot-playback-series";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
 import type { ChartSurfacePort } from "../chart-surface-contract";
@@ -42,12 +43,8 @@ const emit = defineEmits<{
 
 const surface = ref<ChartSurfacePort | null>(null);
 const crosshairGate = new ReplayCrosshairSyncGate();
-const snapshotPrimitive = new SnapshotReferencePrimitive();
-const snapshotVolumePrimitive = new SnapshotVolumePrimitive();
 const snapshotRangeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
 const snapshotVolumeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
-let unregisterSnapshotPrimitive: (() => void) | null = null;
-let unregisterSnapshotVolumePrimitive: (() => void) | null = null;
 let unregisterSnapshotMarkerPrimitive: (() => void) | null = null;
 let unregisterSnapshotVolumeMarkerPrimitive: (() => void) | null = null;
 const playbackOverlayEnabled = computed(() =>
@@ -56,28 +53,6 @@ const playbackOverlayEnabled = computed(() =>
   && props.playbackOffset !== null
   && props.playbackOffset !== undefined,
 );
-
-function currentPrimitiveState(): SnapshotPrimitiveState {
-  return {
-    bars: props.bars,
-    structure: props.structure,
-    enabled: props.syncEnabled && props.playbackOffset !== null && props.playbackOffset !== undefined && props.liveBarCount > 0,
-    playbackEnabled: playbackOverlayEnabled.value,
-    offset: props.playbackOffset,
-    liveCount: props.liveBarCount,
-    processedCount: props.processedCount,
-  };
-}
-
-function currentVolumePrimitiveState(): SnapshotVolumePrimitiveState {
-  return {
-    bars: props.bars,
-    enabled: props.syncEnabled && props.playbackOffset !== null && props.playbackOffset !== undefined && props.liveBarCount > 0,
-    playbackEnabled: playbackOverlayEnabled.value,
-    offset: props.playbackOffset,
-    liveCount: props.liveBarCount,
-  };
-}
 
 function currentRangeMarkerState(showArrows: boolean): SnapshotRangeMarkerState {
   return {
@@ -90,10 +65,75 @@ function currentRangeMarkerState(showArrows: boolean): SnapshotRangeMarkerState 
 }
 
 function refreshSnapshotGeometry(): void {
-  snapshotPrimitive.update(currentPrimitiveState());
-  snapshotVolumePrimitive.update(currentVolumePrimitiveState());
   snapshotRangeMarkerPrimitive.update(currentRangeMarkerState(true));
   snapshotVolumeMarkerPrimitive.update(currentRangeMarkerState(false));
+}
+
+interface AppliedPlaybackStyleState {
+  bars: SBarDto[];
+  playbackEnabled: boolean;
+  offset: number | null;
+  liveCount: number;
+  processedCount: number;
+}
+
+let appliedPlaybackStyleState: AppliedPlaybackStyleState | null = null;
+
+function applyPlaybackSeriesStyles(): void {
+  const port = surface.value;
+  if (!port) return;
+
+  const nextState: AppliedPlaybackStyleState = {
+    bars: props.bars,
+    playbackEnabled: playbackOverlayEnabled.value,
+    offset: props.playbackOffset,
+    liveCount: props.liveBarCount,
+    processedCount: Math.max(0, Math.floor(props.processedCount)),
+  };
+  const projection = projectSnapshotPlaybackSeries({
+    bars: props.bars,
+    playbackEnabled: nextState.playbackEnabled,
+    offset: nextState.offset,
+    liveCount: nextState.liveCount,
+    processedCount: nextState.processedCount,
+  });
+  const previous = appliedPlaybackStyleState;
+  const samePlaybackSequence = previous !== null
+    && previous.bars === nextState.bars
+    && previous.playbackEnabled
+    && nextState.playbackEnabled
+    && previous.offset === nextState.offset
+    && previous.liveCount === nextState.liveCount;
+
+  // A strict one-SBar advance only restores that newly processed candle and
+  // volume bar. Start/stop, jumps, backtracking and sequence changes rebuild
+  // the authoritative native-series styling in one paired setData operation.
+  if (
+    samePlaybackSequence
+    && nextState.processedCount === previous.processedCount + 1
+    && nextState.offset !== null
+  ) {
+    const index = nextState.offset + previous.processedCount;
+    const candle = projection.candles[index];
+    const volume = projection.volume[index];
+    if (candle && volume && port.updateSeriesData(candle, volume, true)) {
+      appliedPlaybackStyleState = nextState;
+      return;
+    }
+  } else if (
+    previous
+    && previous.bars === nextState.bars
+    && previous.playbackEnabled === nextState.playbackEnabled
+    && previous.offset === nextState.offset
+    && previous.liveCount === nextState.liveCount
+    && previous.processedCount === nextState.processedCount
+  ) {
+    return;
+  }
+
+  if (port.replaceSeriesData(projection.candles, projection.volume)) {
+    appliedPlaybackStyleState = nextState;
+  }
 }
 
 function handleViewportChange(range: { from: number; to: number }): void {
@@ -195,6 +235,12 @@ watch(
   { deep: true },
 );
 
+watch(
+  () => [props.snapshotId, props.bars, props.syncEnabled, props.playbackEnabled, props.playbackOffset, props.liveBarCount, props.processedCount] as const,
+  applyPlaybackSeriesStyles,
+  { deep: true, flush: "post" },
+);
+
 watch(() => props.syncRequest, (request) => {
   applyViewportRequest(request);
 }, { deep: true });
@@ -220,16 +266,6 @@ watch(() => [props.snapshotId, props.bars.map((bar) => bar.sbarId).join("\\u0000
 
 onMounted(() => {
   // The child Surface has initialized its chart and Primitive host by this point.
-  unregisterSnapshotPrimitive = surface.value?.registerPrimitive(
-    "snapshot-reference:" + props.snapshotId + ":candle-overlays",
-    snapshotPrimitive,
-    { target: "candles", dispose: () => snapshotPrimitive.dispose() },
-  ) ?? null;
-  unregisterSnapshotVolumePrimitive = surface.value?.registerPrimitive(
-    "snapshot-reference:" + props.snapshotId + ":volume-overlays",
-    snapshotVolumePrimitive,
-    { target: "volume", dispose: () => snapshotVolumePrimitive.dispose() },
-  ) ?? null;
   unregisterSnapshotMarkerPrimitive = surface.value?.registerPrimitive(
     "snapshot-reference:" + props.snapshotId + ":background-range-markers",
     snapshotRangeMarkerPrimitive,
@@ -241,20 +277,16 @@ onMounted(() => {
     { target: "volume", dispose: () => snapshotVolumeMarkerPrimitive.dispose() },
   ) ?? null;
   refreshSnapshotGeometry();
+  applyPlaybackSeriesStyles();
   applyViewportRequest(props.syncRequest);
   applyCrosshairRequest(props.crosshairSync);
 });
 onBeforeUnmount(() => {
-  unregisterSnapshotPrimitive?.();
-  unregisterSnapshotPrimitive = null;
-  unregisterSnapshotVolumePrimitive?.();
-  unregisterSnapshotVolumePrimitive = null;
   unregisterSnapshotMarkerPrimitive?.();
   unregisterSnapshotMarkerPrimitive = null;
   unregisterSnapshotVolumeMarkerPrimitive?.();
   unregisterSnapshotVolumeMarkerPrimitive = null;
-  snapshotPrimitive.dispose();
-  snapshotVolumePrimitive.dispose();
+  appliedPlaybackStyleState = null;
   snapshotRangeMarkerPrimitive.dispose();
   snapshotVolumeMarkerPrimitive.dispose();
 });
