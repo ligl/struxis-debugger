@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
+import type { ChartSurfacePort } from "../chart-surface-contract";
 import ChartSurface from "./ChartSurface.vue";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
@@ -19,19 +20,6 @@ import type {
 } from "../origin-types";
 
 type LogicalRange = { from: number; to: number };
-interface ChartSurfacePort {
-  getVisibleLogicalRange(): LogicalRange | null;
-  applyViewportRange(range: LogicalRange): boolean;
-  applyCrosshairPosition(sbarId: string, price: number): boolean;
-  clearCrosshairPosition(): void;
-  getSbarCoordinate(sbarId: string): number | null;
-  getLogicalCoordinate(index: number): number | null;
-  getPriceCoordinate(price: number): number | null;
-  getSbarIdAtCoordinate(x: number, clampToSequence?: boolean): string | null;
-  getSbarMarker(sbarId: string): { id: string; x: number; y: number; width: number; height: number } | null;
-  getStructureGeometry(): { cbarRectangles: Array<{ id: string; x: number; y: number; width: number; height: number }>; swingSegments: Array<{ id: string; x1: number; y1: number; x2: number; y2: number; state: string; color: string; dasharray: string }> };
-}
-
 const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
