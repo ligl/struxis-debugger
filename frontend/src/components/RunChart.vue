@@ -267,7 +267,10 @@ function handleChartKeyboard(event: KeyboardEvent): void {
       // If Snapshot owns the workspace, only a qualified synchronized
       // Crosshair can be mapped back to the Live Test Dataset. Never use a
       // stale Live-local index when the two sequences are not sync-eligible.
-      if (props.syncOwner === "snapshot" && !props.syncEnabled) {
+      if (
+        props.syncOwner === "snapshot" &&
+        (!props.syncEnabled || !props.crosshairSync?.sbarId)
+      ) {
         event.preventDefault();
         return;
       }
