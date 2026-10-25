@@ -96,8 +96,7 @@ describe("SnapshotReferencePanel", () => {
   });
 
 
-  it("delays Snapshot chart recreation by 200ms while retaining the selected Snapshot", async () => {
-    vi.useFakeTimers();
+  it("destroys only the chart runtime while inactive and recreates it without reloading the selected Snapshot", async () => {
     invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, {
       props: { active: true, instrumentId: "AUD/USD.SIM", snapshots },
@@ -114,14 +113,9 @@ describe("SnapshotReferencePanel", () => {
     expect((wrapper.get('[data-testid="replay-reference-select"]').element as HTMLSelectElement).value).toBe("snapshot-complete-01");
 
     await wrapper.setProps({ active: true } as never);
-    expect(wrapper.findComponent({ name: "SnapshotReferenceChart" }).exists()).toBe(false);
-    await vi.advanceTimersByTimeAsync(199);
-    expect(wrapper.findComponent({ name: "SnapshotReferenceChart" }).exists()).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
     expect(wrapper.findComponent({ name: "SnapshotReferenceChart" }).exists()).toBe(true);
     expect(invokeMock).toHaveBeenCalledTimes(1);
     expect(wrapper.get('[data-testid="snapshot-reference-metadata"]').text()).toContain("run-01");
-    vi.useRealTimers();
   });
 
   it("renders the verified historical chart for a selected completed Snapshot", async () => {
