@@ -300,13 +300,18 @@ describe("RunChart", () => {
 
     // A normal single click keeps its existing Inspector/object-selection role
     // and must not set a Restart target.
-    mocks.clickListener?.({ point: { x: 60, y: 150 } });
+    // The candle spans y=188..191 in this chart mock; clicks outside that
+    // visible OHLC range must not select the SBar even at the same X.
+    mocks.clickListener?.({ point: { x: 60, y: 190 } });
     await nextTick();
     expect(wrapper.emitted("objectSelect")?.[0]?.[0]).toMatchObject({
       kind: "sbar",
       id: originBars[1]!.sbarId,
       checkpointSbarId: null,
     });
+    mocks.clickListener?.({ point: { x: 60, y: 150 } });
+    await nextTick();
+    expect(wrapper.emitted("objectSelect")).toHaveLength(1);
     expect(wrapper.emitted("targetSelect")).toBeUndefined();
 
     // Double-clicking at a different Y coordinate still resolves by the
