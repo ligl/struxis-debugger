@@ -235,7 +235,7 @@ describe("chart entry adapters", () => {
       global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
-    await wrapper.setProps({ processedCount: 1 });
+    await wrapper.setProps({ processedCount: 1 } as never);
     await Promise.resolve();
     expect(surfacePortCalls.updates).toHaveLength(1);
     expect(surfacePortCalls.updates[0]?.historicalUpdate).toBe(true);
