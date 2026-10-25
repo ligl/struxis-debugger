@@ -5,7 +5,7 @@ import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
-import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
+import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
 import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
@@ -148,11 +148,9 @@ function updateStructureGeometry(): void {
   });
   cbarRectangles.value = geometry.cbarRectangles;
   swingSegments.value = geometry.swingSegments;
-  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
-  swingPrimitive?.setVisible(layerVisibility.value.swing);
 }
 
-const scheduleOverlayUpdate = createAnimationFrameCoalescer(() => {
+const scheduleOverlayUpdate = createStructureProjectionScheduler(() => {
   updateSbarCoordinates();
   emit("projectionFrame");
   const latest = pendingViewportRange;
@@ -442,6 +440,10 @@ function handleChartKeyboard(event: KeyboardEvent): void {
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
+
+  if (layer === "cbar" || layer === "swing") {
+    syncStructurePrimitives();
+  }
 
   if (layer === "sbar") {
     candleSeries?.applyOptions({ visible: layerVisibility.value.sbar });
