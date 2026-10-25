@@ -2738,8 +2738,7 @@ th, td { padding: 6px 8px; }
   min-height: 8px;
   align-items: center;
   justify-content: center;
-  border-top: 1px solid var(--dbg-border);
-  border-bottom: 1px solid var(--dbg-border);
+  border:0;
   background: var(--dbg-surface-1);
   cursor: ns-resize;
   touch-action: none;
@@ -2761,6 +2760,7 @@ th, td { padding: 6px 8px; }
   min-width: 0;
   min-height: 0;
   height: 100%;
+  border-top: 1px solid var(--dbg-border);
   flex-direction: column;
   overflow: hidden;
   background: #121619;
