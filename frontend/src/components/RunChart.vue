@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime } from "../sbar-chart-runtime";
+import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
@@ -684,8 +684,7 @@ function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
     if (projectionMessage.value) {
-      candleSeries.setData([]);
-      volumeSeries.setData([]);
+      replaceSbarChartSeriesData(candleSeries, volumeSeries, [], []);
       timeBySbarId = new Map();
       indexBySbarId = new Map();
       cachedProjection = null;
@@ -733,8 +732,7 @@ function updateChart(): void {
         ? { ...bar, color: "#454b53" }
         : bar,
     );
-    candleSeries.setData(candles);
-    volumeSeries.setData(volume);
+    replaceSbarChartSeriesData(candleSeries, volumeSeries, candles, volume);
     syncStructurePrimitives();
     lastProcessedCount = processedCount;
     lastRunId = props.runState?.runId ?? null;
@@ -816,8 +814,7 @@ function updateProgressSeries(): void {
     // them transparent after the layer is shown again.
     // Future candles are already dimmed, so promote only the newly confirmed
     // SBar and volume bar instead of replacing the complete historical series.
-    candleSeries.update(candle, true);
-    volumeSeries.update(volume, true);
+    updateSbarChartSeriesData(candleSeries, volumeSeries, candle, volume, true);
     lastProcessedCount = processedCount;
     updateStructureOverlays();
     return;
