@@ -652,7 +652,41 @@ function setStructureInteractionState(
   });
 }
 
-defineExpose({ replaceSeriesData, updateSeriesData, fitContent: fitContentPort, setLayerVisibility, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
+/**
+ * Public extension point for chart-local drawing owned by a consumer.
+ * Consumers supply a Lightweight Charts Primitive, never chart/series access
+ * or Snapshot/Dataset business props. Surface controls only its attachment
+ * lifecycle and leaves geometry, rendering and domain state to the owner.
+ */
+function registerPrimitive(
+  id: string,
+  primitive: import("lightweight-charts").ISeriesPrimitive<Time>,
+  dispose?: () => void,
+): () => void {
+  if (!primitiveHost || !candleSeries) {
+    throw new Error("ChartSurface is not ready to accept Primitive registrations.");
+  }
+
+  let attached = false;
+  return primitiveHost.register({
+    id,
+    attach() {
+      if (attached) return;
+      attached = true;
+      candleSeries!.attachPrimitive(primitive);
+    },
+    detach() {
+      if (!attached) return;
+      attached = false;
+      candleSeries!.detachPrimitive(primitive);
+    },
+    dispose() {
+      dispose?.();
+    },
+  });
+}
+
+defineExpose({ registerPrimitive, replaceSeriesData, updateSeriesData, fitContent: fitContentPort, setLayerVisibility, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
