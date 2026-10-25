@@ -163,6 +163,11 @@ describe("ReplayWorkspace", () => {
     await nextTick();
     expect(live.attributes("data-has-sync-request")).toBe("false");
     expect(live.attributes("data-crosshair-revision")).toBe("");
+    // The old Snapshot sequence is qualified against test-1 and must not
+    // remain eligible merely because test-2 happens to share the same SBar IDs.
+    expect(live.attributes("data-sync-enabled")).toBe("false");
+    await snapshot.get('[data-testid="snapshot-viewport-change"]').trigger("click");
+    expect(live.attributes("data-has-sync-request")).toBe("false");
     wrapper.unmount();
   });
 
