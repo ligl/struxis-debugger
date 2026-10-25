@@ -21,7 +21,6 @@ const RunChartStub = defineComponent({
 const SnapshotReferencePanelStub = defineComponent({
   name: "SnapshotReferencePanel",
   props: {
-    active: { type: Boolean, default: true },
     keyboardActive: { type: Boolean, default: false },
     progressApplies: { type: Boolean, default: false },
     processedCount: { type: Number, default: 0 },
@@ -30,7 +29,7 @@ const SnapshotReferencePanelStub = defineComponent({
   },
   emits: ["chartActivate", "syncSequence", "viewportChange", "crosshairChange"],
   template: `
-    <div data-testid="snapshot-reference-panel-stub" :data-active="active" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'chartActivate\')" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
+    <div data-testid="snapshot-reference-panel-stub" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'chartActivate\')" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
       <button data-testid="sync-enable" @click="$emit('syncSequence', { snapshotId: 'snapshot-1', barType: 'AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL', sbarIds: ['x', '1', '2', '3', '4'] })">enable sync</button>
       <button data-testid="sync-disable" @click="$emit('syncSequence', null)">disable sync</button>
       <button data-testid="snapshot-viewport-change" @click="$emit('viewportChange', { source: 'reference', from: 2, to: 5 })">change viewport</button>
@@ -40,7 +39,7 @@ const SnapshotReferencePanelStub = defineComponent({
 });
 
 describe("ReplayWorkspace", () => {
-  it("passes workspace activity to Snapshot Reference without unmounting the panel", async () => {
+  it("retains Snapshot Reference panel across workspace activation changes", async () => {
     const active = ref(true);
     const Host = defineComponent({
       components: { ReplayWorkspace },
@@ -52,10 +51,11 @@ describe("ReplayWorkspace", () => {
     const wrapper = mount(Host, {
       global: { stubs: { DualChartStack: DualChartStackStub, RunChart: RunChartStub, SnapshotReferencePanel: SnapshotReferencePanelStub } },
     });
-    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-active")).toBe("true");
+    const panel = wrapper.get('[data-testid="snapshot-reference-panel-stub"]');
+    expect(panel.exists()).toBe(true);
     active.value = false;
     await nextTick();
-    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-active")).toBe("false");
+    expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
     active.value = true;
     await nextTick();
     expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
