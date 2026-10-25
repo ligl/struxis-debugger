@@ -6,7 +6,7 @@ import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
-import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
+import { candlestickBodyWidth, projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -146,6 +146,12 @@ function updateStructureGeometry(): void {
     indexBySbarId,
     visibleRange: timeScale.getVisibleLogicalRange(),
     coordinateForSbarId: (sbarId) => coordinateForSbarId(sbarId),
+    sbarBodyWidth: candlestickBodyWidth(
+      Number(timeScale.options().barSpacing),
+      typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
+        ? Math.max(1, window.devicePixelRatio)
+        : 1,
+    ),
     priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
     cbarVisible: layerVisibility.value.cbar,
     swingVisible: layerVisibility.value.swing,
@@ -199,24 +205,6 @@ function syncStructurePrimitives(): void {
   });
 }
 
-function candlestickBodyWidth(barSpacing: number, pixelRatio: number): number {
-  if (!Number.isFinite(barSpacing) || barSpacing <= 0) return Number.NaN;
-  const specialCaseFrom = 2.5;
-  const specialCaseTo = 4;
-  let width: number;
-  if (barSpacing >= specialCaseFrom && barSpacing <= specialCaseTo) {
-    width = Math.floor(3 * pixelRatio);
-  } else {
-    const coefficient = 1 - (0.2 * Math.atan(Math.max(specialCaseTo, barSpacing) - specialCaseTo)) / (Math.PI * 0.5);
-    const optimal = Math.min(Math.floor(barSpacing * coefficient * pixelRatio), Math.floor(barSpacing * pixelRatio));
-    width = Math.max(Math.floor(pixelRatio), optimal);
-  }
-  if (width >= 2) {
-    const wickWidth = Math.floor(pixelRatio);
-    if (wickWidth % 2 !== width % 2) width--;
-  }
-  return width / pixelRatio;
-}
 
 function markerForSbar(sbarId: string | null | undefined): SBarMarker | null {
   if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
