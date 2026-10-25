@@ -360,6 +360,29 @@ describe("SnapshotReferenceChart", () => {
     wrapper.unmount();
   });
 
+  it("emits the Snapshot SBar selection from a chart click", async () => {
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        ...snapshotDefaults,
+        bars: [bar()],
+        snapshotId: "snapshot-object-selection",
+        structure: null,
+      },
+    });
+    await nextTick();
+
+    const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+    clickHandler?.({ point: { x: 100, y: 50 } });
+
+    expect(wrapper.emitted("objectSelect")?.[0]?.[0]).toEqual({
+      kind: "sbar",
+      id: "1700000000000000000",
+      checkpointSbarId: "1700000000000000000",
+    });
+    wrapper.unmount();
+  });
+
   it("hides the internal time-axis bottom border in Snapshot Reference", () => {
     mount(SnapshotReferenceChart, {
       props: {
