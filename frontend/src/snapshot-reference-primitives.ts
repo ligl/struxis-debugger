@@ -6,7 +6,6 @@ import type {
   Time,
 } from "lightweight-charts";
 import type { SBarDto, ReplayInspectorStructureDto } from "./origin-types";
-import { mapSBarsToChart } from "./sbar-chart-data";
 import { projectCBarRectangles, projectSwingSegments } from "./sbar-chart-structure-geometry";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeIndices, type SnapshotBrightCandleGeometry } from "./snapshot-playback-geometry";
 
