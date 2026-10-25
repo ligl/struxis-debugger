@@ -4,7 +4,7 @@ import { resolveReplaySyncOffset, type ReplaySyncSequenceDescriptor } from "../r
 import DualChartStack from "./DualChartStack.vue";
 import RunChart from "./RunChart.vue";
 import SnapshotReferencePanel from "./SnapshotReferencePanel.vue";
-import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SnapshotArtifactDto, TestDatasetDto } from "../origin-types";
+import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, ReplaySnapshotInspectorSelection, RunStateDto, SnapshotArtifactDto, TestDatasetDto } from "../origin-types";
 
 const props = withDefaults(defineProps<{
   active: boolean;
@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<{
 });
 const emit = defineEmits<{
   objectSelect: [selection: ReplayChartSelection];
+  snapshotSelect: [selection: ReplaySnapshotInspectorSelection | null];
   targetSelect: [sbarId: string];
   targetCancel: [];
 }>();
@@ -123,6 +124,7 @@ watch(
           @chart-activate="activateChart('snapshot')"
           @viewport-change="handleViewportChange"
           @crosshair-change="handleCrosshairChange"
+          @object-select="emit('snapshotSelect', $event)"
         />
       </template>
     </DualChartStack>
