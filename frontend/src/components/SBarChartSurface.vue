@@ -566,6 +566,8 @@ function setStructureInteractionState(
   const stateFor = (kind: "cbar" | "swing"): StructurePrimitiveInteractionState => ({
     hoveredId: hovered?.kind === kind ? hovered.id : null,
     selectedId: selected?.kind === kind ? selected.id : null,
+    selectedColor: "#D99A45",
+    selectedWidth: kind === "swing" ? 2.5 : 2,
   });
   cbarPrimitive?.setInteractionState(stateFor("cbar"));
   swingPrimitive?.setInteractionState(stateFor("swing"));
