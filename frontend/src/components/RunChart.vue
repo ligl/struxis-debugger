@@ -398,14 +398,7 @@ function updateStructureOverlays(): void {
   const structure = props.structure;
   const selected = props.selectedObject;
   if (layerVisibility.value.sbar && selected?.kind === "sbar" && ((selected.checkpointSbarId === null && !props.runState) || selected.checkpointSbarId === props.runState?.cursorSbarId)) {
-    const selectedTime = timeBySbarId.get(selected.id);
-    const selectedBar = bars.value.find((bar) => bar.sbarId === selected.id);
-    const selectedX = selectedTime === undefined ? null : timeScale.timeToCoordinate(selectedTime);
-    const selectedHigh = selectedBar ? candleSeries.priceToCoordinate(Number(selectedBar.high)) : null;
-    const selectedLow = selectedBar ? candleSeries.priceToCoordinate(Number(selectedBar.low)) : null;
-    if (selectedBar && selectedX !== null && selectedX !== undefined && selectedHigh !== null && selectedHigh !== undefined && selectedLow !== null && selectedLow !== undefined) {
-      selectedSbarMarker.value = { id: selected.id, x: selectedX - 6, y: Math.min(selectedHigh, selectedLow), width: 12, height: Math.max(4, Math.abs(selectedLow - selectedHigh)) };
-    } else selectedSbarMarker.value = null;
+    selectedSbarMarker.value = markerForSbar(selected.id);
   } else selectedSbarMarker.value = null;
   const visibleRange = timeScale.getVisibleLogicalRange?.();
   const projectionRange = visibleRange && Number.isFinite(visibleRange.from) && Number.isFinite(visibleRange.to)
