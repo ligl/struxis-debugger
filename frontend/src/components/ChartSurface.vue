@@ -10,7 +10,7 @@ import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometr
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
-import type { ChartSurfaceLayerVisibility } from "../chart-surface-contract";
+import type { ChartSurfaceLayerVisibility, ChartSurfacePrimitiveOptions } from "../chart-surface-contract";
 
 const props = withDefaults(defineProps<{
   bars: SBarDto[];
@@ -661,10 +661,14 @@ function setStructureInteractionState(
 function registerPrimitive(
   id: string,
   primitive: import("lightweight-charts").ISeriesPrimitive<Time>,
-  dispose?: () => void,
+  registration?: ChartSurfacePrimitiveOptions | (() => void),
 ): () => void {
-  if (!primitiveHost || !candleSeries) {
-    throw new Error("ChartSurface is not ready to accept Primitive registrations.");
+  const options = typeof registration === "function"
+    ? { dispose: registration }
+    : registration ?? {};
+  const targetSeries = options.target === "volume" ? volumeSeries : candleSeries;
+  if (!primitiveHost || !targetSeries) {
+    throw new Error("ChartSurface is not ready to accept Primitive registrations for the requested pane.");
   }
 
   let attached = false;
@@ -673,15 +677,15 @@ function registerPrimitive(
     attach() {
       if (attached) return;
       attached = true;
-      candleSeries!.attachPrimitive(primitive);
+      targetSeries.attachPrimitive(primitive);
     },
     detach() {
       if (!attached) return;
       attached = false;
-      candleSeries!.detachPrimitive(primitive);
+      targetSeries.detachPrimitive(primitive);
     },
     dispose() {
-      dispose?.();
+      options.dispose?.();
     },
   });
 }
