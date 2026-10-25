@@ -21,6 +21,12 @@ describe("DualChartStack", () => {
     // Replay defaults to the maximum upper-chart share, leaving the lower chart at its minimum share.
     expect(splitter.attributes("aria-valuenow")).toBe("75");
 
+    // Hovering focuses the splitter, so keyboard resizing works without a preliminary click.
+    await splitter.trigger("mouseenter");
+    expect(document.activeElement).toBe(splitter.element);
+    await splitter.trigger("keydown", { key: "ArrowDown" });
+    expect(splitter.attributes("aria-valuenow")).toBe("75");
+
     await splitter.trigger("keydown", { key: "ArrowUp" });
     expect(splitter.attributes("aria-valuenow")).toBe("73");
 
