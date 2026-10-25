@@ -492,6 +492,22 @@ describe("SnapshotReferenceChart", () => {
     expect(chartMocks.applyChartOptions).toHaveBeenCalledTimes(chartOptionsCallCount);
   });
 
+  it("keeps the layer legend visible in Snapshot Reference after the shared Surface migration", () => {
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        ...snapshotDefaults,
+        bars: [bar()],
+        snapshotId: "snapshot-reference-layer-legend",
+        structure: null,
+      },
+    });
+
+    expect(wrapper.get('[aria-label="Chart layer visibility"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="layer-toggle-sbar"]').text()).toContain("SBar");
+    expect(wrapper.get('[data-testid="layer-toggle-volume"]').text()).toContain("Volume");
+    wrapper.unmount();
+  });
+
   it("hides the chart heading toolbar in Snapshot Reference to maximize plot height", () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
