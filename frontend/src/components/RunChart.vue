@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { createSbarChartRuntime, disposeSbarChartRuntime } from "../sbar-chart-runtime";
+import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
@@ -326,12 +326,7 @@ function handleChartKeyboard(event: KeyboardEvent): void {
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
-  if (layer === "sbar" && candleSeries) {
-    candleSeries.applyOptions?.({ visible: layerVisibility.value.sbar });
-  }
-  if (layer === "volume" && volumeSeries) {
-    volumeSeries.applyOptions?.({ visible: layerVisibility.value.volume });
-  }
+  applySbarChartSeriesVisibility(candleSeries, volumeSeries, layerVisibility.value);
   syncStructurePrimitives();
   // Keep layer state and geometry consumed by hit-testing in the same turn.
   scheduleOverlayUpdate.flush();
@@ -725,21 +720,18 @@ function updateChart(): void {
     timeBySbarId = chartIndex.timeBySbarId;
     indexBySbarId = chartIndex.indexBySbarId;
     const candles = projection.candles.map((candle, index) => {
-      const base = layerVisibility.value.sbar ? candle : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
-      if (!replayProgressApplies.value || index < processedCount) return base;
+      if (!replayProgressApplies.value || index < processedCount) return candle;
       return {
-        ...base,
-        color: layerVisibility.value.sbar ? "#454b53" : "rgba(0,0,0,0)",
-        borderColor: layerVisibility.value.sbar ? "#454b53" : "rgba(0,0,0,0)",
-        wickColor: layerVisibility.value.sbar ? "#454b53" : "rgba(0,0,0,0)",
+        ...candle,
+        color: "#454b53",
+        borderColor: "#454b53",
+        wickColor: "#454b53",
       };
     });
     const volume = projection.volume.map((bar, index) =>
-      !layerVisibility.value.volume
-        ? { ...bar, color: "rgba(0,0,0,0)" }
-        : replayProgressApplies.value && index >= processedCount
-          ? { ...bar, color: "#454b53" }
-          : bar,
+      replayProgressApplies.value && index >= processedCount
+        ? { ...bar, color: "#454b53" }
+        : bar,
     );
     candleSeries.setData(candles);
     volumeSeries.setData(volume);
@@ -819,18 +811,13 @@ function updateProgressSeries(): void {
       updateChart();
       return;
     }
-    const candleUpdate = layerVisibility.value.sbar
-      ? candle
-      : { ...candle, color: "rgba(0,0,0,0)", borderColor: "rgba(0,0,0,0)", wickColor: "rgba(0,0,0,0)" };
-    const volumeUpdate = layerVisibility.value.volume
-      ? volume
-      : { ...volume, color: "rgba(0,0,0,0)" };
-
-    // lightweight-charts v5 supports historical updates. Future candles are
-    // already present as dimmed points, so promote only the newly confirmed
+    // Visibility is controlled by shared series options. Keep point styling
+    // independent so hiding a layer cannot poison historical points and leave
+    // them transparent after the layer is shown again.
+    // Future candles are already dimmed, so promote only the newly confirmed
     // SBar and volume bar instead of replacing the complete historical series.
-    candleSeries.update(candleUpdate, true);
-    volumeSeries.update(volumeUpdate, true);
+    candleSeries.update(candle, true);
+    volumeSeries.update(volume, true);
     lastProcessedCount = processedCount;
     updateStructureOverlays();
     return;
