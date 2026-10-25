@@ -472,23 +472,28 @@ function markerForSbar(sbarId: string | null | undefined): SBarSelectionMarker |
 }
 
 function sbarRangeHighlight(sbarId: string | null | undefined): SBarSelectionMarker | null {
-  if (!chart || !chartHost.value || !sbarId || !layerVisibility.value.sbar) return null;
+  if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
   const index = bars.value.findIndex((bar) => bar.sbarId === sbarId);
   if (index < 0) return null;
+  const bar = bars.value[index];
   const time = timeBySbarId.get(sbarId);
-  if (time === undefined) return null;
+  if (!bar || time === undefined) return null;
   const x = chart.timeScale().timeToCoordinate(time);
-  if (x === null || x === undefined || !Number.isFinite(x)) return null;
+  const highY = candleSeries.priceToCoordinate(Number(bar.high));
+  const lowY = candleSeries.priceToCoordinate(Number(bar.low));
+  if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
 
   const adjacentXs = [
     index > 0 ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index - 1]!.sbarId)!) : null,
     index + 1 < bars.value.length ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index + 1]!.sbarId)!) : null,
   ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
-  const spacing = adjacentXs.length
-    ? Math.min(...adjacentXs.map((adjacentX) => Math.abs(adjacentX - x)).filter((distance) => distance > 0))
-    : 8;
-  const width = Math.max(4, Math.min(24, Number.isFinite(spacing) && spacing > 0 ? spacing * 0.82 : 8));
-  return { id: sbarId, x: x - width / 2, y: 0, width, height: Math.max(1, chartHost.value.clientHeight) };
+  const distances = adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0);
+  const spacing = distances.length > 0 ? Math.min(...distances) : 8;
+  // Outline the SBar's own time/price interval, with a small gap from neighbors.
+  const width = Math.max(4, Math.min(32, Number.isFinite(spacing) && spacing > 0 ? spacing * 0.9 : 8));
+  const top = Math.min(highY as number, lowY as number);
+  const bottom = Math.max(highY as number, lowY as number);
+  return { id: sbarId, x: (x as number) - width / 2, y: top, width, height: Math.max(2, bottom - top) };
 }
 
 function updateHoverMarker(): void {
@@ -1022,7 +1027,7 @@ onBeforeUnmount(() => {
           <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
           <circle :cx="targetSbarX" cy="98%" r="3" fill="#C6A06B" />
         </g>
-        <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="rgb(195 203 209 / 12%)" stroke="none" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
+        <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="none" stroke="#C3CBD1" stroke-width="1.25" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
         <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
          <line v-for="segment in swingSegments" :key="segment.id" :x1="segment.x1" :y1="segment.y1" :x2="segment.x2" :y2="segment.y2" :stroke="segment.color" stroke-width="1.25" :stroke-dasharray="segment.dasharray || undefined" stroke-linecap="round" visibility="hidden" data-testid="run-swing-segment" :data-swing-id="segment.id" :data-swing-state="segment.state" />
          <rect v-for="rectangle in cbarRectangles" :key="rectangle.id" :x="rectangle.x" :y="rectangle.y" :width="rectangle.width" :height="rectangle.height" fill="none" visibility="hidden" stroke="#A0A7B0" stroke-width="1" data-testid="run-cbar-rectangle" :data-cbar-id="rectangle.id" />
