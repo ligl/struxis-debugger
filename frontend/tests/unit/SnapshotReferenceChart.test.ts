@@ -135,12 +135,17 @@ describe("SnapshotReferenceChart", () => {
       .map((call) => call[0])
       .find((primitive) => primitive instanceof SnapshotReferencePrimitive);
     expect(injected).toBeDefined();
-    expect(chartMocks.attachVolumePrimitive.mock.calls.some((call) => call[0] instanceof SnapshotVolumePrimitive)).toBe(true);
+    const volumeInjected = chartMocks.attachVolumePrimitive.mock.calls
+      .map((call) => call[0])
+      .find((primitive) => primitive instanceof SnapshotVolumePrimitive);
+    expect(volumeInjected).toBeDefined();
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
 
     wrapper.unmount();
+    expect(chartMocks.detachPrimitive).toHaveBeenCalledWith(injected);
+    expect(chartMocks.detachVolumePrimitive).toHaveBeenCalledWith(volumeInjected);
   });
 
   it("exposes generic Primitive injection and owns attachment cleanup", async () => {
