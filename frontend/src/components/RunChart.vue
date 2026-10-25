@@ -10,7 +10,7 @@ import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-struc
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
-import { ReplayCrosshairSyncGate, ReplayViewportSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
+import { ReplayCrosshairSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
 import type { OriginDatasetDto, ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplayInspectorStructureDto, RunStateDto, SBarDto, TestDatasetDto } from "../origin-types";
 
 const props = withDefaults(defineProps<{
@@ -110,7 +110,6 @@ let chartClickListener: ((param: { point?: { x: number; y: number } | undefined 
 let chartMoveListener: ((param: { point?: { x: number; y: number } | undefined }) => void) | null = null;
 let crosshairLogicalIndex: number | null = null;
 let crosshairUpdateFrame: number | null = null;
-const viewportSyncGate = new ReplayViewportSyncGate();
 const crosshairSyncGate = new ReplayCrosshairSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
 
@@ -448,11 +447,6 @@ function handleVisibleRangeChange(): void {
   const range = chart.timeScale().getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
 
-  // Ignore the asynchronous echo of a range applied from Snapshot Reference.
-  // A microtask-only guard can expire before Lightweight Charts publishes it.
-  const observation = viewportSyncGate.observeRange(range);
-  if (observation !== "publish") return;
-
   // Coalesce high-frequency wheel/pan events; publish the latest fractional
   // viewport in the same frame as the overlay projection.
   pendingViewportRange = { from: range.from, to: range.to };
@@ -486,10 +480,7 @@ function applySyncRequest(request: ReplayChartViewportSync | null | undefined): 
   if (!target) return;
   if (current && isSameLogicalRange(current, target)) return;
   const { from, to } = target;
-  viewportSyncGate.expectPeerRange(target);
-  const suppressionRevision = viewportSyncGate.beginSuppression();
   chart.timeScale().setVisibleLogicalRange({ from, to });
-  queueMicrotask(() => viewportSyncGate.endSuppression(suppressionRevision));
 }
 
 const scheduleOverlayUpdate = createAnimationFrameCoalescer(() => {
@@ -832,9 +823,8 @@ watch(
       || current[4] !== previous[4]
     );
     if (identityChanged) {
-      // Do not let a queued range or peer-echo expectation cross a dataset/run boundary.
+      // Do not let a queued source range cross a dataset/run boundary.
       pendingViewportRange = null;
-      viewportSyncGate.clear();
     }
     updateChart();
     updateHoveredObject(undefined);
@@ -888,11 +878,8 @@ watch([() => props.syncEnabled, () => props.syncOffset], ([enabled]) => {
     return;
   }
 
-  // Drop every deferred peer-sync artifact on eligibility loss. A frame
-  // already queued may still reproject this chart, but it cannot publish an
-  // old range or suppress a later, genuinely local viewport change.
+  // Drop any deferred source range when synchronization eligibility is lost.
   pendingViewportRange = null;
-  viewportSyncGate.clear();
 });
 watch(() => [layerVisibility.value.sbar, layerVisibility.value.cbar, layerVisibility.value.swing] as const, () => updateHoveredObject(undefined));
 
@@ -915,7 +902,6 @@ onBeforeUnmount(() => {
   stopObservingResize = null;
   scheduleOverlayUpdate.cancel();
   pendingViewportRange = null;
-  viewportSyncGate.clear();
   crosshairSyncGate.clear();
   primitiveHost?.dispose();
   primitiveHost = null;
