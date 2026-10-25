@@ -16,7 +16,7 @@ const RunChartStub = defineComponent({
     syncRequest: { type: Object, default: null },
     crosshairSync: { type: Object, default: null },
   },
-  template: '<div data-testid="run-chart-stub" :data-active="active" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'activate\')" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" :data-crosshair-revision="crosshairSync?.revision ?? \'\'" />',
+  template: '<div data-testid="run-chart-stub" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'activate\')" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" :data-crosshair-revision="crosshairSync?.revision ?? \'\'" />',
 });
 const SnapshotReferencePanelStub = defineComponent({
   name: "SnapshotReferencePanel",
@@ -30,7 +30,7 @@ const SnapshotReferencePanelStub = defineComponent({
   },
   emits: ["chartActivate", "syncSequence", "viewportChange", "crosshairChange"],
   template: `
-    <div data-testid="snapshot-reference-panel-stub" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'chartActivate\')" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
+    <div data-testid="snapshot-reference-panel-stub" :data-active="active" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'chartActivate\')" :data-progress-applies="progressApplies" :data-processed-count="processedCount" :data-has-sync-request="syncRequest !== null">
       <button data-testid="sync-enable" @click="$emit('syncSequence', { snapshotId: 'snapshot-1', barType: 'AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL', sbarIds: ['x', '1', '2', '3', '4'] })">enable sync</button>
       <button data-testid="sync-disable" @click="$emit('syncSequence', null)">disable sync</button>
       <button data-testid="snapshot-viewport-change" @click="$emit('viewportChange', { source: 'reference', from: 2, to: 5 })">change viewport</button>
