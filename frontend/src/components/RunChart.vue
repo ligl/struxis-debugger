@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import { registerCBarPrimitive, registerSwingPrimitive, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
+import type { StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
@@ -843,8 +843,8 @@ onMounted(() => {
   candleSeries = runtime.candleSeries;
   volumeSeries = runtime.volumeSeries;
   primitiveHost = runtime.primitiveHost;
-  cbarPrimitive = registerCBarPrimitive(runtime.primitiveHost, runtime.candleSeries);
-  swingPrimitive = registerSwingPrimitive(runtime.primitiveHost, runtime.candleSeries);
+  cbarPrimitive = runtime.cbarPrimitive;
+  swingPrimitive = runtime.swingPrimitive;
   const timeScale = chart.timeScale();
   if (typeof chart.subscribeClick === "function") {
     chartClickListener = handleChartClick;
