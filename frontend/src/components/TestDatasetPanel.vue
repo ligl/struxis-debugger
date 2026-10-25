@@ -17,7 +17,7 @@ const props = defineProps<{
   testError: string;
 }>();
 
-const emit = defineEmits<{ create: [] }>();
+const emit = defineEmits<{ create: []; selectAll: [] }>();
 const detailsOpen = ref(false);
 const controlsRoot = ref<HTMLElement | null>(null);
 
@@ -78,6 +78,15 @@ function displaySbarTime(sbarId: string): string {
       </div>
 
       <span class="spacer"></span>
+
+      <a
+        href="#"
+        class="dataset-select-all"
+        data-testid="test-dataset-select-all"
+        :aria-disabled="!props.origin || props.origin.bars.length === 0 || props.testLoading || !props.canMutateTest"
+        :tabindex="!props.origin || props.origin.bars.length === 0 || props.testLoading || !props.canMutateTest ? -1 : 0"
+        @click.prevent="props.origin && props.origin.bars.length > 0 && !props.testLoading && props.canMutateTest && emit('selectAll')"
+      >SELECT ALL SBARS</a>
 
       <button
         class="primary-button dataset-create-button"
@@ -239,6 +248,29 @@ function displaySbarTime(sbarId: string): string {
   font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.dataset-select-all {
+  flex: 0 0 auto;
+  color: #c3a16f;
+  cursor: pointer;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .025em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dataset-select-all:hover,
+.dataset-select-all:focus-visible {
+  color: #f0cb8f;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dataset-select-all[aria-disabled="true"] {
+  color: #626d75;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .dataset-create-button {
