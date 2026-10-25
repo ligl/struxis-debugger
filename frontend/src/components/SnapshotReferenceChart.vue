@@ -96,7 +96,7 @@ function refreshSnapshotGeometry(): void {
 }
 
 function handleViewportChange(range: { from: number; to: number }): void {
-  if (!props.syncEnabled || props.syncOwner !== "snapshot") return;
+  if (!props.syncEnabled || (props.syncOwner !== undefined && props.syncOwner !== "snapshot")) return;
   const observation = viewportGate.observeRange(range);
   if (observation !== "publish") return;
   emit("viewportChange", { source: "reference", ...range });
