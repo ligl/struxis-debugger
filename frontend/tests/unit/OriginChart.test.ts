@@ -441,6 +441,33 @@ describe("SBarChartSurface and chart entry adapters", () => {
     wrapper.unmount();
   });
 
+  it("selects an SBar only when the click is inside its visible candle body bounds", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        high: "13",
+        low: "10",
+      }),
+    ];
+    const wrapper = mount(OriginChart, {
+      props: { bars, originDatasetId: "origin-sbar-click-bounds", structure: null },
+    });
+    const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+    expect(clickHandler).toBeTypeOf("function");
+
+    // First SBar's projected candle bounds are x=96..104, y=30..70.
+    clickHandler?.({ point: { x: 100, y: 50 } });
+    clickHandler?.({ point: { x: 100, y: 90 } });
+    clickHandler?.({ point: { x: 100, y: 20 } });
+
+    expect(wrapper.emitted("sbarClick")).toEqual([[bars[0]!.sbarId]]);
+    wrapper.unmount();
+  });
+
   it("shows transient hover feedback without replacing the persistent selected object", async () => {
     const bars = [
       bar(),
