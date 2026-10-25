@@ -775,7 +775,16 @@ onMounted(() => {
     scheduleOverlayUpdate();
   });
   updateChart();
-  if (props.syncEnabled) handleVisibleRangeChange();
+  if (props.syncEnabled) {
+    // The syncRequest watcher may run before the chart instance exists on
+    // initial mount. Apply the initial peer command after chart setup, and do
+    // not sample that peer-controlled viewport as a local Live gesture.
+    if (props.syncRequest?.source === "reference") {
+      applySyncRequest(props.syncRequest);
+    } else {
+      handleVisibleRangeChange();
+    }
+  }
 });
 
 watch(
