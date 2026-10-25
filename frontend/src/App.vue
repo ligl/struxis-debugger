@@ -587,11 +587,11 @@ useReplayKeyboardShortcut(
   playbackStatus,
   canControlPlaybackShortcut,
   runBusy,
-  playbackDelayMs,
   targetSbarId,
   handleRestartToSBar,
   handleRunCommand,
   canUseReplayKeyboardShortcuts,
+  playbackDelayMs,
   setPlaybackDelay,
 );
 
