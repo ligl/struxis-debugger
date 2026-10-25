@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import type { StructurePrimitiveController, StructurePrimitiveInteractionState } from "../sbar-chart-structure-primitives";
+import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
 import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
@@ -178,11 +178,15 @@ function updateSbarCoordinates(): void {
 }
 
 function syncStructurePrimitives(): void {
-  const projection = { timeBySbarId, indexBySbarId };
-  cbarPrimitive?.setData(props.structure?.cbars ?? [], projection);
-  swingPrimitive?.setData(props.structure?.swings ?? [], projection);
-  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
-  swingPrimitive?.setVisible(layerVisibility.value.swing);
+  syncStructurePrimitiveControllers({
+    cbar: cbarPrimitive,
+    swing: swingPrimitive,
+    cbars: props.structure?.cbars ?? [],
+    swings: props.structure?.swings ?? [],
+    projection: { timeBySbarId, indexBySbarId },
+    cbarVisible: layerVisibility.value.cbar,
+    swingVisible: layerVisibility.value.swing,
+  });
 }
 
 function candlestickBodyWidth(barSpacing: number, pixelRatio: number): number {
@@ -574,14 +578,15 @@ function setStructureInteractionState(
   hovered: { kind: "cbar" | "swing"; id: string } | null,
   selected: { kind: "cbar" | "swing"; id: string } | null,
 ): void {
-  const stateFor = (kind: "cbar" | "swing"): StructurePrimitiveInteractionState => ({
-    hoveredId: hovered?.kind === kind ? hovered.id : null,
-    selectedId: selected?.kind === kind ? selected.id : null,
+  setStructurePrimitiveInteractionState({
+    cbar: cbarPrimitive,
+    swing: swingPrimitive,
+    hovered,
+    selected,
     selectedColor: "#D99A45",
-    selectedWidth: kind === "swing" ? 2.5 : 2,
+    cbarSelectedWidth: 2,
+    swingSelectedWidth: 2.5,
   });
-  cbarPrimitive?.setInteractionState(stateFor("cbar"));
-  swingPrimitive?.setInteractionState(stateFor("swing"));
 }
 
 defineExpose({ getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
