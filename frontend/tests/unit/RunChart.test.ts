@@ -129,6 +129,7 @@ function installChartMock(): void {
     priceScale: vi.fn(() => ({ applyOptions: mocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
       width: () => 700,
+      options: () => ({ barSpacing: 10 }),
       fitContent: mocks.fitContent,
       setVisibleLogicalRange: mocks.setVisibleLogicalRange,
       getVisibleLogicalRange: mocks.getVisibleLogicalRange,
