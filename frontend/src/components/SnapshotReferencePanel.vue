@@ -133,6 +133,23 @@ watch(
   { flush: "post" },
 );
 
+watch(
+  () => props.syncIdentity,
+  () => {
+    // The workspace invalidates qualification at every Live identity boundary.
+    // Re-publish only the already-loaded immutable sequence after that invalidation;
+    // the workspace must still resolve compatibility against the new Live sequence.
+    const current = reference.value;
+    if (!current || selectedSnapshotId.value !== current.snapshotId) return;
+    emit("syncSequence", {
+      snapshotId: current.snapshotId,
+      barType: current.barType,
+      sbarIds: current.bars.map((bar) => bar.sbarId),
+    });
+  },
+  { flush: "post" },
+);
+
 watch(availableSnapshots, (available) => {
   if (!available.some((snapshot) => snapshot.snapshotId === selectedSnapshotId.value)) {
     selectedSnapshotId.value = null;
