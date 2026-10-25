@@ -1724,6 +1724,15 @@ body,
   pointer-events: none;
 }
 
+/* Keep legend markers in the same visual state as their labels across all charts. */
+.origin-chart-legend-item .legend-dot {
+  opacity: 1;
+}
+
+.origin-chart-legend-item:not(.active):not(:disabled) .legend-dot {
+  opacity: .35;
+}
+
 /* RunChart cannot inherit OriginChart.vue's scoped legend-dot rules.
    Keep the shared Dataset legend markers identical in Replay. */
 .run-chart-legend .legend-dot {
