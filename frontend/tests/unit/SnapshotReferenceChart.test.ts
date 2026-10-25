@@ -148,7 +148,7 @@ describe("SnapshotReferenceChart", () => {
     expect(chartMocks.volumeSetData).toHaveBeenCalled();
     const candleSetDataCalls = chartMocks.candleSetData.mock.calls;
     const candleData = candleSetDataCalls[candleSetDataCalls.length - 1]?.[0] as Array<{ color: string }>;
-    expect(candleData[0]?.color).not.toBe("#79B58B");
+    expect(candleData[0]?.color).toBe("#224239");
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
@@ -192,7 +192,7 @@ describe("SnapshotReferenceChart", () => {
 
     expect(chartMocks.candleUpdate).toHaveBeenCalledTimes(1);
     expect(chartMocks.volumeUpdate).toHaveBeenCalledTimes(1);
-    expect(chartMocks.candleUpdate).toHaveBeenCalledWith(expect.objectContaining({ time: 1700000000, color: "#79B58B" }), true);
+    expect(chartMocks.candleUpdate).toHaveBeenCalledWith(expect.objectContaining({ time: 1700000000, color: "#557E65" }), true);
     expect(chartMocks.volumeUpdate).toHaveBeenCalledWith(expect.objectContaining({ time: 1700000000 }), true);
     expect(chartMocks.candleSetData).not.toHaveBeenCalled();
     expect(chartMocks.volumeSetData).not.toHaveBeenCalled();
@@ -351,12 +351,12 @@ describe("SnapshotReferenceChart", () => {
     wrapper.unmount();
   });
 
-  it("toggles the Snapshot SBar layer with B only while Snapshot owns chart navigation", async () => {
+  it("leaves B/C layer shortcuts to the active Replay Live chart", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         ...snapshotDefaults,
         bars: [bar()],
-        snapshotId: "snapshot-sbar-keyboard",
+        snapshotId: "snapshot-layer-shortcuts",
         structure: null,
         keyboardActive: true,
       },
@@ -364,61 +364,18 @@ describe("SnapshotReferenceChart", () => {
     await nextTick();
 
     const sbarLegend = wrapper.get('[data-testid="layer-toggle-sbar"]');
-    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
-
-    const dispatchKey = (key: string, init: KeyboardEventInit = {}) => {
-      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
-      document.dispatchEvent(event);
-      return event;
-    };
-
-    const toggleOff = dispatchKey("b");
-    expect(toggleOff.defaultPrevented).toBe(true);
-    expect(sbarLegend.attributes("aria-pressed")).toBe("false");
-
-    const toggleOn = dispatchKey("b");
-    expect(toggleOn.defaultPrevented).toBe(true);
-    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
-
-    const modified = dispatchKey("b", { ctrlKey: true });
-    expect(modified.defaultPrevented).toBe(false);
-    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
-    wrapper.unmount();
-  });
-
-  it("toggles the Snapshot CBar layer with C only while Snapshot owns chart navigation", async () => {
-    const wrapper = mount(SnapshotReferenceChart, {
-      props: {
-        ...snapshotDefaults,
-        bars: [bar()],
-        snapshotId: "snapshot-cbar-keyboard",
-        structure: null,
-        keyboardActive: true,
-      },
-    });
-    await nextTick();
-
     const cbarLegend = wrapper.get('[data-testid="layer-toggle-cbar"]');
+    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
     expect(cbarLegend.attributes("aria-pressed")).toBe("true");
 
-    const dispatchKey = (key: string, init: KeyboardEventInit = {}) => {
-      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
+    for (const key of ["b", "c"]) {
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
       document.dispatchEvent(event);
-      return event;
-    };
+      expect(event.defaultPrevented).toBe(false);
+    }
 
-    const toggleOff = dispatchKey("c");
-    expect(toggleOff.defaultPrevented).toBe(true);
-    expect(cbarLegend.attributes("aria-pressed")).toBe("false");
-
-    const toggleOn = dispatchKey("c");
-    expect(toggleOn.defaultPrevented).toBe(true);
+    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
     expect(cbarLegend.attributes("aria-pressed")).toBe("true");
-
-    const modified = dispatchKey("c", { ctrlKey: true });
-    expect(modified.defaultPrevented).toBe(false);
-    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
-
     wrapper.unmount();
   });
 
