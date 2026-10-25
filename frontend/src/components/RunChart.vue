@@ -5,7 +5,7 @@ import { createSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
-import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
+import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
 import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 import { mapSBarsToChart } from "../sbar-chart-data";
@@ -332,6 +332,7 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   if (layer === "volume" && volumeSeries) {
     volumeSeries.applyOptions?.({ visible: layerVisibility.value.volume });
   }
+  syncStructurePrimitives();
   updateStructureOverlays();
 }
 
@@ -427,8 +428,6 @@ function updateStructureOverlays(): void {
   });
   cbarRectangles.value = geometry.cbarRectangles;
   swingSegments.value = geometry.swingSegments;
-  cbarPrimitive?.setVisible(layerVisibility.value.cbar);
-  swingPrimitive?.setVisible(layerVisibility.value.swing);
   const targetTime = props.targetSbarId ? timeBySbarId.get(props.targetSbarId) : undefined;
   const targetX = targetTime === undefined ? null : timeScale.timeToCoordinate(targetTime);
   targetSbarX.value = targetX !== null && targetX !== undefined && Number.isFinite(targetX)
@@ -548,7 +547,7 @@ function applySyncRequest(request: ReplayChartViewportSync | null | undefined): 
   chart.timeScale().setVisibleLogicalRange({ from, to });
 }
 
-const scheduleOverlayUpdate = createAnimationFrameCoalescer(() => {
+const scheduleOverlayUpdate = createStructureProjectionScheduler(() => {
   updateStructureOverlays();
   const latest = pendingViewportRange;
   pendingViewportRange = null;
