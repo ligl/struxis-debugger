@@ -6,7 +6,6 @@ import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
 import {
   ReplayCrosshairSyncGate,
-  ReplayViewportSyncGate,
   isSameLogicalRange,
   translateReplayViewportRange,
 } from "../replay-chart-sync";
@@ -50,7 +49,6 @@ const emit = defineEmits<{
 }>();
 
 const surface = ref<ChartSurfacePort | null>(null);
-const viewportGate = new ReplayViewportSyncGate();
 const crosshairGate = new ReplayCrosshairSyncGate();
 const brightCandles = ref<SnapshotBrightCandleGeometry[]>([]);
 const boundaries = ref<{ start: number; end: number } | null>(null);
@@ -97,8 +95,6 @@ function refreshSnapshotGeometry(): void {
 
 function handleViewportChange(range: { from: number; to: number }): void {
   if (!props.syncEnabled || (props.syncOwner !== undefined && props.syncOwner !== "snapshot")) return;
-  const observation = viewportGate.observeRange(range);
-  if (observation !== "publish") return;
   emit("viewportChange", { source: "reference", ...range });
 }
 
@@ -115,15 +111,7 @@ function applyViewportRequest(request: ReplayChartViewportSync | null | undefine
   const current = surface.value.getVisibleLogicalRange();
   if (current && isSameLogicalRange(current, target)) return;
 
-  viewportGate.expectPeerRange(target);
-  const revision = viewportGate.beginSuppression();
-  if (!surface.value.applyViewportRange(target)) {
-    viewportGate.clear();
-    return;
-  }
-  // The expected-range check remains active beyond this microtask to catch
-  // Lightweight Charts' potentially asynchronous visible-range callback.
-  queueMicrotask(() => viewportGate.endSuppression(revision));
+  surface.value.applyViewportRange(target);
 }
 
 function applyCrosshairRequest(sync: ReplayChartCrosshairSync | null | undefined): void {
@@ -157,7 +145,6 @@ function applyCrosshairRequest(sync: ReplayChartCrosshairSync | null | undefined
 }
 
 function invalidatePeerState(): void {
-  viewportGate.clear();
   const hadPeerPosition = crosshairGate.hasPeerPosition;
   crosshairGate.clear();
   // Eligibility loss may remove only a position installed by the peer. Never
