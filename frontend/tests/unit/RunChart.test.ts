@@ -971,6 +971,35 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("keeps Replay target shortcuts active while this chart does not own chart navigation", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: runState(),
+        targetSbarId: originBars[1]!.sbarId,
+        keyboardActive: false,
+      },
+    });
+    await nextTick();
+    mocks.setCrosshairPosition.mockClear();
+
+    const arrow = new KeyboardEvent("keydown", {
+      key: "ArrowRight", bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(arrow);
+    expect(arrow.defaultPrevented).toBe(false);
+    expect(mocks.setCrosshairPosition).not.toHaveBeenCalled();
+
+    const target = new KeyboardEvent("keydown", {
+      key: "t", bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(target);
+    expect(target.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("targetCancel")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it("repeats held horizontal arrows and scrolls the selected candle into view", async () => {
     const wrapper = mount(RunChart, {
       props: {
