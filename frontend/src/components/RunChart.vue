@@ -264,17 +264,17 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   // Keep the previous local fallback for isolated component mounts / tests.
   if (props.keyboardActive === false) return;
 
-  // C toggles the CBar overlay only when this Live chart owns navigation.
-  // Ignore modified/repeated shortcuts and preserve normal text-input editing.
-  const isCbarShortcut = event.key.toLowerCase() === "c" &&
+  // B toggles SBar candles; C toggles the CBar overlay. These shortcuts
+  // are handled only by the active Live chart and never steal input from controls.
+  const isLayerShortcut = (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "c") &&
     !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
   if (
-    isCbarShortcut &&
+    isLayerShortcut &&
     !event.repeat &&
     !isInteractiveKeyboardTarget(event.target) &&
     !isInteractiveKeyboardTarget(document.activeElement)
   ) {
-    toggleLayer("cbar");
+    toggleLayer(event.key.toLowerCase() === "b" ? "sbar" : "cbar");
     event.preventDefault();
     return;
   }
