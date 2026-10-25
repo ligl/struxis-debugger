@@ -30,6 +30,8 @@ export interface ProjectCBarRectanglesOptions {
   cbars: readonly CBarGeometryInput[];
   coordinateForSbarId: (sbarId: string) => number | null | undefined;
   priceToCoordinate: (price: number) => number | null | undefined;
+  /** Width of the rendered candlestick body in CSS pixels. */
+  sbarBodyWidth?: number;
   /** Optional logical index map/range enables viewport culling for large sequences. */
   indexBySbarId?: ReadonlyMap<string, number>;
   visibleRange?: LogicalViewportRange | null;
@@ -72,6 +74,7 @@ export function projectCBarRectangles(
     cbars,
     coordinateForSbarId,
     priceToCoordinate,
+    sbarBodyWidth = 0,
     indexBySbarId,
     visibleRange,
     viewportOverscan = 2,
@@ -110,11 +113,13 @@ export function projectCBarRectangles(
       !isFiniteCoordinate(lowY)
     ) return [];
 
-    // CBar boundaries are anchored to the first and last SBar center
-    // coordinates. Do not expand by candle-body width: that changes the
-    // authoritative structural interval and makes hit-testing too broad.
-    const left = Math.min(startX, endX);
-    const right = Math.max(startX, endX);
+    const halfBodyWidth = Number.isFinite(sbarBodyWidth) && sbarBodyWidth > 0
+      ? sbarBodyWidth / 2
+      : 0;
+    // Anchor the CBar range to the outside edges of the first and last
+    // candlestick bodies, not to their center coordinates.
+    const left = Math.min(startX, endX) - halfBodyWidth;
+    const right = Math.max(startX, endX) + halfBodyWidth;
     const top = Math.min(highY, lowY);
     const bottom = Math.max(highY, lowY);
     return [{
@@ -224,6 +229,8 @@ export interface ProjectStructureOverlayOptions {
   visibleRange: LogicalViewportRange | null;
   coordinateForSbarId: (sbarId: string) => number | null | undefined;
   priceToCoordinate: (price: number) => number | null | undefined;
+  /** Width of the rendered candlestick body in CSS pixels. */
+  sbarBodyWidth?: number;
   cbarVisible: boolean;
   swingVisible: boolean;
   resolveSwingStyle: (state: string) => { color: string; dasharray: string };
@@ -252,6 +259,7 @@ export function projectStructureOverlayGeometry(
     visibleRange,
     coordinateForSbarId,
     priceToCoordinate,
+    sbarBodyWidth,
     cbarVisible,
     swingVisible,
     resolveSwingStyle,
@@ -265,6 +273,7 @@ export function projectStructureOverlayGeometry(
         visibleRange,
         coordinateForSbarId,
         priceToCoordinate,
+        sbarBodyWidth,
       })
       : [],
     swingSegments: swingVisible
