@@ -405,3 +405,67 @@ export function registerSwingPrimitive(
 ): StructurePrimitiveController {
   return registerSeriesPrimitive<SwingPrimitiveDto, SwingSeriesPrimitive>(host, "structure.swing", series, new SwingSeriesPrimitive());
 }
+
+export interface StructurePrimitiveObjectReference {
+  kind: "cbar" | "swing";
+  id: string;
+}
+
+export interface StructurePrimitiveSyncOptions {
+  cbar: StructurePrimitiveController | null | undefined;
+  swing: StructurePrimitiveController | null | undefined;
+  cbars: readonly CBarPrimitiveDto[];
+  swings: readonly SwingPrimitiveDto[];
+  projection: StructurePrimitiveProjection;
+  cbarVisible: boolean;
+  swingVisible: boolean;
+  hovered?: StructurePrimitiveObjectReference | null;
+  selected?: StructurePrimitiveObjectReference | null;
+  selectedColor?: string;
+  cbarSelectedWidth?: number;
+  swingSelectedWidth?: number;
+}
+
+/**
+ * Apply one complete structure snapshot to the chart-local Primitive pair.
+ *
+ * This always replaces both object lists, rather than trying to infer changes
+ * from object counts or array identity. That is required because Struxis
+ * structure can backtrack, remove objects, and update an existing ID in place.
+ * Visibility and interaction are applied in the same synchronization pass.
+ */
+export function syncStructurePrimitiveControllers(
+  options: StructurePrimitiveSyncOptions,
+): void {
+  const {
+    cbar,
+    swing,
+    cbars,
+    swings,
+    projection,
+    cbarVisible,
+    swingVisible,
+    hovered = null,
+    selected = null,
+    selectedColor = "#D6A85D",
+    cbarSelectedWidth = 2,
+    swingSelectedWidth = 2.25,
+  } = options;
+
+  cbar?.setData(cbars, projection);
+  swing?.setData(swings, projection);
+  cbar?.setVisible(cbarVisible);
+  swing?.setVisible(swingVisible);
+  cbar?.setInteractionState({
+    hoveredId: hovered?.kind === "cbar" ? hovered.id : null,
+    selectedId: selected?.kind === "cbar" ? selected.id : null,
+    selectedColor,
+    selectedWidth: cbarSelectedWidth,
+  });
+  swing?.setInteractionState({
+    hoveredId: hovered?.kind === "swing" ? hovered.id : null,
+    selectedId: selected?.kind === "swing" ? selected.id : null,
+    selectedColor,
+    selectedWidth: swingSelectedWidth,
+  });
+}
