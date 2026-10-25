@@ -6,7 +6,7 @@ import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import type { StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createAnimationFrameCoalescer } from "../animation-frame-coalescer";
-import { projectCBarRectangles, projectSwingSegments } from "../sbar-chart-structure-geometry";
+import { projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
@@ -404,33 +404,22 @@ function updateStructureOverlays(): void {
   const projectionRange = visibleRange && Number.isFinite(visibleRange.from) && Number.isFinite(visibleRange.to)
     ? { from: visibleRange.from, to: visibleRange.to }
     : null;
-  cbarRectangles.value = layerVisibility.value.cbar
-    ? projectCBarRectangles({
-      cbars: structure?.cbars ?? [],
-      indexBySbarId,
-      visibleRange: projectionRange,
-      coordinateForSbarId: (sbarId) => {
-        const time = timeBySbarId.get(sbarId);
-        return time === undefined ? null : timeScale.timeToCoordinate(time);
-      },
-      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
-    })
-    : [];
-  swingSegments.value = layerVisibility.value.swing
-    ? projectSwingSegments({
-      swings: structure?.swings ?? [],
-      indexBySbarId,
-      visibleRange: projectionRange,
-      coordinateForSbarId: (sbarId) => {
-        const time = timeBySbarId.get(sbarId);
-        return time === undefined ? null : timeScale.timeToCoordinate(time);
-      },
-      priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
-    }).map((segment) => {
-      const style = swingStyleByState[segment.state] ?? { color: "#A0A7B0", dasharray: "4 3" };
-      return { ...segment, color: style.color, dasharray: style.dasharray };
-    })
-    : [];
+  const geometry = projectStructureOverlayGeometry({
+    cbars: structure?.cbars ?? [],
+    swings: structure?.swings ?? [],
+    indexBySbarId,
+    visibleRange: projectionRange,
+    coordinateForSbarId: (sbarId) => {
+      const time = timeBySbarId.get(sbarId);
+      return time === undefined ? null : timeScale.timeToCoordinate(time);
+    },
+    priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
+    cbarVisible: layerVisibility.value.cbar,
+    swingVisible: layerVisibility.value.swing,
+    resolveSwingStyle: (state) => swingStyleByState[state] ?? { color: "#A0A7B0", dasharray: "4 3" },
+  });
+  cbarRectangles.value = geometry.cbarRectangles;
+  swingSegments.value = geometry.swingSegments;
   cbarPrimitive?.setVisible(layerVisibility.value.cbar);
   swingPrimitive?.setVisible(layerVisibility.value.swing);
   const targetTime = props.targetSbarId ? timeBySbarId.get(props.targetSbarId) : undefined;
