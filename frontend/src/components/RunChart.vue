@@ -353,13 +353,17 @@ function syncStructurePrimitives(): void {
   cbarPrimitive?.setVisible(layerVisibility.value.cbar);
   swingPrimitive?.setVisible(layerVisibility.value.swing);
   const cursorSbarId = props.runState?.cursorSbarId ?? null;
-  const hovered = hoveredObject.value?.checkpointSbarId === cursorSbarId &&
-    (hoveredObject.value.kind === "cbar" || hoveredObject.value.kind === "swing")
-    ? { kind: hoveredObject.value.kind, id: hoveredObject.value.id }
+  const hoveredObjectValue = hoveredObject.value;
+  const selectedObjectValue = props.selectedObject;
+  const hovered = hoveredObjectValue &&
+    hoveredObjectValue.checkpointSbarId === cursorSbarId &&
+    (hoveredObjectValue.kind === "cbar" || hoveredObjectValue.kind === "swing")
+    ? { kind: hoveredObjectValue.kind, id: hoveredObjectValue.id }
     : null;
-  const selected = props.selectedObject?.checkpointSbarId === cursorSbarId &&
-    (props.selectedObject.kind === "cbar" || props.selectedObject.kind === "swing")
-    ? { kind: props.selectedObject.kind, id: props.selectedObject.id }
+  const selected = selectedObjectValue &&
+    selectedObjectValue.checkpointSbarId === cursorSbarId &&
+    (selectedObjectValue.kind === "cbar" || selectedObjectValue.kind === "swing")
+    ? { kind: selectedObjectValue.kind, id: selectedObjectValue.id }
     : null;
   cbarPrimitive?.setInteractionState({
     hoveredId: hovered?.kind === "cbar" ? hovered.id : null,
