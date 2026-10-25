@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime } from "../sbar-chart-runtime";
+import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
@@ -504,8 +504,7 @@ function updateChart(): void {
   if (!chart || !candleSeries || !volumeSeries) return;
   try {
     const projection = mapSBarsToChart(props.bars);
-    candleSeries.setData(projection.candles);
-    volumeSeries.setData(projection.volume);
+    replaceSbarChartSeriesData(candleSeries, volumeSeries, projection.candles, projection.volume);
     const sbarIndex = createSbarChartIndex(props.bars, projection.candles.map((candle) => candle.time));
     sbarIdByLogicalIndex = sbarIndex.sbarIdByLogicalIndex;
     indexBySbarId = sbarIndex.indexBySbarId;
@@ -534,8 +533,7 @@ function updateChart(): void {
     secondSbarTime = null;
     syncStructurePrimitives();
     updateSbarCoordinates();
-    candleSeries.setData([]);
-    volumeSeries.setData([]);
+    replaceSbarChartSeriesData(candleSeries, volumeSeries, [], []);
     cbarRectangles.value = [];
     swingSegments.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
