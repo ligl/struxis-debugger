@@ -24,7 +24,9 @@ const props = withDefaults(defineProps<{
   panelLabel?: string;
   chartLabel?: string;
   keyboardActive?: boolean;
-}>();
+}>(), {
+  keyboardActive: undefined,
+});
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   chartActivate: [];
