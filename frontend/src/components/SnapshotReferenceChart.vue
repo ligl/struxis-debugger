@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SnapshotRangeMarkerPrimitive, type SnapshotRangeMarkerState } from "../snapshot-reference-primitives";
-import { projectSnapshotPlaybackSeries } from "../snapshot-playback-series";
+import { projectSnapshotPlaybackSeries, type SnapshotPlaybackSeriesProjection } from "../snapshot-playback-series";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
 import type { ChartSurfacePort } from "../chart-surface-contract";
@@ -78,6 +78,8 @@ interface AppliedPlaybackStyleState {
 }
 
 let appliedPlaybackStyleState: AppliedPlaybackStyleState | null = null;
+let baseSeriesProjection: SnapshotPlaybackSeriesProjection | null = null;
+let baseSeriesBars: SBarDto[] | null = null;
 
 function applyPlaybackSeriesStyles(): void {
   const port = surface.value;
@@ -90,14 +92,23 @@ function applyPlaybackSeriesStyles(): void {
     liveCount: props.liveBarCount,
     processedCount: Math.max(0, Math.floor(props.processedCount)),
   };
-  const projection = projectSnapshotPlaybackSeries({
-    bars: props.bars,
-    playbackEnabled: nextState.playbackEnabled,
-    offset: nextState.offset,
-    liveCount: nextState.liveCount,
-    processedCount: nextState.processedCount,
-  });
   const previous = appliedPlaybackStyleState;
+  if (
+    previous
+    && previous.bars === nextState.bars
+    && previous.playbackEnabled === nextState.playbackEnabled
+    && previous.offset === nextState.offset
+    && previous.liveCount === nextState.liveCount
+    && previous.processedCount === nextState.processedCount
+  ) return;
+
+  if (baseSeriesBars !== props.bars || !baseSeriesProjection) {
+    baseSeriesProjection = projectSnapshotPlaybackSeries({
+      bars: props.bars, playbackEnabled: false, offset: null, liveCount: 0, processedCount: 0,
+    });
+    baseSeriesBars = props.bars;
+  }
+
   const samePlaybackSequence = previous !== null
     && previous.bars === nextState.bars
     && previous.playbackEnabled
@@ -105,32 +116,29 @@ function applyPlaybackSeriesStyles(): void {
     && previous.offset === nextState.offset
     && previous.liveCount === nextState.liveCount;
 
-  // A strict one-SBar advance only restores that newly processed candle and
-  // volume bar. Start/stop, jumps, backtracking and sequence changes rebuild
-  // the authoritative native-series styling in one paired setData operation.
+  // A strict one-SBar advance restores only the newly processed candle and
+  // volume bar from cached source data. It avoids full projection and setData.
   if (
     samePlaybackSequence
     && nextState.processedCount === previous.processedCount + 1
     && nextState.offset !== null
   ) {
     const index = nextState.offset + previous.processedCount;
-    const candle = projection.candles[index];
-    const volume = projection.volume[index];
+    const candle = baseSeriesProjection.candles[index];
+    const volume = baseSeriesProjection.volume[index];
     if (candle && volume && port.updateSeriesData(candle, volume, true)) {
       appliedPlaybackStyleState = nextState;
       return;
     }
-  } else if (
-    previous
-    && previous.bars === nextState.bars
-    && previous.playbackEnabled === nextState.playbackEnabled
-    && previous.offset === nextState.offset
-    && previous.liveCount === nextState.liveCount
-    && previous.processedCount === nextState.processedCount
-  ) {
-    return;
   }
 
+  const projection = projectSnapshotPlaybackSeries({
+    bars: props.bars,
+    playbackEnabled: nextState.playbackEnabled,
+    offset: nextState.offset,
+    liveCount: nextState.liveCount,
+    processedCount: nextState.processedCount,
+  });
   if (port.replaceSeriesData(projection.candles, projection.volume)) {
     appliedPlaybackStyleState = nextState;
   }
@@ -287,6 +295,8 @@ onBeforeUnmount(() => {
   unregisterSnapshotVolumeMarkerPrimitive?.();
   unregisterSnapshotVolumeMarkerPrimitive = null;
   appliedPlaybackStyleState = null;
+  baseSeriesProjection = null;
+  baseSeriesBars = null;
   snapshotRangeMarkerPrimitive.dispose();
   snapshotVolumeMarkerPrimitive.dispose();
 });
