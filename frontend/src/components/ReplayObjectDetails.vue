@@ -14,6 +14,7 @@ const props = defineProps<{
   checkpoint: ReplayInspectorDto | null;
   snapshotStructure?: ReplayInspectorStructureDto | null;
   snapshotId?: string | null;
+  snapshotLabel?: string | null;
   bars: SBarDto[];
 }>();
 
@@ -21,7 +22,7 @@ type InspectorRow = { label: string; value: string; copyValue?: string };
 
 const title = computed(() => props.selectedObject.kind.toUpperCase());
 const sourceLabel = computed(() => {
-  if (props.selectedObject.source === "snapshot") return `SNAPSHOT · ${props.snapshotId ?? "REFERENCE"}`;
+  if (props.selectedObject.source === "snapshot") return `SNAPSHOT · ${props.snapshotLabel ?? props.snapshotId ?? "REFERENCE"}`;
   if (props.selectedObject.kind === "sbar") {
     return props.selectedObject.source === "checkpoint" ? "CONFIRMED CHECKPOINT" : "TEST INPUT";
   }
