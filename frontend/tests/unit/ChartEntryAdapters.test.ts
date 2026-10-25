@@ -3,7 +3,6 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import OriginChart from "../../src/components/OriginChart.vue";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
-import { SnapshotReferencePrimitive } from "../../src/snapshot-reference-primitives";
 import type { SBarDto } from "../../src/origin-types";
 
 const bars: SBarDto[] = [{
@@ -23,6 +22,8 @@ const surfacePortCalls = {
   crosshairs: [] as Array<{ sbarId: string; price: number }>,
   clears: 0,
   primitives: [] as Array<{ id: string; primitive: unknown; dispose?: () => void }>,
+  replacements: [] as Array<{ candles: readonly unknown[]; volume: readonly unknown[] }>,
+  updates: [] as Array<{ candle: unknown; volume: unknown; historicalUpdate?: boolean }>,
 };
 
 const SurfaceStub = defineComponent({
@@ -47,7 +48,16 @@ const SurfaceStub = defineComponent({
       getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "sbar-1" : null,
       getSbarIdAtClientX: (clientX: number, clampToSequence = false) => clientX >= 0 && clientX <= 10 || clampToSequence ? "sbar-1" : null,
       hasSbarId: (sbarId: string) => sbarId === "sbar-1",
-      registerPrimitive: (id: string, primitive: unknown, dispose?: () => void) => {
+      replaceSeriesData: (candles: readonly unknown[], volume: readonly unknown[]) => {
+        surfacePortCalls.replacements.push({ candles, volume });
+        return true;
+      },
+      updateSeriesData: (candle: unknown, volume: unknown, historicalUpdate?: boolean) => {
+        surfacePortCalls.updates.push({ candle, volume, historicalUpdate });
+        return true;
+      },
+      registerPrimitive: (id: string, primitive: unknown, registration?: { dispose?: () => void } | (() => void)) => {
+        const dispose = typeof registration === "function" ? registration : registration?.dispose;
         surfacePortCalls.primitives.push({ id, primitive, dispose });
         return () => { dispose?.(); };
       },
@@ -63,6 +73,8 @@ describe("chart entry adapters", () => {
     surfacePortCalls.crosshairs.length = 0;
     surfacePortCalls.clears = 0;
     surfacePortCalls.primitives.length = 0;
+    surfacePortCalls.replacements.length = 0;
+    surfacePortCalls.updates.length = 0;
   }
   it("keeps Dataset range-selection props and presentation at the Origin adapter boundary", () => {
     const wrapper = mount(OriginChart, {
@@ -124,14 +136,14 @@ describe("chart entry adapters", () => {
     expect(((surface.props() as Record<string, unknown>)["snapshotProcessedCount"])).toBeUndefined();
     expect(wrapper.findComponent({ name: "SnapshotPlaybackOverlay" }).exists()).toBe(false);
     expect(wrapper.findComponent({ name: "SnapshotLiveRangeMarkers" }).exists()).toBe(false);
-    expect(surfacePortCalls.primitives).toHaveLength(4);
+    expect(surfacePortCalls.primitives).toHaveLength(2);
     expect(surfacePortCalls.primitives.map((registration) => registration.id)).toEqual([
-      "snapshot-reference:snapshot-1:candle-overlays",
-      "snapshot-reference:snapshot-1:volume-overlays",
       "snapshot-reference:snapshot-1:background-range-markers",
       "snapshot-reference:snapshot-1:volume-background-range-markers",
     ]);
-    expect(surfacePortCalls.primitives[0]?.primitive).toBeInstanceOf(SnapshotReferencePrimitive);
+    expect(surfacePortCalls.replacements).toHaveLength(1);
+    expect(surfacePortCalls.replacements[0]?.candles).toHaveLength(1);
+    expect(surfacePortCalls.replacements[0]?.volume).toHaveLength(1);
   });
 
   it("applies Live viewport requests through the adapter port", async () => {
@@ -201,41 +213,35 @@ describe("chart entry adapters", () => {
   });
 
 
-  it("publishes Snapshot playback state to its private Primitive", async () => {
+  it("updates the newly processed native candle and volume point incrementally", async () => {
     clearSurfaceCalls();
+    const twoBars: SBarDto[] = [
+      bars[0]!,
+      { ...bars[0]!, sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001" },
+    ];
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
-        bars,
+        bars: twoBars,
         structure: null,
-        snapshotId: "snapshot-geometry",
+        snapshotId: "snapshot-native-playback",
         syncEnabled: true,
         syncRequest: null,
         crosshairSync: null,
-        liveBarCount: 1,
+        liveBarCount: 2,
         playbackEnabled: true,
         playbackOffset: 0,
-        processedCount: 1,
+        processedCount: 0,
       },
       global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
+    await wrapper.setProps({ processedCount: 1 });
     await Promise.resolve();
-    const registration = surfacePortCalls.primitives[0];
-    expect(registration?.primitive).toBeInstanceOf(SnapshotReferencePrimitive);
-    const primitive = registration?.primitive as SnapshotReferencePrimitive;
-    expect(primitive).toBeDefined();
-    // Primitive owns the projection and rendering; adapter supplies only domain state.
-    expect((primitive as unknown as { state: { enabled: boolean; playbackEnabled: boolean; offset: number | null; liveCount: number; processedCount: number } }).state).toMatchObject({
-      enabled: true,
-      playbackEnabled: true,
-      offset: 0,
-      liveCount: 1,
-      processedCount: 1,
-    });
-    const surface = wrapper.getComponent(SurfaceStub);
-    expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackEnabled"])).toBeUndefined();
-    expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackOffset"])).toBeUndefined();
+    expect(surfacePortCalls.updates).toHaveLength(1);
+    expect(surfacePortCalls.updates[0]?.historicalUpdate).toBe(true);
+    expect(surfacePortCalls.replacements).toHaveLength(1);
     wrapper.unmount();
+  });
   });
 
 });
