@@ -10,6 +10,8 @@ const chartMocks = vi.hoisted(() => ({
   volumeSetData: vi.fn(),
   candleApplyOptions: vi.fn(),
   volumeApplyOptions: vi.fn(),
+  attachPrimitive: vi.fn(),
+  detachPrimitive: vi.fn(),
   priceToCoordinate: vi.fn(),
   coordinateToPrice: vi.fn(),
   setCrosshairPosition: vi.fn(),
@@ -84,7 +86,7 @@ const snapshotDefaults = {
 function installChartMock() {
   const chart = {
     addSeries: vi.fn()
-      .mockReturnValueOnce({ setData: chartMocks.candleSetData, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate, coordinateToPrice: chartMocks.coordinateToPrice, attachPrimitive: vi.fn(), detachPrimitive: vi.fn() })
+      .mockReturnValueOnce({ setData: chartMocks.candleSetData, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate, coordinateToPrice: chartMocks.coordinateToPrice, attachPrimitive: chartMocks.attachPrimitive, detachPrimitive: chartMocks.detachPrimitive })
       .mockReturnValueOnce({ setData: chartMocks.volumeSetData, applyOptions: chartMocks.volumeApplyOptions }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
@@ -112,6 +114,29 @@ function installChartMock() {
 }
 
 describe("SnapshotReferenceChart", () => {
+  it("exposes generic Primitive injection and owns attachment cleanup", async () => {
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: { ...snapshotDefaults, snapshotId: "snapshot-primitive-injection" },
+    });
+    await nextTick();
+
+    const primitive = {} as import("lightweight-charts").ISeriesPrimitive<import("lightweight-charts").Time>;
+    const dispose = vi.fn();
+    const surface = wrapper.findComponent({ name: "ChartSurface" });
+    const register = (surface.vm as unknown as {
+      registerPrimitive: (id: string, primitive: typeof primitive, dispose?: () => void) => () => void;
+    }).registerPrimitive;
+
+    const unregister = register("test-consumer-primitive", primitive, dispose);
+    expect(chartMocks.attachPrimitive).toHaveBeenCalledWith(primitive);
+
+    unregister();
+    expect(chartMocks.detachPrimitive).toHaveBeenCalledWith(primitive);
+    expect(dispose).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     chartMocks.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 1 });
