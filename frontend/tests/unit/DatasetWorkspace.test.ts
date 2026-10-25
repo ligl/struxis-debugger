@@ -110,10 +110,10 @@ describe("DatasetWorkspace", () => {
     const wrapper = mountDatasetWorkspace(origin, "loaded", false);
     const chart = wrapper.get('[data-testid="origin-chart-stub"]');
 
-    expect(chart.exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-chart-stub"]').exists()).toBe(true);
     expect((chart.element as HTMLElement).style.display).toBe("none");
 
-    await wrapper.setProps({ active: true });
+    await wrapper.setProps({ active: true } as never);
 
     // Assert the component's own v-show state rather than computed visibility,
     // which can be affected by unrelated wrapper styles in the test DOM.
