@@ -16,11 +16,12 @@ const RunChartStub = defineComponent({
     syncRequest: { type: Object, default: null },
     crosshairSync: { type: Object, default: null },
   },
-  template: '<div data-testid="run-chart-stub" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'activate\')" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" :data-crosshair-revision="crosshairSync?.revision ?? \'\'" />',
+  template: '<div data-testid="run-chart-stub" :data-active="active" :data-keyboard-active="keyboardActive" @mouseenter="$emit(\'activate\')" :data-sync-enabled="syncEnabled" :data-has-sync-request="syncRequest !== null" :data-crosshair-revision="crosshairSync?.revision ?? \'\'" />',
 });
 const SnapshotReferencePanelStub = defineComponent({
   name: "SnapshotReferencePanel",
   props: {
+    active: { type: Boolean, default: true },
     keyboardActive: { type: Boolean, default: false },
     progressApplies: { type: Boolean, default: false },
     processedCount: { type: Number, default: 0 },
@@ -39,6 +40,27 @@ const SnapshotReferencePanelStub = defineComponent({
 });
 
 describe("ReplayWorkspace", () => {
+  it("passes workspace activity to Snapshot Reference without unmounting the panel", async () => {
+    const active = ref(true);
+    const Host = defineComponent({
+      components: { ReplayWorkspace },
+      setup() {
+        return { active, origin: null, testDataset: null, runState: null };
+      },
+      template: '<ReplayWorkspace :active="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="null" :selected-object="null" :snapshots="[]" />',
+    });
+    const wrapper = mount(Host, {
+      global: { stubs: { DualChartStack: DualChartStackStub, RunChart: RunChartStub, SnapshotReferencePanel: SnapshotReferencePanelStub } },
+    });
+    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-active")).toBe("true");
+    active.value = false;
+    await nextTick();
+    expect(wrapper.get('[data-testid="snapshot-reference-panel-stub"]').attributes("data-active")).toBe("false");
+    active.value = true;
+    await nextTick();
+    expect(wrapper.find('[data-testid="snapshot-reference-panel-stub"]').exists()).toBe(true);
+  });
+
   it("routes chart-local keyboard ownership to only the activated chart", async () => {
     const Host = defineComponent({
       components: { ReplayWorkspace },
