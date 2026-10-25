@@ -31,12 +31,20 @@ export interface StructurePrimitiveProjection {
   readonly indexBySbarId: ReadonlyMap<string, number>;
 }
 
+export type StructureObjectKind = "cbar" | "swing";
+
+export interface StructurePrimitiveInteractionState {
+  hoveredId: string | null;
+  selectedId: string | null;
+}
+
 export interface StructurePrimitiveController {
   setData(
     objects: readonly (CBarPrimitiveDto | SwingPrimitiveDto)[],
     projection: StructurePrimitiveProjection,
   ): void;
   setVisible(visible: boolean): void;
+  setInteractionState(state: StructurePrimitiveInteractionState): void;
 }
 
 type PrimitiveDrawTarget = Parameters<IPrimitivePaneRenderer["draw"]>[0];
@@ -85,6 +93,10 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     indexBySbarId: new Map(),
   };
   protected visible = true;
+  protected interactionState: StructurePrimitiveInteractionState = {
+    hoveredId: null,
+    selectedId: null,
+  };
 
   constructor() {
     this.paneViewList = [this];
@@ -138,6 +150,15 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     this.refresh();
   }
 
+  setInteractionState(state: StructurePrimitiveInteractionState): void {
+    if (
+      this.interactionState.hoveredId === state.hoveredId &&
+      this.interactionState.selectedId === state.selectedId
+    ) return;
+    this.interactionState = { ...state };
+    this.requestChartUpdate?.();
+  }
+
   invalidate(): void {
     this.refresh();
   }
@@ -146,6 +167,7 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     this.objects = [];
     this.projection = { timeBySbarId: new Map(), indexBySbarId: new Map() };
     this.visible = false;
+    this.interactionState = { hoveredId: null, selectedId: null };
     this.clearGeometry();
     this.chart = null;
     this.series = null;
@@ -185,18 +207,34 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
 }
 
 class CBarPaneRenderer implements IPrimitivePaneRenderer {
-  constructor(private readonly getRectangles: () => readonly CBarRectangle[]) {}
+  constructor(
+    private readonly getRectangles: () => readonly CBarRectangle[],
+    private readonly getInteractionState: () => StructurePrimitiveInteractionState,
+  ) {}
 
   draw(target: PrimitiveDrawTarget): void {
     const rectangles = this.getRectangles();
     if (rectangles.length === 0) return;
+    const interaction = this.getInteractionState();
     target.useMediaCoordinateSpace(({ context }) => {
       context.save();
       try {
-        context.strokeStyle = "#A0A7B0";
-        context.lineWidth = 1;
         context.setLineDash([]);
         for (const rectangle of rectangles) {
+          context.strokeStyle = "#A0A7B0";
+          context.lineWidth = 1;
+          context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+        }
+        for (const rectangle of rectangles) {
+          if (rectangle.id !== interaction.hoveredId) continue;
+          context.strokeStyle = "#C3CBD1";
+          context.lineWidth = 1.75;
+          context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+        }
+        for (const rectangle of rectangles) {
+          if (rectangle.id !== interaction.selectedId) continue;
+          context.strokeStyle = "#D99A45";
+          context.lineWidth = 2;
           context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
         }
       } finally {
@@ -208,7 +246,10 @@ class CBarPaneRenderer implements IPrimitivePaneRenderer {
 
 class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
   private rectangles: CBarRectangle[] = [];
-  private readonly paneRenderer = new CBarPaneRenderer(() => this.rectangles);
+  private readonly paneRenderer = new CBarPaneRenderer(
+    () => this.rectangles,
+    () => this.interactionState,
+  );
 
   protected project(): void {
     if (!this.visible || !this.chart || !this.series) {
@@ -238,23 +279,43 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
 }
 
 class SwingPaneRenderer implements IPrimitivePaneRenderer {
-  constructor(private readonly getSegments: () => readonly SwingSegment[]) {}
+  constructor(
+    private readonly getSegments: () => readonly SwingSegment[],
+    private readonly getInteractionState: () => StructurePrimitiveInteractionState,
+  ) {}
 
   draw(target: PrimitiveDrawTarget): void {
     const segments = this.getSegments();
     if (segments.length === 0) return;
+    const interaction = this.getInteractionState();
+    const drawSegment = (
+      context: CanvasRenderingContext2D,
+      segment: SwingSegment,
+      color: string,
+      width: number,
+    ) => {
+      context.strokeStyle = color;
+      context.lineWidth = width;
+      context.setLineDash([...segment.dash]);
+      context.beginPath();
+      context.moveTo(segment.x1, segment.y1);
+      context.lineTo(segment.x2, segment.y2);
+      context.stroke();
+    };
     target.useMediaCoordinateSpace(({ context }) => {
       context.save();
       try {
-        context.lineWidth = 1.25;
         context.lineCap = "round";
+        for (const segment of segments) drawSegment(context, segment, segment.color, 1.25);
         for (const segment of segments) {
-          context.strokeStyle = segment.color;
-          context.setLineDash([...segment.dash]);
-          context.beginPath();
-          context.moveTo(segment.x1, segment.y1);
-          context.lineTo(segment.x2, segment.y2);
-          context.stroke();
+          if (segment.id === interaction.hoveredId && segment.id !== interaction.selectedId) {
+            drawSegment(context, segment, "#C3CBD1", 2);
+          }
+        }
+        for (const segment of segments) {
+          if (segment.id === interaction.selectedId) {
+            drawSegment(context, segment, "#D99A45", 2.5);
+          }
         }
       } finally {
         context.setLineDash([]);
@@ -266,7 +327,10 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
 
 class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
   private segments: SwingSegment[] = [];
-  private readonly paneRenderer = new SwingPaneRenderer(() => this.segments);
+  private readonly paneRenderer = new SwingPaneRenderer(
+    () => this.segments,
+    () => this.interactionState,
+  );
 
   protected project(): void {
     if (!this.visible || !this.chart || !this.series) {
@@ -341,6 +405,9 @@ function registerSeriesPrimitive<TObject, TPrimitive extends StructureSeriesPrim
     },
     setVisible(visible) {
       primitive.setVisibility(visible);
+    },
+    setInteractionState(state) {
+      primitive.setInteractionState(state);
     },
   };
 }
