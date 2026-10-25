@@ -440,6 +440,7 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
       checkpoint: replayInspector.value,
       selectedObject: selectedReplayInspectorObject.value,
       snapshotId: selectedReplaySnapshotObject.value?.snapshotId ?? null,
+      snapshotLabel: selectedReplaySnapshotObject.value?.snapshotLabel ?? null,
       snapshotBars: selectedReplaySnapshotObject.value?.bars ?? [],
       snapshotStructure: selectedReplaySnapshotObject.value?.structure ?? null,
       error: replayInspectorError.value,
