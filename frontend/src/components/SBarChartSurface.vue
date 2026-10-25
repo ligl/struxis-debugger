@@ -11,7 +11,7 @@ import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   sequenceId: string;
