@@ -242,6 +242,5 @@ describe("chart entry adapters", () => {
     expect(surfacePortCalls.replacements).toHaveLength(1);
     wrapper.unmount();
   });
-  });
 
 });
