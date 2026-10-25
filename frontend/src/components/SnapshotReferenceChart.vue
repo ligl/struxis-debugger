@@ -341,7 +341,6 @@ onBeforeUnmount(() => {
     @chart-activate="emit('activate')"
     @logical-range-change="handleViewportChange"
     @projection-frame="handleProjectionFrame"
-    @layout-ready="emit('layoutReady')"
     @crosshair-anchor-change="handleCrosshairChange"
     @chart-click="handleChartClick"
   >
