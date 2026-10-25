@@ -5,6 +5,13 @@ const mocks = vi.hoisted(() => ({
   addSeries: vi.fn(),
   priceScale: vi.fn(),
   applyPriceScaleOptions: vi.fn(),
+  registerCBarPrimitive: vi.fn(),
+  registerSwingPrimitive: vi.fn(),
+}));
+
+vi.mock("../../src/sbar-chart-structure-primitives", () => ({
+  registerCBarPrimitive: mocks.registerCBarPrimitive,
+  registerSwingPrimitive: mocks.registerSwingPrimitive,
 }));
 
 vi.mock("lightweight-charts", () => ({
@@ -24,6 +31,8 @@ describe("createSbarChartRuntime", () => {
       .mockReturnValueOnce({ kind: "candles" })
       .mockReturnValueOnce({ kind: "volume" });
     mocks.priceScale.mockReturnValue({ applyOptions: mocks.applyPriceScaleOptions });
+    mocks.registerCBarPrimitive.mockReturnValue({ kind: "cbar-primitive" });
+    mocks.registerSwingPrimitive.mockReturnValue({ kind: "swing-primitive" });
     mocks.createChart.mockReturnValue({
       addSeries: mocks.addSeries,
       priceScale: mocks.priceScale,
@@ -60,5 +69,9 @@ describe("createSbarChartRuntime", () => {
     });
     expect(runtime.candleSeries).toEqual({ kind: "candles" });
     expect(runtime.volumeSeries).toEqual({ kind: "volume" });
+    expect(runtime.cbarPrimitive).toEqual({ kind: "cbar-primitive" });
+    expect(runtime.swingPrimitive).toEqual({ kind: "swing-primitive" });
+    expect(mocks.registerCBarPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
+    expect(mocks.registerSwingPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
   });
 });
