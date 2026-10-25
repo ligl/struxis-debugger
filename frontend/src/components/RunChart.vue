@@ -368,10 +368,14 @@ function syncStructurePrimitives(): void {
   cbarPrimitive?.setInteractionState({
     hoveredId: hovered?.kind === "cbar" ? hovered.id : null,
     selectedId: selected?.kind === "cbar" ? selected.id : null,
+    selectedColor: "#D6A85D",
+    selectedWidth: 2,
   });
   swingPrimitive?.setInteractionState({
     hoveredId: hovered?.kind === "swing" ? hovered.id : null,
     selectedId: selected?.kind === "swing" ? selected.id : null,
+    selectedColor: "#D6A85D",
+    selectedWidth: 2.25,
   });
 }
 
