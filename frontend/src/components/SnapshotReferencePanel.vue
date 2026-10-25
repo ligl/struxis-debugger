@@ -6,6 +6,8 @@ import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewpor
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
+  /** Mirrors Live Replay chart lifecycle; panel state stays mounted while its chart runtime is recreated. */
+  active?: boolean;
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
   liveSbarIds?: string[];
@@ -294,6 +296,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
       </div>
       <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
         <SnapshotReferenceChart
+          v-if="active !== false"
           :bars="reference.bars"
           :structure="playbackStructure"
           :snapshot-id="reference.snapshotId"
