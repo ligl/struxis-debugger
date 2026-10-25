@@ -148,7 +148,7 @@ describe("SnapshotReferenceChart", () => {
     expect(chartMocks.volumeSetData).toHaveBeenCalled();
     const candleSetDataCalls = chartMocks.candleSetData.mock.calls;
     const candleData = candleSetDataCalls[candleSetDataCalls.length - 1]?.[0] as Array<{ color: string }>;
-    expect(candleData[0]?.color).toBe("#224239");
+    expect(candleData[0]?.color).toBe("#2E4239");
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
