@@ -23,9 +23,11 @@ const props = defineProps<{
   panelClass?: string;
   panelLabel?: string;
   chartLabel?: string;
+  keyboardActive?: boolean;
 }>();
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
+  chartActivate: [];
   chartClick: [point: { x: number; y: number | null } | null];
   pointerPosition: [point: { x: number; y: number } | null];
   logicalRangeChange: [range: { from: number; to: number }];
@@ -379,9 +381,8 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
-  // Snapshot Reference and Live Replay both listen at document level. Keep
-  // keyboard commands local to the chart under the pointer or holding focus.
-  if (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement))) return;
+  // ReplayWorkspace owns which chart receives chart-local keyboard commands.
+  if (props.keyboardActive === false) return;
 
   const isArrowKey = event.key === "ArrowUp" || event.key === "ArrowDown" ||
     event.key === "ArrowLeft" || event.key === "ArrowRight";
@@ -653,6 +654,8 @@ onBeforeUnmount(() => {
         :data-first-sbar-x="firstSbarX ?? ''"
         :data-second-sbar-x="secondSbarX ?? ''"
         :aria-label="chartLabel"
+        @pointerenter="emit('chartActivate')"
+        @focusin="emit('chartActivate')"
       ></div>
       <svg
         class="origin-structure-overlay"
