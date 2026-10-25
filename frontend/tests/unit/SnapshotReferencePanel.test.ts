@@ -73,9 +73,24 @@ const snapshots: SnapshotArtifactDto[] = [
 enableAutoUnmount(afterEach);
 
 describe("SnapshotReferencePanel", () => {
-  it("has a Snapshot selection event contract", () => {
+  it("resolves a selected Snapshot SBar to immutable Snapshot data", async () => {
+    invokeMock.mockResolvedValueOnce(reference);
     const wrapper = mount(SnapshotReferencePanel, { props: { instrumentId: "AUD/USD.SIM", snapshots } });
-    expect(wrapper.emitted("objectSelect")).toBeUndefined();
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("snapshot-complete-01");
+    await flushPromises();
+    const chart = wrapper.findComponent({ name: "SnapshotReferenceChart" });
+    expect(chart.exists()).toBe(true);
+    chart.vm.$emit("objectSelect", { kind: "sbar", id: "100", checkpointSbarId: "100" });
+    const selections = wrapper.emitted("objectSelect");
+    expect(selections?.[selections.length - 1]?.[0]).toMatchObject({
+      snapshotId: "snapshot-complete-01",
+      checkpointSbarId: "100",
+      timeframe: "5m",
+      kind: "sbar",
+      object: { sbarId: "100", open: "10", close: "11" },
+      bars: reference.bars,
+      structure: reference.structureTimeline[0]?.structure,
+    });
   });
 
 
