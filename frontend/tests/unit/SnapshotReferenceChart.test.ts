@@ -124,7 +124,7 @@ describe("SnapshotReferenceChart", () => {
     const dispose = vi.fn();
     const surface = wrapper.findComponent({ name: "ChartSurface" });
     const register = (surface.vm as unknown as {
-      registerPrimitive: (id: string, primitive: typeof primitive, dispose?: () => void) => () => void;
+      registerPrimitive: (id: string, primitive: import("lightweight-charts").ISeriesPrimitive<import("lightweight-charts").Time>, dispose?: () => void) => () => void;
     }).registerPrimitive;
 
     const unregister = register("test-consumer-primitive", primitive, dispose);
