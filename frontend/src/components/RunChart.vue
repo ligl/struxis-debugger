@@ -375,10 +375,10 @@ function updateHoverMarker(): void {
     : null;
 }
 
-function handleVisibleRangeChange(): void {
+function handleVisibleRangeChange(range?: { from: number; to: number } | null): void {
   scheduleOverlayUpdate();
-  if (!props.syncEnabled || (props.syncOwner !== undefined && props.syncOwner !== "live") || !chart || bars.value.length === 0) return;
-  const range = surface.value?.getVisibleLogicalRange();
+  if (!props.syncEnabled || (props.syncOwner !== undefined && props.syncOwner !== "live") || !surface.value || bars.value.length === 0) return;
+  const currentRange = range ?? surface.value.getVisibleLogicalRange();
   if (!currentRange || !Number.isFinite(currentRange.from) || !Number.isFinite(currentRange.to)) return;
 
   // Coalesce high-frequency wheel/pan events; publish the latest fractional
@@ -796,7 +796,7 @@ onBeforeUnmount(() => {
   scheduleOverlayUpdate.cancel();
   pendingViewportRange = null;
   crosshairSyncGate.clear();
-});;
+});
 </script>
 
 <template>
@@ -843,6 +843,10 @@ onBeforeUnmount(() => {
         data-mode="external"
         panel-class="run-chart-surface"
         panel-label="Live Replay SBar chart"
+        canvas-test-id="run-chart-canvas"
+        structure-overlay-test-id="run-structure-overlay"
+        :show-empty-state="false"
+        :show-structure-overlay="!projectionMessage"
         :chart-label="`Candlestick and volume chart for Test Dataset ${testDataset?.testDatasetId ?? 'not selected'}`"
         @chart-activate="emit('activate')"
         @chart-click="handleSurfaceClick"
