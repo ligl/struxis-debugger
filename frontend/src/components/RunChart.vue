@@ -263,6 +263,21 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   // ReplayWorkspace is the sole owner of chart-local keyboard routing.
   // Keep the previous local fallback for isolated component mounts / tests.
   if (props.keyboardActive === false) return;
+
+  // C toggles the CBar overlay only when this Live chart owns navigation.
+  // Ignore modified/repeated shortcuts and preserve normal text-input editing.
+  const isCbarShortcut = event.key.toLowerCase() === "c" &&
+    !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
+  if (
+    isCbarShortcut &&
+    !event.repeat &&
+    !isInteractiveKeyboardTarget(event.target) &&
+    !isInteractiveKeyboardTarget(document.activeElement)
+  ) {
+    toggleLayer("cbar");
+    event.preventDefault();
+    return;
+  }
   if (
     props.keyboardActive === undefined &&
     (!document.querySelector(".run-chart-surface .origin-chart-host")?.matches(":hover") && !document.querySelector(".run-chart-surface .origin-chart-host")?.contains(document.activeElement))
