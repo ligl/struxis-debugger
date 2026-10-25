@@ -22,7 +22,7 @@ vi.mock("lightweight-charts", () => ({
   createChart: mocks.createChart,
 }));
 
-import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime } from "../../src/sbar-chart-runtime";
+import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../../src/sbar-chart-runtime";
 
 describe("createSbarChartRuntime", () => {
   beforeEach(() => {
@@ -92,6 +92,55 @@ describe("applySbarChartSeriesVisibility", () => {
 
   it("tolerates series not yet created or already released", () => {
     expect(() => applySbarChartSeriesVisibility(null, undefined, { sbar: true, volume: false })).not.toThrow();
+  });
+});
+
+describe("paired SBar / Volume data application", () => {
+  it("replaces both series with the supplied authoritative projection", () => {
+    const candleSetData = vi.fn();
+    const volumeSetData = vi.fn();
+    const candles = [{ time: 10, open: 1, high: 2, low: 0, close: 1 }];
+    const volume = [{ time: 10, value: 5 }];
+
+    expect(replaceSbarChartSeriesData(
+      { setData: candleSetData } as never,
+      { setData: volumeSetData } as never,
+      candles,
+      volume,
+    )).toBe(true);
+
+    expect(candleSetData).toHaveBeenCalledWith(candles);
+    expect(volumeSetData).toHaveBeenCalledWith(volume);
+  });
+
+  it("updates both series with the same historical-update policy", () => {
+    const candleUpdate = vi.fn();
+    const volumeUpdate = vi.fn();
+    const candle = { time: 10, open: 1, high: 2, low: 0, close: 1 };
+    const volume = { time: 10, value: 5 };
+
+    expect(updateSbarChartSeriesData(
+      { update: candleUpdate } as never,
+      { update: volumeUpdate } as never,
+      candle,
+      volume,
+      true,
+    )).toBe(true);
+
+    expect(candleUpdate).toHaveBeenCalledWith(candle, true);
+    expect(volumeUpdate).toHaveBeenCalledWith(volume, true);
+  });
+
+  it("does not partially update when one series is unavailable", () => {
+    const candleUpdate = vi.fn();
+    expect(updateSbarChartSeriesData(
+      { update: candleUpdate } as never,
+      null,
+      { time: 10, open: 1, high: 2, low: 0, close: 1 } as never,
+      { time: 10, value: 5 } as never,
+      true,
+    )).toBe(false);
+    expect(candleUpdate).not.toHaveBeenCalled();
   });
 });
 
