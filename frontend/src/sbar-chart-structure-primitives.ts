@@ -221,20 +221,10 @@ class CBarPaneRenderer implements IPrimitivePaneRenderer {
       try {
         context.setLineDash([]);
         for (const rectangle of rectangles) {
-          context.strokeStyle = "#A0A7B0";
-          context.lineWidth = 1;
-          context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
-        }
-        for (const rectangle of rectangles) {
-          if (rectangle.id !== interaction.hoveredId) continue;
-          context.strokeStyle = "#C3CBD1";
-          context.lineWidth = 1.75;
-          context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
-        }
-        for (const rectangle of rectangles) {
-          if (rectangle.id !== interaction.selectedId) continue;
-          context.strokeStyle = "#D99A45";
-          context.lineWidth = 2;
+          const selected = rectangle.id === interaction.selectedId;
+          const hovered = rectangle.id === interaction.hoveredId;
+          context.strokeStyle = selected ? "#D99A45" : hovered ? "#C3CBD1" : "#A0A7B0";
+          context.lineWidth = selected ? 2 : hovered ? 1.75 : 1;
           context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
         }
       } finally {
@@ -288,34 +278,20 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
     const segments = this.getSegments();
     if (segments.length === 0) return;
     const interaction = this.getInteractionState();
-    const drawSegment = (
-      context: CanvasRenderingContext2D,
-      segment: SwingSegment,
-      color: string,
-      width: number,
-    ) => {
-      context.strokeStyle = color;
-      context.lineWidth = width;
-      context.setLineDash([...segment.dash]);
-      context.beginPath();
-      context.moveTo(segment.x1, segment.y1);
-      context.lineTo(segment.x2, segment.y2);
-      context.stroke();
-    };
     target.useMediaCoordinateSpace(({ context }) => {
       context.save();
       try {
         context.lineCap = "round";
-        for (const segment of segments) drawSegment(context, segment, segment.color, 1.25);
         for (const segment of segments) {
-          if (segment.id === interaction.hoveredId && segment.id !== interaction.selectedId) {
-            drawSegment(context, segment, "#C3CBD1", 2);
-          }
-        }
-        for (const segment of segments) {
-          if (segment.id === interaction.selectedId) {
-            drawSegment(context, segment, "#D99A45", 2.5);
-          }
+          const selected = segment.id === interaction.selectedId;
+          const hovered = segment.id === interaction.hoveredId;
+          context.strokeStyle = selected ? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
+          context.lineWidth = selected ? 2.5 : hovered ? 2 : 1.25;
+          context.setLineDash([...segment.dash]);
+          context.beginPath();
+          context.moveTo(segment.x1, segment.y1);
+          context.lineTo(segment.x2, segment.y2);
+          context.stroke();
         }
       } finally {
         context.setLineDash([]);
