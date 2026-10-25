@@ -55,6 +55,13 @@ export interface ChartSurfaceStructureInteraction {
   id: string;
 }
 
+export interface ChartSurfacePrimitiveOptions {
+  /** Series pane to which the consumer-owned Primitive is attached. */
+  target?: "candles" | "volume";
+  /** Called once when the registration is unregistered or the Surface is disposed. */
+  dispose?: () => void;
+}
+
 export interface ChartSurfacePort {
   /**
    * Injects a chart-local Series Primitive without exposing the chart or series.
@@ -64,7 +71,7 @@ export interface ChartSurfacePort {
   registerPrimitive(
     id: string,
     primitive: ISeriesPrimitive<Time>,
-    dispose?: () => void,
+    options?: ChartSurfacePrimitiveOptions | (() => void),
   ): () => void;
   /**
    * Policy-free series operations. The caller chooses full replacement versus
