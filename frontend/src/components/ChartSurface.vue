@@ -408,6 +408,22 @@ function handleChartKeyboard(event: KeyboardEvent): void {
     (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement)))
   ) return;
 
+  // Snapshot Reference shares Replay's chart-owner routing, but keeps its
+  // layer state inside ChartSurface so keyboard and legend toggles stay in sync.
+  const isSnapshotCbarShortcut = props.panelClass === "snapshot-reference-chart"
+    && event.key.toLowerCase() === "c"
+    && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
+  if (
+    isSnapshotCbarShortcut &&
+    !event.repeat &&
+    !isInteractiveKeyboardTarget(event.target) &&
+    !isInteractiveKeyboardTarget(document.activeElement)
+  ) {
+    toggleLayer("cbar");
+    event.preventDefault();
+    return;
+  }
+
   const key = ({ h: "ArrowLeft", j: "ArrowDown", k: "ArrowUp", l: "ArrowRight" } as const)[
     event.key as "h" | "j" | "k" | "l"
   ] ?? event.key;
