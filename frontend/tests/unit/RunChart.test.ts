@@ -251,7 +251,7 @@ describe("RunChart", () => {
 
   it("maps Vim h/j/k/l keys to the existing Replay chart navigation commands", async () => {
     const wrapper = mount(RunChart, {
-      props: { origin: origin(), testDataset: testDataset(), runState: null },
+      props: { origin: origin(), testDataset: testDataset(), runState: null, syncEnabled: true },
     });
     await nextTick();
 
@@ -265,6 +265,11 @@ describe("RunChart", () => {
     const right = dispatchKey("l");
     expect(right.defaultPrevented).toBe(true);
     expect(mocks.setCrosshairPosition).toHaveBeenCalledWith(11, 1700000120, expect.anything());
+    expect(wrapper.emitted("crosshairChange")?.at(-1)?.[0]).toEqual({
+      source: "live",
+      sbarId: originBars[1]!.sbarId,
+      price: 11,
+    });
 
     // k/j preserve the existing zoom-in / zoom-out behavior of ArrowUp/ArrowDown.
     mocks.setVisibleLogicalRange.mockClear();
