@@ -64,8 +64,8 @@ const rows = computed<InspectorRow[]>(() => {
       { label: "Init Time · UTC", value: formatDomainTimestamp(bar.tsInit, props.timeframe), copyValue: bar.tsInit },
       { label: "Open", value: bar.open },
       { label: "High", value: bar.high },
-      { label: "Low", value: bar.low },
       { label: "Close", value: bar.close },
+      { label: "Low", value: bar.low },
       { label: "Volume", value: bar.volume },
     ];
     if (selected.source === "checkpoint") {
@@ -168,8 +168,8 @@ const rows = computed<InspectorRow[]>(() => {
         <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp((endpoint.object as SBarDto).tsInit, timeframe)" :copy-value="(endpoint.object as SBarDto).tsInit" wide />
         <InspectorPropertyField label="Open" :value="(endpoint.object as SBarDto).open" />
         <InspectorPropertyField label="High" :value="(endpoint.object as SBarDto).high" />
-        <InspectorPropertyField label="Low" :value="(endpoint.object as SBarDto).low" />
         <InspectorPropertyField label="Close" :value="(endpoint.object as SBarDto).close" />
+        <InspectorPropertyField label="Low" :value="(endpoint.object as SBarDto).low" />
         <InspectorPropertyField label="Volume" :value="(endpoint.object as SBarDto).volume" />
       </dl>
     </details>
