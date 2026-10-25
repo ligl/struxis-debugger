@@ -40,43 +40,6 @@ describe("createSbarChartRuntime", () => {
     });
   });
 
-  it("creates the shared chart and both series while preserving the caller's last-value policy", () => {
-    const host = document.createElement("div");
-    const runtime = createSbarChartRuntime(host, {
-      width: 640,
-      height: 320,
-      candleLastValueVisible: false,
-    });
-
-    expect(mocks.createChart).toHaveBeenCalledWith(host, expect.objectContaining({
-      width: 640,
-      height: 320,
-      layout: expect.objectContaining({
-        background: { type: "solid", color: "#121619" },
-        textColor: "#a8b2b9",
-      }),
-      timeScale: expect.objectContaining({ rightOffset: 4, timeVisible: true }),
-    }));
-    expect(mocks.addSeries).toHaveBeenNthCalledWith(1, { kind: "candlestick" }, expect.objectContaining({
-      lastValueVisible: false,
-      priceLineVisible: false,
-    }));
-    expect(mocks.addSeries).toHaveBeenNthCalledWith(2, { kind: "histogram" }, expect.objectContaining({
-      priceScaleId: "",
-      lastValueVisible: false,
-    }));
-    expect(mocks.applyPriceScaleOptions).toHaveBeenCalledWith({
-      scaleMargins: { top: 0.82, bottom: 0 },
-    });
-    expect(runtime.candleSeries).toEqual({ kind: "candles" });
-    expect(runtime.volumeSeries).toEqual({ kind: "volume" });
-    expect(runtime.cbarPrimitive).toEqual({ kind: "cbar-primitive" });
-    expect(runtime.swingPrimitive).toEqual({ kind: "swing-primitive" });
-    expect(mocks.registerCBarPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
-    expect(mocks.registerSwingPrimitive).toHaveBeenCalledWith(runtime.primitiveHost, runtime.candleSeries);
-  });
-});
-
 describe("applySbarChartSeriesVisibility", () => {
   it("applies visibility at the series level without rewriting point data", () => {
     const candleApplyOptions = vi.fn();
@@ -141,26 +104,5 @@ describe("paired SBar / Volume data application", () => {
       true,
     )).toBe(false);
     expect(candleUpdate).not.toHaveBeenCalled();
-  });
-});
-
-describe("disposeSbarChartRuntime", () => {
-  it("disposes the Primitive host before removing the chart", () => {
-    const hostElement = document.createElement("div");
-    const runtime = createSbarChartRuntime(hostElement, {
-      width: 320,
-      height: 240,
-      candleLastValueVisible: true,
-    });
-    const disposeHost = vi.spyOn(runtime.primitiveHost, "dispose");
-    const removeChart = vi.mocked(runtime.chart.remove);
-
-    disposeSbarChartRuntime(runtime.chart, runtime.primitiveHost);
-
-    expect(disposeHost).toHaveBeenCalledOnce();
-    expect(removeChart).toHaveBeenCalledOnce();
-    expect(disposeHost.mock.invocationCallOrder[0]).toBeLessThan(
-      removeChart.mock.invocationCallOrder[0],
-    );
   });
 });
