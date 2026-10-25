@@ -583,9 +583,8 @@ function hitTestSbar(x: number, y: number): string | null {
   if (!bar) return null;
   const marker = markerForSbar(bar.sbarId);
   if (!marker) return null;
-  const centerX = marker.x + marker.width / 2;
-  if (Math.abs(x - centerX) > Math.max(3, marker.width / 2 + 1) ||
-      y < marker.y - 5 || y > marker.y + marker.height + 5) return null;
+  if (x < marker.x || x > marker.x + marker.width ||
+      y < marker.y || y > marker.y + marker.height) return null;
   return bar.sbarId;
 }
 
@@ -654,12 +653,11 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
     emit("objectSelect", { ...structureHit, checkpointSbarId });
     return;
   }
-  const logical = chart.timeScale().coordinateToLogical?.(x);
-  if (logical === null || logical === undefined || !Number.isFinite(logical)) return;
-  const index = Math.round(logical);
-  const bar = bars.value[index];
-  if (!bar) return;
-  emit("objectSelect", { kind: "sbar", id: bar.sbarId, checkpointSbarId: checkpointSbarId ?? null });
+  // Match the hover hit-test: only the visible OHLC body bounds select an SBar.
+  // Clicks in the same logical column but outside the candle do not select it.
+  const sbarId = hitTestSbar(x, y);
+  if (!sbarId) return;
+  emit("objectSelect", { kind: "sbar", id: sbarId, checkpointSbarId: checkpointSbarId ?? null });
 }
 
 function handleChartDoubleClick(event: MouseEvent): void {
