@@ -14,7 +14,7 @@ export function createStructureProjectionScheduler(
   project: () => void,
 ): StructureProjectionScheduler {
   const schedule = createAnimationFrameCoalescer(project);
-  const scheduler = schedule as StructureProjectionScheduler;
+  const scheduler = schedule as unknown as StructureProjectionScheduler;
 
   scheduler.flush = () => {
     schedule.cancel();
