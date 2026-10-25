@@ -143,7 +143,8 @@ describe("SnapshotReferenceChart", () => {
     expect(volumeMarker).toBeDefined();
     expect(chartMocks.candleSetData).toHaveBeenCalled();
     expect(chartMocks.volumeSetData).toHaveBeenCalled();
-    const candleData = chartMocks.candleSetData.mock.calls.at(-1)?.[0] as Array<{ color: string }>;
+    const candleSetDataCalls = chartMocks.candleSetData.mock.calls;
+    const candleData = candleSetDataCalls[candleSetDataCalls.length - 1]?.[0] as Array<{ color: string }>;
     expect(candleData[0]?.color).not.toBe("#79B58B");
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
