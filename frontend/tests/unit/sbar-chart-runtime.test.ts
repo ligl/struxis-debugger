@@ -28,7 +28,7 @@ describe("createSbarChartRuntime", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.addSeries
-      .mockReturnValueOnce({ kind: "candles" })
+      .mockReturnValueOnce({ kind: "candles", attachPrimitive: vi.fn(), detachPrimitive: vi.fn() })
       .mockReturnValueOnce({ kind: "volume" });
     mocks.priceScale.mockReturnValue({ applyOptions: mocks.applyPriceScaleOptions });
     mocks.registerCBarPrimitive.mockReturnValue({ kind: "cbar-primitive" });
