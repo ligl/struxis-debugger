@@ -370,7 +370,10 @@ describe("RunChart", () => {
     expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("fill")).toBe("none");
     expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("stroke")).toBe("#C3CBD1");
     expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("stroke-width")).toBe("1.25");
-    // The outline follows the SBar's high/low range, not the whole chart height.
+    // The frame uses the chart's projected logical slot boundaries, not a fixed
+    // pixel width or a width guessed from neighboring timestamp coordinates.
+    expect(Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("x"))).toBe(30);
+    expect(Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("width"))).toBe(60);
     expect(Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("y"))).toBeGreaterThan(0);
     expect(Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("height"))).toBeLessThan(20);
     expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe(`SBAR · ${originBars[1]!.sbarId}`);
