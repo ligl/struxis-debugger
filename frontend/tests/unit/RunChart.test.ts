@@ -448,7 +448,7 @@ describe("RunChart", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", {
       key: "ArrowRight", bubbles: true, cancelable: true,
     }));
-    await wrapper.setProps({ syncOwner: "snapshot" });
+    await wrapper.setProps({ syncOwner: "snapshot" } as never);
 
     const targetEvent = new KeyboardEvent("keydown", {
       key: "t", bubbles: true, cancelable: true,
@@ -918,7 +918,7 @@ describe("RunChart", () => {
 
     // Ownership switches explicitly; the same chart may now publish its own
     // local range changes as the synchronization source.
-    await wrapper.setProps({ syncOwner: "live" });
+    await wrapper.setProps({ syncOwner: "live" } as never);
     mocks.getVisibleLogicalRange.mockReturnValue({ from: 1.5, to: 5.25 });
     mocks.visibleRangeListener?.();
     mocks.animationFrameCallback?.(0);
