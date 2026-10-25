@@ -7,7 +7,7 @@ describe("observeSbarChartResize", () => {
     vi.unstubAllGlobals();
   });
 
-  it("applies normalized host dimensions, invokes the adapter callback, and disconnects", () => {
+  it("ignores hidden zero-sized hosts and applies positive dimensions before invoking the adapter callback", () => {
     let resizeCallback: ResizeObserverCallback | undefined;
     const disconnect = vi.fn();
     const observe = vi.fn();
@@ -33,7 +33,14 @@ describe("observeSbarChartResize", () => {
       [{ contentRect: { width: 120.8, height: 0 } } as ResizeObserverEntry],
       {} as ResizeObserver,
     );
-    expect(applyOptions).toHaveBeenCalledWith({ width: 120, height: 1 });
+    expect(applyOptions).not.toHaveBeenCalled();
+    expect(onResized).not.toHaveBeenCalled();
+
+    resizeCallback?.(
+      [{ contentRect: { width: 120.8, height: 80.4 } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    expect(applyOptions).toHaveBeenCalledWith({ width: 120, height: 80 });
     expect(onResized).toHaveBeenCalledOnce();
 
     dispose();
