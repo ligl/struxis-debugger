@@ -487,7 +487,7 @@ const scheduleOverlayUpdate = createAnimationFrameCoalescer(() => {
   updateStructureOverlays();
   const latest = pendingViewportRange;
   pendingViewportRange = null;
-  if (latest && props.syncEnabled && chart) {
+  if (latest && props.syncEnabled && (props.syncOwner === undefined || props.syncOwner === "live") && chart) {
     emit("viewportChange", { source: "live", from: latest.from, to: latest.to });
   }
 });
