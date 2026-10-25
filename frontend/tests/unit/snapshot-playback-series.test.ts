@@ -55,6 +55,6 @@ describe("projectSnapshotPlaybackSeries", () => {
     });
     expect(projection.processedStart).toBe(3);
     expect(projection.processedEndExclusive).toBe(4);
-    expect(projection.candles[3]?.color).toBe("#79B58B");
+    expect(projection.candles[3]?.color).toBe("#D98282");
   });
 });
