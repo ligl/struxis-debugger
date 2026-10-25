@@ -32,6 +32,7 @@ type SurfacePort = {
   getSbarIdAtClientX: (clientX: number, clampToSequence?: boolean) => string | null;
   hasSbarId: (sbarId: string) => boolean;
   getSbarMarker: (sbarId: string) => SBarMarker | null;
+  getSbarRangeHighlight: (sbarId: string) => SBarMarker | null;
   getStructureGeometry: () => { cbarRectangles: CBarRectangle[]; swingSegments: SwingSegment[] };
   setStructureInteractionState: (
     hovered: { kind: "cbar" | "swing"; id: string } | null,
@@ -113,7 +114,7 @@ function handleProjectionFrame(): void {
     return;
   }
   if (hovered.kind === "sbar") {
-    const marker = surface.value?.getSbarMarker(hovered.id) ?? null;
+    const marker = surface.value?.getSbarRangeHighlight(hovered.id) ?? null;
     hoveredSbarMarker.value = marker;
     if (!marker) hoveredObject.value = null;
     return;
@@ -167,7 +168,7 @@ function updateHoveredObject(point: { x: number; y: number } | null): void {
   const current = hoveredObject.value;
   if (current?.kind === nextObject?.kind && current?.id === nextObject?.id && current?.originDatasetId === nextObject?.originDatasetId) return;
   hoveredObject.value = nextObject;
-  hoveredSbarMarker.value = nextObject?.kind === "sbar" ? surface.value?.getSbarMarker(nextObject.id) ?? null : null;
+  hoveredSbarMarker.value = nextObject?.kind === "sbar" ? surface.value?.getSbarRangeHighlight(nextObject.id) ?? null : null;
   syncStructureInteractionState();
 }
 
@@ -301,9 +302,8 @@ onBeforeUnmount(stopBoundaryDrag);
           :height="hoveredSbarMarker.height"
           data-testid="origin-hover-sbar"
           :data-sbar-id="hoveredSbarMarker.id"
-          fill="none"
-          stroke="#C3CBD1"
-          stroke-width="1.25"
+          fill="rgb(195 203 209 / 12%)"
+          stroke="none"
         />
         <rect
           v-if="selectedSbarMarker"
