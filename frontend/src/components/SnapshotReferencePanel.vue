@@ -15,6 +15,8 @@ const props = defineProps<{
   crosshairSync?: ReplayChartCrosshairSync | null;
   progressApplies?: boolean;
   processedCount?: number;
+  /** Changes whenever the Live sequence identity is replaced. */
+  syncIdentity?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -113,6 +115,23 @@ function describeSnapshot(snapshot: SnapshotArtifactDto): string {
   const end = formatEventTime(snapshot.inputEndTsEvent, snapshot.barType);
   return `${timeframe} · ${start} → ${end} · ${formatGeneratedAt(snapshot.generatedAt)}`;
 }
+
+watch(
+  () => props.syncIdentity,
+  () => {
+    // The workspace invalidates qualification at every Live identity boundary.
+    // Re-publish only the already-loaded immutable sequence, after the parent's
+    // invalidation watcher has run; the workspace must still resolve compatibility.
+    const current = reference.value;
+    if (!current || selectedSnapshotId.value !== current.snapshotId) return;
+    emit("syncSequence", {
+      snapshotId: current.snapshotId,
+      barType: current.barType,
+      sbarIds: current.bars.map((bar) => bar.sbarId),
+    });
+  },
+  { flush: "post" },
+);
 
 watch(availableSnapshots, (available) => {
   if (!available.some((snapshot) => snapshot.snapshotId === selectedSnapshotId.value)) {
