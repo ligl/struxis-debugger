@@ -1,7 +1,6 @@
 import type {
   IPrimitivePaneRenderer,
   IPrimitivePaneView,
-  ISeriesApi,
   ISeriesPrimitive,
   Time,
 } from "lightweight-charts";
