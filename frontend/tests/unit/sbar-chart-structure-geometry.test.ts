@@ -18,21 +18,19 @@ describe("projectCBarRectangles", () => {
       cbars: [cbar()],
       coordinateForSbarId: (id) => ({ "sbar-1": 80, "sbar-3": 20 })[id as "sbar-1" | "sbar-3"] ?? null,
       priceToCoordinate: (price) => price === 15 ? 10 : price === 8 ? 50 : null,
-      sbarBodyWidth: 8,
     });
 
-    expect(result).toEqual([{ id: "cbar-1", x: 16, y: 10, width: 68, height: 40 }]);
+    expect(result).toEqual([{ id: "cbar-1", x: 20, y: 10, width: 60, height: 40 }]);
   });
 
-  it("uses the first SBar body left edge and last SBar body right edge regardless of anchor order", () => {
+  it("uses the first and last SBar center coordinates regardless of anchor order", () => {
     const result = projectCBarRectangles({
       cbars: [cbar()],
       coordinateForSbarId: (id) => id === "sbar-1" ? 20 : 80,
       priceToCoordinate: (price) => price === 15 ? 10 : 50,
-      sbarBodyWidth: 10,
     });
 
-    expect(result).toEqual([{ id: "cbar-1", x: 15, y: 10, width: 70, height: 40 }]);
+    expect(result).toEqual([{ id: "cbar-1", x: 20, y: 10, width: 60, height: 40 }]);
   });
 
   it("omits geometry when either SBar anchor is missing", () => {
