@@ -726,7 +726,7 @@ describe("Test, Run and Snapshot workbench", () => {
 
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(false);
     await wrapper.get('[data-testid="workspace-replay"]').trigger("click");
-    expect(wrapper.find('[data-testid="catalog-controls"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="catalog-controls"]').isVisible()).toBe(false);
     expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-chart-test-stub"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="run-chart-test-stub"]')).toHaveLength(1);
