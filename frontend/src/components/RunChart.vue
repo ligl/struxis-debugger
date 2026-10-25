@@ -262,7 +262,12 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   }
 
   // ReplayWorkspace is the sole owner of chart-local keyboard routing.
+  // Keep the previous local fallback for isolated component mounts / tests.
   if (props.keyboardActive === false) return;
+  if (
+    props.keyboardActive === undefined &&
+    (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement)))
+  ) return;
 
   // Vim normal-mode navigation aliases: h/ j/ k/ l behave exactly like the
   // corresponding arrow keys, without changing the existing chart commands.
