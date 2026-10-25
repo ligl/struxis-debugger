@@ -1,3 +1,5 @@
+import type { CandlestickData, HistogramData, UTCTimestamp } from "lightweight-charts";
+
 /**
  * Neutral imperative port exposed by ChartSurface to its business adapters.
  *
@@ -47,6 +49,25 @@ export interface ChartSurfaceStructureInteraction {
 }
 
 export interface ChartSurfacePort {
+  /**
+   * Policy-free series operations. The caller chooses full replacement versus
+   * incremental update; the Surface owns the actual chart series.
+   */
+  replaceSeriesData(
+    candles: readonly CandlestickData<UTCTimestamp>[],
+    volume: readonly HistogramData<UTCTimestamp>[],
+  ): boolean;
+  updateSeriesData(
+    candle: CandlestickData<UTCTimestamp>,
+    volume: HistogramData<UTCTimestamp>,
+    historicalUpdate?: boolean,
+  ): boolean;
+  fitContent(): boolean;
+  getTimeCoordinate(time: UTCTimestamp): number | null;
+  getTimeAtCoordinate(x: number): UTCTimestamp | null;
+  getLogicalIndexAtCoordinate(x: number): number | null;
+  getPriceAtCoordinate(y: number): number | null;
+  getPriceCoordinate(price: number): number | null;
   getVisibleLogicalRange(): ChartSurfaceLogicalRange | null;
   applyViewportRange(range: ChartSurfaceLogicalRange): boolean;
   applyCrosshairPosition(sbarId: string, price: number): boolean;
