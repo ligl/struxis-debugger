@@ -229,6 +229,8 @@ export interface ProjectStructureOverlayOptions {
   visibleRange: LogicalViewportRange | null;
   coordinateForSbarId: (sbarId: string) => number | null | undefined;
   priceToCoordinate: (price: number) => number | null | undefined;
+  /** Width of the rendered candlestick body in CSS pixels. */
+  sbarBodyWidth?: number;
   cbarVisible: boolean;
   swingVisible: boolean;
   resolveSwingStyle: (state: string) => { color: string; dasharray: string };
@@ -257,6 +259,7 @@ export function projectStructureOverlayGeometry(
     visibleRange,
     coordinateForSbarId,
     priceToCoordinate,
+    sbarBodyWidth,
     cbarVisible,
     swingVisible,
     resolveSwingStyle,
@@ -270,6 +273,7 @@ export function projectStructureOverlayGeometry(
         visibleRange,
         coordinateForSbarId,
         priceToCoordinate,
+        sbarBodyWidth,
       })
       : [],
     swingSegments: swingVisible
