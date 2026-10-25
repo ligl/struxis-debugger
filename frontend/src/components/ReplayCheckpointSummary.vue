@@ -28,8 +28,8 @@ defineProps<{
         <dl class="inspector-market-grid">
           <div><dt>OPEN</dt><dd>{{ replayInspector.sbar.open }}</dd></div>
           <div><dt>HIGH</dt><dd>{{ replayInspector.sbar.high }}</dd></div>
-          <div><dt>LOW</dt><dd>{{ replayInspector.sbar.low }}</dd></div>
           <div><dt>CLOSE</dt><dd>{{ replayInspector.sbar.close }}</dd></div>
+          <div><dt>LOW</dt><dd>{{ replayInspector.sbar.low }}</dd></div>
           <div class="inspector-volume"><dt>VOLUME</dt><dd>{{ replayInspector.sbar.volume }}</dd></div>
         </dl>
       </div>
