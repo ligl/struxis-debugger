@@ -569,6 +569,7 @@ function updateHoveredObject(point: { x: number; y: number } | undefined): void 
   const current = hoveredObject.value;
   if (current?.kind === next?.kind && current?.id === next?.id && current?.checkpointSbarId === next?.checkpointSbarId) return;
   hoveredObject.value = next;
+  syncStructurePrimitives();
   updateHoverMarker();
 }
 
@@ -877,7 +878,10 @@ watch(() => props.structure, () => {
   updateStructureOverlays();
   updateHoveredObject(undefined);
 }, { deep: true });
-watch(() => props.selectedObject, updateStructureOverlays);
+watch(() => props.selectedObject, () => {
+  syncStructurePrimitives();
+  updateStructureOverlays();
+});
 watch(() => props.targetSbarId, updateStructureOverlays);
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => props.crosshairSync, (sync) => {
