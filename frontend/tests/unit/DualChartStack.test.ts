@@ -6,6 +6,7 @@ import DualChartStack from "../../src/components/DualChartStack.vue";
 describe("DualChartStack", () => {
   it("keeps upper and lower chart roles explicit and supports keyboard resizing", async () => {
     const wrapper = mount(DualChartStack, {
+      attachTo: document.body,
       props: { workspace: "replay" },
       slots: {
         upper: '<div data-testid="live-chart-slot">Live Replay</div>',
@@ -43,6 +44,7 @@ describe("DualChartStack", () => {
 
     await splitter.trigger("keydown", { key: "End" });
     expect(splitter.attributes("aria-valuenow")).toBe("75");
+    wrapper.unmount();
   });
 
   it("resizes the chart tracks from pointer movement within the stack", async () => {
