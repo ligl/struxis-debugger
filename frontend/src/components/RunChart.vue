@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<{
   selectedObject?: ReplayChartSelection | null;
   targetSbarId?: string | null;
   keyboardActive?: boolean;
+  syncOwner?: "live" | "snapshot";
   syncEnabled?: boolean;
   syncOffset?: number | null;
   syncRequest?: ReplayChartViewportSync | null;
@@ -443,7 +444,7 @@ function updateHoverMarker(): void {
 
 function handleVisibleRangeChange(): void {
   scheduleOverlayUpdate();
-  if (!props.syncEnabled || !chart || bars.value.length === 0) return;
+  if (!props.syncEnabled || props.syncOwner !== "live" || !chart || bars.value.length === 0) return;
   const range = chart.timeScale().getVisibleLogicalRange();
   if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return;
 
