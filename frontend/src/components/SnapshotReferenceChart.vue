@@ -42,6 +42,10 @@ const emit = defineEmits<{
 }>();
 
 const surface = ref<ChartSurfacePort | null>(null);
+const hoveredObject = ref<ReplayChartSelection | null>(null);
+const selectedObject = ref<ReplayChartSelection | null>(null);
+const hoveredSbarMarker = ref<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
+const selectedSbarMarker = ref<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
 const crosshairGate = new ReplayCrosshairSyncGate();
 const snapshotRangeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
 const snapshotVolumeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
@@ -162,8 +166,75 @@ function applyPlaybackSeriesStyles(): void {
   }
 }
 
+function syncStructureInteractionState(): void {
+  const geometry = surface.value?.getStructureGeometry();
+  const hovered = hoveredObject.value
+    && (hoveredObject.value.kind === "cbar" || hoveredObject.value.kind === "swing")
+    && (hoveredObject.value.kind === "cbar"
+      ? geometry?.cbarRectangles.some((item) => item.id === hoveredObject.value?.id)
+      : geometry?.swingSegments.some((item) => item.id === hoveredObject.value?.id))
+    ? { kind: hoveredObject.value.kind, id: hoveredObject.value.id }
+    : null;
+  const selected = selectedObject.value
+    && (selectedObject.value.kind === "cbar" || selectedObject.value.kind === "swing")
+    && (selectedObject.value.kind === "cbar"
+      ? geometry?.cbarRectangles.some((item) => item.id === selectedObject.value?.id)
+      : geometry?.swingSegments.some((item) => item.id === selectedObject.value?.id))
+    ? { kind: selectedObject.value.kind, id: selectedObject.value.id }
+    : null;
+  surface.value?.setStructureInteractionState(hovered, selected);
+}
+
+function updateSbarInteractionMarkers(): void {
+  hoveredSbarMarker.value = hoveredObject.value?.kind === "sbar"
+    ? surface.value?.getSbarRangeHighlight(hoveredObject.value.id) ?? null
+    : null;
+  selectedSbarMarker.value = selectedObject.value?.kind === "sbar"
+    ? surface.value?.getSbarMarker(selectedObject.value.id) ?? null
+    : null;
+}
+
+function updateHoveredObject(point: { x: number; y: number } | null): void {
+  const port = surface.value;
+  let next: ReplayChartSelection | null = null;
+  if (port && point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+    const geometry = port.getStructureGeometry();
+    const hit = hitTestStructureObject({
+      x: point.x,
+      y: point.y,
+      swings: geometry.swingSegments,
+      cbars: geometry.cbarRectangles,
+      swingVisible: true,
+      cbarVisible: true,
+    });
+    const sbarId = port.getSbarIdAtCoordinate(point.x);
+    if (hit && sbarId) {
+      next = { kind: hit.kind, id: hit.id, checkpointSbarId: sbarId };
+    } else if (sbarId) {
+      const marker = port.getSbarRangeHighlight(sbarId);
+      if (marker && point.x >= marker.x && point.x <= marker.x + marker.width
+        && point.y >= marker.y - 5 && point.y <= marker.y + marker.height + 5) {
+        next = { kind: "sbar", id: sbarId, checkpointSbarId: sbarId };
+      }
+    }
+  }
+
+  const current = hoveredObject.value;
+  if (current?.kind === next?.kind && current?.id === next?.id
+    && current?.checkpointSbarId === next?.checkpointSbarId) return;
+  hoveredObject.value = next;
+  updateSbarInteractionMarkers();
+  syncStructureInteractionState();
+}
+
+function handlePointerPosition(point: { x: number; y: number } | null): void {
+  updateHoveredObject(point);
+}
+
 function handleProjectionFrame(): void {
   refreshSnapshotGeometry();
+  updateSbarInteractionMarkers();
+  syncStructureInteractionState();
 }
 
 function handleViewportChange(range: { from: number; to: number }): void {
@@ -192,7 +263,11 @@ function handleChartClick(point: { x: number; y: number | null } | null): void {
     cbarVisible: true,
   });
   if (structureHit) {
-    emit("objectSelect", { kind: structureHit.kind, id: structureHit.id, checkpointSbarId: anchorSbarId });
+    const selection = { kind: structureHit.kind, id: structureHit.id, checkpointSbarId: anchorSbarId } satisfies ReplayChartSelection;
+    selectedObject.value = selection;
+    updateSbarInteractionMarkers();
+    syncStructureInteractionState();
+    emit("objectSelect", selection);
     return;
   }
   const marker = port.getSbarMarker(anchorSbarId);
@@ -203,7 +278,11 @@ function handleChartClick(point: { x: number; y: number | null } | null): void {
     point.y < marker.y - 5 ||
     point.y > marker.y + marker.height + 5
   ) return;
-  emit("objectSelect", { kind: "sbar", id: anchorSbarId, checkpointSbarId: anchorSbarId });
+  const selection = { kind: "sbar", id: anchorSbarId, checkpointSbarId: anchorSbarId } satisfies ReplayChartSelection;
+  selectedObject.value = selection;
+  updateSbarInteractionMarkers();
+  syncStructureInteractionState();
+  emit("objectSelect", selection);
 }
 
 function applyViewportRequest(request: ReplayChartViewportSync | null | undefined): void {
@@ -342,8 +421,38 @@ onBeforeUnmount(() => {
     @logical-range-change="handleViewportChange"
     @projection-frame="handleProjectionFrame"
     @crosshair-anchor-change="handleCrosshairChange"
+    @pointer-position="handlePointerPosition"
     @chart-click="handleChartClick"
   >
+    <template #chart-structure-overlays>
+      <rect
+        v-if="hoveredSbarMarker"
+        :x="hoveredSbarMarker.x"
+        :y="hoveredSbarMarker.y"
+        :width="hoveredSbarMarker.width"
+        :height="hoveredSbarMarker.height"
+        fill="none"
+        stroke="#C3CBD1"
+        stroke-width="1.25"
+        data-testid="snapshot-hover-sbar"
+        :data-sbar-id="hoveredSbarMarker.id"
+      />
+      <rect
+        v-if="selectedSbarMarker"
+        :x="selectedSbarMarker.x"
+        :y="selectedSbarMarker.y"
+        :width="selectedSbarMarker.width"
+        :height="selectedSbarMarker.height"
+        fill="rgb(217 154 69 / 10%)"
+        stroke="#D99A45"
+        stroke-width="1.5"
+        data-testid="snapshot-selected-sbar"
+        :data-sbar-id="selectedSbarMarker.id"
+      />
+    </template>
+    <template #chart-interaction-overlay>
+      <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="snapshot-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
+    </template>
   </ChartSurface>
 </template>
 
