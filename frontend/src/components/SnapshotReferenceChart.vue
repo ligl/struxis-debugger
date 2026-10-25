@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { projectSnapshotBrightCandles, resolveSnapshotLiveRangeCoordinates, type SnapshotBrightCandleGeometry } from "../snapshot-playback-geometry";
+import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
+import type { ReplayChartSelection } from "../origin-types";
 import SBarChartSurface from "./SBarChartSurface.vue";
 import SnapshotPlaybackOverlay from "./SnapshotPlaybackOverlay.vue";
 import SnapshotLiveRangeMarkers from "./SnapshotLiveRangeMarkers.vue";
@@ -25,6 +27,9 @@ interface ChartSurfacePort {
   getSbarCoordinate(sbarId: string): number | null;
   getLogicalCoordinate(index: number): number | null;
   getPriceCoordinate(price: number): number | null;
+  getSbarIdAtCoordinate(x: number, clampToSequence?: boolean): string | null;
+  getSbarMarker(sbarId: string): { id: string; x: number; y: number; width: number; height: number } | null;
+  getStructureGeometry(): { cbarRectangles: Array<{ id: string; x: number; y: number; width: number; height: number }>; swingSegments: Array<{ id: string; x1: number; y1: number; x2: number; y2: number; state: string; color: string; dasharray: string }> };
 }
 
 const props = defineProps<{
@@ -46,6 +51,7 @@ const emit = defineEmits<{
   activate: [];
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
+  objectSelect: [selection: ReplayChartSelection];
 }>();
 
 const surface = ref<ChartSurfacePort | null>(null);
@@ -102,6 +108,35 @@ function handleCrosshairChange(anchor: { sbarId: string | null; price: number | 
   if (!props.syncEnabled || crosshairGate.isApplying) return;
   crosshairGate.setPeerPositionActive(false);
   emit("crosshairChange", { source: "reference", ...anchor });
+}
+
+function handleChartClick(point: { x: number; y: number | null } | null): void {
+  const port = surface.value;
+  if (!point || point.y === null || !port || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+  const anchorSbarId = port.getSbarIdAtCoordinate(point.x);
+  if (!anchorSbarId) return;
+  const geometry = port.getStructureGeometry();
+  const structureHit = hitTestStructureObject({
+    x: point.x,
+    y: point.y,
+    swings: geometry.swingSegments,
+    cbars: geometry.cbarRectangles,
+    swingVisible: true,
+    cbarVisible: true,
+  });
+  if (structureHit) {
+    emit("objectSelect", { kind: structureHit.kind, id: structureHit.id, checkpointSbarId: anchorSbarId });
+    return;
+  }
+  const marker = port.getSbarMarker(anchorSbarId);
+  if (!marker) return;
+  const centerX = marker.x + marker.width / 2;
+  if (
+    Math.abs(point.x - centerX) > Math.max(3, marker.width / 2 + 1) ||
+    point.y < marker.y - 5 ||
+    point.y > marker.y + marker.height + 5
+  ) return;
+  emit("objectSelect", { kind: "sbar", id: anchorSbarId, checkpointSbarId: anchorSbarId });
 }
 
 function applyViewportRequest(request: ReplayChartViewportSync | null | undefined): void {
@@ -210,6 +245,7 @@ onMounted(() => {
     @logical-range-change="handleViewportChange"
     @projection-frame="refreshSnapshotGeometry"
     @crosshair-anchor-change="handleCrosshairChange"
+    @chart-click="handleChartClick"
   >
     <template #chart-structure-overlays="{ cbarRectangles, swingSegments }">
       <SnapshotPlaybackOverlay
