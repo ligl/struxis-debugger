@@ -3,8 +3,7 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import OriginChart from "../../src/components/OriginChart.vue";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
-import SnapshotPlaybackOverlay from "../../src/components/SnapshotPlaybackOverlay.vue";
-import SnapshotLiveRangeMarkers from "../../src/components/SnapshotLiveRangeMarkers.vue";
+import { SnapshotReferencePrimitive } from "../../src/snapshot-reference-primitives";
 import type { SBarDto } from "../../src/origin-types";
 
 const bars: SBarDto[] = [{
@@ -23,6 +22,7 @@ const surfacePortCalls = {
   viewportRanges: [] as Array<{ from: number; to: number }>,
   crosshairs: [] as Array<{ sbarId: string; price: number }>,
   clears: 0,
+  primitives: [] as Array<{ id: string; primitive: unknown; dispose?: () => void }>,
 };
 
 const SurfaceStub = defineComponent({
@@ -47,6 +47,10 @@ const SurfaceStub = defineComponent({
       getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "sbar-1" : null,
       getSbarIdAtClientX: (clientX: number, clampToSequence = false) => clientX >= 0 && clientX <= 10 || clampToSequence ? "sbar-1" : null,
       hasSbarId: (sbarId: string) => sbarId === "sbar-1",
+      registerPrimitive: (id: string, primitive: unknown, dispose?: () => void) => {
+        surfacePortCalls.primitives.push({ id, primitive, dispose });
+        return () => { dispose?.(); };
+      },
     });
     return {};
   },
@@ -58,6 +62,7 @@ describe("chart entry adapters", () => {
     surfacePortCalls.viewportRanges.length = 0;
     surfacePortCalls.crosshairs.length = 0;
     surfacePortCalls.clears = 0;
+    surfacePortCalls.primitives.length = 0;
   }
   it("keeps Dataset range-selection props and presentation at the Origin adapter boundary", () => {
     const wrapper = mount(OriginChart, {
@@ -117,8 +122,11 @@ describe("chart entry adapters", () => {
     expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackEnabled"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackOffset"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["snapshotProcessedCount"])).toBeUndefined();
-    expect(wrapper.findComponent(SnapshotPlaybackOverlay).exists()).toBe(true);
-    expect(wrapper.findComponent(SnapshotLiveRangeMarkers).exists()).toBe(true);
+    expect(wrapper.findComponent({ name: "SnapshotPlaybackOverlay" }).exists()).toBe(false);
+    expect(wrapper.findComponent({ name: "SnapshotLiveRangeMarkers" }).exists()).toBe(false);
+    expect(surfacePortCalls.primitives).toHaveLength(1);
+    expect(surfacePortCalls.primitives[0]?.id).toBe("snapshot-reference:snapshot-1:overlays");
+    expect(surfacePortCalls.primitives[0]?.primitive).toBeInstanceOf(SnapshotReferencePrimitive);
   });
 
   it("applies Live viewport requests through the adapter port", async () => {
@@ -188,7 +196,7 @@ describe("chart entry adapters", () => {
   });
 
 
-  it("projects Snapshot playback geometry in the Snapshot adapter", async () => {
+  it("publishes Snapshot playback state to its private Primitive", async () => {
     clearSurfaceCalls();
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
@@ -207,18 +215,22 @@ describe("chart entry adapters", () => {
     });
 
     await Promise.resolve();
-    const overlay = wrapper.getComponent(SnapshotPlaybackOverlay);
-    expect(((overlay.props() as Record<string, unknown>)["enabled"])).toBe(true);
-    expect(((overlay.props() as Record<string, unknown>)["brightCandles"])).toEqual([
-      { id: "sbar-1", x: 6.8, y: 18, width: 6.4, height: 6 },
-    ]);
-    expect((wrapper.getComponent(SnapshotLiveRangeMarkers).props() as Record<string, unknown>)["boundaries"]).toEqual({
-      start: 10,
-      end: 10,
+    const registration = surfacePortCalls.primitives[0];
+    expect(registration?.primitive).toBeInstanceOf(SnapshotReferencePrimitive);
+    const primitive = registration?.primitive as SnapshotReferencePrimitive;
+    expect(primitive).toBeDefined();
+    // Primitive owns the projection and rendering; adapter supplies only domain state.
+    expect((primitive as unknown as { state: { enabled: boolean; playbackEnabled: boolean; offset: number | null; liveCount: number; processedCount: number } }).state).toMatchObject({
+      enabled: true,
+      playbackEnabled: true,
+      offset: 0,
+      liveCount: 1,
+      processedCount: 1,
     });
     const surface = wrapper.getComponent(SurfaceStub);
     expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackEnabled"])).toBeUndefined();
     expect(((surface.props() as Record<string, unknown>)["snapshotPlaybackOffset"])).toBeUndefined();
+    wrapper.unmount();
   });
 
 });
