@@ -452,48 +452,27 @@ function markerForSbar(sbarId: string | null | undefined): SBarSelectionMarker |
   if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
   const index = bars.value.findIndex((bar) => bar.sbarId === sbarId);
   const bar = index >= 0 ? bars.value[index] : undefined;
-  const time = timeBySbarId.get(sbarId);
-  if (!bar || time === undefined) return null;
-  const x = chart.timeScale().timeToCoordinate(time);
+  const timeScale = chart.timeScale();
+  if (!bar || index < 0) return null;
+
+  // Use Lightweight Charts' actual logical slot boundaries, which track wheel
+  // zoom, range zoom, pan and resize without a pixel-width heuristic.
+  const left = timeScale.logicalToCoordinate(index - 0.5);
+  const right = timeScale.logicalToCoordinate(index + 0.5);
   const highY = candleSeries.priceToCoordinate(Number(bar.high));
   const lowY = candleSeries.priceToCoordinate(Number(bar.low));
-  if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
-  const adjacentXs = [
-    index > 0 ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index - 1]!.sbarId)!) : null,
-    index + 1 < bars.value.length ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index + 1]!.sbarId)!) : null,
-  ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
-  const spacing = adjacentXs.length
-    ? Math.min(...adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0))
-    : 8;
-  const width = Math.max(4, Math.min(12, Number.isFinite(spacing) && spacing > 0 ? spacing * 0.42 : 6));
+  if ([left, right, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
+
+  const x1 = Math.min(left as number, right as number);
+  const x2 = Math.max(left as number, right as number);
   const top = Math.min(highY as number, lowY as number);
   const bottom = Math.max(highY as number, lowY as number);
-  return { id: sbarId, x: (x as number) - width / 2, y: top, width, height: Math.max(2, bottom - top) };
+  return { id: sbarId, x: x1, y: top, width: Math.max(1, x2 - x1), height: Math.max(1, bottom - top) };
 }
 
 function sbarRangeHighlight(sbarId: string | null | undefined): SBarSelectionMarker | null {
-  if (!chart || !candleSeries || !sbarId || !layerVisibility.value.sbar) return null;
-  const index = bars.value.findIndex((bar) => bar.sbarId === sbarId);
-  if (index < 0) return null;
-  const bar = bars.value[index];
-  const time = timeBySbarId.get(sbarId);
-  if (!bar || time === undefined) return null;
-  const x = chart.timeScale().timeToCoordinate(time);
-  const highY = candleSeries.priceToCoordinate(Number(bar.high));
-  const lowY = candleSeries.priceToCoordinate(Number(bar.low));
-  if ([x, highY, lowY].some((value) => value === null || value === undefined || !Number.isFinite(value))) return null;
-
-  const adjacentXs = [
-    index > 0 ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index - 1]!.sbarId)!) : null,
-    index + 1 < bars.value.length ? chart.timeScale().timeToCoordinate(timeBySbarId.get(bars.value[index + 1]!.sbarId)!) : null,
-  ].filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
-  const distances = adjacentXs.map((adjacentX) => Math.abs(adjacentX - (x as number))).filter((distance) => distance > 0);
-  const spacing = distances.length > 0 ? Math.min(...distances) : 8;
-  // Outline the SBar's own time/price interval, with a small gap from neighbors.
-  const width = Math.max(4, Math.min(32, Number.isFinite(spacing) && spacing > 0 ? spacing * 0.9 : 8));
-  const top = Math.min(highY as number, lowY as number);
-  const bottom = Math.max(highY as number, lowY as number);
-  return { id: sbarId, x: (x as number) - width / 2, y: top, width, height: Math.max(2, bottom - top) };
+  // Hover and Selection must use the same live-projected SBar geometry.
+  return markerForSbar(sbarId);
 }
 
 function updateHoverMarker(): void {
