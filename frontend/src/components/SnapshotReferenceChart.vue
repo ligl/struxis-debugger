@@ -162,6 +162,10 @@ function applyPlaybackSeriesStyles(): void {
   }
 }
 
+function handleProjectionFrame(): void {
+  refreshSnapshotGeometry();
+}
+
 function handleViewportChange(range: { from: number; to: number }): void {
   if (!props.syncEnabled || (props.syncOwner !== undefined && props.syncOwner !== "snapshot")) return;
   emit("viewportChange", { source: "reference", ...range });
@@ -336,7 +340,8 @@ onBeforeUnmount(() => {
     :keyboard-active="keyboardActive"
     @chart-activate="emit('activate')"
     @logical-range-change="handleViewportChange"
-    @projection-frame="refreshSnapshotGeometry"
+    @projection-frame="handleProjectionFrame"
+    @layout-ready="emit('layoutReady')"
     @crosshair-anchor-change="handleCrosshairChange"
     @chart-click="handleChartClick"
   >
