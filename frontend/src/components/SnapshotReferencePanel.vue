@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import SnapshotReferenceChart from "./SnapshotReferenceChart.vue";
 import { describeIpcError, getSnapshotReference } from "../origin-bridge";
 import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplaySnapshotInspectorSelection, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
@@ -30,6 +30,32 @@ const emit = defineEmits<{
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
   objectSelect: [selection: ReplaySnapshotInspectorSelection | null];
 }>();
+
+const snapshotChartActivationReady = ref(props.active !== false);
+let snapshotChartActivationTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(() => props.active, (active) => {
+  if (snapshotChartActivationTimer !== null) {
+    clearTimeout(snapshotChartActivationTimer);
+    snapshotChartActivationTimer = null;
+  }
+  if (active === false) {
+    snapshotChartActivationReady.value = false;
+    return;
+  }
+
+  // Let Live Replay finish its activation-time FIT before the reference chart
+  // mounts and aligns its viewport to the overlapping SBar interval.
+  snapshotChartActivationReady.value = false;
+  snapshotChartActivationTimer = setTimeout(() => {
+    snapshotChartActivationReady.value = true;
+    snapshotChartActivationTimer = null;
+  }, 200);
+});
+
+onBeforeUnmount(() => {
+  if (snapshotChartActivationTimer !== null) clearTimeout(snapshotChartActivationTimer);
+});
 
 const selectedSnapshotId = ref<string | null>(null);
 const reference = ref<SnapshotReferenceDto | null>(null);
@@ -296,7 +322,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
       </div>
       <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
         <SnapshotReferenceChart
-          v-if="active !== false"
+          v-if="active !== false && snapshotChartActivationReady"
           :bars="reference.bars"
           :structure="playbackStructure"
           :snapshot-id="reference.snapshotId"
