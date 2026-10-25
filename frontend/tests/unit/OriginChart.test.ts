@@ -501,7 +501,9 @@ describe("SBarChartSurface and chart entry adapters", () => {
 
     expect(wrapper.get('[data-testid="origin-object-hover-label"]').text()).toBe("SWING · swing-hover");
     expect(wrapper.get('[data-testid="origin-selected-sbar"]').attributes("data-sbar-id")).toBe(bars[0]!.sbarId);
-    expect(wrapper.get('[data-testid="origin-hover-swing"]').attributes("data-swing-id")).toBe("swing-hover");
+    // Structure hover/selection visuals are rendered by the attached Primitive,
+    // not duplicated as SVG nodes. Hover remains transient and Inspector selection stays unchanged.
+    expect(wrapper.find('[data-testid="origin-hover-swing"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-selected-swing"]').exists()).toBe(false);
 
     // Hiding the hovered structure layer invalidates the transient hover but not persistent selection.
