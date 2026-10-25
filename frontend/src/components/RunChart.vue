@@ -385,8 +385,15 @@ function updateStructureOverlays(): void {
     hoveredSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
-    cbarPrimitive?.setData([], { timeBySbarId, indexBySbarId });
-    swingPrimitive?.setData([], { timeBySbarId, indexBySbarId });
+    syncStructurePrimitiveControllers({
+      cbar: cbarPrimitive,
+      swing: swingPrimitive,
+      cbars: [],
+      swings: [],
+      projection: { timeBySbarId, indexBySbarId },
+      cbarVisible: layerVisibility.value.cbar,
+      swingVisible: layerVisibility.value.swing,
+    });
     targetSbarX.value = null;
     return;
   }
@@ -693,8 +700,15 @@ function updateChart(): void {
       selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
-      cbarPrimitive?.setData([], { timeBySbarId, indexBySbarId });
-      swingPrimitive?.setData([], { timeBySbarId, indexBySbarId });
+      syncStructurePrimitiveControllers({
+        cbar: cbarPrimitive,
+        swing: swingPrimitive,
+        cbars: [],
+        swings: [],
+        projection: { timeBySbarId, indexBySbarId },
+        cbarVisible: layerVisibility.value.cbar,
+        swingVisible: layerVisibility.value.swing,
+      });
       targetSbarX.value = null;
       chartError.value = "";
       return;
@@ -754,8 +768,15 @@ function updateChart(): void {
     selectedSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
-    cbarPrimitive?.setData([], { timeBySbarId, indexBySbarId });
-    swingPrimitive?.setData([], { timeBySbarId, indexBySbarId });
+    syncStructurePrimitiveControllers({
+      cbar: cbarPrimitive,
+      swing: swingPrimitive,
+      cbars: [],
+      swings: [],
+      projection: { timeBySbarId, indexBySbarId },
+      cbarVisible: layerVisibility.value.cbar,
+      swingVisible: layerVisibility.value.swing,
+    });
     targetSbarX.value = null;
     chartError.value = error instanceof Error ? error.message : String(error);
   }
