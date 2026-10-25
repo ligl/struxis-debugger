@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { createSbarChartRuntime, disposeSbarChartRuntime } from "../sbar-chart-runtime";
+import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
@@ -445,11 +445,7 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
     syncStructurePrimitives();
   }
 
-  if (layer === "sbar") {
-    candleSeries?.applyOptions({ visible: layerVisibility.value.sbar });
-  } else if (layer === "volume") {
-    volumeSeries?.applyOptions({ visible: layerVisibility.value.volume });
-  }
+  applySbarChartSeriesVisibility(candleSeries, volumeSeries, layerVisibility.value);
 
   // Flush the shared scheduler so the legend's visual state and the hit-test
   // geometry become consistent in the same interaction turn.
