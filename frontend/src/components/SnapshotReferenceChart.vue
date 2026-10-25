@@ -33,6 +33,7 @@ const props = defineProps<{
   structure: ReplayInspectorStructureDto | null;
   snapshotId: string;
   syncEnabled: boolean;
+  keyboardActive?: boolean;
   syncRequest?: ReplayChartViewportSync | null;
   crosshairSync?: ReplayChartCrosshairSync | null;
   liveBarCount: number;
@@ -42,6 +43,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  activate: [];
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
@@ -215,6 +217,8 @@ onMounted(() => {
     panel-class="snapshot-reference-chart"
     panel-label="Snapshot Reference chart"
     :chart-label="`Candlestick and volume chart for Snapshot ${snapshotId}`"
+    :keyboard-active="keyboardActive"
+    @chart-activate="emit('activate')"
     @logical-range-change="handleViewportChange"
     @projection-frame="refreshSnapshotGeometry"
     @crosshair-anchor-change="handleCrosshairChange"
