@@ -302,8 +302,9 @@ onBeforeUnmount(stopBoundaryDrag);
           :height="hoveredSbarMarker.height"
           data-testid="origin-hover-sbar"
           :data-sbar-id="hoveredSbarMarker.id"
-          fill="rgb(195 203 209 / 12%)"
-          stroke="none"
+          fill="none"
+          stroke="#C3CBD1"
+          stroke-width="1.25"
         />
         <rect
           v-if="selectedSbarMarker"
