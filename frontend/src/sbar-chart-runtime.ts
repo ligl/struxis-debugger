@@ -28,9 +28,9 @@ export interface SBarChartRuntime {
 /**
  * Creates only the shared Lightweight Charts primitives used by SBar charts.
  * The caller remains responsible for event subscriptions, ResizeObserver,
- * overlay scheduling, business interactions, and chart disposal. Primitive
- * adapters are registered with the returned chart-local host and that host
- * must be disposed before removing the chart.
+ * overlay scheduling, business interactions, and chart disposal. CBar / Swing
+ * Primitive registration is centralized here, but every invocation creates
+ * chart-local controllers. The host must be disposed before removing the chart.
  */
 export function createSbarChartRuntime(
   host: HTMLElement,
