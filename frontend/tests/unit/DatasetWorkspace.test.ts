@@ -37,10 +37,10 @@ const OriginChartStub = defineComponent({
   template: "<div data-testid=\"origin-chart-stub\" />",
 });
 
-function mountDatasetWorkspace(originValue: OriginDatasetDto | null = origin, loadStatus: "idle" | "loading" | "loaded" | "failed" = "loaded") {
+function mountDatasetWorkspace(originValue: OriginDatasetDto | null = origin, loadStatus: "idle" | "loading" | "loaded" | "failed" = "loaded", active = true) {
   return mount(DatasetWorkspace, {
     props: {
-      active: true,
+      active,
       datasets: [],
       selectedId: "",
       selectedDataset: null,
@@ -104,6 +104,17 @@ describe("DatasetWorkspace", () => {
 
     expect(wrapper.find('[data-testid="dataset-chart-empty"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-chart-stub"]').exists()).toBe(true);
+  });
+
+  it("keeps the Origin chart mounted while Dataset is inactive", async () => {
+    const wrapper = mountDatasetWorkspace(origin, "loaded", false);
+
+    expect(wrapper.find('[data-testid="origin-chart-stub"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="origin-chart-stub"]').isVisible()).toBe(false);
+
+    await wrapper.setProps({ active: true });
+
+    expect(wrapper.get('[data-testid="origin-chart-stub"]').isVisible()).toBe(true);
   });
 
   it("forwards catalog and Test Dataset actions to the composition root", () => {
