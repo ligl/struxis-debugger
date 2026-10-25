@@ -63,6 +63,7 @@ const liveBars = computed(() => {
 function handleSyncSequence(sequence: ReplaySyncSequenceDescriptor | null): void {
   // Every descriptor transition invalidates peer commands, even when a new
   // Snapshot happens to resolve to the same numeric Offset.
+  if (!sequence) activeChartOwner.value = "live";
   referenceSequence.value = sequence;
   syncRequest.value = null;
   crosshairSync.value = null;
