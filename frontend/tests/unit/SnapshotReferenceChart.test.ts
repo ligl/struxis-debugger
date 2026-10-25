@@ -148,7 +148,7 @@ describe("SnapshotReferenceChart", () => {
     expect(chartMocks.volumeSetData).toHaveBeenCalled();
     const candleSetDataCalls = chartMocks.candleSetData.mock.calls;
     const candleData = candleSetDataCalls[candleSetDataCalls.length - 1]?.[0] as Array<{ color: string }>;
-    expect(candleData[0]?.color).toBe("#2E4239");
+    expect(candleData[0]?.color).toBe("#2e4239");
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
@@ -351,7 +351,7 @@ describe("SnapshotReferenceChart", () => {
     wrapper.unmount();
   });
 
-  it("leaves B/C layer shortcuts to the active Replay Live chart", async () => {
+  it("toggles Snapshot SBar and CBar layers with B/C while Snapshot owns chart navigation", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         ...snapshotDefaults,
@@ -368,14 +368,13 @@ describe("SnapshotReferenceChart", () => {
     expect(sbarLegend.attributes("aria-pressed")).toBe("true");
     expect(cbarLegend.attributes("aria-pressed")).toBe("true");
 
-    for (const key of ["b", "c"]) {
+    for (const [key, legend] of [["b", sbarLegend], ["c", cbarLegend]] as const) {
       const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
       document.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
+      expect(event.defaultPrevented).toBe(true);
+      expect(legend.attributes("aria-pressed")).toBe("false");
     }
 
-    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
-    expect(cbarLegend.attributes("aria-pressed")).toBe("true");
     wrapper.unmount();
   });
 
