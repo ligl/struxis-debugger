@@ -106,3 +106,4 @@ describe("paired SBar / Volume data application", () => {
     expect(candleUpdate).not.toHaveBeenCalled();
   });
 });
+});
