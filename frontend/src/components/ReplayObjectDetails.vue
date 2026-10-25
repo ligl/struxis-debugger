@@ -24,7 +24,7 @@ const title = computed(() => props.selectedObject.kind.toUpperCase());
 const sourceLabel = computed(() => {
   if (props.selectedObject.source === "snapshot") return `SNAPSHOT · ${props.snapshotLabel ?? props.snapshotId ?? "REFERENCE"}`;
   if (props.selectedObject.kind === "sbar") {
-    return props.selectedObject.source === "checkpoint" ? "CONFIRMED CHECKPOINT" : "TEST INPUT";
+    return props.selectedObject.source === "checkpoint" ? "CONFIRMED CHECKPOINT" : "LIVE REPLAY";
   }
   return "CONFIRMED CHECKPOINT STRUCTURE";
 });
