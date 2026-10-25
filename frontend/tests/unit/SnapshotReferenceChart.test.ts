@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
+import { SnapshotReferencePrimitive } from "../../src/snapshot-reference-primitives";
 import type { SBarDto } from "../../src/origin-types";
 
 const chartMocks = vi.hoisted(() => ({
@@ -114,6 +115,31 @@ function installChartMock() {
 }
 
 describe("SnapshotReferenceChart", () => {
+  it("injects Snapshot-owned drawing Primitive instead of rendering private SVG overlays", async () => {
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        ...snapshotDefaults,
+        snapshotId: "snapshot-private-primitive",
+        syncEnabled: true,
+        playbackOffset: 0,
+        liveBarCount: 1,
+        playbackEnabled: true,
+        processedCount: 1,
+      },
+    });
+    await nextTick();
+
+    const injected = chartMocks.attachPrimitive.mock.calls
+      .map((call) => call[0])
+      .find((primitive) => primitive instanceof SnapshotReferencePrimitive);
+    expect(injected).toBeDefined();
+    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("exposes generic Primitive injection and owns attachment cleanup", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: { ...snapshotDefaults, snapshotId: "snapshot-primitive-injection" },
@@ -157,82 +183,6 @@ describe("SnapshotReferenceChart", () => {
     vi.unstubAllGlobals();
   });
 
-  it("dims the full Snapshot plot while revealing processed candles one by one", async () => {
-    const bars = [
-      bar(),
-      bar({ sbarId: "1700000060000000000", tsEvent: "1700000060000000000", tsInit: "1700000060000000001", open: "10", close: "11" }),
-      bar({ sbarId: "1700000120000000000", tsEvent: "1700000120000000000", tsInit: "1700000120000000001", open: "11", close: "10" }),
-    ];
-    const wrapper = mount(SnapshotReferenceChart, {
-      props: {
-        ...snapshotDefaults,
-        bars,
-        snapshotId: "snapshot-playback-brightness",
-        structure: {
-          cbarCount: 1,
-          cbars: [{
-            cbarId: "cbar-checkpoint-1",
-            high: "12",
-            low: "9",
-            sbarStartId: "1700000000000000000",
-            sbarEndId: "1700000060000000000",
-            spanSbars: 2,
-            fractalType: null,
-            createdAt: "1",
-          }],
-          swingCount: 1,
-          swings: [{
-            swingId: "swing-checkpoint-1",
-            direction: "Up",
-            high: "12",
-            low: "9",
-            cbarStartId: "cbar-checkpoint-1",
-            cbarEndId: "cbar-checkpoint-1",
-            sbarStartId: "1700000000000000000",
-            sbarEndId: "1700000060000000000",
-            startOi: null,
-            endOi: null,
-            volume: "200",
-            spanSbars: 2,
-            state: "Confirmed",
-            createdAt: "1",
-            updatedAt: "1",
-          }],
-        },
-        syncEnabled: true,
-        liveBarCount: 2,
-        playbackEnabled: true,
-        playbackOffset: 0,
-        processedCount: 1,
-      },
-    });
-    await nextTick();
-
-    const initialSetDataCalls = chartMocks.candleSetData.mock.calls.length;
-    expect(wrapper.get('[data-testid="snapshot-playback-dimming"]').attributes("fill-opacity")).toBe("0.68");
-    expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]').map((node) => node.attributes("data-sbar-id")))
-      .toEqual(["1700000000000000000"]);
-    expect(wrapper.findAll('[data-testid="snapshot-bright-cbar-cutout"]').map((node) => node.attributes("data-cbar-id")))
-      .toEqual(["cbar-checkpoint-1"]);
-    expect(wrapper.findAll('[data-testid="snapshot-bright-swing-cutout"]').map((node) => node.attributes("data-swing-id")))
-      .toEqual(["swing-checkpoint-1"]);
-    expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
-
-    await wrapper.setProps({ processedCount: 2 } as never);
-    expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]').map((node) => node.attributes("data-sbar-id")))
-      .toEqual(["1700000000000000000", "1700000060000000000"]);
-    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(true);
-    expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
-
-    // Playback completion disables the overlay and restores the whole Snapshot,
-    // including historical bars outside the Live/Snapshot overlap.
-    await wrapper.setProps({ playbackEnabled: false } as never);
-    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
-    expect(wrapper.findAll('[data-testid="snapshot-bright-candle-cutout"]')).toHaveLength(0);
-    expect(chartMocks.candleSetData).toHaveBeenCalledTimes(initialSetDataCalls);
-    wrapper.unmount();
-  });
-
   it("applies an existing Live viewport request when Snapshot Reference mounts late", () => {
     const bars = [
       bar(),
@@ -263,125 +213,6 @@ describe("SnapshotReferenceChart", () => {
       from: 100.25,
       to: 101.75,
     });
-    wrapper.unmount();
-  });
-
-  it("anchors Snapshot sync guides to the first and last Live SBars regardless of viewport", async () => {
-    const bars = [
-      bar(),
-      bar({
-        sbarId: "1700000060000000000",
-        tsEvent: "1700000060000000000",
-        tsInit: "1700000060000000001",
-      }),
-      bar({
-        sbarId: "1700000120000000000",
-        tsEvent: "1700000120000000000",
-        tsInit: "1700000120000000001",
-      }),
-    ];
-    const wrapper = mount(SnapshotReferenceChart, {
-      props: {
-        ...snapshotDefaults,
-        bars,
-        snapshotId: "snapshot-reference-live-range-guides",
-        structure: null,
-        syncEnabled: true,
-        liveBarCount: 2,
-        playbackOffset: 1,
-        playbackEnabled: true,
-        processedCount: 1,
-        syncRequest: {
-          revision: 1,
-          source: "live",
-          from: -0.5,
-          to: 1.5,
-          offset: 1,
-        },
-      },
-    });
-    await nextTick();
-
-    const start = wrapper.get('[data-testid="snapshot-live-range-start"]');
-    const end = wrapper.get('[data-testid="snapshot-live-range-end"]');
-    expect(start.attributes("x1")).toBe("200");
-    expect(end.attributes("x1")).toBe("300");
-    expect(start.attributes("opacity")).toBe("0.42");
-    expect(start.attributes("stroke-width")).toBe("0.9");
-    expect(start.attributes("stroke-dasharray")).toBe("3 5");
-
-    const startArrow = wrapper.get('[data-testid="snapshot-live-range-start-arrow"]');
-    const endArrow = wrapper.get('[data-testid="snapshot-live-range-end-arrow"]');
-    expect(startArrow.attributes("d")).toContain("H 208");
-    expect(endArrow.attributes("d")).toContain("H 292");
-    expect(startArrow.attributes("stroke")).toBe(start.attributes("stroke"));
-    expect(endArrow.attributes("stroke")).toBe(end.attributes("stroke"));
-    expect(startArrow.attributes("pointer-events")).toBe("none");
-
-    // A viewport request outside the Live interval must not hide or redefine
-    // the domain anchors. Only their projected pixel coordinates may change.
-    await wrapper.setProps({
-      syncRequest: {
-        revision: 2,
-        source: "live",
-        from: 8.25,
-        to: 9.75,
-        offset: 1,
-      },
-    } as never);
-    await nextTick();
-    expect(wrapper.get('[data-testid="snapshot-live-range-start"]').attributes("x1")).toBe("200");
-    expect(wrapper.get('[data-testid="snapshot-live-range-end"]').attributes("x1")).toBe("300");
-    expect(wrapper.get('[data-testid="snapshot-live-range-start-arrow"]').attributes("d")).toContain("H 208");
-    expect(wrapper.get('[data-testid="snapshot-live-range-end-arrow"]').attributes("d")).toContain("H 292");
-
-    await wrapper.setProps({ syncEnabled: false } as never);
-    await nextTick();
-    expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="snapshot-live-range-start-arrow"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="snapshot-live-range-end-arrow"]').exists()).toBe(false);
-    // Run-progress brightness is a peer projection and must be invalidated with the Offset.
-    expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
-    wrapper.unmount();
-  });
-
-  it("keeps Snapshot sync guides anchored to the same SBars at sub-candle zoom", async () => {
-    const bars = [
-      bar(),
-      bar({
-        sbarId: "1700000060000000000",
-        tsEvent: "1700000060000000000",
-        tsInit: "1700000060000000001",
-      }),
-      bar({
-        sbarId: "1700000120000000000",
-        tsEvent: "1700000120000000000",
-        tsInit: "1700000120000000001",
-      }),
-    ];
-    const wrapper = mount(SnapshotReferenceChart, {
-      props: {
-        ...snapshotDefaults,
-        bars,
-        snapshotId: "snapshot-reference-live-range-subcandle-zoom",
-        structure: null,
-        syncEnabled: true,
-        liveBarCount: 2,
-        playbackOffset: 1,
-        syncRequest: {
-          revision: 1,
-          source: "live",
-          from: 0.2,
-          to: 0.4,
-          offset: 1,
-        },
-      },
-    });
-    await nextTick();
-
-    expect(wrapper.get('[data-testid="snapshot-live-range-start"]').attributes("x1")).toBe("200");
-    expect(wrapper.get('[data-testid="snapshot-live-range-end"]').attributes("x1")).toBe("300");
     wrapper.unmount();
   });
 
