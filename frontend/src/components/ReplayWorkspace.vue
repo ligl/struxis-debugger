@@ -24,6 +24,13 @@ const emit = defineEmits<{
   targetSelect: [sbarId: string];
   targetCancel: [];
 }>();
+type ReplayChartOwner = "live" | "snapshot";
+const activeChartOwner = ref<ReplayChartOwner>("live");
+
+function activateChart(owner: ReplayChartOwner): void {
+  activeChartOwner.value = owner;
+}
+
 const referenceSequence = ref<ReplaySyncSequenceDescriptor | null>(null);
 const syncOffset = computed(() => resolveReplaySyncOffset(
   props.testDataset?.barType ?? null,
@@ -91,7 +98,7 @@ watch(
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel
@@ -100,12 +107,14 @@ watch(
           :live-sbar-ids="liveBars.map((bar) => bar.sbarId)"
           :sync-identity="JSON.stringify([testDataset?.testDatasetId, testDataset?.barType, liveBars.map((bar) => bar.sbarId)])"
           :sync-eligible="syncEligible"
+          :keyboard-active="activeChartOwner === 'snapshot'"
           :sync-offset="syncOffset"
           :sync-request="activeSyncRequest"
           :crosshair-sync="activeCrosshairSync"
           :progress-applies="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId && runState.status !== 'disposed'"
           :processed-count="runState !== null && testDataset !== null && runState.testDatasetId === testDataset.testDatasetId ? runState.processedCount : 0"
           @sync-sequence="handleSyncSequence"
+          @chart-activate="activateChart('snapshot')"
           @viewport-change="handleViewportChange"
           @crosshair-change="handleCrosshairChange"
         />
