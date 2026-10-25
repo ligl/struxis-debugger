@@ -176,7 +176,7 @@ export type InspectorWorkspaceContext =
         | { kind: "swing"; object: ReplayInspectorSwingDto; source?: "checkpoint" | "snapshot" }
         | null;
       snapshotId: string | null;
-      snapshotLabel: string | null;
+      snapshotLabel?: string | null;
       snapshotBars: SBarDto[];
       snapshotStructure: ReplayInspectorStructureDto | null;
       error: string;
@@ -204,7 +204,7 @@ export type ReplayChartSelection = {
 type ReplaySnapshotSelectionContext = {
   snapshotId: string;
   /** Human-readable label shared with the Snapshot Reference dropdown. */
-  snapshotLabel: string;
+  snapshotLabel?: string;
   checkpointSbarId: string;
   timeframe: string;
   bars: SBarDto[];
