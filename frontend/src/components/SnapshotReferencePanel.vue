@@ -5,7 +5,7 @@ import { describeIpcError, getSnapshotReference } from "../origin-bridge";
 import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplaySnapshotInspectorSelection, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
   liveSbarIds?: string[];
@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{
   processedCount?: number;
   /** Changes whenever the Live sequence identity is replaced. */
   syncIdentity?: string | null;
-}>());
+}>();
 
 const emit = defineEmits<{
   chartActivate: [];
