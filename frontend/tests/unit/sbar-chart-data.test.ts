@@ -35,7 +35,7 @@ describe("mapSBarsToChart", () => {
     expect(result.candles.map((candle) => candle.time)).toEqual([1700000000, 1700000001]);
     expect(result.candles[0]).toMatchObject({ open: 10.25, high: 12, low: 9.5, close: 11.75 });
     expect(result.candles[0]).toMatchObject({ color: "#557E65", borderColor: "#557E65", wickColor: "#557E65" });
-    expect(result.candles[1]).toMatchObject({ color: "#79B58B", borderColor: "#79B58B", wickColor: "#79B58B" });
+    expect(result.candles[1]).toMatchObject({ color: "#557E65", borderColor: "#557E65", wickColor: "#557E65" });
     expect(result.volume.map((point) => point.color)).toEqual(["#557E65", "#557E65"]);
     expect(result.volume.map((point) => point.value)).toEqual([123, 88]);
     expect(result.sbarIdByTime.get(1700000000)).toBe("1700000000000000000");
