@@ -8,6 +8,7 @@ import SnapshotReferencePanel from "../../src/components/SnapshotReferencePanel.
 config.global.stubs = {
   ...config.global.stubs,
   SnapshotReferenceChart: {
+    name: "SnapshotReferenceChart",
     props: [
       "bars",
       "structure",
