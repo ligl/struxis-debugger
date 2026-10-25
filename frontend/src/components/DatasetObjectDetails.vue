@@ -177,8 +177,8 @@ function formatReplayField(field: string, value: unknown): string {
             <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsInit, timeframe)" :copy-value="endpoint.object.tsInit" wide />
             <InspectorPropertyField label="Open" :value="endpoint.object.open" />
             <InspectorPropertyField label="High" :value="endpoint.object.high" />
-            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
             <InspectorPropertyField label="Close" :value="endpoint.object.close" />
+            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
             <InspectorPropertyField label="Volume" :value="endpoint.object.volume" />
           </dl>
         </details>
