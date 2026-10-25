@@ -113,6 +113,7 @@ function applyPlaybackSeriesStyles(): void {
   }
 
   const samePlaybackSequence = previous !== null
+    && previous.snapshotId === nextState.snapshotId
     && previous.bars === nextState.bars
     && previous.playbackEnabled
     && nextState.playbackEnabled
