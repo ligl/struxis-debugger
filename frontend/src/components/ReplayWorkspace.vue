@@ -31,6 +31,10 @@ function activateChart(owner: ReplayChartOwner): void {
   activeChartOwner.value = owner;
 }
 
+watch(() => props.active, (active) => {
+  if (!active) activeChartOwner.value = "live";
+});
+
 const referenceSequence = ref<ReplaySyncSequenceDescriptor | null>(null);
 const syncOffset = computed(() => resolveReplaySyncOffset(
   props.testDataset?.barType ?? null,
