@@ -6,7 +6,6 @@ import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewpor
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = withDefaults(defineProps<{
-  active?: boolean;
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
   liveSbarIds?: string[];
@@ -20,9 +19,7 @@ const props = withDefaults(defineProps<{
   processedCount?: number;
   /** Changes whenever the Live sequence identity is replaced. */
   syncIdentity?: string | null;
-}>(), {
-  active: true,
-});
+}>());
 
 const emit = defineEmits<{
   chartActivate: [];
@@ -35,19 +32,8 @@ const emit = defineEmits<{
 const selectedSnapshotId = ref<string | null>(null);
 const reference = ref<SnapshotReferenceDto | null>(null);
 const referenceLoading = ref(false);
-const chartLayoutReady = ref(false);
 const referenceError = ref("");
 let requestRevision = 0;
-
-watch(() => props.active, (active) => {
-  // Keep the chart instance and viewport alive while Replay is hidden, but
-  // mask its canvas until a positive visible-size resize has been applied.
-  if (!active) chartLayoutReady.value = false;
-});
-
-function handleChartLayoutReady(): void {
-  if (props.active) chartLayoutReady.value = true;
-}
 
 const availableSnapshots = computed(() =>
   props.instrumentId
@@ -306,7 +292,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
         <p class="snapshot-reference-unavailable">{{ referenceError }}</p>
         <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
       </div>
-      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled, 'is-layout-ready': chartLayoutReady }" :style="{ visibility: chartLayoutReady ? 'visible' : 'hidden' }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
+      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
         <SnapshotReferenceChart
           :bars="reference.bars"
           :structure="playbackStructure"
@@ -320,7 +306,6 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
           :playback-enabled="snapshotPlaybackEnabled"
           :playback-offset="syncOffset"
           :processed-count="processedCount ?? 0"
-          @layout-ready="handleChartLayoutReady"
           @activate="emit('chartActivate')"
           @viewport-change="emit('viewportChange', $event)"
           @crosshair-change="emit('crosshairChange', $event)"
