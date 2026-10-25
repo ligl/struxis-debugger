@@ -38,11 +38,11 @@ export function useReplayKeyboardShortcut(
   playbackStatus: Readonly<Ref<PlaybackStatus>>,
   canControlPlayback: Readonly<Ref<boolean>>,
   runBusy: Readonly<Ref<boolean>>,
-  playbackDelayMs: Readonly<Ref<number>>,
   targetSbarId: Readonly<Ref<string | null>>,
   restartToTarget: () => Promise<void>,
   executeCommand: (command: RunCommand) => Promise<void>,
   canUseReplayShortcuts: Readonly<Ref<boolean>> = canControlPlayback,
+  playbackDelayMs: Readonly<Ref<number>> = { value: 200 },
   setPlaybackDelay: (milliseconds: number) => void = () => undefined,
 ): void {
   function handleKeydown(event: KeyboardEvent): void {
