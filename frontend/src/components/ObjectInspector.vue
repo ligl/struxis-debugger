@@ -62,6 +62,9 @@ const replayInspectorError = computed(() =>
 const replaySnapshotId = computed(() =>
   props.context.workspace === "replay" ? props.context.snapshotId : null,
 );
+const replaySnapshotLabel = computed(() =>
+  props.context.workspace === "replay" ? props.context.snapshotLabel : null,
+);
 const replayBars = computed(() =>
   props.context.workspace === "replay" && selectedReplayObject.value?.source === "snapshot"
     ? props.context.snapshotBars
@@ -130,6 +133,7 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
         :bars="replayBars"
         :snapshot-structure="replaySnapshotStructure"
         :snapshot-id="replaySnapshotId"
+        :snapshot-label="replaySnapshotLabel"
       />
     </template>
     <template v-else-if="workspaceMode === 'replay' && replayInspector">
