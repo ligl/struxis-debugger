@@ -182,6 +182,7 @@ function handleSelection(event: Event): void {
 function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
   const current = reference.value;
   if (!current || current.snapshotId !== selectedSnapshotId.value) return;
+  const snapshotLabel = selectedSnapshot.value ? describeSnapshot(selectedSnapshot.value) : current.snapshotId;
 
   if (selection.kind === "sbar") {
     const bar = current.bars.find((item) => item.sbarId === selection.id);
@@ -189,6 +190,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
     const checkpoint = current.structureTimeline.find((item) => item.sbarId === bar.sbarId);
     emit("objectSelect", {
       snapshotId: current.snapshotId,
+      snapshotLabel,
       checkpointSbarId: bar.sbarId,
       timeframe: current.timeframe,
       kind: "sbar",
@@ -208,6 +210,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
       if (object) {
         emit("objectSelect", {
           snapshotId: current.snapshotId,
+          snapshotLabel,
           checkpointSbarId: checkpoint.sbarId,
           timeframe: current.timeframe,
           kind: "cbar",
@@ -222,6 +225,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
       if (object) {
         emit("objectSelect", {
           snapshotId: current.snapshotId,
+          snapshotLabel,
           checkpointSbarId: checkpoint.sbarId,
           timeframe: current.timeframe,
           kind: "swing",
