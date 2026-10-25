@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.vue";
-import { SnapshotReferencePrimitive } from "../../src/snapshot-reference-primitives";
+import { SnapshotReferencePrimitive, SnapshotVolumePrimitive } from "../../src/snapshot-reference-primitives";
 import type { SBarDto } from "../../src/origin-types";
 
 const chartMocks = vi.hoisted(() => ({
@@ -13,6 +13,8 @@ const chartMocks = vi.hoisted(() => ({
   volumeApplyOptions: vi.fn(),
   attachPrimitive: vi.fn(),
   detachPrimitive: vi.fn(),
+  attachVolumePrimitive: vi.fn(),
+  detachVolumePrimitive: vi.fn(),
   priceToCoordinate: vi.fn(),
   coordinateToPrice: vi.fn(),
   setCrosshairPosition: vi.fn(),
@@ -88,7 +90,7 @@ function installChartMock() {
   const chart = {
     addSeries: vi.fn()
       .mockReturnValueOnce({ setData: chartMocks.candleSetData, applyOptions: chartMocks.candleApplyOptions, priceToCoordinate: chartMocks.priceToCoordinate, coordinateToPrice: chartMocks.coordinateToPrice, attachPrimitive: chartMocks.attachPrimitive, detachPrimitive: chartMocks.detachPrimitive })
-      .mockReturnValueOnce({ setData: chartMocks.volumeSetData, applyOptions: chartMocks.volumeApplyOptions }),
+      .mockReturnValueOnce({ setData: chartMocks.volumeSetData, applyOptions: chartMocks.volumeApplyOptions, attachPrimitive: chartMocks.attachVolumePrimitive, detachPrimitive: chartMocks.detachVolumePrimitive }),
     priceScale: vi.fn(() => ({ applyOptions: chartMocks.applyPriceScaleOptions })),
     timeScale: vi.fn(() => ({
       width: () => 700,
@@ -133,6 +135,7 @@ describe("SnapshotReferenceChart", () => {
       .map((call) => call[0])
       .find((primitive) => primitive instanceof SnapshotReferencePrimitive);
     expect(injected).toBeDefined();
+    expect(chartMocks.attachVolumePrimitive.mock.calls.some((call) => call[0] instanceof SnapshotVolumePrimitive)).toBe(true);
     expect(wrapper.find('[data-testid="snapshot-playback-dimming"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-start"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="snapshot-live-range-end"]').exists()).toBe(false);
