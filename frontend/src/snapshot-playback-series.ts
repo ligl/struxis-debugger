@@ -49,8 +49,10 @@ export function projectSnapshotPlaybackSeries(input: {
   const volume = projection.volume.map((bar) => ({ ...bar }));
 
   const offset = input.offset;
-  const liveCount = Math.max(0, Math.floor(input.liveCount));
-  const processedCount = Math.max(0, Math.min(liveCount, Math.floor(input.processedCount)));
+  const liveCount = Number.isFinite(input.liveCount) ? Math.max(0, Math.floor(input.liveCount)) : 0;
+  const processedCount = Number.isFinite(input.processedCount)
+    ? Math.max(0, Math.min(liveCount, Math.floor(input.processedCount)))
+    : 0;
   const validOffset = offset !== null && Number.isInteger(offset) && offset >= 0;
   const processedStart = input.playbackEnabled && validOffset ? Math.min(input.bars.length, offset) : 0;
   const processedEndExclusive = input.playbackEnabled && validOffset
@@ -62,10 +64,10 @@ export function projectSnapshotPlaybackSeries(input: {
       if (index >= processedStart && index < processedEndExclusive) continue;
       const candle = candles[index]!;
       if (candle.color) {
-        const color = dimColor(candle.color);
-        candle.color = color;
-        candle.borderColor = dimColor(candle.borderColor ?? candle.color);
-        candle.wickColor = dimColor(candle.wickColor ?? candle.color);
+        const sourceColor = candle.color;
+        candle.color = dimColor(sourceColor);
+        candle.borderColor = dimColor(candle.borderColor ?? sourceColor);
+        candle.wickColor = dimColor(candle.wickColor ?? sourceColor);
       }
       const volumeBar = volume[index]!;
       if (volumeBar.color) volumeBar.color = dimColor(volumeBar.color);
