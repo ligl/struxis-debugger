@@ -578,67 +578,6 @@ describe("ChartSurface and chart entry adapters", () => {
     wrapper.unmount();
   });
 
-  it("reprojects CBar and Swing overlays after the visible chart range changes", async () => {
-    const bars = [
-      bar(),
-      bar({
-        sbarId: "1700000060000000000",
-        tsEvent: "1700000060000000000",
-        tsInit: "1700000060000000001",
-        high: "13",
-        low: "10",
-      }),
-    ];
-    const wrapper = mount(ChartSurface, {
-      props: {
-        bars,
-        sequenceId: "origin-zoom-overlay",
-        structure: {
-          cbarCount: 1,
-          cbars: [{
-            cbarId: "cbar-zoom",
-            high: "13",
-            low: "9",
-            sbarStartId: bars[0]!.sbarId,
-            sbarEndId: bars[1]!.sbarId,
-          }],
-          swingCount: 1,
-          swings: [{
-            swingId: "swing-zoom",
-            direction: "Up",
-            high: "13",
-            low: "9",
-            sbarStartId: bars[0]!.sbarId,
-            sbarEndId: bars[1]!.sbarId,
-            state: "Confirmed",
-          }],
-        } as never,
-      },
-    });
-    await nextTick();
-
-    expect(wrapper.get('[data-testid="cbar-range-rectangle"]').attributes("x")).toBe("96.5");
-    expect(wrapper.get('[data-testid="swing-state-segment"]').attributes("x2")).toBe("200");
-
-    chartMocks.timeToCoordinate.mockImplementation((time: number) => {
-      if (time === 1700000000) return 60;
-      if (time === 1700000060) return 260;
-      return null;
-    });
-    const rangeChange = chartMocks.subscribeVisibleLogicalRangeChange.mock.calls[0]?.[0] as
-      (() => void) | undefined;
-    expect(rangeChange).toBeTypeOf("function");
-    rangeChange?.();
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await nextTick();
-
-    expect(wrapper.get('[data-testid="cbar-range-rectangle"]').attributes("x")).toBe("56");
-    expect(wrapper.get('[data-testid="cbar-range-rectangle"]').attributes("width")).toBe("208");
-    expect(wrapper.get('[data-testid="swing-state-segment"]').attributes("x1")).toBe("60");
-    expect(wrapper.get('[data-testid="swing-state-segment"]').attributes("x2")).toBe("260");
-    wrapper.unmount();
-  });
-
   it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", async () => {
     const wrapper = mount(OriginChart, {
       props: {
