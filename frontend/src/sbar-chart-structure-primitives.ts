@@ -36,6 +36,8 @@ export type StructureObjectKind = "cbar" | "swing";
 export interface StructurePrimitiveInteractionState {
   hoveredId: string | null;
   selectedId: string | null;
+  selectedColor?: string;
+  selectedWidth?: number;
 }
 
 export interface StructurePrimitiveController {
@@ -96,6 +98,8 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
   protected interactionState: StructurePrimitiveInteractionState = {
     hoveredId: null,
     selectedId: null,
+    selectedColor: undefined,
+    selectedWidth: undefined,
   };
 
   constructor() {
@@ -153,7 +157,9 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
   setInteractionState(state: StructurePrimitiveInteractionState): void {
     if (
       this.interactionState.hoveredId === state.hoveredId &&
-      this.interactionState.selectedId === state.selectedId
+      this.interactionState.selectedId === state.selectedId &&
+      this.interactionState.selectedColor === state.selectedColor &&
+      this.interactionState.selectedWidth === state.selectedWidth
     ) return;
     this.interactionState = { ...state };
     this.requestChartUpdate?.();
@@ -167,7 +173,7 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     this.objects = [];
     this.projection = { timeBySbarId: new Map(), indexBySbarId: new Map() };
     this.visible = false;
-    this.interactionState = { hoveredId: null, selectedId: null };
+    this.interactionState = { hoveredId: null, selectedId: null, selectedColor: undefined, selectedWidth: undefined };
     this.clearGeometry();
     this.chart = null;
     this.series = null;
@@ -223,8 +229,8 @@ class CBarPaneRenderer implements IPrimitivePaneRenderer {
         for (const rectangle of rectangles) {
           const selected = rectangle.id === interaction.selectedId;
           const hovered = rectangle.id === interaction.hoveredId;
-          context.strokeStyle = selected ? "#D99A45" : hovered ? "#C3CBD1" : "#A0A7B0";
-          context.lineWidth = selected ? 2 : hovered ? 1.75 : 1;
+          context.strokeStyle = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : "#A0A7B0";
+          context.lineWidth = selected ? interaction.selectedWidth ?? 2 : hovered ? 1.75 : 1;
           context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
         }
       } finally {
@@ -285,8 +291,8 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
         for (const segment of segments) {
           const selected = segment.id === interaction.selectedId;
           const hovered = segment.id === interaction.hoveredId;
-          context.strokeStyle = selected ? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
-          context.lineWidth = selected ? 2.5 : hovered ? 2 : 1.25;
+          context.strokeStyle = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
+          context.lineWidth = selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.25;
           context.setLineDash([...segment.dash]);
           context.beginPath();
           context.moveTo(segment.x1, segment.y1);
