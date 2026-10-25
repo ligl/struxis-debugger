@@ -7,7 +7,10 @@ import {
   HistogramSeries,
   createChart,
   type IChartApi,
+  type CandlestickData,
+  type HistogramData,
   type ISeriesApi,
+  type UTCTimestamp,
 } from "lightweight-charts";
 
 export interface SBarChartLayerVisibility {
@@ -27,6 +30,40 @@ export function applySbarChartSeriesVisibility(
 ): void {
   candleSeries?.applyOptions({ visible: visibility.sbar });
   volumeSeries?.applyOptions({ visible: visibility.volume });
+}
+
+/**
+ * Replaces the complete SBar / Volume projection as one shared operation.
+ * Callers retain responsibility for deciding when a rebuild is authoritative.
+ */
+export function replaceSbarChartSeriesData(
+  candleSeries: ISeriesApi<"Candlestick"> | null | undefined,
+  volumeSeries: ISeriesApi<"Histogram"> | null | undefined,
+  candles: readonly CandlestickData<UTCTimestamp>[],
+  volume: readonly HistogramData<UTCTimestamp>[],
+): boolean {
+  if (!candleSeries || !volumeSeries) return false;
+  candleSeries.setData([...candles]);
+  volumeSeries.setData([...volume]);
+  return true;
+}
+
+/**
+ * Applies a single SBar / Volume point update. Replay decides whether the
+ * transition qualifies for an incremental update; this helper owns only the
+ * shared paired-series operation.
+ */
+export function updateSbarChartSeriesData(
+  candleSeries: ISeriesApi<"Candlestick"> | null | undefined,
+  volumeSeries: ISeriesApi<"Histogram"> | null | undefined,
+  candle: CandlestickData<UTCTimestamp>,
+  volume: HistogramData<UTCTimestamp>,
+  historicalUpdate = false,
+): boolean {
+  if (!candleSeries || !volumeSeries) return false;
+  candleSeries.update(candle, historicalUpdate);
+  volumeSeries.update(volume, historicalUpdate);
+  return true;
 }
 
 export interface SBarChartRuntimeOptions {
