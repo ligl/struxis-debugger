@@ -47,7 +47,7 @@ const snapshotRangeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
 const snapshotVolumeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
 let unregisterSnapshotMarkerPrimitive: (() => void) | null = null;
 let unregisterSnapshotVolumeMarkerPrimitive: (() => void) | null = null;
-const playbackOverlayEnabled = computed(() =>
+const nativePlaybackStylingEnabled = computed(() =>
   props.syncEnabled
   && props.playbackEnabled
   && props.playbackOffset !== null
@@ -89,10 +89,10 @@ function applyPlaybackSeriesStyles(): void {
   const nextState: AppliedPlaybackStyleState = {
     snapshotId: props.snapshotId,
     bars: props.bars,
-    playbackEnabled: playbackOverlayEnabled.value,
+    playbackEnabled: nativePlaybackStylingEnabled.value,
     offset: props.playbackOffset,
     liveCount: props.liveBarCount,
-    processedCount: Math.max(0, Math.floor(props.processedCount)),
+    processedCount: Number.isFinite(props.processedCount) ? Math.max(0, Math.floor(props.processedCount)) : 0,
   };
   const previous = appliedPlaybackStyleState;
   if (
