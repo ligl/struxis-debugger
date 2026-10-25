@@ -26,7 +26,7 @@ const surfacePortCalls = {
 };
 
 const SurfaceStub = defineComponent({
-  name: "SBarChartSurface",
+  name: "ChartSurface",
   props: [
     "bars", "structure", "sequenceId", "headerTitle", "headerTag", "emptyMessage",
     "showHeader", "showFooter", "panelClass", "panelLabel", "chartLabel",
@@ -67,7 +67,7 @@ describe("chart entry adapters", () => {
         originDatasetId: "origin-1",
         selectionEditable: true,
       },
-      global: { stubs: { SBarChartSurface: SurfaceStub } },
+      global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
     const surface = wrapper.getComponent(SurfaceStub);
@@ -98,7 +98,7 @@ describe("chart entry adapters", () => {
         playbackOffset: 0,
         processedCount: 0,
       },
-      global: { stubs: { SBarChartSurface: SurfaceStub } },
+      global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
     const surface = wrapper.getComponent(SurfaceStub);
@@ -136,7 +136,7 @@ describe("chart entry adapters", () => {
         playbackOffset: 2,
         processedCount: 0,
       },
-      global: { stubs: { SBarChartSurface: SurfaceStub } },
+      global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
     await Promise.resolve();
@@ -158,7 +158,7 @@ describe("chart entry adapters", () => {
         playbackOffset: 0,
         processedCount: 0,
       },
-      global: { stubs: { SBarChartSurface: SurfaceStub } },
+      global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
     await Promise.resolve();
@@ -180,7 +180,7 @@ describe("chart entry adapters", () => {
         playbackOffset: 0,
         processedCount: 0,
       },
-      global: { stubs: { SBarChartSurface: SurfaceStub } },
+      global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
     await Promise.resolve();
@@ -203,7 +203,7 @@ describe("chart entry adapters", () => {
         playbackOffset: 0,
         processedCount: 1,
       },
-      global: { stubs: { SBarChartSurface: SurfaceStub } },
+      global: { stubs: { ChartSurface: SurfaceStub } },
     });
 
     await Promise.resolve();
