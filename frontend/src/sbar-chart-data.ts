@@ -88,7 +88,7 @@ export function mapSBarsToChart(bars: readonly SBarDto[]): SBarChartProjection {
     }
 
     const time = timeSeconds as UTCTimestamp;
-    const directionColor = close > open ? "#79B58B" : close < open ? "#D98282" : "#858D97";
+    const directionColor = close > open ? "#557E65" : close < open ? "#8D555B" : "#858D97";
     candles.push({
       time,
       open,
