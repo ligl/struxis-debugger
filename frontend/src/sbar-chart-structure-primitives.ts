@@ -54,7 +54,7 @@ type PrimitiveAttachedParameter = Parameters<
 type PrimitiveChart = PrimitiveAttachedParameter["chart"];
 
 const SWING_STYLE_BY_STATE: Readonly<Record<string, { color: string; dash: readonly number[] }>> = {
-  Confirmed: { color: "#B49ACD", dash: [] },
+  Confirmed: { color: "#C6A06B", dash: [] },
   Tentative: { color: "#D6A85D", dash: [6, 3] },
   Extending: { color: "#8FA9C4", dash: [2, 3] },
 };
