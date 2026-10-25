@@ -88,22 +88,21 @@ export function mapSBarsToChart(bars: readonly SBarDto[]): SBarChartProjection {
     }
 
     const time = timeSeconds as UTCTimestamp;
-    const candleColor = close > open ? "#79B58B" : close < open ? "#D98282" : "#858D97";
-    const volumeColor = close > open ? "#557E65" : close < open ? "#8D555B" : "#858D97";
+    const directionColor = close > open ? "#557E65" : close < open ? "#8D555B" : "#858D97";
     candles.push({
       time,
       open,
       high,
       low,
       close,
-      color: candleColor,
-      borderColor: candleColor,
-      wickColor: candleColor,
+      color: directionColor,
+      borderColor: directionColor,
+      wickColor: directionColor,
     });
     volume.push({
       time,
       value: barVolume,
-      color: volumeColor,
+      color: directionColor,
     });
     sbarIdByTime.set(timeSeconds, bar.sbarId);
   }
