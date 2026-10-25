@@ -356,7 +356,7 @@ describe("ChartSurface and chart entry adapters", () => {
 
     const cbarRectangle = wrapper.get('[data-testid="cbar-range-rectangle"]');
     expect(cbarRectangle.attributes("data-cbar-id")).toBe("1700000000000000000");
-    expect(cbarRectangle.attributes("x")).toBe("96");
+    expect(cbarRectangle.attributes("x")).toBe("96.5");
     expect(cbarRectangle.attributes("y")).toBe("30");
     expect(cbarRectangle.attributes("width")).toBe("108");
     expect(cbarRectangle.attributes("height")).toBe("40");
@@ -617,7 +617,7 @@ describe("ChartSurface and chart entry adapters", () => {
     });
     await nextTick();
 
-    expect(wrapper.get('[data-testid="cbar-range-rectangle"]').attributes("x")).toBe("96");
+    expect(wrapper.get('[data-testid="cbar-range-rectangle"]').attributes("x")).toBe("96.5");
     expect(wrapper.get('[data-testid="swing-state-segment"]').attributes("x2")).toBe("200");
 
     chartMocks.timeToCoordinate.mockImplementation((time: number) => {
