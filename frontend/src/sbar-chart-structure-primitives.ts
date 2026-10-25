@@ -6,7 +6,7 @@ import type {
   Time,
 } from "lightweight-charts";
 import type { ChartPrimitiveHost, ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
-import { projectCBarRectangles, projectSwingSegments } from "./sbar-chart-structure-geometry";
+import { candlestickBodyWidth, projectCBarRectangles, projectSwingSegments } from "./sbar-chart-structure-geometry";
 
 export interface CBarPrimitiveDto {
   cbarId: string;
@@ -251,8 +251,12 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
       return;
     }
     const timeScale = this.chart.timeScale();
+    const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
+      ? Math.max(1, window.devicePixelRatio)
+      : 1;
     this.rectangles = projectCBarRectangles({
       cbars: this.objects,
+      sbarBodyWidth: candlestickBodyWidth(Number(timeScale.options().barSpacing), pixelRatio),
       indexBySbarId: this.projection.indexBySbarId,
       visibleRange: this.getVisibleLogicalRange(),
       coordinateForSbarId: (sbarId) => this.coordinateForSbarId(sbarId),
