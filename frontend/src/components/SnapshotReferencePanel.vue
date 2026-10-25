@@ -177,8 +177,9 @@ watch(selectedSnapshotId, async (snapshotId) => {
 });
 
 function handleSelection(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value;
-  selectedSnapshotId.value = value || null;
+  const select = event.currentTarget as HTMLSelectElement;
+  selectedSnapshotId.value = select.value || null;
+  select.blur();
 }
 
 function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
