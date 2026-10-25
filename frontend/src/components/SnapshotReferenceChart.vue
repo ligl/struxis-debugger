@@ -70,6 +70,7 @@ function refreshSnapshotGeometry(): void {
 }
 
 interface AppliedPlaybackStyleState {
+  snapshotId: string;
   bars: SBarDto[];
   playbackEnabled: boolean;
   offset: number | null;
@@ -86,6 +87,7 @@ function applyPlaybackSeriesStyles(): void {
   if (!port) return;
 
   const nextState: AppliedPlaybackStyleState = {
+    snapshotId: props.snapshotId,
     bars: props.bars,
     playbackEnabled: playbackOverlayEnabled.value,
     offset: props.playbackOffset,
@@ -95,6 +97,7 @@ function applyPlaybackSeriesStyles(): void {
   const previous = appliedPlaybackStyleState;
   if (
     previous
+    && previous.snapshotId === nextState.snapshotId
     && previous.bars === nextState.bars
     && previous.playbackEnabled === nextState.playbackEnabled
     && previous.offset === nextState.offset
