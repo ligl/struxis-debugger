@@ -539,6 +539,42 @@ describe("RunChart", () => {
   });
 
 
+  it("toggles the Live Replay SBar layer with B only while Live owns chart navigation", async () => {
+    const wrapper = mount(RunChart, {
+      props: {
+        origin: origin(),
+        testDataset: testDataset(),
+        runState: null,
+        keyboardActive: true,
+      },
+    });
+    await nextTick();
+
+    const sbarLegend = wrapper.get('[data-testid="run-layer-toggle-sbar"]');
+    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
+
+    const dispatchKey = (key: string, init: KeyboardEventInit = {}) => {
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
+      document.dispatchEvent(event);
+      return event;
+    };
+
+    const toggleOff = dispatchKey("b");
+    expect(toggleOff.defaultPrevented).toBe(true);
+    expect(sbarLegend.attributes("aria-pressed")).toBe("false");
+    expect(mocks.candleApplyOptions).toHaveBeenLastCalledWith({ visible: false });
+
+    const toggleOn = dispatchKey("b");
+    expect(toggleOn.defaultPrevented).toBe(true);
+    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
+    expect(mocks.candleApplyOptions).toHaveBeenLastCalledWith({ visible: true });
+
+    const modified = dispatchKey("b", { ctrlKey: true });
+    expect(modified.defaultPrevented).toBe(false);
+    expect(sbarLegend.attributes("aria-pressed")).toBe("true");
+    wrapper.unmount();
+  });
+
   it("keeps Replay point styling independent from layer visibility during incremental progress", async () => {
     const wrapper = mount(RunChart, {
       props: {
