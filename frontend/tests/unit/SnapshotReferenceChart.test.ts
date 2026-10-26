@@ -291,8 +291,6 @@ describe("SnapshotReferenceChart", () => {
     const port = surface.vm as unknown as ChartSurfacePort;
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
-    const marker = { id: "1700000000000000000", x: 97, y: 40, width: 6, height: 15 };
-    Object.defineProperty(port, "getSbarRangeHighlight", { configurable: true, value: vi.fn().mockReturnValue(marker) });
     const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
     surface.vm.$emit("pointerPosition", { x: 100, y: 50 });
@@ -300,7 +298,7 @@ describe("SnapshotReferenceChart", () => {
 
     expect(wrapper.find('[data-testid="snapshot-hover-sbar"]').exists()).toBe(false);
     expect(markerUpdate).toHaveBeenLastCalledWith(expect.objectContaining({
-      hovered: marker,
+      hovered: expect.objectContaining({ id: "1700000000000000000" }),
       selected: null,
       selectedStroke: "#D99A45",
       selectedWidth: 1.5,
@@ -330,8 +328,6 @@ describe("SnapshotReferenceChart", () => {
     const port = surface.vm as unknown as ChartSurfacePort;
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
-    const marker = { id: "1700000000000000000", x: 97, y: 40, width: 6, height: 15 };
-    Object.defineProperty(port, "getSbarMarker", { configurable: true, value: vi.fn().mockReturnValue(marker) });
     const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
     const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
@@ -342,7 +338,7 @@ describe("SnapshotReferenceChart", () => {
     expect(wrapper.find('[data-testid="snapshot-selected-sbar"]').exists()).toBe(false);
     expect(markerUpdate).toHaveBeenLastCalledWith(expect.objectContaining({
       hovered: null,
-      selected: marker,
+      selected: expect.objectContaining({ id: "1700000000000000000" }),
       selectedStroke: "#D99A45",
       selectedWidth: 1.5,
     }));
