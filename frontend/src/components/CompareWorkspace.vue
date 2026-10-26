@@ -74,7 +74,14 @@ watch(() => props.active, (active) => {
       </template>
     </DualChartStack>
     <details class="snapshot-store-disclosure" data-testid="snapshot-store-disclosure">
-      <summary data-testid="snapshot-store-toggle">SNAPSHOT STORE / DIFFERENCES</summary>
+      <summary data-testid="snapshot-store-toggle">
+        <span class="snapshot-store-title">SNAPSHOT STORE <span>/</span> DIFFERENCES</span>
+        <span class="snapshot-store-counts">
+          {{ snapshots.length }} ARTIFACTS
+          <span class="snapshot-store-separator">·</span>
+          {{ compareResult?.differences.length ?? 0 }} DIFFERENCES
+        </span>
+      </summary>
       <SnapshotPanel
         :snapshots="snapshots"
         :snapshots-loading="snapshotsLoading"
