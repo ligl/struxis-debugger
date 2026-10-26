@@ -2,96 +2,30 @@
 
 Running 22 tests using 1 worker
 
-  ✓   1 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:241:1 › captures workbench visual and computed-style baseline (863ms)
-  ✓   2 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the dataset workspace default state (685ms)
-  ✓   3 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the replay workspace default state (774ms)
-  ✓   4 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the compare workspace default state (614ms)
-  ✓   5 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked left (806ms)
-  ✓   6 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked right (801ms)
-  ✓   7 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked top (718ms)
-  ✓   8 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked bottom (755ms)
-  ✓   9 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked left (742ms)
-  ✓  10 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked right (816ms)
-  ✓  11 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked top (697ms)
-  ✓  12 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked bottom (700ms)
-  ✓  13 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:319:1 › captures Inspector expanded and collapsed states (3.2s)
-  ✓  14 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:340:1 › captures the default collapsed Diagnostics state (628ms)
-  ✓  15 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at minimum viewport (402ms)
-  ✓  16 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at compact viewport (398ms)
-  ✓  17 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at standard viewport (409ms)
-  ✓  18 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at desktop viewport (424ms)
-  ✓  19 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at wide viewport (470ms)
-  ✓  20 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:375:1 › captures deterministic Origin chart and each legend layer toggle (2.1s)
-  ✘  21 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 12 processed SBars and unprocessed candle styling (941ms)
-  ✘  22 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 24 processed SBars and unprocessed candle styling (1.2s)
+  ✓   1 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:241:1 › captures workbench visual and computed-style baseline (803ms)
+  ✓   2 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the dataset workspace default state (667ms)
+  ✓   3 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the replay workspace default state (781ms)
+  ✓   4 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the compare workspace default state (590ms)
+  ✓   5 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked left (801ms)
+  ✓   6 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked right (832ms)
+  ✓   7 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked top (743ms)
+  ✓   8 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked bottom (767ms)
+  ✓   9 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked left (708ms)
+  ✓  10 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked right (754ms)
+  ✓  11 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked top (717ms)
+  ✓  12 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked bottom (684ms)
+  ✓  13 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:319:1 › captures Inspector expanded and collapsed states (3.4s)
+  ✓  14 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:340:1 › captures the default collapsed Diagnostics state (625ms)
+  ✓  15 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at minimum viewport (408ms)
+  ✓  16 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at compact viewport (423ms)
+  ✓  17 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at standard viewport (407ms)
+  ✓  18 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at desktop viewport (420ms)
+  ✓  19 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at wide viewport (475ms)
+  ✓  20 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:375:1 › captures deterministic Origin chart and each legend layer toggle (2.0s)
+  ✓  21 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 12 processed SBars and unprocessed candle styling (987ms)
+  ✓  22 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 24 processed SBars and unprocessed candle styling (917ms)
 
-
-  1) [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 12 processed SBars and unprocessed candle styling 
-
-    Error: expect(received).toBeGreaterThan(expected)
-
-    Matcher error: received value must be a number or bigint
-
-    Received has value: undefined
-
-      444 |     expect(renderedColors["#8d555b"], "native down-candle pixels").toBeGreaterThan(0);
-      445 |     expect(renderedColors["#2e4239"], "dimmed up-candle pixels").toBeGreaterThan(0);
-    > 446 |     expect(renderedColors["#463135"], "dimmed down-candle pixels").toBeGreaterThan(0);
-          |                                                                    ^
-      447 |
-      448 |     await expect(page).toHaveScreenshot(`replay-processed-${processedCount}-of-36.png`, {
-      449 |       fullPage: true,
-        at /tmp/capitus-css-regression.m9x6w7/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/css-visual-regression.spec.ts:446:68
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    css-migration-regression/artifacts/test-results/css-visual-regression-capt-feccd--unprocessed-candle-styling-css-regression-chromium/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: css-migration-regression/artifacts/test-results/css-visual-regression-capt-feccd--unprocessed-candle-styling-css-regression-chromium/error-context.md
-
-    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    css-migration-regression/artifacts/test-results/css-visual-regression-capt-feccd--unprocessed-candle-styling-css-regression-chromium/trace.zip
-    Usage:
-
-        npx playwright show-trace css-migration-regression/artifacts/test-results/css-visual-regression-capt-feccd--unprocessed-candle-styling-css-regression-chromium/trace.zip
-
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-  2) [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 24 processed SBars and unprocessed candle styling 
-
-    Error: expect(received).toBeGreaterThan(expected)
-
-    Matcher error: received value must be a number or bigint
-
-    Received has value: undefined
-
-      444 |     expect(renderedColors["#8d555b"], "native down-candle pixels").toBeGreaterThan(0);
-      445 |     expect(renderedColors["#2e4239"], "dimmed up-candle pixels").toBeGreaterThan(0);
-    > 446 |     expect(renderedColors["#463135"], "dimmed down-candle pixels").toBeGreaterThan(0);
-          |                                                                    ^
-      447 |
-      448 |     await expect(page).toHaveScreenshot(`replay-processed-${processedCount}-of-36.png`, {
-      449 |       fullPage: true,
-        at /tmp/capitus-css-regression.m9x6w7/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/css-visual-regression.spec.ts:446:68
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    css-migration-regression/artifacts/test-results/css-visual-regression-capt-99215--unprocessed-candle-styling-css-regression-chromium/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: css-migration-regression/artifacts/test-results/css-visual-regression-capt-99215--unprocessed-candle-styling-css-regression-chromium/error-context.md
-
-    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    css-migration-regression/artifacts/test-results/css-visual-regression-capt-99215--unprocessed-candle-styling-css-regression-chromium/trace.zip
-    Usage:
-
-        npx playwright show-trace css-migration-regression/artifacts/test-results/css-visual-regression-capt-99215--unprocessed-candle-styling-css-regression-chromium/trace.zip
-
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-  2 failed
-    [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 12 processed SBars and unprocessed candle styling 
-    [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 24 processed SBars and unprocessed candle styling 
-  20 passed (24.7s)
+  22 passed (23.5s)
 
 To open last HTML report run:
 [36m[39m
