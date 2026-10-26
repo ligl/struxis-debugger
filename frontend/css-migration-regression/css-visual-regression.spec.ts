@@ -1134,7 +1134,7 @@ test("preserves Replay playback speed menu geometry, options and hover styling",
     fontSize: "11px",
     textAlign: "left",
   });
-  expect(styles.options).toEqual(["0.5x✓", "1x", "2x", "3x", "MAX"]);
+  expect(styles.options).toEqual(["0.5x", "1x✓", "2x", "3x", "MAX"]);
 
   const surface3 = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--dbg-surface-3").trim());
   const resolvedSurface3 = await page.evaluate((token) => {
