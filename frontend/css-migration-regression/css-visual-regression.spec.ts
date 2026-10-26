@@ -19,6 +19,33 @@ test.beforeEach(async ({ page }) => {
               return reference;
             }
             case "get_run_state": return (window as typeof window & { __CSS_REGRESSION_RUN_STATE__?: unknown }).__CSS_REGRESSION_RUN_STATE__ ?? null;
+            case "step_run": {
+              const target = window as typeof window & {
+                __CSS_REGRESSION_ORIGIN__?: { bars?: Array<{ sbarId: string }> };
+                __CSS_REGRESSION_RUN_STATE__?: {
+                  runId: string;
+                  testDatasetId: string;
+                  inputFingerprint: string;
+                  inputCount: number;
+                  status: string;
+                  processedCount: number;
+                  cursorSbarId: string | null;
+                  failureDiagnostic: string | null;
+                };
+              };
+              const current = target.__CSS_REGRESSION_RUN_STATE__;
+              if (!current) throw new Error("step_run requires a deterministic Replay fixture");
+              const processedCount = Math.min(current.inputCount, current.processedCount + 1);
+              const bars = target.__CSS_REGRESSION_ORIGIN__?.bars ?? [];
+              const next = {
+                ...current,
+                status: processedCount >= current.inputCount ? "completed" : "paused",
+                processedCount,
+                cursorSbarId: processedCount > 0 ? bars[processedCount - 1]?.sbarId ?? null : null,
+              };
+              target.__CSS_REGRESSION_RUN_STATE__ = next;
+              return { runState: next, inspector: null };
+            }
             case "get_replay_inspector": return null;
             default: throw new Error(`Unexpected CSS regression IPC command: ${command}`);
           }
@@ -400,6 +427,83 @@ test("captures deterministic Origin chart and each legend layer toggle", async (
   }
 });
 
+
+
+for (const processedCount of [0, 12, 35] as const) {
+  test(`advances Replay progress from ${processedCount} to ${processedCount + 1} processed SBars`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installDeterministicOrigin(page, processedCount);
+    await page.goto("/");
+    await page.getByTestId("workspace-replay").click();
+
+    const progress = page.getByRole("progressbar", { name: "Replay progress" });
+    await expect(progress).toHaveAttribute("aria-valuenow", String(processedCount));
+    await expect(progress).toHaveAttribute("aria-valuemax", "36");
+
+    const snapshotSelect = page.getByTestId("replay-reference-select");
+    await snapshotSelect.selectOption("css-regression-fixture-snapshot");
+    const snapshotChart = page.getByTestId("snapshot-reference-chart");
+    await expect(snapshotChart).toHaveAttribute("data-progress-active", "true");
+
+    await page.getByTestId("run-step").click();
+    await expect(progress).toHaveAttribute("aria-valuenow", String(processedCount + 1));
+    await expect(page.getByTestId("run-toolbar-status")).toContainText(`${processedCount + 1} / 36`);
+    await expect(snapshotChart).toHaveAttribute("data-progress-active", "true");
+    if (processedCount === 35) {
+      await expect(page.getByTestId("run-toolbar-status")).toContainText("COMPLETED");
+      await expect(page.getByTestId("run-step")).toBeDisabled();
+    }
+  });
+}
+
+async function expectChartPixelsToChangeAfter(
+  page: Page,
+  follower: ReturnType<Page["getByTestId"]>,
+  before: Buffer,
+) {
+  await expect.poll(async () => !(await follower.screenshot()).equals(before), {
+    message: "the synchronized follower chart should visibly respond to the source chart interaction",
+    timeout: 3000,
+  }).toBe(true);
+}
+
+test("synchronizes the Snapshot crosshair when the Live chart owns interaction", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page, 12);
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+  await page.getByTestId("replay-reference-select").selectOption("css-regression-fixture-snapshot");
+
+  const liveChart = page.getByTestId("run-chart-canvas");
+  const snapshotChart = page.getByTestId("snapshot-reference-chart").getByTestId("origin-chart-canvas");
+  await expect(snapshotChart).toBeVisible();
+  const bounds = await liveChart.boundingBox();
+  expect(bounds).not.toBeNull();
+  if (!bounds) throw new Error("Live chart canvas host has no bounding box");
+  const before = await snapshotChart.screenshot();
+
+  await page.mouse.move(bounds.x + bounds.width * 0.63, bounds.y + bounds.height * 0.43);
+  await expectChartPixelsToChangeAfter(page, snapshotChart, before);
+});
+
+test("synchronizes Snapshot viewport when the Live chart is zoomed", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page, 12);
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+  await page.getByTestId("replay-reference-select").selectOption("css-regression-fixture-snapshot");
+
+  const liveChart = page.getByTestId("run-chart-canvas");
+  const snapshotChart = page.getByTestId("snapshot-reference-chart").getByTestId("origin-chart-canvas");
+  const bounds = await liveChart.boundingBox();
+  expect(bounds).not.toBeNull();
+  if (!bounds) throw new Error("Live chart canvas host has no bounding box");
+  const before = await snapshotChart.screenshot();
+
+  await page.mouse.move(bounds.x + bounds.width * 0.63, bounds.y + bounds.height * 0.43);
+  await page.mouse.wheel(0, -240);
+  await expectChartPixelsToChangeAfter(page, snapshotChart, before);
+});
 
 for (const processedCount of [12, 24] as const) {
   test(`captures Replay with ${processedCount} processed SBars and unprocessed candle styling`, async ({ page }) => {
