@@ -294,8 +294,7 @@ describe("SnapshotReferenceChart", () => {
     surface.vm.$emit("pointerPosition", { x: 100, y: 50 });
     await nextTick();
 
-    expect(wrapper.get('[data-testid="snapshot-hover-sbar"]').attributes("data-sbar-id"))
-      .toBe("1700000000000000000");
+    expect(wrapper.find('[data-testid="snapshot-hover-sbar"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="snapshot-object-hover-label"]').text())
       .toBe("SBAR · 1700000000000000000");
 
@@ -327,8 +326,7 @@ describe("SnapshotReferenceChart", () => {
     clickHandler?.({ point: { x: 100, y: 50 } });
     await nextTick();
 
-    expect(wrapper.get('[data-testid="snapshot-selected-sbar"]').attributes("data-sbar-id"))
-      .toBe("1700000000000000000");
+    expect(wrapper.find('[data-testid="snapshot-selected-sbar"]').exists()).toBe(false);
     expect(wrapper.emitted("objectSelect")?.[0]?.[0]).toEqual({
       kind: "sbar",
       id: "1700000000000000000",
