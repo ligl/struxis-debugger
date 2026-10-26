@@ -76,6 +76,15 @@ function refreshSnapshotGeometry(): void {
   snapshotVolumeMarkerPrimitive.update(currentRangeMarkerState(false));
 }
 
+function syncStructurePlaybackBrightness(): void {
+  surface.value?.setStructurePlaybackState({
+    enabled: nativePlaybackStylingEnabled.value,
+    offset: props.playbackOffset,
+    processedCount: props.processedCount,
+    liveCount: props.liveBarCount,
+  });
+}
+
 interface AppliedPlaybackStyleState {
   snapshotId: string;
   bars: SBarDto[];
@@ -365,6 +374,12 @@ watch(
 );
 
 watch(
+  () => [props.syncEnabled, props.playbackEnabled, props.playbackOffset, props.processedCount, props.liveBarCount] as const,
+  syncStructurePlaybackBrightness,
+  { deep: true, flush: "post" },
+);
+
+watch(
   () => [props.snapshotId, props.bars, props.syncEnabled, props.playbackEnabled, props.playbackOffset, props.liveBarCount, props.processedCount] as const,
   applyPlaybackSeriesStyles,
   { deep: true, flush: "post" },
@@ -410,6 +425,7 @@ onMounted(() => {
     { target: "volume", dispose: () => snapshotVolumeMarkerPrimitive.dispose() },
   ) ?? null;
   refreshSnapshotGeometry();
+  syncStructurePlaybackBrightness();
   applyPlaybackSeriesStyles();
   applyViewportRequest(props.syncRequest);
   applyCrosshairRequest(props.crosshairSync);
