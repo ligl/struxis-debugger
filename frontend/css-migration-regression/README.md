@@ -1,71 +1,63 @@
 # Temporary CSS Migration Regression
 
-> **Lifecycle:** temporary migration-only tooling. Delete this entire directory after all CSS migration batches have been accepted and the final formal checks have run.
+> **Lifecycle:** one-time tooling for the CSS migration only. Delete this entire directory after all CSS migration batches are accepted and final formal checks pass.
 
-This suite is deliberately isolated from the maintained E2E suite. It does not modify `package.json`, the formal Playwright config, production components, or production styles.
+## One command
 
-## Baseline identity
-
-- Repository: `ligl/capitus`
-- Intended baseline commit: `171254d0bbdad139f51ba1550e8379899d8f6ca6`
-- Formal E2E config remains `../playwright.config.ts`
-- App URL: `http://127.0.0.1:1421`
-- Browser project: Chromium / Desktop Chrome
-- Viewport snapshots: 1440 × 900, device scale factor 1
-- Responsive geometry checks: 920 × 800, 1024 × 800, 1280 × 800, 1440 × 900, 1920 × 1080
-
-The baseline is **not established by committing these test files**. The temporary directory does not exist at the historical baseline commit, so copy this directory into a separate worktree at that exact commit before generating snapshots. Do not generate baseline screenshots from a CSS-migrated working tree.
-
-## Commands
-
-From the repository root of a clean checkout containing the temporary suite on `develop`, create a separate worktree at the pinned baseline and copy only the temporary directory into it:
+Run from the Capitus repository root on a clean `develop` worktree:
 
 ```bash
-git worktree add /tmp/capitus-css-baseline 171254d0bbdad139f51ba1550e8379899d8f6ca6
-cp -a crates/struxis-debugger/frontend/css-migration-regression \\
-  /tmp/capitus-css-baseline/crates/struxis-debugger/frontend/
-cd /tmp/capitus-css-baseline/crates/struxis-debugger/frontend
-bun install --frozen-lockfile
-bunx playwright test --config css-migration-regression/playwright.config.ts --update-snapshots
-bunx playwright test --config css-migration-regression/playwright.config.ts
+bash crates/struxis-debugger/frontend/css-migration-regression/run-css-regression.sh
 ```
 
-Review the generated screenshots and computed-style attachments, then copy the reviewed `baseline/` directory into the temporary suite on the migration working tree. Run comparisons from `crates/struxis-debugger/frontend` on that working tree:
+That is the only command the operator needs to run. The script refuses to run on another branch or with a dirty worktree so the result can be tied to an exact candidate commit. Commit the candidate CSS/source changes first, run the command, then commit the generated baseline (on the first run) and `css-migration-regression/results/latest/` to `develop`.
 
-```bash
-bunx playwright test --config css-migration-regression/playwright.config.ts
-```
+The script automatically:
 
-The `--update-snapshots` command is for initial baseline creation only. Do not routinely pass it to make a comparison green. Keep both the baseline worktree and candidate worktree on the same dependency lockfile/browser installation where feasible; if the historical lockfile or rendering environment differs, document that as a comparability risk.
+1. Verifies the branch, clean worktree, pinned baseline commit, Bun, and suite files.
+2. Installs locked frontend dependencies and Chromium.
+3. If no baseline screenshots exist yet, creates a detached worktree at `171254d0bbdad139f51ba1550e8379899d8f6ca6`, copies only the temporary test suite into it, installs its locked dependencies, and generates baseline screenshots there.
+4. Copies the initial baseline into `css-migration-regression/baseline/` and verifies the baseline suite against those snapshots.
+5. Runs the same suite against the current `develop` candidate.
+6. Writes logs, Playwright HTML report, failure screenshots/diffs/traces, and a machine-readable manifest into `css-migration-regression/results/latest/`.
+7. Removes the temporary baseline worktree on exit.
 
-Test artifacts, HTML reports, traces, and result output are written below this temporary directory and must not be committed as permanent product assets. Preserve the reviewed baseline files locally while running each migration batch.
+The first run can take longer because it builds the baseline and installs dependencies in both worktrees. It requires network access for fetching the pinned commit / installing packages and the browser if these are not cached.
 
-## What this first version checks
+## Result package
 
-- Default workbench screenshot at 1440 × 900.
-- Every test installs a deterministic empty-session Tauri IPC stub before app startup, so workspace/layout tests do not depend on a running Tauri host. The chart test supplies a test-local Origin override with 36 deterministic SBar records and explicit CBar/Swing DTOs, without production hooks or external Catalog data. Unknown IPC commands fail explicitly.
-- Deterministic Dataset chart screenshot plus independent SBar, CBar, Swing, and Volume legend off/on screenshots. The fixture is test-local and is not a production data source.
-- Dataset, Replay, and Compare default-workspace screenshots.
-- Inspector expanded and collapsed screenshots, plus expanded screenshots in all four dock directions.
-- Diagnostics default-collapsed screenshot and expanded screenshots in all four dock directions.
-- Stable shell/layout test IDs and selected computed CSS properties/tokens.
-- Horizontal document overflow and non-negative geometry at five desktop viewports.
-- JSON layout/style contracts attached to each Playwright test report.
+Review or commit the complete `results/latest/` directory. The key files are:
 
-## Known coverage gap — do not treat as full visual acceptance
+- `summary.md`: concise outcome and review instructions.
+- `manifest.json`: exact baseline/candidate commit, environment, screenshot count, exit code, and known coverage gaps.
+- `logs/baseline-create.log`: present only when the baseline was created during this run.
+- `logs/baseline-verify.log`: verification of the historical baseline.
+- `logs/candidate-test.log`: current candidate test output.
+- `playwright-report/`: HTML report when Playwright generated it.
+- `test-results/`: failure diffs, screenshots, traces, and attachments when present.
 
-This suite now constructs deterministic Origin chart data and covers each Dataset legend layer toggle. It still does not cover the full interaction matrix listed in `docs/architecture/struxis/debugger/css-layered-architecture.md` §10. Inspector collapse/restore and Diagnostics default-collapsed/expanded states are covered, but Inspector dock resizing is not yet captured as a visual state. Replay processed/unprocessed candle brightness and real Snapshot Reference projection remain uncovered. The current Compare workspace intentionally uses `ComparisonChartPlaceholder.vue`, so real Candidate/Baseline chart imagery cannot be captured without changing product scope; do not fabricate those charts in the fixture.
+Open the HTML report locally by opening `results/latest/playwright-report/index.html`. The manifest and logs are plain text and can be reviewed directly from GitHub after the result commit is pushed.
 
-Before CSS migration begins, extend this temporary suite with reproducible state setup and screenshots for the remaining constructible scenarios, or record why a scenario cannot be deterministically constructed. Replay requires deterministic RunState/checkpoint responses and Test Dataset setup; Snapshot Reference requires the full SnapshotReferenceDto and a valid SBar sequence. Reuse existing stable selectors and interaction contracts; do not add production-only hooks or weaken the formal E2E suite to support this temporary suite.
+## Baseline integrity
 
-## Acceptance and cleanup
+- Baseline commit: `171254d0bbdad139f51ba1550e8379899d8f6ca6`.
+- Baselines are generated only from a detached worktree at that exact commit, never from the candidate tree.
+- Do not pass `--update-snapshots` manually to silence a candidate mismatch.
+- The script requires a clean worktree at launch. This ensures the tested candidate commit is the same commit recorded in the manifest.
+- A failed baseline verification aborts candidate comparison. Fix the test harness/environment before interpreting candidate results.
+- The suite is temporary and does not replace `bun run check`, `bun run test:e2e`, or actual desktop-rendering checks.
 
-For every migration batch:
+## Current coverage and known gaps
 
-1. Run this suite against the unchanged baseline first and confirm the baseline is valid.
-2. Run the same suite against the candidate with the same browser, viewport, fonts, and fixture state.
-3. Review screenshot diffs and attached computed-style contracts; investigate all unexpected changes.
-4. Keep baseline updates explicit and reviewable. Never update snapshots merely to make a failing comparison green.
-5. Separately run `bun run check` and `bun run test:e2e`; this suite does not replace them.
+The suite covers default workspace screenshots, Dataset's deterministic 36-SBar / 3-CBar / 2-Swing chart and four legend toggles, Inspector expanded/collapsed and four dock directions, Diagnostics collapsed and four expanded dock directions, selected computed styles/tokens, and shell geometry at five desktop viewports.
 
-After all CSS batches have passed review, remove this entire directory (including baselines and generated artifacts), check that no production or formal-test files reference it, and rerun the formal checks. Do not claim visual equivalence until the state-coverage gap above has been closed and the tests have actually run.
+It does **not yet** fully cover Replay processed/unprocessed candle brightness, the real Snapshot Reference projection, Inspector dock resizing, the full Inspector/Diagnostics drag-resize matrix, or actual Candidate/Baseline market charts (Compare currently renders `ComparisonChartPlaceholder.vue`). The generated manifest records these gaps. A passing run means only that the currently implemented checks passed; it does not establish complete visual equivalence.
+
+## Cleanup requirement
+
+After all CSS migration batches have been reviewed and accepted:
+
+1. Delete this entire `css-migration-regression/` directory, including the script, snapshots, fixture, reports, logs, and result package.
+2. Confirm no production/formal-test references remain.
+3. Run `bun run check` and `bun run test:e2e` from the frontend directory, plus available desktop-rendering checks.
+4. Record any unavailable checks and remaining limitations. Do not claim visual equivalence beyond the executed coverage.
