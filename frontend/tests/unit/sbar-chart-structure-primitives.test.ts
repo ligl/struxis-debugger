@@ -200,6 +200,28 @@ describe("CBar and Swing Series Primitives", () => {
     view?.renderer()?.draw(h.target as never);
     expect(segmentStyles).toContainEqual({ color: "#D99A45", width: 2.5 });
 
+    // Extending's arrowhead must retain the same hover / selection emphasis
+    // as the dashed segment instead of reverting to its pale state color.
+    controller.setData([{
+      swingId: "swing-1",
+      sbarStartId: "s1",
+      sbarEndId: "s3",
+      high: "30",
+      low: "10",
+      direction: "Up",
+      state: "Extending",
+    }], h.projection);
+    segmentStyles.length = 0;
+    controller.setInteractionState({ hoveredId: "swing-1", selectedId: null });
+    view?.renderer()?.draw(h.target as never);
+    expect(segmentStyles.length).toBeGreaterThan(0);
+    expect(segmentStyles.every((style) => style.color === "#C3CBD1" && style.width === 2)).toBe(true);
+    segmentStyles.length = 0;
+    controller.setInteractionState({ hoveredId: null, selectedId: "swing-1" });
+    view?.renderer()?.draw(h.target as never);
+    expect(segmentStyles.length).toBeGreaterThan(0);
+    expect(segmentStyles.every((style) => style.color === "#D99A45" && style.width === 2.5)).toBe(true);
+
     controller.setVisible(false);
     expect(view?.renderer()).toBeNull();
     controller.setVisible(true);
