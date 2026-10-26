@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-10-26T19:21:22.786728+00:00",
+  "generatedAtUtc": "2026-10-26T19:30:51.206992+00:00",
   "repository": "ligl/capitus",
   "branch": "develop",
   "baselineCommit": "171254d0bbdad139f51ba1550e8379899d8f6ca6",
-  "candidateCommit": "ad13d5129343ac2f895c744a8c99bcc5177b0b4f",
-  "candidateCommitDate": "2026-10-27T03:19:36+08:00",
+  "candidateCommit": "5bf61a51675c88bfaac9f26d316d54c24d823e52",
+  "candidateCommitDate": "2026-10-27T03:28:19+08:00",
   "workingTreeWasCleanAtStart": true,
   "platform": "Linux 7.0.0-38-generic x86_64",
   "bunVersion": "1.4.3",
@@ -15,9 +15,8 @@
   "candidateTestExitCode": 0,
   "result": "passed",
   "knownCoverageGaps": [
-    "Real Snapshot Reference chart projection",
-    "Inspector dock resize interaction",
-    "Full Inspector/Diagnostics drag-resize interaction matrix",
+    "Replay progress transitions and Live/Snapshot viewport-crosshair synchronization interactions",
+    "Real Snapshot Reference chart projection parity has not been independently established",
     "Compare uses ComparisonChartPlaceholder.vue, not real Candidate/Baseline market charts"
   ]
 }
