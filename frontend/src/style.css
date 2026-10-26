@@ -4060,13 +4060,6 @@ th, td { padding: 6px 8px; }
 
 }
 
-/* Dataset mode follows the prototype's single control row above the Origin chart. */
-.dataset-controls-host {
-  flex: 0 0 auto;
-  min-width: 0;
-  overflow: visible;
-}
-
 .dataset-controls {
   display: flex;
   min-width: 0;
