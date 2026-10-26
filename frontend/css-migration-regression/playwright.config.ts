@@ -32,7 +32,7 @@ export default defineConfig({
   },
   projects: [{ name: "css-regression-chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } }],
   webServer: {
-    command: "bun run dev",
+    command: `bun run dev --port ${regressionPort}`,
     cwd: frontendDir,
     url: baseURL,
     reuseExistingServer: false,
