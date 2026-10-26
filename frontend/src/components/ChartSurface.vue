@@ -24,11 +24,7 @@ const props = withDefaults(defineProps<{
   showLegend?: boolean;
   showEmptyState?: boolean;
   showErrorState?: boolean;
-  showStructureOverlay?: boolean;
   canvasTestId?: string;
-  structureOverlayTestId?: string;
-  cbarTestId?: string;
-  swingTestId?: string;
   panelClass?: string;
   panelLabel?: string;
   chartLabel?: string;
@@ -42,7 +38,6 @@ const props = withDefaults(defineProps<{
   showLegend: true,
   showEmptyState: true,
   showErrorState: true,
-  showStructureOverlay: true,
   dataMode: "props",
 });
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
@@ -816,47 +811,6 @@ onBeforeUnmount(() => {
         :aria-label="chartLabel"
         @pointerenter="emit('chartActivate')"
       ></div>
-      <svg
-        v-if="showStructureOverlay !== false && bars.length > 0"
-        :data-testid="structureOverlayTestId ?? 'origin-structure-overlay'"
-        class="origin-structure-overlay"
-        :style="{ width: `${structureOverlayWidth}px` }"
-        :data-structure-counts="JSON.stringify({ cbars: props.structure?.cbars.length ?? 0, swings: props.structure?.swings.length ?? 0 })"
-        aria-hidden="true"
-      >
-        <line
-          v-for="segment in swingSegments"
-          :key="segment.id"
-          :x1="segment.x1"
-          :y1="segment.y1"
-          :x2="segment.x2"
-          :y2="segment.y2"
-          :stroke="segment.color"
-          stroke-width="1.25"
-          :stroke-dasharray="segment.dasharray || undefined"
-          visibility="hidden"
-          stroke-linecap="round"
-          :data-testid="swingTestId ?? 'swing-state-segment'"
-          :data-swing-id="segment.id"
-          :data-swing-state="segment.state"
-        />
-        <rect
-          v-for="rectangle in cbarRectangles"
-          :key="rectangle.id"
-          :x="rectangle.x"
-          :y="rectangle.y"
-          :width="rectangle.width"
-          :height="rectangle.height"
-          fill="none"
-          visibility="hidden"
-          stroke="#A0A7B0"
-          stroke-width="1"
-          :data-testid="cbarTestId ?? 'cbar-range-rectangle'"
-          :data-cbar-id="rectangle.id"
-        />
-
-
-      </svg>
       <svg
         v-if="bars.length > 0"
         class="origin-structure-overlay origin-structure-interaction-overlay"
