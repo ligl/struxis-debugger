@@ -216,9 +216,8 @@ manifest = {
     "candidateTestExitCode": int(os.environ["CSS_REGRESSION_TEST_EXIT"]),
     "result": "passed" if int(os.environ["CSS_REGRESSION_TEST_EXIT"]) == 0 else "failed",
     "knownCoverageGaps": [
-        "Real Snapshot Reference chart projection",
-        "Inspector dock resize interaction",
-        "Full Inspector/Diagnostics drag-resize interaction matrix",
+        "Replay progress transitions and Live/Snapshot viewport-crosshair synchronization interactions",
+        "Real Snapshot Reference chart projection parity has not been independently established",
         "Compare uses ComparisonChartPlaceholder.vue, not real Candidate/Baseline market charts"
     ]
 }
