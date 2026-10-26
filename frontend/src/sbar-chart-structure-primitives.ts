@@ -6,6 +6,7 @@ import type {
   Time,
 } from "lightweight-charts";
 import type { ChartPrimitiveHost, ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
+import { alignStrokeCoordinate } from "./chart-canvas-pixel-alignment";
 import { candlestickBodyWidth, projectCBarRectangles, projectSwingSegments } from "./sbar-chart-structure-geometry";
 
 export interface CBarPrimitiveDto {
@@ -106,33 +107,6 @@ function dimStructureColor(color: string): string {
 
 function finite(value: number | null | undefined): value is number {
   return value !== null && value !== undefined && Number.isFinite(value);
-}
-
-/**
- * Align a stroke's outer edge to the physical-pixel grid.
- *
- * Primitive coordinates are expressed in media (CSS-pixel) space. A centered
- * Canvas stroke can otherwise cover different fractions of edge pixels as the
- * chart zooms, making nominally identical rectangle edges appear to change
- * brightness. Align each edge independently using the active stroke width.
- */
-export function alignStrokeCoordinate(
-  coordinate: number,
-  lineWidth: number,
-  pixelRatio: number,
-): number {
-  if (
-    !finite(coordinate) ||
-    !finite(lineWidth) ||
-    lineWidth <= 0 ||
-    !finite(pixelRatio) ||
-    pixelRatio <= 0
-  ) return coordinate;
-  const physicalLineWidth = lineWidth * pixelRatio;
-  return (
-    Math.round(coordinate * pixelRatio - physicalLineWidth / 2) +
-    physicalLineWidth / 2
-  ) / pixelRatio;
 }
 
 abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Time> {
