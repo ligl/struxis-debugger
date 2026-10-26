@@ -89,6 +89,15 @@ describe("CBar and Swing Series Primitives", () => {
     h.context.strokeRect.mockImplementation(() => {
       rectangleStyles.push({ color: h.context.strokeStyle, width: h.context.lineWidth });
     });
+    controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 1, liveCount: 3 });
+    rectangleStyles.length = 0;
+    renderer!.draw(h.target as never);
+    expect(rectangleStyles).toContainEqual({ color: "#4e5358", width: 1 });
+    controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 2, liveCount: 3 });
+    rectangleStyles.length = 0;
+    renderer!.draw(h.target as never);
+    expect(rectangleStyles).toContainEqual({ color: "#A0A7B0", width: 1 });
+
     controller.setInteractionState({ hoveredId: "cbar-1", selectedId: null });
     renderer!.draw(h.target as never);
     expect(rectangleStyles).toContainEqual({ color: "#C3CBD1", width: 1.75 });
@@ -142,6 +151,13 @@ describe("CBar and Swing Series Primitives", () => {
     expect(h.context.strokeStyle).toBe("#D6A85D");
     expect(h.context.setLineDash).toHaveBeenCalledWith([6, 3]);
 
+    controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 1, liveCount: 3 });
+    view?.renderer()?.draw(h.target as never);
+    expect(h.context.strokeStyle).toBe("#5e503b");
+    controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 3, liveCount: 3 });
+    view?.renderer()?.draw(h.target as never);
+    expect(h.context.strokeStyle).toBe("#D6A85D");
+
     // Confirmed Swing uses the normative default Swing token and a solid stroke.
     controller.setData([{
       swingId: "swing-1",
@@ -182,11 +198,13 @@ describe("syncStructurePrimitiveControllers", () => {
       setData: vi.fn(),
       setVisible: vi.fn(),
       setInteractionState: vi.fn(),
+      setPlaybackState: vi.fn(),
     };
     const swing = {
       setData: vi.fn(),
       setVisible: vi.fn(),
       setInteractionState: vi.fn(),
+      setPlaybackState: vi.fn(),
     };
     const cbars = [{ cbarId: "c1", sbarStartId: "s1", sbarEndId: "s2", high: "12", low: "8" }];
     const swings = [{
@@ -224,6 +242,8 @@ describe("syncStructurePrimitiveControllers", () => {
     expect(swing.setData).toHaveBeenCalledWith(swings, projection);
     expect(cbar.setVisible).toHaveBeenCalledWith(false);
     expect(swing.setVisible).toHaveBeenCalledWith(true);
+    expect(cbar.setPlaybackState).toHaveBeenCalledWith({ enabled: false, offset: null, processedCount: 0, liveCount: 0 });
+    expect(swing.setPlaybackState).toHaveBeenCalledWith({ enabled: false, offset: null, processedCount: 0, liveCount: 0 });
     expect(cbar.setInteractionState).toHaveBeenCalledWith({
       hoveredId: null,
       selectedId: "c1",
