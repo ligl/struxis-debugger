@@ -529,6 +529,12 @@ for (const panel of ["inspector", "diagnostics"] as const) {
       await page.goto("/");
       if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
 
+      // Start away from the requested destination so a stale aria-pressed value
+      // cannot make this test pass without a successful drag/drop.
+      const initialDirection = direction === "left" ? "right" : "left";
+      await chooseDockDirection(page, `${panel}-dock-menu`, `${panel}-dock-${initialDirection}`);
+      await expect(page.getByTestId(`${panel}-dock-${initialDirection}`)).toHaveAttribute("aria-pressed", "true");
+
       const source = page.getByTestId(`${panel}-dock-drag-handle`);
       const target = page.getByTestId("chart-workspace");
       const targetBounds = await target.boundingBox();
