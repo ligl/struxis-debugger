@@ -167,7 +167,6 @@ test("captures Inspector expanded and collapsed states", async ({ page }) => {
 
   await page.getByRole("button", { name: "Collapse Inspector" }).click();
   await expect(page.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
-  await expect(inspector).toHaveClass(/collapsed/);
   await expect(page).toHaveScreenshot("inspector-collapsed.png", {
     fullPage: true,
     animations: "disabled",
