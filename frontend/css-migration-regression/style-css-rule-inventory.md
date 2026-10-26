@@ -2,11 +2,11 @@
 
 - Source: `crates/struxis-debugger/frontend/src/style.css`
 - Source blob after latest scoped migration: `f5c1f37e4860a634e9a6de8c303002edadea1daf`
-- Source lines: 4786; rule occurrences recorded: 762
+- Source lines: 4779; rule occurrences recorded: 761
 - Status: temporary migration aid; regenerate when source CSS changes; remove with the temporary CSS migration regression suite after migration and visual acceptance.
 - Method: lexical scan that skips comments/quoted strings and tracks at-rule nesting. Not a standards-compliant CSS AST; property names are extracted heuristically. Do not use this report alone to change cascade behavior.
 - Ordering: source order preserved. Repeated selectors are intentionally not deduplicated.
-- 2026-10-27 delta: removed the final global `.dataset-controls` rule (`position`, `z-index`) after moving those declarations into `TestDatasetPanel.vue`; this inventory drops that rule occurrence. Subsequent line references were shifted by five lines to reflect the removal. Line references remain a lexical migration aid and must be regenerated before any broad selector cleanup.
+- 2026-10-27 delta: removed the global `.dataset-controls-host` rule after moving its `flex`, `min-width`, and `overflow` declarations into `DatasetWorkspace.vue`; this inventory drops that rule occurrence. The earlier `.dataset-controls` stacking rule migration is also reflected. Line references are a lexical migration aid and must be regenerated before any broad selector cleanup.
 
 
 | # | Line | Selector | At-rule context | Properties (heuristic) | Owner candidate | Review status |
@@ -664,7 +664,6 @@
 | 651 | 4041 | `.toolbar-error` | global | max-width, overflow, font-size, text-overflow, white-space | Manual review: unclassified | Heuristic only |
 | 652 | 4051 | `.replay-toolbar-actions` | @media (max-width: 1280px) | gap | Candidate: Chart / Replay | Heuristic only |
 | 653 | 4054 | `.replay-toolbar-actions .subtle-button` | @media (max-width: 1280px) | padding-inline, font-size | Candidate: Chart / Replay | Heuristic only |
-| 654 | 4061 | `/* Dataset mode follows the prototype's single control row above the Origin chart. */ .dataset-controls-host` | global | flex, min-width, overflow | Manual review: Dataset / Catalog + Chart / Replay | Heuristic only |
 | 655 | 4068 | `.dataset-controls` | global | display, min-width, min-height, align-items, gap, padding, background | Candidate: Dataset / Catalog | Heuristic only |
 | 656 | 4078 | `.dataset-controls-label` | global | display, flex, align-items, gap, white-space | Candidate: Dataset / Catalog | Heuristic only |
 | 657 | 4086 | `.dataset-controls-label .section-index` | global | margin, color, font, letter-spacing | Candidate: Dataset / Catalog | Heuristic only |
