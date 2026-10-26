@@ -1023,6 +1023,24 @@ test("preserves development context menu positioning, stacking, button geometry 
       },
     };
   });
+  const surface1 = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--dbg-surface-1").trim());
+  const surface3 = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--dbg-surface-3").trim());
+  const resolvedSurface1 = await page.evaluate((token) => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = token;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  }, surface1);
+  const resolvedSurface3 = await page.evaluate((token) => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = token;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  }, surface3);
   expect(menuStyle).toMatchObject({
     left: "120px",
     top: "140px",
@@ -1031,7 +1049,7 @@ test("preserves development context menu positioning, stacking, button geometry 
     minWidth: "176px",
     padding: "4px",
     borderRadius: "4px",
-    backgroundColor: "rgb(27, 32, 37)",
+    backgroundColor: resolvedSurface1,
     button: {
       display: "block",
       minHeight: "30px",
@@ -1045,5 +1063,5 @@ test("preserves development context menu positioning, stacking, button geometry 
   const firstButton = page.getByTestId("open-devtools");
   await firstButton.hover();
   const hoverBackground = await firstButton.evaluate((element) => getComputedStyle(element).backgroundColor);
-  expect(hoverBackground).toBe("rgb(48, 56, 63)");
+  expect(hoverBackground).toBe(resolvedSurface3);
 });
