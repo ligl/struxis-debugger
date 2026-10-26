@@ -10,7 +10,7 @@ import { candlestickBodyWidth, projectStructureOverlayGeometry } from "../sbar-c
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
-import type { ChartSurfaceLayerVisibility, ChartSurfacePrimitiveOptions } from "../chart-surface-contract";
+import type { ChartSurfaceLayerVisibility, ChartSurfacePrimitiveOptions, ChartSurfaceStructurePlaybackState } from "../chart-surface-contract";
 
 const props = withDefaults(defineProps<{
   bars: SBarDto[];
@@ -58,6 +58,9 @@ let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let primitiveHost: ChartPrimitiveHost | null = null;
 let cbarPrimitive: StructurePrimitiveController | null = null;
 let swingPrimitive: StructurePrimitiveController | null = null;
+let structurePlaybackState: ChartSurfaceStructurePlaybackState = {
+  enabled: false, offset: null, processedCount: 0, liveCount: 0,
+};
 let stopObservingResize: (() => void) | null = null;
 
 let crosshairUpdateFrame: number | null = null;
@@ -199,6 +202,7 @@ function syncStructurePrimitives(): void {
     projection: { timeBySbarId, indexBySbarId },
     cbarVisible: layerVisibility.value.cbar,
     swingVisible: layerVisibility.value.swing,
+    playbackState: structurePlaybackState,
   });
 }
 
@@ -638,6 +642,17 @@ function getStructureGeometry() {
   return { cbarRectangles: cbarRectangles.value, swingSegments: swingSegments.value };
 }
 
+function setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): void {
+  structurePlaybackState = {
+    enabled: state.enabled,
+    offset: state.offset,
+    processedCount: Number.isFinite(state.processedCount) ? Math.max(0, Math.floor(state.processedCount)) : 0,
+    liveCount: Number.isFinite(state.liveCount) ? Math.max(0, Math.floor(state.liveCount)) : 0,
+  };
+  cbarPrimitive?.setPlaybackState(structurePlaybackState);
+  swingPrimitive?.setPlaybackState(structurePlaybackState);
+}
+
 function setStructureInteractionState(
   hovered: { kind: "cbar" | "swing"; id: string } | null,
   selected: { kind: "cbar" | "swing"; id: string } | null,
@@ -691,7 +706,7 @@ function registerPrimitive(
   });
 }
 
-defineExpose({ registerPrimitive, replaceSeriesData, updateSeriesData, fitContent: fitContentPort, setLayerVisibility, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState });
+defineExpose({ registerPrimitive, replaceSeriesData, updateSeriesData, fitContent: fitContentPort, setLayerVisibility, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState, setStructurePlaybackState });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
