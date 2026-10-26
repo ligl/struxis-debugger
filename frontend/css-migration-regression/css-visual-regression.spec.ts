@@ -452,3 +452,99 @@ for (const processedCount of [12, 24] as const) {
     });
   });
 }
+
+async function expandDiagnosticsIfNeeded(page: Page) {
+  const diagnostics = page.getByTestId("diagnostics-dock");
+  if (await diagnostics.getAttribute("class").then((value) => value?.includes("collapsed") ?? false)) {
+    await page.getByTestId("diagnostics-collapse-toggle").click();
+  }
+  await expect(diagnostics).not.toHaveClass(/collapsed/);
+}
+
+async function prepareDockForInteraction(page: Page, panel: "inspector" | "diagnostics", direction: typeof dockDirections[number]) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
+  await chooseDockDirection(page, `${panel}-dock-menu`, `${panel}-dock-${direction}`);
+  await expect(page.getByTestId(`${panel}-dock-${direction}`)).toHaveAttribute("aria-pressed", "true");
+  if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
+}
+
+async function resizePanelByPointer(page: Page, panel: "inspector" | "diagnostics", direction: typeof dockDirections[number]) {
+  const edge = page.getByTestId(`${panel}-resize-edge`);
+  await expect(edge).toBeVisible();
+  const before = Number(await edge.getAttribute("aria-valuenow"));
+  const bounds = await edge.boundingBox();
+  expect(bounds, `${panel} resize edge should have a rendered box`).not.toBeNull();
+  if (!bounds) throw new Error(`${panel} resize edge has no bounding box`);
+
+  const startX = bounds.x + bounds.width / 2;
+  const startY = bounds.y + bounds.height / 2;
+  const delta = 36;
+  const dx = direction === "left" ? delta : direction === "right" ? -delta : 0;
+  const dy = direction === "top" ? delta : direction === "bottom" ? -delta : 0;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + dx, startY + dy, { steps: 4 });
+  await page.mouse.up();
+
+  await expect.poll(async () => Number(await edge.getAttribute("aria-valuenow"))).toBeGreaterThan(before);
+}
+
+for (const panel of ["inspector", "diagnostics"] as const) {
+  for (const direction of dockDirections) {
+    test(`resizes ${panel} by pointer when docked ${direction}`, async ({ page }) => {
+      await prepareDockForInteraction(page, panel, direction);
+      await resizePanelByPointer(page, panel, direction);
+
+      const edge = page.getByTestId(`${panel}-resize-edge`);
+      await expect(edge).toHaveAttribute("aria-orientation", direction === "left" || direction === "right" ? "vertical" : "horizontal");
+      await expect(page.getByTestId(panel === "inspector" ? "inspector-panel" : "diagnostics-dock")).toBeVisible();
+    });
+  }
+}
+
+for (const panel of ["inspector", "diagnostics"] as const) {
+  for (const direction of dockDirections) {
+    test(`supports keyboard resize for ${panel} docked ${direction}`, async ({ page }) => {
+      await prepareDockForInteraction(page, panel, direction);
+      const edge = page.getByTestId(`${panel}-resize-edge`);
+      const before = Number(await edge.getAttribute("aria-valuenow"));
+      const increaseKey = direction === "left" ? "ArrowRight"
+        : direction === "right" ? "ArrowLeft"
+          : direction === "top" ? "ArrowDown" : "ArrowUp";
+
+      await edge.focus();
+      await page.keyboard.press(increaseKey);
+      await expect.poll(async () => Number(await edge.getAttribute("aria-valuenow"))).toBe(before + 12);
+    });
+  }
+}
+
+for (const panel of ["inspector", "diagnostics"] as const) {
+  for (const direction of dockDirections) {
+    test(`drags ${panel} to the ${direction} workbench edge`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/");
+      if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
+
+      const source = page.getByTestId(`${panel}-dock-drag-handle`);
+      const target = page.getByTestId("chart-workspace");
+      const targetBounds = await target.boundingBox();
+      expect(targetBounds, "workbench drop target should be rendered").not.toBeNull();
+      if (!targetBounds) throw new Error("workbench drop target has no bounding box");
+
+      const targetPosition = direction === "left"
+        ? { x: 2, y: targetBounds.height / 2 }
+        : direction === "right"
+          ? { x: targetBounds.width - 2, y: targetBounds.height / 2 }
+          : direction === "top"
+            ? { x: targetBounds.width / 2, y: 2 }
+            : { x: targetBounds.width / 2, y: targetBounds.height - 2 };
+
+      await source.dragTo(target, { targetPosition });
+      await expect(page.getByTestId(`${panel}-dock-${direction}`)).toHaveAttribute("aria-pressed", "true");
+    });
+  }
+}
