@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SnapshotRangeMarkerPrimitive, type SnapshotRangeMarkerState } from "../snapshot-reference-primitives";
+import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
 import { projectSnapshotPlaybackSeries, type SnapshotPlaybackSeriesProjection } from "../snapshot-playback-series";
 import { hitTestStructureObject } from "../sbar-chart-structure-hit-test";
 import type { ReplayChartSelection } from "../origin-types";
-import type { ChartSurfacePort } from "../chart-surface-contract";
+import type { ChartSurfacePort, ChartSurfaceSBarMarker } from "../chart-surface-contract";
 import ChartSurface from "./ChartSurface.vue";
 import {
   ReplayCrosshairSyncGate,
@@ -44,13 +45,15 @@ const emit = defineEmits<{
 const surface = ref<ChartSurfacePort | null>(null);
 const hoveredObject = ref<ReplayChartSelection | null>(null);
 const selectedObject = ref<ReplayChartSelection | null>(null);
-const hoveredSbarMarker = ref<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
-const selectedSbarMarker = ref<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
+const hoveredSbarMarker = ref<ChartSurfaceSBarMarker | null>(null);
+const selectedSbarMarker = ref<ChartSurfaceSBarMarker | null>(null);
 const crosshairGate = new ReplayCrosshairSyncGate();
 const snapshotRangeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
 const snapshotVolumeMarkerPrimitive = new SnapshotRangeMarkerPrimitive();
+const snapshotSbarMarkerPrimitive = new SBarMarkerPrimitive();
 let unregisterSnapshotMarkerPrimitive: (() => void) | null = null;
 let unregisterSnapshotVolumeMarkerPrimitive: (() => void) | null = null;
+let unregisterSnapshotSbarMarkerPrimitive: (() => void) | null = null;
 const nativePlaybackStylingEnabled = computed(() =>
   props.syncEnabled
   && props.playbackEnabled
@@ -192,6 +195,13 @@ function updateSbarInteractionMarkers(): void {
   selectedSbarMarker.value = selectedObject.value?.kind === "sbar"
     ? surface.value?.getSbarMarker(selectedObject.value.id) ?? null
     : null;
+  snapshotSbarMarkerPrimitive.update({
+    hovered: hoveredSbarMarker.value,
+    selected: selectedSbarMarker.value,
+    selectedFill: "rgb(217 154 69 / 10%)",
+    selectedStroke: "#D99A45",
+    selectedWidth: 1.5,
+  });
 }
 
 function updateHoveredObject(point: { x: number; y: number } | null): void {
@@ -385,6 +395,10 @@ watch(() => [props.snapshotId, props.bars.map((bar) => bar.sbarId).join("\\u0000
 
 onMounted(() => {
   // The child Surface has initialized its chart and Primitive host by this point.
+  unregisterSnapshotSbarMarkerPrimitive = surface.value?.registerPrimitive(
+    "snapshot-reference:sbar-interaction-markers",
+    snapshotSbarMarkerPrimitive,
+  ) ?? null;
   unregisterSnapshotMarkerPrimitive = surface.value?.registerPrimitive(
     "snapshot-reference:" + props.snapshotId + ":background-range-markers",
     snapshotRangeMarkerPrimitive,
@@ -401,6 +415,8 @@ onMounted(() => {
   applyCrosshairRequest(props.crosshairSync);
 });
 onBeforeUnmount(() => {
+  unregisterSnapshotSbarMarkerPrimitive?.();
+  unregisterSnapshotSbarMarkerPrimitive = null;
   unregisterSnapshotMarkerPrimitive?.();
   unregisterSnapshotMarkerPrimitive = null;
   unregisterSnapshotVolumeMarkerPrimitive?.();
@@ -410,6 +426,7 @@ onBeforeUnmount(() => {
   baseSeriesBars = null;
   snapshotRangeMarkerPrimitive.dispose();
   snapshotVolumeMarkerPrimitive.dispose();
+  snapshotSbarMarkerPrimitive.dispose();
 });
 
 </script>
@@ -434,32 +451,6 @@ onBeforeUnmount(() => {
     @pointer-position="handlePointerPosition"
     @chart-click="handleChartClick"
   >
-    <template #chart-structure-overlays>
-      <rect
-        v-if="hoveredSbarMarker"
-        :x="hoveredSbarMarker.x"
-        :y="hoveredSbarMarker.y"
-        :width="hoveredSbarMarker.width"
-        :height="hoveredSbarMarker.height"
-        fill="none"
-        stroke="#C3CBD1"
-        stroke-width="1.25"
-        data-testid="snapshot-hover-sbar"
-        :data-sbar-id="hoveredSbarMarker.id"
-      />
-      <rect
-        v-if="selectedSbarMarker"
-        :x="selectedSbarMarker.x"
-        :y="selectedSbarMarker.y"
-        :width="selectedSbarMarker.width"
-        :height="selectedSbarMarker.height"
-        fill="rgb(217 154 69 / 10%)"
-        stroke="#D99A45"
-        stroke-width="1.5"
-        data-testid="snapshot-selected-sbar"
-        :data-sbar-id="selectedSbarMarker.id"
-      />
-    </template>
     <template #chart-interaction-overlay>
       <div v-if="hoveredObject" class="snapshot-object-hover-label" data-testid="snapshot-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
     </template>
