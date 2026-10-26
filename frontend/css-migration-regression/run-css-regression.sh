@@ -41,13 +41,54 @@ git cat-file -e "$BASELINE_SHA^{commit}" 2>/dev/null || fail "Pinned baseline co
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/capitus-css-regression.XXXXXX")"
 BASELINE_WORKTREE="$TMP_ROOT/baseline-worktree"
 WORKTREE_ADDED=0
-cleanup() {
+publish_and_cleanup() {
+  local original_exit=$?
+  set +e
+
   if [[ "$WORKTREE_ADDED" == "1" ]]; then
-    git worktree remove --force "$BASELINE_WORKTREE" >/dev/null 2>&1 || true
+    git worktree remove --force "$BASELINE_WORKTREE" >/dev/null 2>&1
   fi
   rm -rf "$TMP_ROOT"
+
+  if [[ -d "${RESULTS_DIR:-}" ]]; then
+    if [[ ! -f "$RESULTS_DIR/manifest.json" ]]; then
+      mkdir -p "$RESULTS_DIR/logs"
+      printf '%s\n' '# CSS migration regression result' '' '- Result: INFRASTRUCTURE FAILURE' "- Candidate commit: ${CANDIDATE_SHA:-unknown}" "- Pinned baseline: $BASELINE_SHA" '' 'The run stopped before a complete report was generated. Inspect available logs.' > "$RESULTS_DIR/summary.md"
+      python3 - "$RESULTS_DIR/manifest.json" "${CANDIDATE_SHA:-unknown}" "$BASELINE_SHA" "$original_exit" <<'PY'
+import json, pathlib, sys
+path, candidate, baseline, code = sys.argv[1:]
+pathlib.Path(path).write_text(json.dumps({
+  "schemaVersion": 1,
+  "repository": "ligl/capitus",
+  "branch": "develop",
+  "candidateCommit": candidate,
+  "baselineCommit": baseline,
+  "result": "infrastructure_failure",
+  "exitCode": int(code),
+  "note": "Run stopped before a complete report was generated; inspect available logs."
+}, indent=2) + "\\n")
+PY
+    fi
+
+    git add -f -- "$RESULTS_DIR"
+    if [[ -d "$BASELINE_DIR" ]]; then git add -f -- "$BASELINE_DIR"; fi
+    if ! git diff --cached --quiet; then
+      git commit -m "test(struxis-debugger): publish CSS regression results for ${CANDIDATE_SHA:-unknown}"
+      if [[ $? -ne 0 ]]; then
+        printf '\n[CSS regression] ERROR: Could not commit result package. Results remain in %s\n' "$RESULTS_DIR" >&2
+        exit 1
+      fi
+    fi
+    if ! git push origin develop; then
+      printf '\n[CSS regression] ERROR: Results are committed locally but could not be pushed. Run: git push origin develop\n' >&2
+      exit 1
+    fi
+    printf '\n[CSS regression] Published baseline/results to origin/develop.\n'
+  fi
+
+  return "$original_exit"
 }
-trap cleanup EXIT
+trap publish_and_cleanup EXIT
 
 rm -rf "$RESULTS_DIR" "$REGRESSION_DIR/artifacts"
 mkdir -p "$RESULTS_DIR/logs"
@@ -208,7 +249,7 @@ PY
 
 printf '\n[CSS regression] Result package: %s\n' "$RESULTS_DIR"
 printf '[CSS regression] Candidate result: %s\n' "$([[ "$CANDIDATE_TEST_EXIT" -eq 0 ]] && printf PASS || printf FAIL)"
-printf '[CSS regression] Commit the baseline (if newly created) and the complete results/latest directory to develop.\n'
+printf '[CSS regression] Baseline/results will be committed and pushed automatically by the exit handler.\n'
 printf '[CSS regression] Keep the temporary css-migration-regression directory until all CSS migration batches are accepted.\n'
 
 exit "$CANDIDATE_TEST_EXIT"
