@@ -982,7 +982,16 @@ test("preserves Compare summary metric geometry and responsive separators", asyn
 test("preserves development context menu positioning, stacking, button geometry and hover styling", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.mouse.click(120, 140, { button: "right" });
+  await page.evaluate(() => {
+    window.dispatchEvent(new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 120,
+      clientY: 140,
+      button: 2,
+      buttons: 2,
+    }));
+  });
 
   const menu = page.getByTestId("devtools-context-menu");
   await expect(menu).toBeVisible();
