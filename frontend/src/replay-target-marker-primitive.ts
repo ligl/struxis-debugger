@@ -79,8 +79,8 @@ export class ReplayTargetMarkerPrimitive implements ISeriesPrimitive<Time> {
         if (label) {
           context.fillStyle = "#C6A06B";
           context.font = "600 9px ui-monospace, SFMono-Regular, Consolas, monospace";
-          context.textBaseline = "top";
-          context.fillText("TARGET", x + 5, 5);
+          context.textBaseline = "alphabetic";
+          context.fillText("TARGET", x + 5, 13);
         }
 
         if (endpoint) {
