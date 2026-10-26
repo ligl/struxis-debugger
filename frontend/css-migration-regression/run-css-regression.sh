@@ -66,7 +66,7 @@ pathlib.Path(path).write_text(json.dumps({
   "result": "infrastructure_failure",
   "exitCode": int(code),
   "note": "Run stopped before a complete report was generated; inspect available logs."
-}, indent=2) + "\\n")
+}, indent=2) + "\n")
 PY
     fi
 
