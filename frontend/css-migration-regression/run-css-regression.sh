@@ -30,6 +30,7 @@ BASELINE_DIR="$REGRESSION_DIR/baseline"
 [[ -f "$REGRESSION_DIR/css-visual-regression.spec.ts" ]] || fail "Missing CSS regression spec."
 command -v bun >/dev/null 2>&1 || fail "Bun is required. Install the repository-pinned Bun version and rerun."
 command -v git >/dev/null 2>&1 || fail "Git is required."
+command -v python3 >/dev/null 2>&1 || fail "Python 3 is required to write the result manifest."
 
 if ! git cat-file -e "$BASELINE_SHA^{commit}" 2>/dev/null; then
   printf '[CSS regression] Fetching pinned baseline commit %s\n' "$BASELINE_SHA"
@@ -48,7 +49,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-rm -rf "$RESULTS_DIR"
+rm -rf "$RESULTS_DIR" "$REGRESSION_DIR/artifacts"
 mkdir -p "$RESULTS_DIR/logs"
 
 CANDIDATE_SHA="$(git rev-parse HEAD)"
