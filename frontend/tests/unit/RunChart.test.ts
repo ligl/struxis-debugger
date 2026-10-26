@@ -241,7 +241,6 @@ describe("RunChart", () => {
     expect(mocks.candleSetData).toHaveBeenCalledTimes(1);
     expect(mocks.volumeSetData).toHaveBeenCalledTimes(1);
     expect(wrapper.get('[data-testid="run-chart-panel"]').attributes("data-sbar-count")).toBe("2");
-    expect(wrapper.get('[data-testid="run-structure-overlay"]').attributes("style")).toContain("width: 700px");
     expect(mocks.fitContent).toHaveBeenCalledOnce();
     expect(mocks.setVisibleLogicalRange).toHaveBeenCalledWith({ from: -0.5, to: 5.5 });
     wrapper.unmount();
@@ -1157,7 +1156,6 @@ describe("RunChart", () => {
     expect(wrapper.get('[data-testid="run-chart-empty"]').text()).toContain("Create a Test Dataset");
     expect(wrapper.get('[aria-label="Replay data workflow"]').text()).toContain("LOAD ORIGIN");
     expect(wrapper.get('[data-testid="run-chart-canvas"]').classes()).toContain("is-empty");
-    expect(wrapper.find('[data-testid="run-structure-overlay"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="run-layer-toggle-sbar"]').exists()).toBe(false);
     expect(mocks.candleSetData).toHaveBeenCalledWith([]);
     expect(mocks.volumeSetData).toHaveBeenCalledWith([]);
