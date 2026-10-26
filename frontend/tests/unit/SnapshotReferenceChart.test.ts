@@ -275,7 +275,7 @@ describe("SnapshotReferenceChart", () => {
     wrapper.unmount();
   });
 
-  it("shows a local SBar hover highlight and label on pointer movement", async () => {
+  it("publishes a local SBar hover label while the Primitive owns highlight drawing", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         ...snapshotDefaults,
