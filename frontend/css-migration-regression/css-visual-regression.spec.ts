@@ -448,7 +448,9 @@ for (const processedCount of [0, 12, 35] as const) {
     await page.getByTestId("run-step").click();
     await expect(progress).toHaveAttribute("aria-valuenow", String(processedCount + 1));
     await expect(page.getByTestId("run-toolbar-status")).toContainText(`${processedCount + 1} / 36`);
-    await expect(snapshotChart).toHaveAttribute("data-progress-active", "true");
+    // Playback styling is active only while unprocessed Live SBars remain.
+    // The final step reaches the completed state and must disable progress styling.
+    await expect(snapshotChart).toHaveAttribute("data-progress-active", String(processedCount + 1 < 36));
     if (processedCount === 35) {
       await expect(page.getByTestId("run-toolbar-status")).toContainText("COMPLETED");
       await expect(page.getByTestId("run-step")).toBeDisabled();
