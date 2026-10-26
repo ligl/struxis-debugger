@@ -1002,19 +1002,19 @@ onBeforeUnmount(() => {
 }
 
 .sbar-dot {
-  background: #75c6a1;
+  background: var(--dbg-legend-sbar);
 }
 
 .cbar-dot {
-  background: #A0A7B0;
+  background: var(--dbg-legend-cbar);
 }
 
 .swing-dot {
-  background: #C6A06B;
+  background: var(--dbg-legend-swing);
 }
 
 .volume-dot {
-  background: #c4a16b;
+  background: var(--dbg-legend-volume);
 }
 
 .origin-chart-foot {
