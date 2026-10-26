@@ -35,7 +35,7 @@ function createHarness() {
     lineCap: "butt",
   };
   const target = {
-    useMediaCoordinateSpace: (callback: (arg: { context: typeof context }) => void) => callback({ context }),
+    useMediaCoordinateSpace: (callback: (arg: { context: typeof context; mediaSize: { width: number; height: number } }) => void) => callback({ context, mediaSize: { width: 100, height: 100 } }),
   };
   const attached: ISeriesPrimitive<Time>[] = [];
   const series = {
@@ -108,11 +108,11 @@ describe("CBar and Swing Series Primitives", () => {
     controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 1, liveCount: 3 });
     rectangleStyles.length = 0;
     renderer!.draw(h.target as never);
-    expect(rectangleStyles).toContainEqual({ color: "#4e5358", width: 1 });
+    expect(rectangleStyles).toContainEqual({ color: "#42484e", width: 1 });
     controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 2, liveCount: 3 });
     rectangleStyles.length = 0;
     renderer!.draw(h.target as never);
-    expect(rectangleStyles).toContainEqual({ color: "#A0A7B0", width: 1 });
+    expect(rectangleStyles).toContainEqual({ color: "#858D97", width: 1 });
 
     controller.setInteractionState({ hoveredId: "cbar-1", selectedId: null });
     renderer!.draw(h.target as never);
