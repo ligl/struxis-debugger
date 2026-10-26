@@ -11,9 +11,14 @@ test.beforeEach(async ({ page }) => {
           switch (command) {
             case "list_catalog_datasets": return [];
             case "get_current_origin": return origin;
-            case "get_current_test_dataset": return null;
-            case "list_snapshots": return [];
-            case "get_run_state": return null;
+            case "get_current_test_dataset": return (window as typeof window & { __CSS_REGRESSION_TEST_DATASET__?: unknown }).__CSS_REGRESSION_TEST_DATASET__ ?? null;
+            case "list_snapshots": return (window as typeof window & { __CSS_REGRESSION_SNAPSHOTS__?: unknown[] }).__CSS_REGRESSION_SNAPSHOTS__ ?? [];
+            case "get_snapshot_reference": {
+              const reference = (window as typeof window & { __CSS_REGRESSION_SNAPSHOT_REFERENCE__?: unknown }).__CSS_REGRESSION_SNAPSHOT_REFERENCE__;
+              if (!reference) throw new Error("Unexpected CSS regression IPC command: get_snapshot_reference");
+              return reference;
+            }
+            case "get_run_state": return (window as typeof window & { __CSS_REGRESSION_RUN_STATE__?: unknown }).__CSS_REGRESSION_RUN_STATE__ ?? null;
             case "get_replay_inspector": return null;
             default: throw new Error(`Unexpected CSS regression IPC command: ${command}`);
           }
@@ -24,7 +29,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 
-async function installDeterministicOrigin(page: Page) {
+async function installDeterministicOrigin(page: Page, replayProcessedCount?: number) {
   await page.addInitScript(() => {
     const bars = Array.from({ length: 36 }, (_, index) => {
       const timestamp = BigInt(1_790_000_000 + index * 60) * 1_000_000_000n;
@@ -74,6 +79,71 @@ async function installDeterministicOrigin(page: Page) {
       structure,
     };
     (window as typeof window & { __CSS_REGRESSION_ORIGIN__?: typeof origin }).__CSS_REGRESSION_ORIGIN__ = origin;
+
+    if (typeof replayProcessedCount === "number") {
+      const testDataset = {
+        testDatasetId: "css-regression-fixture-test",
+        originDatasetId: origin.originDatasetId,
+        instrumentId: origin.instrumentId,
+        barType: origin.barType,
+        timeframe: origin.timeframe,
+        startSbarId: bars[0].sbarId,
+        endSbarId: bars[bars.length - 1].sbarId,
+        sbarCount: bars.length,
+        sbarSequenceFingerprint: origin.sbarSequenceFingerprint,
+      };
+      const runState = {
+        runId: "css-regression-fixture-run",
+        testDatasetId: testDataset.testDatasetId,
+        inputFingerprint: testDataset.sbarSequenceFingerprint,
+        inputCount: bars.length,
+        status: "paused",
+        processedCount: Math.max(0, Math.min(bars.length, replayProcessedCount)),
+        cursorSbarId: replayProcessedCount > 0 ? bars[Math.min(bars.length, replayProcessedCount) - 1]?.sbarId ?? null : null,
+        failureDiagnostic: null,
+      };
+      const snapshotId = "css-regression-fixture-snapshot";
+      const snapshot = {
+        fileName: "css-regression-fixture.snapshot",
+        path: "/tmp/css-regression-fixture.snapshot",
+        kind: "complete",
+        snapshotId,
+        runId: "css-regression-fixture-run",
+        stateKey: "css-regression-fixture-state",
+        instrumentId: origin.instrumentId,
+        barType: origin.barType,
+        inputStartTsEvent: bars[0].tsEvent,
+        inputEndTsEvent: bars[bars.length - 1].tsEvent,
+        generatedAt: "2026-10-26T00:00:00Z",
+        checkpointCount: bars.length,
+        diagnostic: null,
+      };
+      const snapshotReference = {
+        snapshotId,
+        runId: "css-regression-fixture-run",
+        instrumentId: origin.instrumentId,
+        barType: origin.barType,
+        timeframe: origin.timeframe,
+        snapshotGeneratedAt: "1790000000000000000",
+        sbarSequenceFingerprint: origin.sbarSequenceFingerprint,
+        bars,
+        structure,
+        structureTimeline: bars.map((bar, index) => ({
+          sbarId: bar.sbarId,
+          structure: index === 8 || index === 19 || index === 31 ? structure : null,
+        })),
+      };
+      const target = window as typeof window & {
+        __CSS_REGRESSION_TEST_DATASET__?: typeof testDataset;
+        __CSS_REGRESSION_RUN_STATE__?: typeof runState;
+        __CSS_REGRESSION_SNAPSHOTS__?: typeof snapshot[];
+        __CSS_REGRESSION_SNAPSHOT_REFERENCE__?: typeof snapshotReference;
+      };
+      target.__CSS_REGRESSION_TEST_DATASET__ = testDataset;
+      target.__CSS_REGRESSION_RUN_STATE__ = runState;
+      target.__CSS_REGRESSION_SNAPSHOTS__ = [snapshot];
+      target.__CSS_REGRESSION_SNAPSHOT_REFERENCE__ = snapshotReference;
+    }
   });
 }
 
@@ -329,3 +399,24 @@ test("captures deterministic Origin chart and each legend layer toggle", async (
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
   }
 });
+
+
+for (const processedCount of [12, 24] as const) {
+  test(`captures Replay with ${processedCount} processed SBars and unprocessed candle styling`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installDeterministicOrigin(page, processedCount);
+    await page.goto("/");
+    await page.getByTestId("workspace-replay").click();
+    await expect(page.getByTestId("run-chart-panel")).toBeVisible();
+    await expect(page.getByTestId("run-chart-panel")).toHaveAttribute("data-processed-count", String(processedCount));
+    const snapshotSelect = page.getByTestId("replay-reference-select");
+    await expect(snapshotSelect.locator("option[value='css-regression-fixture-snapshot']")).toHaveCount(1);
+    await snapshotSelect.selectOption("css-regression-fixture-snapshot");
+    await expect(page.getByTestId("snapshot-reference-chart")).toBeVisible();
+    await expect(page).toHaveScreenshot(`replay-processed-${processedCount}-of-36.png`, {
+      fullPage: true,
+      animations: "disabled",
+      caret: "hide",
+    });
+  });
+}
