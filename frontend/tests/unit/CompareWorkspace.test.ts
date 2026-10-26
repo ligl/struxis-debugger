@@ -30,6 +30,15 @@ function mountWorkspace(active = true) {
 }
 
 describe("CompareWorkspace", () => {
+  it("shows compact Snapshot Store and difference counts while collapsed", () => {
+    const wrapper = mountWorkspace();
+    const summary = wrapper.get('[data-testid="snapshot-store-toggle"]');
+
+    expect(summary.text()).toContain("0 ARTIFACTS");
+    expect(summary.text()).toContain("0 DIFFERENCES");
+    expect(wrapper.get('[data-testid="snapshot-store-disclosure"]').attributes("open")).toBeUndefined();
+  });
+
   it("owns difference selection and forwards the selected domain difference", async () => {
     const wrapper = mountWorkspace();
     wrapper.findComponent(SnapshotPanel).vm.$emit("selectDifference", difference);
