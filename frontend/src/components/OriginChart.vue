@@ -4,6 +4,7 @@ import ChartSurface from "./ChartSurface.vue";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 import type { ChartSurfacePort, ChartSurfaceSBarMarker } from "../chart-surface-contract";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
+import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
 
 const props = defineProps<{
   bars: SBarDto[];
@@ -33,6 +34,18 @@ const selectionEndX = ref<number | null>(null);
 const previewX = ref<number | null>(null);
 let draggingBoundary: "start" | "end" | null = null;
 let lastEmittedBoundaryId: string | null = null;
+const sbarMarkerPrimitive = new SBarMarkerPrimitive();
+let unregisterSbarMarkerPrimitive: (() => void) | null = null;
+
+function syncSbarMarkerPrimitive(): void {
+  sbarMarkerPrimitive.update({
+    hovered: hoveredSbarMarker.value,
+    selected: selectedSbarMarker.value,
+    selectedFill: "rgba(217, 154, 69, 0.10)",
+    selectedStroke: "#D99A45",
+    selectedWidth: 1.25,
+  });
+}
 
 const selectionStatus = computed(() => {
   if (props.selectionPending) return "SELECT END · MOVE TO PREVIEW";
@@ -248,10 +261,19 @@ watch(() => [props.bars, props.originDatasetId, props.structure] as const, () =>
 }, { deep: false });
 
 onMounted(() => {
+  unregisterSbarMarkerPrimitive = surface.value?.registerPrimitive("origin-sbar-markers", sbarMarkerPrimitive) ?? null;
+  syncSbarMarkerPrimitive();
   updateSelectionCoordinates();
   updateSelectedObjectProjection();
 });
-onBeforeUnmount(stopBoundaryDrag);
+onBeforeUnmount(() => {
+  stopBoundaryDrag();
+  unregisterSbarMarkerPrimitive?.();
+  unregisterSbarMarkerPrimitive = null;
+  sbarMarkerPrimitive.dispose();
+});
+
+watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: true });
 </script>
 
 <template>
@@ -290,6 +312,7 @@ onBeforeUnmount(stopBoundaryDrag);
           fill="none"
           stroke="#C3CBD1"
           stroke-width="1.25"
+          visibility="hidden"
         />
         <rect
           v-if="selectedSbarMarker"
@@ -303,6 +326,7 @@ onBeforeUnmount(stopBoundaryDrag);
           fill="rgb(217 154 69 / 10%)"
           stroke="#D99A45"
           stroke-width="1.25"
+          visibility="hidden"
         />
       </template>
       <template #footer-trailing>
