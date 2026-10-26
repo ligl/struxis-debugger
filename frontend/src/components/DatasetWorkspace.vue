@@ -147,6 +147,12 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
 </template>
 
 <style scoped>
+.dataset-controls-host {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: visible;
+}
+
 .dataset-chart-empty {
   display: flex;
   min-width: 0;
