@@ -2,11 +2,11 @@
 
 - Source: `crates/struxis-debugger/frontend/src/style.css`
 - Source blob after latest scoped migration: `f5c1f37e4860a634e9a6de8c303002edadea1daf`
-- Source lines: 4860; rule occurrences recorded: 762
+- Source lines: 4786; rule occurrences recorded: 762
 - Status: temporary migration aid; regenerate when source CSS changes; remove with the temporary CSS migration regression suite after migration and visual acceptance.
 - Method: lexical scan that skips comments/quoted strings and tracks at-rule nesting. Not a standards-compliant CSS AST; property names are extracted heuristically. Do not use this report alone to change cascade behavior.
 - Ordering: source order preserved. Repeated selectors are intentionally not deduplicated.
-- 2026-10-27 delta: removed the final global `.dataset-controls` rule (`position`, `z-index`) after moving those declarations into `TestDatasetPanel.vue`; this inventory drops that rule occurrence. Line references remain a lexical migration aid and must be regenerated before any broad selector cleanup.
+- 2026-10-27 delta: removed the final global `.dataset-controls` rule (`position`, `z-index`) after moving those declarations into `TestDatasetPanel.vue`; this inventory drops that rule occurrence. Subsequent line references were shifted by five lines to reflect the removal. Line references remain a lexical migration aid and must be regenerated before any broad selector cleanup.
 
 
 | # | Line | Selector | At-rule context | Properties (heuristic) | Owner candidate | Review status |
@@ -699,77 +699,77 @@
 | 686 | 4284 | `.dataset-range-summary` | @media (max-width: 1100px) | flex-basis, gap | Candidate: Dataset / Catalog | Heuristic only |
 | 687 | 4289 | `.dataset-range-status` | @media (max-width: 1100px) | display | Candidate: Dataset / Catalog | Heuristic only |
 | 688 | 4293 | `.test-dataset-details > summary` | @media (max-width: 1100px) | padding-inline | Candidate: Dataset / Catalog | Heuristic only |
-| 690 | 4304 | `.chart-panels > .dataset-workspace-content` | global | overflow | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
-| 691 | 4310 | `/* The side Inspector is positioned at the exact edge reserved by workbench-main. The left-facing frame belongs to the positioned workspace itself, so inset that workspace by 5px rather than trying to move only its inner grid. Replay/Compare remain unchanged. */ .debugger-shell:not(.catalog-is-hidden).inspector-dock-left .workbench-main` | global | left | Manual review: Dataset / Catalog + Shell / Workspace + Dock / Inspector / Diagnostics | Heuristic only |
-| 692 | 4322 | `.dataset-workspace-content > .origin-chart-panel` | global | display, flex, min-height, flex-direction, margin | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
-| 693 | 4330 | `.dataset-workspace-content > .origin-chart-panel > .origin-chart-viewport` | global | flex, height, min-height | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
-| 694 | 4336 | `.dataset-workspace-content .origin-chart-host` | global | height, min-height | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
-| 695 | 4341 | `.dataset-workspace-content .origin-chart-panel > .chart-selection-hint` | global | flex | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
-| 696 | 4345 | `/* Compare mirrors the prototype's toolbar controls → summary strip → dual-chart stack. */ .compare-toolbar-actions` | global | min-width, gap | Manual review: Chart / Replay + Compare | Heuristic only |
-| 697 | 4352 | `.compare-toolbar-select` | global | display, min-width, align-items, gap, color, font, letter-spacing, white-space | Candidate: Compare | Heuristic only |
-| 698 | 4363 | `.compare-toolbar-select select` | global | width, max-width, min-width, height, padding, overflow, border, border-radius, background, color, font, text-overflow | Candidate: Compare | Heuristic only |
-| 699 | 4378 | `.compare-run-button` | global | flex, min-height, padding, font-size, white-space | Candidate: Compare | Heuristic only |
-| 700 | 4386 | `.compare-workspace > .compare-summary` | global | display, flex, min-width, min-height, align-items, gap, padding, border-bottom, background | Manual review: Shell / Workspace + Compare | Heuristic only |
-| 701 | 4398 | `.compare-summary .metric` | global | display, flex, align-items, gap, font-size, white-space | Candidate: Compare | Heuristic only |
-| 702 | 4407 | `.compare-summary .metric .label` | global | color, font-size, letter-spacing | Candidate: Compare | Heuristic only |
-| 703 | 4413 | `.compare-summary .metric .value` | global | color, font | Candidate: Compare | Heuristic only |
-| 704 | 4418 | `.compare-summary .compare-divergence` | global | color | Candidate: Compare | Heuristic only |
-| 705 | 4420 | `.compare-summary .compare-difference-count` | global | color | Candidate: Compare | Heuristic only |
-| 706 | 4421 | `.compare-summary .compare-identity-match` | global | color | Candidate: Compare | Heuristic only |
-| 707 | 4422 | `.compare-summary .compare-identity-mismatch` | global | color | Candidate: Compare | Heuristic only |
-| 708 | 4423 | `.compare-summary .metric` | global | position, min-width | Candidate: Compare | Heuristic only |
-| 709 | 4428 | `.compare-summary .metric + .metric` | global | padding-left | Candidate: Compare | Heuristic only |
-| 710 | 4432 | `.compare-summary .metric + .metric::before` | global | position, top, bottom, left, width, background, content, pointer-events | Candidate: Compare | Heuristic only |
-| 711 | 4443 | `.compare-summary .metric .value` | global | overflow, max-width, text-overflow | Candidate: Compare | Heuristic only |
-| 712 | 4449 | `.comparison-chart-heading .section-index` | global | margin, color, font, letter-spacing | Candidate: Chart / Replay | Heuristic only |
-| 713 | 4456 | `.comparison-chart-heading h3` | global | color, font-size, letter-spacing | Candidate: Chart / Replay | Heuristic only |
-| 714 | 4462 | `.comparison-chart-state` | global | display, align-items, gap, padding, border-radius | Candidate: Chart / Replay | Heuristic only |
-| 715 | 4470 | `.comparison-chart-state.is-ready` | global | border-color, color | Candidate: Chart / Replay | Heuristic only |
-| 716 | 4475 | `.comparison-chart-state.is-pending` | global | color | Candidate: Chart / Replay | Heuristic only |
-| 717 | 4479 | `.comparison-chart-empty` | global | position, flex, padding, background, background-size | Candidate: Chart / Replay | Heuristic only |
-| 718 | 4490 | `.comparison-chart-empty-mark` | global | display, width, height, place-items, border, border-radius, color, font | Candidate: Chart / Replay | Heuristic only |
-| 719 | 4501 | `.comparison-chart-empty strong` | global | margin-top, font-size, letter-spacing | Candidate: Chart / Replay | Heuristic only |
-| 720 | 4507 | `.comparison-chart-empty p` | global | max-width, font-size, line-height | Candidate: Chart / Replay | Heuristic only |
-| 721 | 4513 | `.comparison-chart-integrity` | global | margin-top, color, font, letter-spacing | Candidate: Chart / Replay | Heuristic only |
-| 722 | 4520 | `.comparison-chart-integrity i` | global | padding-inline, color, font-style | Candidate: Chart / Replay | Heuristic only |
-| 723 | 4526 | `.compare-summary .footnote` | global | min-width, margin-left, overflow, font, text-overflow, white-space | Candidate: Compare | Heuristic only |
-| 724 | 4535 | `.compare-summary-error` | global | max-width, margin, overflow, font-size, text-overflow, white-space | Candidate: Compare | Heuristic only |
-| 725 | 4547 | `.compare-toolbar-select select` | @media (max-width: 1280px) | width, max-width | Candidate: Compare | Heuristic only |
-| 726 | 4551 | `.compare-workspace > .compare-summary` | @media (max-width: 1280px) | gap, padding-inline | Manual review: Shell / Workspace + Compare | Heuristic only |
-| 727 | 4556 | `.compare-summary .footnote` | @media (max-width: 1280px) | display | Candidate: Compare | Heuristic only |
-| 728 | 4563 | `.compare-toolbar-actions` | @media (max-width: 1050px) | gap | Candidate: Compare | Heuristic only |
-| 729 | 4564 | `.compare-toolbar-select` | @media (max-width: 1050px) | gap, font-size | Candidate: Compare | Heuristic only |
-| 730 | 4565 | `.compare-toolbar-select select` | @media (max-width: 1050px) | width, max-width | Candidate: Compare | Heuristic only |
-| 731 | 4566 | `.compare-run-button` | @media (max-width: 1050px) | padding-inline, font-size | Candidate: Compare | Heuristic only |
-| 732 | 4567 | `.compare-workspace > .compare-summary` | @media (max-width: 1050px) | gap | Manual review: Shell / Workspace + Compare | Heuristic only |
-| 733 | 4568 | `.compare-summary .metric` | @media (max-width: 1050px) | gap | Candidate: Compare | Heuristic only |
-| 734 | 4569 | `.compare-summary .metric + .metric` | @media (max-width: 1050px) | padding-left | Candidate: Compare | Heuristic only |
-| 735 | 4570 | `.compare-summary .metric + .metric::before` | @media (max-width: 1050px) | top, bottom | Candidate: Compare | Heuristic only |
-| 736 | 4574 | `.compare-toolbar-select > span` | @media (max-width: 1050px) | display | Candidate: Compare | Heuristic only |
-| 737 | 4575 | `.compare-toolbar-select select` | @media (max-width: 1050px) | width, max-width | Candidate: Compare | Heuristic only |
-| 738 | 4577 | `/* Collapsed horizontal Inspector rails follow the Diagnostics toolbar geometry. */ .inspector-rail.collapsed.dock-top, .inspector-rail.collapsed.dock-bottom` | global | padding | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 739 | 4584 | `.inspector-rail.collapsed.dock-top .rail-heading, .inspector-rail.collapsed.dock-bottom .rail-heading` | global | width, height, min-height, flex, flex-direction, align-items, justify-content, gap, padding, border-bottom | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 740 | 4597 | `.inspector-rail.collapsed.dock-top .panel-title, .inspector-rail.collapsed.dock-bottom .panel-title, .inspector-rail.collapsed.dock-top .inspector-object-tag, .inspector-rail.collapsed.dock-bottom .inspector-object-tag, .inspector-rail.collapsed.dock-top .dock-menu, .inspector-rail.collapsed.dock-bottom .dock-menu` | global | display | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 741 | 4605 | `.inspector-rail.collapsed.dock-top .rail-heading > .spacer, .inspector-rail.collapsed.dock-bottom .rail-heading > .spacer` | global | display | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 742 | 4609 | `.inspector-rail.collapsed.dock-top .rail-heading > .rail-toggle, .inspector-rail.collapsed.dock-bottom .rail-heading > .rail-toggle` | global | display, flex, align-items, justify-content, width, height, margin, padding, writing-mode, transform | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 743 | 4622 | `/* A collapsed side rail keeps its reopen control, not the Dock menu. */ .diagnostics-dock.collapsed.dock-left .dock-actions > .dock-menu, .diagnostics-dock.collapsed.dock-right .dock-actions > .dock-menu` | global | display | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 744 | 4628 | `.diagnostics-dock.collapsed.dock-left .dock-actions > [data-testid="diagnostics-collapse-toggle"], .diagnostics-dock.collapsed.dock-right .dock-actions > [data-testid="diagnostics-collapse-toggle"]` | global | display, flex, align-items, justify-content, width, height, margin, padding | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 745 | 4639 | `.diagnostics-dock.collapsed.dock-left .diagnostics-heading, .diagnostics-dock.collapsed.dock-right .diagnostics-heading` | global | cursor | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
-| 746 | 4643 | `/* Development-only browser tooling entry point; not part of the production UI. */ .devtools-context-menu` | global | position, z-index, min-width, padding, border, border-radius, background, box-shadow | Manual review: unclassified | Heuristic only |
-| 747 | 4656 | `.devtools-context-menu button` | global | display, width, min-height, padding, border, border-radius, background, color, text-align, cursor, font | Manual review: unclassified | Heuristic only |
-| 748 | 4670 | `.devtools-context-menu button:hover, .devtools-context-menu button:focus-visible` | global | outline, background | Manual review: unclassified | Heuristic only |
-| 749 | 4676 | `/* Replay playback speed selector — compact Bilibili-style current value + menu. */ /* The toolbar normally clips horizontal overflow; let the speed menu escape below it. */ .workflow-toolbar:has(.replay-speed-menu)` | global | position, z-index, overflow | Manual review: Shell / Workspace + Chart / Replay | Heuristic only |
-| 750 | 4685 | `.replay-speed-control` | global | position, display, flex | Candidate: Chart / Replay | Heuristic only |
-| 751 | 4691 | `.replay-speed-trigger` | global | display, min-width, min-height, align-items, justify-content, padding, border, border-radius, background, color, font-size, cursor | Candidate: Chart / Replay | Heuristic only |
-| 752 | 4706 | `.replay-speed-trigger:hover, .replay-speed-trigger[aria-expanded="true"]` | global | background, color | Candidate: Chart / Replay | Heuristic only |
-| 753 | 4712 | `.replay-speed-menu` | global | position, z-index, top, right, display, width, flex-direction, gap, padding, border, border-radius, background, box-shadow | Candidate: Chart / Replay | Heuristic only |
-| 754 | 4728 | `.replay-speed-option` | global | display, min-height, align-items, justify-content, padding, border, border-radius, background, color, font-size, text-align, cursor | Candidate: Chart / Replay | Heuristic only |
-| 755 | 4743 | `.replay-speed-option:hover, .replay-speed-option:focus-visible` | global | outline, background, color | Candidate: Chart / Replay | Heuristic only |
-| 756 | 4750 | `.replay-speed-option.selected` | global | color, background | Candidate: Chart / Replay | Heuristic only |
-| 757 | 4755 | `.replay-speed-check` | global | color, font-size | Candidate: Chart / Replay | Heuristic only |
-| 758 | 4760 | `/* Shared operation feedback (vue-sonner). Keep toasts above docked panels and menus. */ [data-sonner-toaster]` | global | z-index | Manual review: Dock / Inspector / Diagnostics + Toast integration | Heuristic only |
-| 759 | 4766 | `[data-sonner-toast]` | global | font-family, border-color, background, color, box-shadow | Candidate: Toast integration | Heuristic only |
-| 760 | 4774 | `[data-sonner-toast] [data-description]` | global | color | Candidate: Toast integration | Heuristic only |
-| 761 | 4778 | `[data-sonner-toast][data-type="success"]` | global | border-color | Candidate: Toast integration | Heuristic only |
-| 762 | 4782 | `[data-sonner-toast][data-type="warning"]` | global | border-color | Candidate: Toast integration | Heuristic only |
-| 763 | 4786 | `[data-sonner-toast][data-type="error"]` | global | border-color | Candidate: Toast integration | Heuristic only |
+| 690 | 4299 | `.chart-panels > .dataset-workspace-content` | global | overflow | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
+| 691 | 4305 | `/* The side Inspector is positioned at the exact edge reserved by workbench-main. The left-facing frame belongs to the positioned workspace itself, so inset that workspace by 5px rather than trying to move only its inner grid. Replay/Compare remain unchanged. */ .debugger-shell:not(.catalog-is-hidden).inspector-dock-left .workbench-main` | global | left | Manual review: Dataset / Catalog + Shell / Workspace + Dock / Inspector / Diagnostics | Heuristic only |
+| 692 | 4317 | `.dataset-workspace-content > .origin-chart-panel` | global | display, flex, min-height, flex-direction, margin | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
+| 693 | 4325 | `.dataset-workspace-content > .origin-chart-panel > .origin-chart-viewport` | global | flex, height, min-height | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
+| 694 | 4331 | `.dataset-workspace-content .origin-chart-host` | global | height, min-height | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
+| 695 | 4336 | `.dataset-workspace-content .origin-chart-panel > .chart-selection-hint` | global | flex | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
+| 696 | 4340 | `/* Compare mirrors the prototype's toolbar controls → summary strip → dual-chart stack. */ .compare-toolbar-actions` | global | min-width, gap | Manual review: Chart / Replay + Compare | Heuristic only |
+| 697 | 4347 | `.compare-toolbar-select` | global | display, min-width, align-items, gap, color, font, letter-spacing, white-space | Candidate: Compare | Heuristic only |
+| 698 | 4358 | `.compare-toolbar-select select` | global | width, max-width, min-width, height, padding, overflow, border, border-radius, background, color, font, text-overflow | Candidate: Compare | Heuristic only |
+| 699 | 4373 | `.compare-run-button` | global | flex, min-height, padding, font-size, white-space | Candidate: Compare | Heuristic only |
+| 700 | 4381 | `.compare-workspace > .compare-summary` | global | display, flex, min-width, min-height, align-items, gap, padding, border-bottom, background | Manual review: Shell / Workspace + Compare | Heuristic only |
+| 701 | 4393 | `.compare-summary .metric` | global | display, flex, align-items, gap, font-size, white-space | Candidate: Compare | Heuristic only |
+| 702 | 4402 | `.compare-summary .metric .label` | global | color, font-size, letter-spacing | Candidate: Compare | Heuristic only |
+| 703 | 4408 | `.compare-summary .metric .value` | global | color, font | Candidate: Compare | Heuristic only |
+| 704 | 4413 | `.compare-summary .compare-divergence` | global | color | Candidate: Compare | Heuristic only |
+| 705 | 4415 | `.compare-summary .compare-difference-count` | global | color | Candidate: Compare | Heuristic only |
+| 706 | 4416 | `.compare-summary .compare-identity-match` | global | color | Candidate: Compare | Heuristic only |
+| 707 | 4417 | `.compare-summary .compare-identity-mismatch` | global | color | Candidate: Compare | Heuristic only |
+| 708 | 4418 | `.compare-summary .metric` | global | position, min-width | Candidate: Compare | Heuristic only |
+| 709 | 4423 | `.compare-summary .metric + .metric` | global | padding-left | Candidate: Compare | Heuristic only |
+| 710 | 4427 | `.compare-summary .metric + .metric::before` | global | position, top, bottom, left, width, background, content, pointer-events | Candidate: Compare | Heuristic only |
+| 711 | 4438 | `.compare-summary .metric .value` | global | overflow, max-width, text-overflow | Candidate: Compare | Heuristic only |
+| 712 | 4444 | `.comparison-chart-heading .section-index` | global | margin, color, font, letter-spacing | Candidate: Chart / Replay | Heuristic only |
+| 713 | 4451 | `.comparison-chart-heading h3` | global | color, font-size, letter-spacing | Candidate: Chart / Replay | Heuristic only |
+| 714 | 4457 | `.comparison-chart-state` | global | display, align-items, gap, padding, border-radius | Candidate: Chart / Replay | Heuristic only |
+| 715 | 4465 | `.comparison-chart-state.is-ready` | global | border-color, color | Candidate: Chart / Replay | Heuristic only |
+| 716 | 4470 | `.comparison-chart-state.is-pending` | global | color | Candidate: Chart / Replay | Heuristic only |
+| 717 | 4474 | `.comparison-chart-empty` | global | position, flex, padding, background, background-size | Candidate: Chart / Replay | Heuristic only |
+| 718 | 4485 | `.comparison-chart-empty-mark` | global | display, width, height, place-items, border, border-radius, color, font | Candidate: Chart / Replay | Heuristic only |
+| 719 | 4496 | `.comparison-chart-empty strong` | global | margin-top, font-size, letter-spacing | Candidate: Chart / Replay | Heuristic only |
+| 720 | 4502 | `.comparison-chart-empty p` | global | max-width, font-size, line-height | Candidate: Chart / Replay | Heuristic only |
+| 721 | 4508 | `.comparison-chart-integrity` | global | margin-top, color, font, letter-spacing | Candidate: Chart / Replay | Heuristic only |
+| 722 | 4515 | `.comparison-chart-integrity i` | global | padding-inline, color, font-style | Candidate: Chart / Replay | Heuristic only |
+| 723 | 4521 | `.compare-summary .footnote` | global | min-width, margin-left, overflow, font, text-overflow, white-space | Candidate: Compare | Heuristic only |
+| 724 | 4530 | `.compare-summary-error` | global | max-width, margin, overflow, font-size, text-overflow, white-space | Candidate: Compare | Heuristic only |
+| 725 | 4542 | `.compare-toolbar-select select` | @media (max-width: 1280px) | width, max-width | Candidate: Compare | Heuristic only |
+| 726 | 4546 | `.compare-workspace > .compare-summary` | @media (max-width: 1280px) | gap, padding-inline | Manual review: Shell / Workspace + Compare | Heuristic only |
+| 727 | 4551 | `.compare-summary .footnote` | @media (max-width: 1280px) | display | Candidate: Compare | Heuristic only |
+| 728 | 4558 | `.compare-toolbar-actions` | @media (max-width: 1050px) | gap | Candidate: Compare | Heuristic only |
+| 729 | 4559 | `.compare-toolbar-select` | @media (max-width: 1050px) | gap, font-size | Candidate: Compare | Heuristic only |
+| 730 | 4560 | `.compare-toolbar-select select` | @media (max-width: 1050px) | width, max-width | Candidate: Compare | Heuristic only |
+| 731 | 4561 | `.compare-run-button` | @media (max-width: 1050px) | padding-inline, font-size | Candidate: Compare | Heuristic only |
+| 732 | 4562 | `.compare-workspace > .compare-summary` | @media (max-width: 1050px) | gap | Manual review: Shell / Workspace + Compare | Heuristic only |
+| 733 | 4563 | `.compare-summary .metric` | @media (max-width: 1050px) | gap | Candidate: Compare | Heuristic only |
+| 734 | 4564 | `.compare-summary .metric + .metric` | @media (max-width: 1050px) | padding-left | Candidate: Compare | Heuristic only |
+| 735 | 4565 | `.compare-summary .metric + .metric::before` | @media (max-width: 1050px) | top, bottom | Candidate: Compare | Heuristic only |
+| 736 | 4569 | `.compare-toolbar-select > span` | @media (max-width: 1050px) | display | Candidate: Compare | Heuristic only |
+| 737 | 4570 | `.compare-toolbar-select select` | @media (max-width: 1050px) | width, max-width | Candidate: Compare | Heuristic only |
+| 738 | 4572 | `/* Collapsed horizontal Inspector rails follow the Diagnostics toolbar geometry. */ .inspector-rail.collapsed.dock-top, .inspector-rail.collapsed.dock-bottom` | global | padding | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 739 | 4579 | `.inspector-rail.collapsed.dock-top .rail-heading, .inspector-rail.collapsed.dock-bottom .rail-heading` | global | width, height, min-height, flex, flex-direction, align-items, justify-content, gap, padding, border-bottom | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 740 | 4592 | `.inspector-rail.collapsed.dock-top .panel-title, .inspector-rail.collapsed.dock-bottom .panel-title, .inspector-rail.collapsed.dock-top .inspector-object-tag, .inspector-rail.collapsed.dock-bottom .inspector-object-tag, .inspector-rail.collapsed.dock-top .dock-menu, .inspector-rail.collapsed.dock-bottom .dock-menu` | global | display | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 741 | 4600 | `.inspector-rail.collapsed.dock-top .rail-heading > .spacer, .inspector-rail.collapsed.dock-bottom .rail-heading > .spacer` | global | display | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 742 | 4604 | `.inspector-rail.collapsed.dock-top .rail-heading > .rail-toggle, .inspector-rail.collapsed.dock-bottom .rail-heading > .rail-toggle` | global | display, flex, align-items, justify-content, width, height, margin, padding, writing-mode, transform | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 743 | 4617 | `/* A collapsed side rail keeps its reopen control, not the Dock menu. */ .diagnostics-dock.collapsed.dock-left .dock-actions > .dock-menu, .diagnostics-dock.collapsed.dock-right .dock-actions > .dock-menu` | global | display | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 744 | 4623 | `.diagnostics-dock.collapsed.dock-left .dock-actions > [data-testid="diagnostics-collapse-toggle"], .diagnostics-dock.collapsed.dock-right .dock-actions > [data-testid="diagnostics-collapse-toggle"]` | global | display, flex, align-items, justify-content, width, height, margin, padding | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 745 | 4634 | `.diagnostics-dock.collapsed.dock-left .diagnostics-heading, .diagnostics-dock.collapsed.dock-right .diagnostics-heading` | global | cursor | Candidate: Dock / Inspector / Diagnostics | Heuristic only |
+| 746 | 4638 | `/* Development-only browser tooling entry point; not part of the production UI. */ .devtools-context-menu` | global | position, z-index, min-width, padding, border, border-radius, background, box-shadow | Manual review: unclassified | Heuristic only |
+| 747 | 4651 | `.devtools-context-menu button` | global | display, width, min-height, padding, border, border-radius, background, color, text-align, cursor, font | Manual review: unclassified | Heuristic only |
+| 748 | 4665 | `.devtools-context-menu button:hover, .devtools-context-menu button:focus-visible` | global | outline, background | Manual review: unclassified | Heuristic only |
+| 749 | 4671 | `/* Replay playback speed selector — compact Bilibili-style current value + menu. */ /* The toolbar normally clips horizontal overflow; let the speed menu escape below it. */ .workflow-toolbar:has(.replay-speed-menu)` | global | position, z-index, overflow | Manual review: Shell / Workspace + Chart / Replay | Heuristic only |
+| 750 | 4680 | `.replay-speed-control` | global | position, display, flex | Candidate: Chart / Replay | Heuristic only |
+| 751 | 4686 | `.replay-speed-trigger` | global | display, min-width, min-height, align-items, justify-content, padding, border, border-radius, background, color, font-size, cursor | Candidate: Chart / Replay | Heuristic only |
+| 752 | 4701 | `.replay-speed-trigger:hover, .replay-speed-trigger[aria-expanded="true"]` | global | background, color | Candidate: Chart / Replay | Heuristic only |
+| 753 | 4707 | `.replay-speed-menu` | global | position, z-index, top, right, display, width, flex-direction, gap, padding, border, border-radius, background, box-shadow | Candidate: Chart / Replay | Heuristic only |
+| 754 | 4723 | `.replay-speed-option` | global | display, min-height, align-items, justify-content, padding, border, border-radius, background, color, font-size, text-align, cursor | Candidate: Chart / Replay | Heuristic only |
+| 755 | 4738 | `.replay-speed-option:hover, .replay-speed-option:focus-visible` | global | outline, background, color | Candidate: Chart / Replay | Heuristic only |
+| 756 | 4745 | `.replay-speed-option.selected` | global | color, background | Candidate: Chart / Replay | Heuristic only |
+| 757 | 4750 | `.replay-speed-check` | global | color, font-size | Candidate: Chart / Replay | Heuristic only |
+| 758 | 4755 | `/* Shared operation feedback (vue-sonner). Keep toasts above docked panels and menus. */ [data-sonner-toaster]` | global | z-index | Manual review: Dock / Inspector / Diagnostics + Toast integration | Heuristic only |
+| 759 | 4761 | `[data-sonner-toast]` | global | font-family, border-color, background, color, box-shadow | Candidate: Toast integration | Heuristic only |
+| 760 | 4769 | `[data-sonner-toast] [data-description]` | global | color | Candidate: Toast integration | Heuristic only |
+| 761 | 4773 | `[data-sonner-toast][data-type="success"]` | global | border-color | Candidate: Toast integration | Heuristic only |
+| 762 | 4777 | `[data-sonner-toast][data-type="warning"]` | global | border-color | Candidate: Toast integration | Heuristic only |
+| 763 | 4781 | `[data-sonner-toast][data-type="error"]` | global | border-color | Candidate: Toast integration | Heuristic only |
