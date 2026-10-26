@@ -60,6 +60,10 @@ export class SBarMarkerPrimitive implements ISeriesPrimitive<Time> {
     return this.paneRenderer;
   }
 
+  zOrder(): "top" {
+    return "top";
+  }
+
   update(state: SBarMarkerPrimitiveState): void {
     this.state = state;
     this.updateAllViews();
