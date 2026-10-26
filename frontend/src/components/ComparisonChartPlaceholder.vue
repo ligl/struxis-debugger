@@ -17,16 +17,19 @@ defineProps<{
         <p class="section-index">{{ side === "candidate" ? "CANDIDATE / UPPER" : "BASELINE / LOWER" }}</p>
         <h3>{{ side === "candidate" ? "Candidate" : "Baseline" }}</h3>
       </div>
-      <span class="comparison-chart-state">{{ hasComparison ? `${checkpointCount ?? 0} CHECKPOINTS COMPARED` : "AWAITING VERIFIED COMPARE" }}</span>
+      <span class="comparison-chart-state" :class="{ 'is-ready': hasComparison, 'is-pending': !hasComparison }">
+        {{ hasComparison ? `${checkpointCount ?? 0} CHECKPOINTS` : "NO RESULT" }}
+      </span>
     </header>
     <div class="comparison-chart-empty">
-      <strong>Authoritative chart projection not connected</strong>
+      <span class="comparison-chart-empty-mark" aria-hidden="true">—</span>
+      <strong>Historical chart data unavailable</strong>
       <p>
         {{ hasComparison
-          ? "The current Compare DTO exposes checkpoint and difference metadata, not the historical SBar OHLCV sequence required for chart rendering."
-          : "Select two eligible completed Snapshots in the Compare controls below. Chart data will only be drawn from an authoritative historical SBar projection." }}
+          ? "Comparison metadata is available, but this result does not include the historical SBar OHLCV sequence needed to render candles."
+          : "Choose two completed Snapshots and run a comparison. Candles will appear only when an authoritative historical SBar sequence is available." }}
       </p>
-      <span>NO SYNTHETIC MARKET DATA</span>
+      <span class="comparison-chart-integrity">AUTHORITATIVE DATA ONLY <i>·</i> NO SYNTHETIC CANDLES</span>
     </div>
   </section>
 </template>
