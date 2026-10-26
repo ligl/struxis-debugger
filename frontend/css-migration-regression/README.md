@@ -14,18 +14,29 @@ This suite is deliberately isolated from the maintained E2E suite. It does not m
 - Viewport snapshots: 1440 × 900, device scale factor 1
 - Responsive geometry checks: 920 × 800, 1024 × 800, 1280 × 800, 1440 × 900, 1920 × 1080
 
-The baseline is **not established by committing these test files**. It must be generated locally by checking out the exact baseline commit and running the commands below. Do not generate baseline screenshots from a CSS-migrated working tree.
+The baseline is **not established by committing these test files**. The temporary directory does not exist at the historical baseline commit, so copy this directory into a separate worktree at that exact commit before generating snapshots. Do not generate baseline screenshots from a CSS-migrated working tree.
 
 ## Commands
 
-Run from `crates/struxis-debugger/frontend`:
+From the repository root of a clean checkout containing the temporary suite on `develop`, create a separate worktree at the pinned baseline and copy only the temporary directory into it:
 
 ```bash
+git worktree add /tmp/capitus-css-baseline 171254d0bbdad139f51ba1550e8379899d8f6ca6
+cp -a crates/struxis-debugger/frontend/css-migration-regression \\
+  /tmp/capitus-css-baseline/crates/struxis-debugger/frontend/
+cd /tmp/capitus-css-baseline/crates/struxis-debugger/frontend
+bun install --frozen-lockfile
 bunx playwright test --config css-migration-regression/playwright.config.ts --update-snapshots
 bunx playwright test --config css-migration-regression/playwright.config.ts
 ```
 
-The first command is for initial baseline creation only, and must be run while the production CSS is at the baseline commit. Review the generated screenshots and computed-style attachments before treating the baseline as valid. After the baseline has been generated, use the second command for comparisons; do not routinely pass `--update-snapshots`.
+Review the generated screenshots and computed-style attachments, then copy the reviewed `baseline/` directory into the temporary suite on the migration working tree. Run comparisons from `crates/struxis-debugger/frontend` on that working tree:
+
+```bash
+bunx playwright test --config css-migration-regression/playwright.config.ts
+```
+
+The `--update-snapshots` command is for initial baseline creation only. Do not routinely pass it to make a comparison green. Keep both the baseline worktree and candidate worktree on the same dependency lockfile/browser installation where feasible; if the historical lockfile or rendering environment differs, document that as a comparability risk.
 
 Test artifacts, HTML reports, traces, and result output are written below this temporary directory and must not be committed as permanent product assets. Preserve the reviewed baseline files locally while running each migration batch.
 
