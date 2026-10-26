@@ -634,7 +634,7 @@ test("projects every Snapshot Reference candle from the independent SBar fixture
         .filter((column) => column.total >= 4 && (column.dominant?.[1] ?? 0) >= 3)
         .sort((a, b) => a.x - b.x);
       const groups: Array<{ start: number; end: number; counts: Map<string, number> }> = [];
-      for (const [x, counts] of coloredColumns) {
+      for (const { x, counts } of coloredColumns) {
         const previous = groups[groups.length - 1];
         if (!previous || x - previous.end > 4) {
           groups.push({ start: x, end: x, counts: new Map(counts) });
