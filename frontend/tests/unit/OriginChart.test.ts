@@ -520,7 +520,11 @@ describe("ChartSurface and chart entry adapters", () => {
     await nextTick();
     expect(wrapper.find('[data-testid="origin-object-hover-label"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-selected-sbar"]').exists()).toBe(false);
-    expect(wrapper.props("selectedObject")).toEqual({ kind: "sbar", id: bars[0]!.sbarId, originDatasetId: "origin-hover-state" });
+    expect((wrapper.props() as Record<string, unknown>).selectedObject).toEqual({
+      kind: "sbar",
+      id: bars[0]!.sbarId,
+      originDatasetId: "origin-hover-state",
+    });
 
     moveHandler?.({});
     await nextTick();
