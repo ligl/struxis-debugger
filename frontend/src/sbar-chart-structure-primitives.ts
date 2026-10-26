@@ -442,6 +442,13 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
           const arrowHalfWidth = 2.25;
           const baseX = tipX - ux * arrowLength;
           const baseY = tipY - uy * arrowLength;
+
+          // Keep the arrowhead under the same hover / selection emphasis as
+          // its Swing segment; do not let the Extending state color mask it.
+          context.strokeStyle = selected || hovered || !segment.dimmed
+            ? baseColor
+            : dimStructureColor(baseColor);
+          context.lineWidth = (selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.5) * scale;
           context.setLineDash([]);
           context.beginPath();
           context.moveTo(tipX * scale, tipY * scale);
