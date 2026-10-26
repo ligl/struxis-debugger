@@ -509,9 +509,9 @@ describe("ChartSurface and chart entry adapters", () => {
     moveHandler?.({ point: { x: 150, y: 50 } });
     await nextTick();
 
-    expect(wrapper.get('[data-testid="origin-object-hover-label"]').text()).toBe("SWING · swing-hover");
+    expect(wrapper.find('[data-testid="origin-object-hover-label"]').exists()).toBe(false);
     // Structure hover/selection visuals are rendered by the attached Primitive,
-    // not duplicated as SVG nodes. Hover remains transient and Inspector selection stays unchanged.
+    // not duplicated as SVG nodes. Hover remains transient, has no ID label, and Inspector selection stays unchanged.
     expect(wrapper.find('[data-testid="origin-hover-swing"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="origin-selected-swing"]').exists()).toBe(false);
 
