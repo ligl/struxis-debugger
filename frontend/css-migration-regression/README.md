@@ -44,14 +44,15 @@ Test artifacts, HTML reports, traces, and result output are written below this t
 
 - Default workbench screenshot at 1440 × 900.
 - Dataset, Replay, and Compare default-workspace screenshots.
-- Expanded Diagnostics screenshots in all four dock directions.
+- Inspector expanded and collapsed screenshots.
+- Diagnostics default-collapsed screenshot and expanded screenshots in all four dock directions.
 - Stable shell/layout test IDs and selected computed CSS properties/tokens.
 - Horizontal document overflow and non-negative geometry at five desktop viewports.
 - JSON layout/style contracts attached to each Playwright test report.
 
 ## Known coverage gap — do not treat as full visual acceptance
 
-This initial suite still does not construct deterministic market/chart data or exercise the full interaction matrix listed in `docs/architecture/struxis/debugger/css-layered-architecture.md` §10. The workspace screenshots use the current default data state; the Diagnostics captures cover expanded docks in four directions, but do not yet cover Inspector's four docking directions, resizing, or the complete collapse/restore matrix. In particular, an empty/default application view cannot prove that chart legend layers, Replay processed/unprocessed candles, Snapshot Reference, or Compare Candidate/Baseline remain visually equivalent.
+This initial suite still does not construct deterministic market/chart data or exercise the full interaction matrix listed in `docs/architecture/struxis/debugger/css-layered-architecture.md` §10. The workspace screenshots use the current default data state. Inspector collapse/restore and Diagnostics default-collapsed/expanded states are covered, but Inspector's four docking directions and dock resizing are not. In particular, an empty/default application view cannot prove that chart legend layers, Replay processed/unprocessed candles, Snapshot Reference, or Compare Candidate/Baseline remain visually equivalent.
 
 Before CSS migration begins, extend this temporary suite with reproducible state setup and screenshots for those scenarios, or record why a scenario cannot be deterministically constructed. Reuse existing stable selectors and interaction contracts; do not add production-only hooks or weaken the formal E2E suite to support this temporary suite.
 
