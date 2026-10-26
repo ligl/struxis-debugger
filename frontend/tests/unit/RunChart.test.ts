@@ -390,10 +390,9 @@ describe("RunChart", () => {
     mocks.crosshairMoveListener?.({ point: { x: 60, y: 190 } });
     await nextTick();
 
-    // SBar hover is rendered by SBarMarkerPrimitive; the compatibility SVG
-    // probe is intentionally absent. The semantic hover label remains adapter-owned.
+    // Hover keeps its chart interaction semantics without rendering an ID label.
     expect(wrapper.find('[data-testid="run-hover-sbar"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe(`SBAR · ${originBars[1]!.sbarId}`);
+    expect(wrapper.find('[data-testid="run-object-hover-label"]').exists()).toBe(false);
     expect(wrapper.emitted("objectSelect")).toBeUndefined();
 
     mocks.crosshairMoveListener?.({ point: undefined });
@@ -683,7 +682,7 @@ describe("RunChart", () => {
     moveHandler?.({ point: { x: 90, y: 189.5 } });
     await nextTick();
     expect(wrapper.find('[data-testid="run-hover-swing"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe("SWING · swing-1");
+    expect(wrapper.find('[data-testid="run-object-hover-label"]').exists()).toBe(false);
     expect(projectedStructureGeometry(wrapper).cbarRectangles.map((item) => item.id)).toContain("cbar-1");
     expect(wrapper.emitted("objectSelect")).toBeUndefined();
 
@@ -692,7 +691,7 @@ describe("RunChart", () => {
     moveHandler?.({ point: { x: 90, y: 188 } });
     await nextTick();
     expect(wrapper.find('[data-testid="run-hover-cbar"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe("CBAR · cbar-1");
+    expect(wrapper.find('[data-testid="run-object-hover-label"]').exists()).toBe(false);
     expect(wrapper.emitted("objectSelect")).toBeUndefined();
 
     await wrapper.get('[data-testid="run-layer-toggle-cbar"]').trigger("click");
