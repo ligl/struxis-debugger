@@ -622,7 +622,17 @@ test("projects every Snapshot Reference candle from the independent SBar fixture
         }
       }
 
-      const coloredColumns = [...byX.entries()].sort(([a], [b]) => a - b);
+      // Ignore sparse exact-color hits from overlays and antialiased edges.
+      // A candle body contributes multiple fully opaque pixels at its x coordinate.
+      const coloredColumns = [...byX.entries()]
+        .map(([x, counts]) => ({
+          x,
+          counts,
+          total: [...counts.values()].reduce((sum, count) => sum + count, 0),
+          dominant: [...counts.entries()].sort((a, b) => b[1] - a[1])[0],
+        }))
+        .filter((column) => column.total >= 4 && (column.dominant?.[1] ?? 0) >= 3)
+        .sort((a, b) => a.x - b.x);
       const groups: Array<{ start: number; end: number; counts: Map<string, number> }> = [];
       for (const [x, counts] of coloredColumns) {
         const previous = groups[groups.length - 1];
