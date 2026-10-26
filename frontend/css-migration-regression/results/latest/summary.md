@@ -1,9 +1,9 @@
 # CSS migration regression result
 
 - **Result:** PASSED
-- **Candidate commit:** `2f0ae7598c092aace14ed24b03a006429efb0a68`
+- **Candidate commit:** `ad13d5129343ac2f895c744a8c99bcc5177b0b4f`
 - **Pinned visual baseline:** `171254d0bbdad139f51ba1550e8379899d8f6ca6`
-- **Generated (UTC):** 2026-10-26T19:16:10.642789+00:00
+- **Generated (UTC):** 2026-10-26T19:21:22.786728+00:00
 - **Environment:** Linux 7.0.0-38-generic x86_64; Bun 1.4.3; Node v22.22.2
 - **Baseline screenshots:** 22
 - **Candidate test exit code:** 0
@@ -17,7 +17,6 @@
 
 ## Known coverage gaps
 
-- Replay processed/unprocessed candle brightness is covered by full-page screenshots at two progress states, but has no targeted per-candle pixel/color assertion
 - Real Snapshot Reference chart projection
 - Inspector dock resize interaction
 - Full Inspector/Diagnostics drag-resize interaction matrix
