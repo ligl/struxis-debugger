@@ -15,8 +15,8 @@ import {
   startRun,
   stepRun,
   stopRun,
-} from "./origin-bridge";
-import type { RunStateDto, IpcError } from "./origin-types";
+} from "../../src/origin-bridge";
+import type { RunStateDto, IpcError } from "../../src/origin-types";
 
 const mockRunState: RunStateDto = {
   runId: "run-abc-123",
