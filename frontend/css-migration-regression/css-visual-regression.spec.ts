@@ -595,11 +595,21 @@ test("projects every Snapshot Reference candle from the independent SBar fixture
       "#557e65", "#8d555b", "#858d97",
       "#2e4239", "#463035", "#42484e",
     ];
-    const byX = new Map<number, Map<string, number>>();
-    for (const canvas of host.querySelectorAll("canvas")) {
+    const results: Array<{
+      canvasIndex: number;
+      width: number;
+      height: number;
+      groups: Array<{ start: number; end: number; color: string | null }>;
+    }> = [];
+
+    // Lightweight Charts layers canvases (price series, volume pane, primitives)
+    // separately. Never merge their pixels: a full-width overlay can otherwise
+    // make unrelated color columns appear to be one continuous candle.
+    [...host.querySelectorAll("canvas")].forEach((canvas, canvasIndex) => {
       const context = canvas.getContext("2d", { willReadFrequently: true });
-      if (!context || canvas.width === 0 || canvas.height === 0) continue;
+      if (!context || canvas.width === 0 || canvas.height === 0) return;
       const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const byX = new Map<number, Map<string, number>>();
       for (let y = 0; y < canvas.height; y += 1) {
         for (let x = 0; x < canvas.width; x += 1) {
           const offset = (y * canvas.width + x) * 4;
@@ -611,35 +621,46 @@ test("projects every Snapshot Reference candle from the independent SBar fixture
           byX.set(x, counts);
         }
       }
-    }
 
-    const coloredColumns = [...byX.entries()].sort(([a], [b]) => a - b);
-    const groups: Array<{ start: number; end: number; counts: Map<string, number> }> = [];
-    for (const [x, counts] of coloredColumns) {
-      const previous = groups[groups.length - 1];
-      if (!previous || x - previous.end > 4) {
-        groups.push({ start: x, end: x, counts: new Map(counts) });
-      } else {
-        previous.end = x;
-        for (const [color, count] of counts) {
-          previous.counts.set(color, (previous.counts.get(color) ?? 0) + count);
+      const coloredColumns = [...byX.entries()].sort(([a], [b]) => a - b);
+      const groups: Array<{ start: number; end: number; counts: Map<string, number> }> = [];
+      for (const [x, counts] of coloredColumns) {
+        const previous = groups[groups.length - 1];
+        if (!previous || x - previous.end > 4) {
+          groups.push({ start: x, end: x, counts: new Map(counts) });
+        } else {
+          previous.end = x;
+          for (const [color, count] of counts) {
+            previous.counts.set(color, (previous.counts.get(color) ?? 0) + count);
+          }
         }
       }
-    }
 
-    return groups.map((group) => ({
-      start: group.start,
-      end: group.end,
-      color: [...group.counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
-    }));
+      results.push({
+        canvasIndex,
+        width: canvas.width,
+        height: canvas.height,
+        groups: groups.map((group) => ({
+          start: group.start,
+          end: group.end,
+          color: [...group.counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+        })),
+      });
+    });
+
+    // Select the individual canvas layer that contains the most separate
+    // expected candle-color columns. Return all candidates for diagnostics.
+    const selected = [...results].sort((a, b) => b.groups.length - a.groups.length)[0];
+    return { selected: selected ?? null, canvases: results };
   });
 
   await testInfo.attach("snapshot-candle-projection-oracle.json", {
     body: JSON.stringify({ expected, actual }, null, 2),
     contentType: "application/json",
   });
-  expect(actual, "every fixture SBar should have a distinct rendered candle/volume color column").toHaveLength(36);
-  expect(actual.map((item) => item.color), "rendered candle colors must follow the independent SBar direction/progress oracle").toEqual(expected);
+  expect(actual.selected, "a dedicated chart canvas layer should expose candle color columns").not.toBeNull();
+  expect(actual.selected?.groups, "every fixture SBar should have a distinct rendered candle color column").toHaveLength(36);
+  expect(actual.selected?.groups.map((item) => item.color), "rendered candle colors must follow the independent SBar direction/progress oracle").toEqual(expected);
 });
 
 async function expandDiagnosticsIfNeeded(page: Page) {
