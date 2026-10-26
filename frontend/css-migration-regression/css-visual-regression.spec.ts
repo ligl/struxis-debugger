@@ -152,6 +152,42 @@ for (const direction of dockDirections) {
   });
 }
 
+
+test("captures Inspector expanded and collapsed states", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const inspector = page.getByTestId("inspector-panel");
+  await expect(inspector).toBeVisible();
+  await expect(page.getByRole("button", { name: "Collapse Inspector" })).toBeVisible();
+  await expect(page).toHaveScreenshot("inspector-expanded.png", {
+    fullPage: true,
+    animations: "disabled",
+    caret: "hide",
+  });
+
+  await page.getByRole("button", { name: "Collapse Inspector" }).click();
+  await expect(page.getByRole("button", { name: "Expand Inspector" })).toBeVisible();
+  await expect(inspector).toHaveClass(/collapsed/);
+  await expect(page).toHaveScreenshot("inspector-collapsed.png", {
+    fullPage: true,
+    animations: "disabled",
+    caret: "hide",
+  });
+});
+
+test("captures the default collapsed Diagnostics state", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const diagnostics = page.getByTestId("diagnostics-dock");
+  await expect(diagnostics).toBeVisible();
+  await expect(diagnostics).toHaveClass(/collapsed/);
+  await expect(page).toHaveScreenshot("diagnostics-collapsed-default.png", {
+    fullPage: true,
+    animations: "disabled",
+    caret: "hide",
+  });
+});
+
 for (const viewport of viewports) {
   test(`preserves shell geometry at ${viewport.name} viewport`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
