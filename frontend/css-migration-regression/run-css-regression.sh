@@ -166,10 +166,26 @@ if [[ "$WORKTREE_ADDED" != "1" ]]; then
 fi
 mkdir -p "$BASELINE_SUITE/baseline"
 cp -a "$BASELINE_DIR/." "$BASELINE_SUITE/baseline/"
+set +e
 (
   cd "$BASELINE_FRONTEND"
   bunx playwright test --config css-migration-regression/playwright.config.ts
 ) 2>&1 | tee "$RESULTS_DIR/logs/baseline-verify.log"
+BASELINE_VERIFY_EXIT=${PIPESTATUS[0]}
+set -e
+
+# Preserve baseline failure attachments before the EXIT trap removes the
+# temporary worktree. Without this copy, the oracle JSON, screenshot, and trace
+# disappear with TMP_ROOT and cannot be inspected from the published result.
+if [[ -d "$BASELINE_SUITE/artifacts/test-results" ]]; then
+  cp -a "$BASELINE_SUITE/artifacts/test-results" "$RESULTS_DIR/baseline-test-results"
+fi
+if [[ -d "$BASELINE_SUITE/artifacts/report" ]]; then
+  cp -a "$BASELINE_SUITE/artifacts/report" "$RESULTS_DIR/baseline-playwright-report"
+fi
+if [[ "$BASELINE_VERIFY_EXIT" -ne 0 ]]; then
+  fail "Pinned baseline verification failed (exit $BASELINE_VERIFY_EXIT). Preserved its Playwright attachments under $RESULTS_DIR/baseline-test-results."
+fi
 
 printf '[CSS regression] Running candidate visual and layout regression suite...\n'
 set +e
