@@ -4425,7 +4425,7 @@ th, td { padding: 6px 8px; }
 }
 
 .compare-summary .metric + .metric {
-  padding-left: 14px;
+  padding-left: 10px;
   border-left: 1px solid #2a3136;
 }
 
@@ -4628,6 +4628,7 @@ th, td { padding: 6px 8px; }
   .compare-run-button { padding-inline: 5px; font-size: 8px; }
   .compare-workspace > .compare-summary { gap: 8px; }
   .compare-summary .metric { gap: 4px; }
+  .compare-summary .metric + .metric { padding-left: 6px; }
 }
 
 @media (max-width: 1050px) {
