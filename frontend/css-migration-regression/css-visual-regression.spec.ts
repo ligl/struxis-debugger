@@ -498,11 +498,15 @@ test("synchronizes Snapshot viewport when the Live chart is zoomed", async ({ pa
   const bounds = await liveChart.boundingBox();
   expect(bounds).not.toBeNull();
   if (!bounds) throw new Error("Live chart canvas host has no bounding box");
-  const before = await snapshotChart.screenshot();
+  const initial = await snapshotChart.screenshot();
 
   await page.mouse.move(bounds.x + bounds.width * 0.63, bounds.y + bounds.height * 0.43);
+  await expectChartPixelsToChangeAfter(page, snapshotChart, initial);
+  // Establish the synchronized crosshair first; the second comparison must
+  // detect an additional visual change caused by the viewport zoom itself.
+  const beforeZoom = await snapshotChart.screenshot();
   await page.mouse.wheel(0, -240);
-  await expectChartPixelsToChangeAfter(page, snapshotChart, before);
+  await expectChartPixelsToChangeAfter(page, snapshotChart, beforeZoom);
 });
 
 for (const processedCount of [12, 24] as const) {
