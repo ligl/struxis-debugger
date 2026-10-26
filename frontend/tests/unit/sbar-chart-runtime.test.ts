@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UTCTimestamp } from "lightweight-charts";
 
 const mocks = vi.hoisted(() => ({
   createChart: vi.fn(),
@@ -63,7 +64,7 @@ describe("paired SBar / Volume data application", () => {
     const candleSetData = vi.fn();
     const volumeSetData = vi.fn();
     const candles = [{ time: 10, open: 1, high: 2, low: 0, close: 1 }];
-    const volume = [{ time: 10, value: 5 }];
+    const volume = [{ time: 10 as UTCTimestamp, value: 5 }];
 
     expect(replaceSbarChartSeriesData(
       { setData: candleSetData } as never,
@@ -80,7 +81,7 @@ describe("paired SBar / Volume data application", () => {
     const candleUpdate = vi.fn();
     const volumeUpdate = vi.fn();
     const candle = { time: 10, open: 1, high: 2, low: 0, close: 1 };
-    const volume = { time: 10, value: 5 };
+    const volume = { time: 10 as UTCTimestamp, value: 5 };
 
     expect(updateSbarChartSeriesData(
       { update: candleUpdate } as never,
