@@ -411,7 +411,12 @@ for (const processedCount of [12, 24] as const) {
     const snapshotSelect = page.getByTestId("replay-reference-select");
     await expect(snapshotSelect.locator("option[value='css-regression-fixture-snapshot']")).toHaveCount(1);
     await snapshotSelect.selectOption("css-regression-fixture-snapshot");
-    await expect(page.getByTestId("snapshot-reference-chart")).toBeVisible();
+    const snapshotChart = page.getByTestId("snapshot-reference-chart");
+    await expect(snapshotChart).toBeVisible();
+    // Do not accept a screenshot of an empty/unsynchronized reference as a Replay fixture.
+    await expect(snapshotChart).toHaveAttribute("data-sync-eligible", "true");
+    await expect(snapshotChart).toHaveAttribute("data-progress-active", "true");
+    await expect(page.getByTestId("run-chart-panel")).toBeVisible();
     await expect(page).toHaveScreenshot(`replay-processed-${processedCount}-of-36.png`, {
       fullPage: true,
       animations: "disabled",
