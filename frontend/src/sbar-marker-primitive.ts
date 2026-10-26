@@ -30,7 +30,6 @@ export interface SBarMarkerPrimitiveState {
  * or selected; this Primitive has no Dataset / Replay business semantics.
  */
 export class SBarMarkerPrimitive implements ISeriesPrimitive<Time> {
-  private chart: AttachedParameter["chart"] | null = null;
   private requestUpdate: (() => void) | null = null;
   private state: SBarMarkerPrimitiveState = {
     hovered: null,
@@ -45,13 +44,11 @@ export class SBarMarkerPrimitive implements ISeriesPrimitive<Time> {
   };
 
   attached(param: AttachedParameter): void {
-    this.chart = param.chart;
     this.requestUpdate = param.requestUpdate;
     this.updateAllViews();
   }
 
   detached(): void {
-    this.chart = null;
     this.requestUpdate = null;
   }
 
