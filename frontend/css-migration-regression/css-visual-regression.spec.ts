@@ -870,3 +870,110 @@ test("preserves Compare Snapshot Store disclosure geometry and styling", async (
   expect(expanded.panel.borderRadius).toBe("3px");
   expect(expanded.panel.backgroundColor).toBe("rgb(21, 25, 29)");
 });
+
+
+test("preserves Compare summary metric geometry and responsive separators", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("workspace-compare").click();
+
+  const summary = page.getByTestId("compare-summary");
+  await expect(summary).toBeVisible();
+  const desktop = await summary.evaluate((element) => {
+    const root = getComputedStyle(element);
+    const metric = element.querySelector<HTMLElement>(".metric")!;
+    const nextMetric = element.querySelector<HTMLElement>(".metric + .metric")!;
+    const label = element.querySelector<HTMLElement>(".metric .label")!;
+    const value = element.querySelector<HTMLElement>(".metric .value")!;
+    const separator = getComputedStyle(nextMetric, "::before");
+    return {
+      root: {
+        display: root.display,
+        flex: root.flex,
+        minHeight: root.minHeight,
+        gap: root.gap,
+        padding: root.padding,
+        backgroundColor: root.backgroundColor,
+      },
+      metric: {
+        display: getComputedStyle(metric).display,
+        position: getComputedStyle(metric).position,
+        gap: getComputedStyle(metric).gap,
+        whiteSpace: getComputedStyle(metric).whiteSpace,
+      },
+      label: {
+        fontSize: getComputedStyle(label).fontSize,
+        letterSpacing: getComputedStyle(label).letterSpacing,
+      },
+      value: {
+        fontFamily: getComputedStyle(value).fontFamily,
+        fontSize: getComputedStyle(value).fontSize,
+        maxWidth: getComputedStyle(value).maxWidth,
+        overflow: getComputedStyle(value).overflow,
+        textOverflow: getComputedStyle(value).textOverflow,
+      },
+      separator: {
+        content: separator.content,
+        width: separator.width,
+        top: separator.top,
+        bottom: separator.bottom,
+        backgroundColor: separator.backgroundColor,
+      },
+    };
+  });
+  expect(desktop.root).toEqual({
+    display: "flex",
+    flex: "0 0 56px",
+    minHeight: "38px",
+    gap: "14px",
+    padding: "0px 12px",
+    backgroundColor: "rgb(20, 25, 29)",
+  });
+  expect(desktop.metric).toEqual({
+    display: "flex",
+    position: "relative",
+    gap: "7px",
+    whiteSpace: "nowrap",
+  });
+  expect(desktop.label).toEqual({ fontSize: "8px", letterSpacing: "0.24px" });
+  expect(desktop.value).toMatchObject({
+    fontSize: "10px",
+    maxWidth: "240px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  });
+  expect(desktop.separator).toEqual({
+    content: '""',
+    width: "1px",
+    top: "7px",
+    bottom: "7px",
+    backgroundColor: "rgb(42, 49, 54)",
+  });
+
+  await page.setViewportSize({ width: 1000, height: 900 });
+  const compact = await summary.evaluate((element) => {
+    const root = getComputedStyle(element);
+    const metric = element.querySelector<HTMLElement>(".metric")!;
+    const nextMetric = element.querySelector<HTMLElement>(".metric + .metric")!;
+    const footnote = element.querySelector<HTMLElement>(".footnote")!;
+    const separator = getComputedStyle(nextMetric, "::before");
+    return {
+      rootGap: root.gap,
+      paddingInline: root.paddingInline,
+      metricGap: getComputedStyle(metric).gap,
+      nextMetricPaddingLeft: getComputedStyle(nextMetric).paddingLeft,
+      separatorTop: separator.top,
+      separatorBottom: separator.bottom,
+      footnoteDisplay: getComputedStyle(footnote).display,
+    };
+  });
+  expect(compact).toEqual({
+    rootGap: "8px",
+    paddingInline: "8px",
+    metricGap: "4px",
+    nextMetricPaddingLeft: "6px",
+    separatorTop: "8px",
+    separatorBottom: "8px",
+    footnoteDisplay: "none",
+  });
+});
