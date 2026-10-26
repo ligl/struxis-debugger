@@ -1992,7 +1992,7 @@ body,
   --dbg-legend-sbar: #75c6a1;
   --dbg-legend-cbar: #a8b2b9;
   --dbg-legend-swing: var(--dbg-chart-swing);
-  --dbg-legend-volume: #e17e79;
+  --dbg-legend-volume: #8B5558;
   color: var(--dbg-text-primary);
   background: var(--dbg-bg);
   font-size: 13px;
