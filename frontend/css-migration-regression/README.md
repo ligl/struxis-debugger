@@ -10,7 +10,7 @@ Run from the Capitus repository root on a clean `develop` worktree:
 bash crates/struxis-debugger/frontend/css-migration-regression/run-css-regression.sh
 ```
 
-That is the only command the operator needs to run. The script refuses to run on another branch or with a dirty worktree so the result can be tied to an exact candidate commit. Commit the candidate CSS/source changes first, run the command, then commit the generated baseline (on the first run) and `css-migration-regression/results/latest/` to `develop`.
+That is the only command the operator needs to run. The script refuses to run on another branch or with a dirty worktree so the result can be tied to an exact candidate commit. Commit the candidate CSS/source changes first, then run the command. The script automatically commits and pushes the generated baseline (on the first run) and `css-migration-regression/results/latest/` to `develop`.
 
 The script automatically:
 
@@ -21,12 +21,13 @@ The script automatically:
 5. Runs the same suite against the current `develop` candidate.
 6. Writes logs, Playwright HTML report, failure screenshots/diffs/traces, and a machine-readable manifest into `css-migration-regression/results/latest/`.
 7. Removes the temporary baseline worktree on exit.
+8. Commits the generated baseline (on the first run) and the complete result package to the current local develop history, then pushes develop to origin automatically. This runs even when the candidate test fails or the run stops after result-directory initialization, so the remote repository retains failure evidence.
 
-The first run can take longer because it builds the baseline and installs dependencies in both worktrees. It requires network access for fetching the pinned commit / installing packages and the browser if these are not cached. The temporary Playwright config disables server reuse: each run must launch the dev server from the exact baseline or candidate worktree under test, rather than silently attaching to an already-running server from another checkout.
+The first run can take longer because it builds the baseline and installs dependencies in both worktrees. It requires network access for fetching the pinned commit / installing packages, downloading Chromium if needed, and pushing to GitHub. The temporary Playwright config disables server reuse: each run must launch the dev server from the exact baseline or candidate worktree under test, rather than silently attaching to an already-running server from another checkout.
 
 ## Result package
 
-Review or commit the complete `results/latest/` directory. The key files are:
+The script publishes `results/latest/` automatically. Do not manually stage or commit the result package unless the automatic push failed. The key files are:
 
 - `summary.md`: concise outcome and review instructions.
 - `manifest.json`: exact baseline/candidate commit, environment, screenshot count, exit code, and known coverage gaps.
@@ -36,7 +37,7 @@ Review or commit the complete `results/latest/` directory. The key files are:
 - `playwright-report/`: HTML report when Playwright generated it.
 - `test-results/`: failure diffs, screenshots, traces, and attachments when present.
 
-Open the HTML report locally by opening `results/latest/playwright-report/index.html`. The manifest and logs are plain text and can be reviewed directly from GitHub after the result commit is pushed.
+Open the HTML report locally by opening `results/latest/playwright-report/index.html`. The manifest and logs are plain text and can be reviewed directly from GitHub after the script's automatic result commit is pushed.
 
 ## Baseline integrity
 
