@@ -22,7 +22,7 @@ The script automatically:
 6. Writes logs, Playwright HTML report, failure screenshots/diffs/traces, and a machine-readable manifest into `css-migration-regression/results/latest/`.
 7. Removes the temporary baseline worktree on exit.
 
-The first run can take longer because it builds the baseline and installs dependencies in both worktrees. It requires network access for fetching the pinned commit / installing packages and the browser if these are not cached.
+The first run can take longer because it builds the baseline and installs dependencies in both worktrees. It requires network access for fetching the pinned commit / installing packages and the browser if these are not cached. The temporary Playwright config disables server reuse: each run must launch the dev server from the exact baseline or candidate worktree under test, rather than silently attaching to an already-running server from another checkout.
 
 ## Result package
 
