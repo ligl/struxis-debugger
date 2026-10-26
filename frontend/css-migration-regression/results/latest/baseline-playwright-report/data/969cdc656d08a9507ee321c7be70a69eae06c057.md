@@ -17,8 +17,8 @@ Error: every fixture SBar should have a distinct rendered candle color column
 expect(received).toHaveLength(expected)
 
 Expected length: 36
-Received length: 1
-Received array:  [{"color": "#2e4239", "end": 949, "start": 13}]
+Received length: 2
+Received array:  [{"color": "#858d97", "end": 34, "start": 16}, {"color": "#2e4239", "end": 949, "start": 39}]
 ```
 
 # Page snapshot
@@ -148,16 +148,6 @@ Received array:  [{"color": "#2e4239", "end": 949, "start": 13}]
 # Test source
 
 ```ts
-  562 |     });
-  563 |   });
-  564 | }
-  565 | 
-  566 | 
-  567 | test("projects every Snapshot Reference candle from the independent SBar fixture oracle", async ({ page }, testInfo) => {
-  568 |   const processedCount = 12;
-  569 |   await page.setViewportSize({ width: 1440, height: 900 });
-  570 |   await installDeterministicOrigin(page, processedCount);
-  571 |   await page.goto("/");
   572 |   await page.getByTestId("workspace-replay").click();
   573 |   await page.getByTestId("replay-reference-select").selectOption("css-regression-fixture-snapshot");
   574 | 
@@ -211,143 +201,153 @@ Received array:  [{"color": "#2e4239", "end": 949, "start": 13}]
   622 |         }
   623 |       }
   624 | 
-  625 |       const coloredColumns = [...byX.entries()].sort(([a], [b]) => a - b);
-  626 |       const groups: Array<{ start: number; end: number; counts: Map<string, number> }> = [];
-  627 |       for (const [x, counts] of coloredColumns) {
-  628 |         const previous = groups[groups.length - 1];
-  629 |         if (!previous || x - previous.end > 4) {
-  630 |           groups.push({ start: x, end: x, counts: new Map(counts) });
-  631 |         } else {
-  632 |           previous.end = x;
-  633 |           for (const [color, count] of counts) {
-  634 |             previous.counts.set(color, (previous.counts.get(color) ?? 0) + count);
-  635 |           }
-  636 |         }
-  637 |       }
-  638 | 
-  639 |       results.push({
-  640 |         canvasIndex,
-  641 |         width: canvas.width,
-  642 |         height: canvas.height,
-  643 |         groups: groups.map((group) => ({
-  644 |           start: group.start,
-  645 |           end: group.end,
-  646 |           color: [...group.counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
-  647 |         })),
-  648 |       });
-  649 |     });
-  650 | 
-  651 |     // Select the individual canvas layer that contains the most separate
-  652 |     // expected candle-color columns. Return all candidates for diagnostics.
-  653 |     const selected = [...results].sort((a, b) => b.groups.length - a.groups.length)[0];
-  654 |     return { selected: selected ?? null, canvases: results };
-  655 |   });
-  656 | 
-  657 |   await testInfo.attach("snapshot-candle-projection-oracle.json", {
-  658 |     body: JSON.stringify({ expected, actual }, null, 2),
-  659 |     contentType: "application/json",
-  660 |   });
-  661 |   expect(actual.selected, "a dedicated chart canvas layer should expose candle color columns").not.toBeNull();
-> 662 |   expect(actual.selected?.groups, "every fixture SBar should have a distinct rendered candle color column").toHaveLength(36);
+  625 |       // Ignore sparse exact-color hits from overlays and antialiased edges.
+  626 |       // A candle body contributes multiple fully opaque pixels at its x coordinate.
+  627 |       const coloredColumns = [...byX.entries()]
+  628 |         .map(([x, counts]) => ({
+  629 |           x,
+  630 |           counts,
+  631 |           total: [...counts.values()].reduce((sum, count) => sum + count, 0),
+  632 |           dominant: [...counts.entries()].sort((a, b) => b[1] - a[1])[0],
+  633 |         }))
+  634 |         .filter((column) => column.total >= 4 && (column.dominant?.[1] ?? 0) >= 3)
+  635 |         .sort((a, b) => a.x - b.x);
+  636 |       const groups: Array<{ start: number; end: number; counts: Map<string, number> }> = [];
+  637 |       for (const { x, counts } of coloredColumns) {
+  638 |         const previous = groups[groups.length - 1];
+  639 |         if (!previous || x - previous.end > 4) {
+  640 |           groups.push({ start: x, end: x, counts: new Map(counts) });
+  641 |         } else {
+  642 |           previous.end = x;
+  643 |           for (const [color, count] of counts) {
+  644 |             previous.counts.set(color, (previous.counts.get(color) ?? 0) + count);
+  645 |           }
+  646 |         }
+  647 |       }
+  648 | 
+  649 |       results.push({
+  650 |         canvasIndex,
+  651 |         width: canvas.width,
+  652 |         height: canvas.height,
+  653 |         groups: groups.map((group) => ({
+  654 |           start: group.start,
+  655 |           end: group.end,
+  656 |           color: [...group.counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+  657 |         })),
+  658 |       });
+  659 |     });
+  660 | 
+  661 |     // Select the individual canvas layer that contains the most separate
+  662 |     // expected candle-color columns. Return all candidates for diagnostics.
+  663 |     const selected = [...results].sort((a, b) => b.groups.length - a.groups.length)[0];
+  664 |     return { selected: selected ?? null, canvases: results };
+  665 |   });
+  666 | 
+  667 |   await testInfo.attach("snapshot-candle-projection-oracle.json", {
+  668 |     body: JSON.stringify({ expected, actual }, null, 2),
+  669 |     contentType: "application/json",
+  670 |   });
+  671 |   expect(actual.selected, "a dedicated chart canvas layer should expose candle color columns").not.toBeNull();
+> 672 |   expect(actual.selected?.groups, "every fixture SBar should have a distinct rendered candle color column").toHaveLength(36);
       |                                                                                                             ^ Error: every fixture SBar should have a distinct rendered candle color column
-  663 |   expect(actual.selected?.groups.map((item) => item.color), "rendered candle colors must follow the independent SBar direction/progress oracle").toEqual(expected);
-  664 | });
-  665 | 
-  666 | async function expandDiagnosticsIfNeeded(page: Page) {
-  667 |   const diagnostics = page.getByTestId("diagnostics-dock");
-  668 |   if (await diagnostics.getAttribute("class").then((value) => value?.includes("collapsed") ?? false)) {
-  669 |     await page.getByTestId("diagnostics-collapse-toggle").click();
-  670 |   }
-  671 |   await expect(diagnostics).not.toHaveClass(/collapsed/);
-  672 | }
-  673 | 
-  674 | async function prepareDockForInteraction(page: Page, panel: "inspector" | "diagnostics", direction: typeof dockDirections[number]) {
-  675 |   await page.setViewportSize({ width: 1440, height: 900 });
-  676 |   await page.goto("/");
-  677 |   if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
-  678 |   await chooseDockDirection(page, `${panel}-dock-menu`, `${panel}-dock-${direction}`);
-  679 |   await expect(page.getByTestId(`${panel}-dock-${direction}`)).toHaveAttribute("aria-pressed", "true");
-  680 |   if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
-  681 | }
-  682 | 
-  683 | async function resizePanelByPointer(page: Page, panel: "inspector" | "diagnostics", direction: typeof dockDirections[number]) {
-  684 |   const edge = page.getByTestId(`${panel}-resize-edge`);
-  685 |   await expect(edge).toBeVisible();
-  686 |   const before = Number(await edge.getAttribute("aria-valuenow"));
-  687 |   const bounds = await edge.boundingBox();
-  688 |   expect(bounds, `${panel} resize edge should have a rendered box`).not.toBeNull();
-  689 |   if (!bounds) throw new Error(`${panel} resize edge has no bounding box`);
-  690 | 
-  691 |   const startX = bounds.x + bounds.width / 2;
-  692 |   const startY = bounds.y + bounds.height / 2;
-  693 |   const delta = 36;
-  694 |   const dx = direction === "left" ? delta : direction === "right" ? -delta : 0;
-  695 |   const dy = direction === "top" ? delta : direction === "bottom" ? -delta : 0;
-  696 | 
-  697 |   await page.mouse.move(startX, startY);
-  698 |   await page.mouse.down();
-  699 |   await page.mouse.move(startX + dx, startY + dy, { steps: 4 });
-  700 |   await page.mouse.up();
-  701 | 
-  702 |   await expect.poll(async () => Number(await edge.getAttribute("aria-valuenow"))).toBeGreaterThan(before);
-  703 | }
-  704 | 
-  705 | for (const panel of ["inspector", "diagnostics"] as const) {
-  706 |   for (const direction of dockDirections) {
-  707 |     test(`resizes ${panel} by pointer when docked ${direction}`, async ({ page }) => {
-  708 |       await prepareDockForInteraction(page, panel, direction);
-  709 |       await resizePanelByPointer(page, panel, direction);
-  710 | 
-  711 |       const edge = page.getByTestId(`${panel}-resize-edge`);
-  712 |       await expect(edge).toHaveAttribute("aria-orientation", direction === "left" || direction === "right" ? "vertical" : "horizontal");
-  713 |       await expect(page.getByTestId(panel === "inspector" ? "inspector-panel" : "diagnostics-dock")).toBeVisible();
-  714 |     });
-  715 |   }
-  716 | }
-  717 | 
-  718 | for (const panel of ["inspector", "diagnostics"] as const) {
-  719 |   for (const direction of dockDirections) {
-  720 |     test(`supports keyboard resize for ${panel} docked ${direction}`, async ({ page }) => {
-  721 |       await prepareDockForInteraction(page, panel, direction);
-  722 |       const edge = page.getByTestId(`${panel}-resize-edge`);
-  723 |       const before = Number(await edge.getAttribute("aria-valuenow"));
-  724 |       const increaseKey = direction === "left" ? "ArrowRight"
-  725 |         : direction === "right" ? "ArrowLeft"
-  726 |           : direction === "top" ? "ArrowDown" : "ArrowUp";
+  673 |   expect(actual.selected?.groups.map((item) => item.color), "rendered candle colors must follow the independent SBar direction/progress oracle").toEqual(expected);
+  674 | });
+  675 | 
+  676 | async function expandDiagnosticsIfNeeded(page: Page) {
+  677 |   const diagnostics = page.getByTestId("diagnostics-dock");
+  678 |   if (await diagnostics.getAttribute("class").then((value) => value?.includes("collapsed") ?? false)) {
+  679 |     await page.getByTestId("diagnostics-collapse-toggle").click();
+  680 |   }
+  681 |   await expect(diagnostics).not.toHaveClass(/collapsed/);
+  682 | }
+  683 | 
+  684 | async function prepareDockForInteraction(page: Page, panel: "inspector" | "diagnostics", direction: typeof dockDirections[number]) {
+  685 |   await page.setViewportSize({ width: 1440, height: 900 });
+  686 |   await page.goto("/");
+  687 |   if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
+  688 |   await chooseDockDirection(page, `${panel}-dock-menu`, `${panel}-dock-${direction}`);
+  689 |   await expect(page.getByTestId(`${panel}-dock-${direction}`)).toHaveAttribute("aria-pressed", "true");
+  690 |   if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
+  691 | }
+  692 | 
+  693 | async function resizePanelByPointer(page: Page, panel: "inspector" | "diagnostics", direction: typeof dockDirections[number]) {
+  694 |   const edge = page.getByTestId(`${panel}-resize-edge`);
+  695 |   await expect(edge).toBeVisible();
+  696 |   const before = Number(await edge.getAttribute("aria-valuenow"));
+  697 |   const bounds = await edge.boundingBox();
+  698 |   expect(bounds, `${panel} resize edge should have a rendered box`).not.toBeNull();
+  699 |   if (!bounds) throw new Error(`${panel} resize edge has no bounding box`);
+  700 | 
+  701 |   const startX = bounds.x + bounds.width / 2;
+  702 |   const startY = bounds.y + bounds.height / 2;
+  703 |   const delta = 36;
+  704 |   const dx = direction === "left" ? delta : direction === "right" ? -delta : 0;
+  705 |   const dy = direction === "top" ? delta : direction === "bottom" ? -delta : 0;
+  706 | 
+  707 |   await page.mouse.move(startX, startY);
+  708 |   await page.mouse.down();
+  709 |   await page.mouse.move(startX + dx, startY + dy, { steps: 4 });
+  710 |   await page.mouse.up();
+  711 | 
+  712 |   await expect.poll(async () => Number(await edge.getAttribute("aria-valuenow"))).toBeGreaterThan(before);
+  713 | }
+  714 | 
+  715 | for (const panel of ["inspector", "diagnostics"] as const) {
+  716 |   for (const direction of dockDirections) {
+  717 |     test(`resizes ${panel} by pointer when docked ${direction}`, async ({ page }) => {
+  718 |       await prepareDockForInteraction(page, panel, direction);
+  719 |       await resizePanelByPointer(page, panel, direction);
+  720 | 
+  721 |       const edge = page.getByTestId(`${panel}-resize-edge`);
+  722 |       await expect(edge).toHaveAttribute("aria-orientation", direction === "left" || direction === "right" ? "vertical" : "horizontal");
+  723 |       await expect(page.getByTestId(panel === "inspector" ? "inspector-panel" : "diagnostics-dock")).toBeVisible();
+  724 |     });
+  725 |   }
+  726 | }
   727 | 
-  728 |       await edge.focus();
-  729 |       await page.keyboard.press(increaseKey);
-  730 |       await expect.poll(async () => Number(await edge.getAttribute("aria-valuenow"))).toBe(before + 12);
-  731 |     });
-  732 |   }
-  733 | }
-  734 | 
-  735 | for (const panel of ["inspector", "diagnostics"] as const) {
-  736 |   for (const direction of dockDirections) {
-  737 |     test(`drags ${panel} to the ${direction} workbench edge`, async ({ page }) => {
-  738 |       await page.setViewportSize({ width: 1440, height: 900 });
-  739 |       await page.goto("/");
-  740 |       if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
-  741 | 
-  742 |       // Start away from the requested destination so a stale aria-pressed value
-  743 |       // cannot make this test pass without a successful drag/drop.
-  744 |       const initialDirection = direction === "left" ? "right" : "left";
-  745 |       await chooseDockDirection(page, `${panel}-dock-menu`, `${panel}-dock-${initialDirection}`);
-  746 |       await expect(page.getByTestId(`${panel}-dock-${initialDirection}`)).toHaveAttribute("aria-pressed", "true");
-  747 | 
-  748 |       const source = page.getByTestId(`${panel}-dock-drag-handle`);
-  749 |       // The drop handler computes edge ratios from the shell bounding box.
-  750 |       const target = page.getByTestId("debugger-shell");
-  751 |       const targetBounds = await target.boundingBox();
-  752 |       expect(targetBounds, "debugger shell drop target should be rendered").not.toBeNull();
-  753 |       if (!targetBounds) throw new Error("debugger shell drop target has no bounding box");
-  754 | 
-  755 |       const targetPosition = direction === "left"
-  756 |         ? { x: 2, y: targetBounds.height / 2 }
-  757 |         : direction === "right"
-  758 |           ? { x: targetBounds.width - 2, y: targetBounds.height / 2 }
-  759 |           : direction === "top"
-  760 |             ? { x: targetBounds.width / 2, y: 2 }
-  761 |             : { x: targetBounds.width / 2, y: targetBounds.height - 2 };
-  762 | 
+  728 | for (const panel of ["inspector", "diagnostics"] as const) {
+  729 |   for (const direction of dockDirections) {
+  730 |     test(`supports keyboard resize for ${panel} docked ${direction}`, async ({ page }) => {
+  731 |       await prepareDockForInteraction(page, panel, direction);
+  732 |       const edge = page.getByTestId(`${panel}-resize-edge`);
+  733 |       const before = Number(await edge.getAttribute("aria-valuenow"));
+  734 |       const increaseKey = direction === "left" ? "ArrowRight"
+  735 |         : direction === "right" ? "ArrowLeft"
+  736 |           : direction === "top" ? "ArrowDown" : "ArrowUp";
+  737 | 
+  738 |       await edge.focus();
+  739 |       await page.keyboard.press(increaseKey);
+  740 |       await expect.poll(async () => Number(await edge.getAttribute("aria-valuenow"))).toBe(before + 12);
+  741 |     });
+  742 |   }
+  743 | }
+  744 | 
+  745 | for (const panel of ["inspector", "diagnostics"] as const) {
+  746 |   for (const direction of dockDirections) {
+  747 |     test(`drags ${panel} to the ${direction} workbench edge`, async ({ page }) => {
+  748 |       await page.setViewportSize({ width: 1440, height: 900 });
+  749 |       await page.goto("/");
+  750 |       if (panel === "diagnostics") await expandDiagnosticsIfNeeded(page);
+  751 | 
+  752 |       // Start away from the requested destination so a stale aria-pressed value
+  753 |       // cannot make this test pass without a successful drag/drop.
+  754 |       const initialDirection = direction === "left" ? "right" : "left";
+  755 |       await chooseDockDirection(page, `${panel}-dock-menu`, `${panel}-dock-${initialDirection}`);
+  756 |       await expect(page.getByTestId(`${panel}-dock-${initialDirection}`)).toHaveAttribute("aria-pressed", "true");
+  757 | 
+  758 |       const source = page.getByTestId(`${panel}-dock-drag-handle`);
+  759 |       // The drop handler computes edge ratios from the shell bounding box.
+  760 |       const target = page.getByTestId("debugger-shell");
+  761 |       const targetBounds = await target.boundingBox();
+  762 |       expect(targetBounds, "debugger shell drop target should be rendered").not.toBeNull();
+  763 |       if (!targetBounds) throw new Error("debugger shell drop target has no bounding box");
+  764 | 
+  765 |       const targetPosition = direction === "left"
+  766 |         ? { x: 2, y: targetBounds.height / 2 }
+  767 |         : direction === "right"
+  768 |           ? { x: targetBounds.width - 2, y: targetBounds.height / 2 }
+  769 |           : direction === "top"
+  770 |             ? { x: targetBounds.width / 2, y: 2 }
+  771 |             : { x: targetBounds.width / 2, y: targetBounds.height - 2 };
+  772 | 
 ```
