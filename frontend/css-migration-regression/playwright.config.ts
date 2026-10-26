@@ -4,7 +4,8 @@ import { dirname, resolve } from "node:path";
 
 const regressionDir = dirname(fileURLToPath(import.meta.url));
 const frontendDir = resolve(regressionDir, "..");
-const baseURL = "http://127.0.0.1:1421";
+const regressionPort = Number(process.env.CSS_REGRESSION_PORT ?? "1421");
+const baseURL = `http://127.0.0.1:${regressionPort}`;
 
 export default defineConfig({
   testDir: regressionDir,
