@@ -13,10 +13,7 @@ defineProps<{
     :aria-label="side === 'candidate' ? 'Candidate chart' : 'Baseline chart'"
   >
     <header class="comparison-chart-heading">
-      <div>
-        <p class="section-index">{{ side === "candidate" ? "CANDIDATE / UPPER" : "BASELINE / LOWER" }}</p>
-        <h3>{{ side === "candidate" ? "Candidate" : "Baseline" }}</h3>
-      </div>
+      <h3>{{ side === "candidate" ? "Candidate" : "Baseline" }}</h3>
       <span class="comparison-chart-state" :class="{ 'is-ready': hasComparison, 'is-pending': !hasComparison }">
         {{ hasComparison ? `${checkpointCount ?? 0} CHECKPOINTS` : "NO RESULT" }}
       </span>
