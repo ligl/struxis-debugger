@@ -189,7 +189,7 @@ describe("projectStructureOverlayGeometry", () => {
       cbarVisible: true,
       swingVisible: true,
       resolveSwingStyle: (state) => state === "Confirmed"
-        ? { color: "#B49ACD", dasharray: "" }
+        ? { color: "#8A739F", dasharray: "" }
         : { color: "#A0A7B0", dasharray: "4 3" },
     });
 
@@ -197,7 +197,7 @@ describe("projectStructureOverlayGeometry", () => {
       { id: "cbar-1", x: 10, y: 10, width: 20, height: 40 },
     ]);
     expect(result.swingSegments).toEqual([
-      { id: "swing-1", x1: 10, y1: 50, x2: 30, y2: 10, state: "Confirmed", color: "#B49ACD", dasharray: "" },
+      { id: "swing-1", x1: 10, y1: 50, x2: 30, y2: 10, state: "Confirmed", color: "#8A739F", dasharray: "" },
     ]);
   });
 
