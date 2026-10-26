@@ -43,6 +43,8 @@ Test artifacts, HTML reports, traces, and result output are written below this t
 ## What this first version checks
 
 - Default workbench screenshot at 1440 × 900.
+- A temporary in-page Tauri IPC stub provides 36 deterministic SBar records and explicit CBar/Swing DTOs for the Dataset chart, without production hooks or external Catalog data.
+- Deterministic Dataset chart screenshot plus independent SBar, CBar, Swing, and Volume legend off/on screenshots. The fixture is test-local and is not a production data source.
 - Dataset, Replay, and Compare default-workspace screenshots.
 - Inspector expanded and collapsed screenshots, plus expanded screenshots in all four dock directions.
 - Diagnostics default-collapsed screenshot and expanded screenshots in all four dock directions.
@@ -52,9 +54,9 @@ Test artifacts, HTML reports, traces, and result output are written below this t
 
 ## Known coverage gap — do not treat as full visual acceptance
 
-This initial suite still does not construct deterministic market/chart data or exercise the full interaction matrix listed in `docs/architecture/struxis/debugger/css-layered-architecture.md` §10. The workspace screenshots use the current default data state. Inspector collapse/restore and Diagnostics default-collapsed/expanded states are covered, but Inspector dock resizing is not yet captured as a visual state. In particular, an empty/default application view cannot prove that chart legend layers, Replay processed/unprocessed candles, Snapshot Reference, or Compare Candidate/Baseline remain visually equivalent.
+This suite now constructs deterministic Origin chart data and covers each Dataset legend layer toggle. It still does not cover the full interaction matrix listed in `docs/architecture/struxis/debugger/css-layered-architecture.md` §10. Inspector collapse/restore and Diagnostics default-collapsed/expanded states are covered, but Inspector dock resizing is not yet captured as a visual state. Replay processed/unprocessed candle brightness and real Snapshot Reference projection remain uncovered. The current Compare workspace intentionally uses `ComparisonChartPlaceholder.vue`, so real Candidate/Baseline chart imagery cannot be captured without changing product scope; do not fabricate those charts in the fixture.
 
-Before CSS migration begins, extend this temporary suite with reproducible state setup and screenshots for those scenarios, or record why a scenario cannot be deterministically constructed. Reuse existing stable selectors and interaction contracts; do not add production-only hooks or weaken the formal E2E suite to support this temporary suite.
+Before CSS migration begins, extend this temporary suite with reproducible state setup and screenshots for the remaining constructible scenarios, or record why a scenario cannot be deterministically constructed. Replay requires deterministic RunState/checkpoint responses and Test Dataset setup; Snapshot Reference requires the full SnapshotReferenceDto and a valid SBar sequence. Reuse existing stable selectors and interaction contracts; do not add production-only hooks or weaken the formal E2E suite to support this temporary suite.
 
 ## Acceptance and cleanup
 
