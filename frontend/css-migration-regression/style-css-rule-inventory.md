@@ -1,11 +1,12 @@
 # Temporary global CSS rule inventory
 
 - Source: `crates/struxis-debugger/frontend/src/style.css`
-- Source blob at generation: `55e3face2e241ff035dbdcc350faa2e962cf43d4`
-- Source lines: current source; rule occurrences recorded: 763
+- Source blob after latest scoped migration: `f5c1f37e4860a634e9a6de8c303002edadea1daf`
+- Source lines: 4860; rule occurrences recorded: 762
 - Status: temporary migration aid; regenerate when source CSS changes; remove with the temporary CSS migration regression suite after migration and visual acceptance.
 - Method: lexical scan that skips comments/quoted strings and tracks at-rule nesting. Not a standards-compliant CSS AST; property names are extracted heuristically. Do not use this report alone to change cascade behavior.
 - Ordering: source order preserved. Repeated selectors are intentionally not deduplicated.
+- 2026-10-27 delta: removed the final global `.dataset-controls` rule (`position`, `z-index`) after moving those declarations into `TestDatasetPanel.vue`; this inventory drops that rule occurrence. Line references remain a lexical migration aid and must be regenerated before any broad selector cleanup.
 
 
 | # | Line | Selector | At-rule context | Properties (heuristic) | Owner candidate | Review status |
@@ -698,7 +699,6 @@
 | 686 | 4284 | `.dataset-range-summary` | @media (max-width: 1100px) | flex-basis, gap | Candidate: Dataset / Catalog | Heuristic only |
 | 687 | 4289 | `.dataset-range-status` | @media (max-width: 1100px) | display | Candidate: Dataset / Catalog | Heuristic only |
 | 688 | 4293 | `.test-dataset-details > summary` | @media (max-width: 1100px) | padding-inline | Candidate: Dataset / Catalog | Heuristic only |
-| 689 | 4298 | `.dataset-controls` | global | position, z-index | Candidate: Dataset / Catalog | Heuristic only |
 | 690 | 4304 | `.chart-panels > .dataset-workspace-content` | global | overflow | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
 | 691 | 4310 | `/* The side Inspector is positioned at the exact edge reserved by workbench-main. The left-facing frame belongs to the positioned workspace itself, so inset that workspace by 5px rather than trying to move only its inner grid. Replay/Compare remain unchanged. */ .debugger-shell:not(.catalog-is-hidden).inspector-dock-left .workbench-main` | global | left | Manual review: Dataset / Catalog + Shell / Workspace + Dock / Inspector / Diagnostics | Heuristic only |
 | 692 | 4322 | `.dataset-workspace-content > .origin-chart-panel` | global | display, flex, min-height, flex-direction, margin | Manual review: Dataset / Catalog + Shell / Workspace + Chart / Replay | Heuristic only |
