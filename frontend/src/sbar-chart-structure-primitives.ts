@@ -108,6 +108,33 @@ function finite(value: number | null | undefined): value is number {
   return value !== null && value !== undefined && Number.isFinite(value);
 }
 
+/**
+ * Align a stroke's outer edge to the physical-pixel grid.
+ *
+ * Primitive coordinates are expressed in media (CSS-pixel) space. A centered
+ * Canvas stroke can otherwise cover different fractions of edge pixels as the
+ * chart zooms, making nominally identical rectangle edges appear to change
+ * brightness. Align each edge independently using the active stroke width.
+ */
+export function alignStrokeCoordinate(
+  coordinate: number,
+  lineWidth: number,
+  pixelRatio: number,
+): number {
+  if (
+    !finite(coordinate) ||
+    !finite(lineWidth) ||
+    lineWidth <= 0 ||
+    !finite(pixelRatio) ||
+    pixelRatio <= 0
+  ) return coordinate;
+  const physicalLineWidth = lineWidth * pixelRatio;
+  return (
+    Math.round(coordinate * pixelRatio - physicalLineWidth / 2) +
+    physicalLineWidth / 2
+  ) / pixelRatio;
+}
+
 abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Time> {
   protected chart: PrimitiveChart | null = null;
   protected series: ISeriesApi<"Candlestick"> | null = null;
@@ -284,7 +311,14 @@ class CBarPaneRenderer implements IPrimitivePaneRenderer {
           const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : "#A0A7B0";
           context.strokeStyle = selected || hovered || !rectangle.dimmed ? baseColor : dimStructureColor(baseColor);
           context.lineWidth = selected ? interaction.selectedWidth ?? 2 : hovered ? 1.75 : 1;
-          context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+          const pixelRatio = typeof window !== "undefined" && finite(window.devicePixelRatio)
+            ? Math.max(1, window.devicePixelRatio)
+            : 1;
+          const left = alignStrokeCoordinate(rectangle.x, context.lineWidth, pixelRatio);
+          const top = alignStrokeCoordinate(rectangle.y, context.lineWidth, pixelRatio);
+          const right = alignStrokeCoordinate(rectangle.x + rectangle.width, context.lineWidth, pixelRatio);
+          const bottom = alignStrokeCoordinate(rectangle.y + rectangle.height, context.lineWidth, pixelRatio);
+          context.strokeRect(left, top, right - left, bottom - top);
         }
       } finally {
         context.restore();
