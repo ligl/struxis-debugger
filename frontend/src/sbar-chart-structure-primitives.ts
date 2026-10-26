@@ -438,8 +438,8 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
           const uy = dy / length;
           const tipX = segment.x2;
           const tipY = segment.y2;
-          const arrowLength = 7;
-          const arrowHalfWidth = 3.5;
+          const arrowLength = 4.5;
+          const arrowHalfWidth = 2.25;
           const baseX = tipX - ux * arrowLength;
           const baseY = tipY - uy * arrowLength;
           context.setLineDash([]);
