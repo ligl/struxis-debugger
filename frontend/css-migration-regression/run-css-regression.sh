@@ -39,6 +39,11 @@ fi
 git cat-file -e "$BASELINE_SHA^{commit}" 2>/dev/null || fail "Pinned baseline commit is unavailable locally."
 
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/capitus-css-regression.XXXXXX")"
+# Select an unused loopback port so an ordinary frontend dev server on 1421
+# cannot block the isolated baseline/candidate webServer.
+CSS_REGRESSION_PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')"
+export CSS_REGRESSION_PORT
+printf '[CSS regression] Isolated Playwright server port: %s\\n' "$CSS_REGRESSION_PORT"
 BASELINE_WORKTREE="$TMP_ROOT/baseline-worktree"
 WORKTREE_ADDED=0
 publish_and_cleanup() {
