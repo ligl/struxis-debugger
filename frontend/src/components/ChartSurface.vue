@@ -87,7 +87,7 @@ const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
-  Confirmed: { color: "#B49ACD", dasharray: "" },
+  Confirmed: { color: "#8A739F", dasharray: "" },
   Tentative: { color: "#D6A85D", dasharray: "6 3" },
   Extending: { color: "#8FA9C4", dasharray: "2 3" },
 };
