@@ -97,9 +97,10 @@ export class SnapshotRangeMarkerPrimitive implements ISeriesPrimitive<Time> {
         const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
           ? Math.max(1, window.devicePixelRatio)
           : 1;
+        const startX = alignStrokeCoordinate(start, context.lineWidth, pixelRatio);
+        const endX = alignStrokeCoordinate(end, context.lineWidth, pixelRatio);
         context.setLineDash([3, 5]);
-        for (const anchorX of [start, end]) {
-          const x = alignStrokeCoordinate(anchorX, context.lineWidth, pixelRatio);
+        for (const x of [startX, endX]) {
           context.beginPath();
           context.moveTo(x, 0);
           context.lineTo(x, mediaSize.height);
@@ -112,10 +113,10 @@ export class SnapshotRangeMarkerPrimitive implements ISeriesPrimitive<Time> {
           context.lineCap = "round";
           context.lineJoin = "round";
           context.beginPath();
-          context.moveTo(start + 2, 7); context.lineTo(start + 8, 7);
-          context.moveTo(start + 5, 4); context.lineTo(start + 8, 7); context.lineTo(start + 5, 10);
-          context.moveTo(end - 2, 7); context.lineTo(end - 8, 7);
-          context.moveTo(end - 5, 4); context.lineTo(end - 8, 7); context.lineTo(end - 5, 10);
+          context.moveTo(startX + 2, 7); context.lineTo(startX + 8, 7);
+          context.moveTo(startX + 5, 4); context.lineTo(startX + 8, 7); context.lineTo(startX + 5, 10);
+          context.moveTo(endX - 2, 7); context.lineTo(endX - 8, 7);
+          context.moveTo(endX - 5, 4); context.lineTo(endX - 8, 7); context.lineTo(endX - 5, 10);
           context.stroke();
         }
       } finally {
