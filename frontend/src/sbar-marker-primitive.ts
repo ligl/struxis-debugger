@@ -95,17 +95,17 @@ export class SBarMarkerPrimitive implements ISeriesPrimitive<Time> {
     target.useMediaCoordinateSpace(({ context }) => {
       context.save();
       try {
+        if (hovered) {
+          context.strokeStyle = "#C3CBD1";
+          context.lineWidth = 1.25;
+          context.strokeRect(hovered.x, hovered.y, hovered.width, hovered.height);
+        }
         if (selected) {
           context.fillStyle = this.state.selectedFill;
           context.strokeStyle = this.state.selectedStroke;
           context.lineWidth = this.state.selectedWidth;
           context.fillRect(selected.x, selected.y, selected.width, selected.height);
           context.strokeRect(selected.x, selected.y, selected.width, selected.height);
-        }
-        if (hovered) {
-          context.strokeStyle = "#C3CBD1";
-          context.lineWidth = 1.25;
-          context.strokeRect(hovered.x, hovered.y, hovered.width, hovered.height);
         }
       } finally {
         context.restore();
