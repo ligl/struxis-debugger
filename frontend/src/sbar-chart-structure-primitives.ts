@@ -282,7 +282,7 @@ class CBarPaneRenderer implements IPrimitivePaneRenderer {
         for (const rectangle of rectangles) {
           const selected = rectangle.id === interaction.selectedId;
           const hovered = rectangle.id === interaction.hoveredId;
-          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : "#A0A7B0";
+          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : "#858D97";
           context.strokeStyle = selected || hovered || !rectangle.dimmed ? baseColor : dimStructureColor(baseColor);
           context.lineWidth = selected ? interaction.selectedWidth ?? 2 : hovered ? 1.75 : 1;
           const pixelRatio = typeof window !== "undefined" && finite(window.devicePixelRatio)
@@ -418,7 +418,7 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
         const hovered = segment.id === interaction.hoveredId;
         const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
         context.strokeStyle = selected || hovered || !segment.dimmed ? baseColor : dimStructureColor(baseColor);
-        context.lineWidth = (selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.25) * scale;
+        context.lineWidth = (selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.5) * scale;
         context.setLineDash(segment.dash.map((dashLength) => dashLength * scale));
         context.beginPath();
         context.moveTo(segment.x1 * scale, segment.y1 * scale);
