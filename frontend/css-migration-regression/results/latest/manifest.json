@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "repository": "ligl/capitus",
   "branch": "develop",
-  "candidateCommit": "bb04b9927912d212c99454137cdeadfdb965e9b6",
+  "candidateCommit": "0e3162688cea0c9da20d8ece768f5850d42f8601",
   "baselineCommit": "171254d0bbdad139f51ba1550e8379899d8f6ca6",
   "result": "infrastructure_failure",
   "exitCode": 1,
