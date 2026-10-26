@@ -117,6 +117,10 @@ function runState(overrides: Partial<RunStateDto> = {}): RunStateDto {
 }
 
 function projectedStructureGeometry(wrapper: VueWrapper<any>): ChartSurfaceStructureGeometry {
+  const root = wrapper.vm as unknown as {
+    getStructureGeometry?: () => ChartSurfaceStructureGeometry;
+  };
+  if (typeof root.getStructureGeometry === "function") return root.getStructureGeometry();
   const surface = wrapper.findComponent(ChartSurface).vm as unknown as {
     getStructureGeometry: () => ChartSurfaceStructureGeometry;
   };
