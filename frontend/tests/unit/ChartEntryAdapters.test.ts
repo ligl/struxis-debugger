@@ -24,6 +24,7 @@ const surfacePortCalls = {
   primitives: [] as Array<{ id: string; primitive: unknown; dispose?: () => void }>,
   replacements: [] as Array<{ candles: readonly unknown[]; volume: readonly unknown[] }>,
   updates: [] as Array<{ candle: unknown; volume: unknown; historicalUpdate?: boolean }>,
+  playbackStates: [] as Array<{ enabled: boolean; offset: number | null; processedCount: number; liveCount: number }>,
 };
 
 const SurfaceStub = defineComponent({
@@ -43,6 +44,7 @@ const SurfaceStub = defineComponent({
       getSbarMarker: (sbarId: string) => sbarId === "1700000000000000000" ? { id: sbarId, x: 5, y: 10, width: 6, height: 8 } : null,
       getStructureGeometry: () => ({ cbarRectangles: [], swingSegments: [] }),
       setStructureInteractionState: () => {},
+      setStructurePlaybackState: (state: { enabled: boolean; offset: number | null; processedCount: number; liveCount: number }) => { surfacePortCalls.playbackStates.push(state); },
       getLogicalCoordinate: (index: number) => index * 10,
       getPriceCoordinate: (price: number) => price * 2,
       getSbarIdAtCoordinate: (x: number, clampToSequence = false) => x >= 0 && x <= 10 || clampToSequence ? "1700000000000000000" : null,
@@ -75,6 +77,7 @@ describe("chart entry adapters", () => {
     surfacePortCalls.primitives.length = 0;
     surfacePortCalls.replacements.length = 0;
     surfacePortCalls.updates.length = 0;
+    surfacePortCalls.playbackStates.length = 0;
   }
   it("keeps Dataset range-selection props and presentation at the Origin adapter boundary", () => {
     const wrapper = mount(OriginChart, {
@@ -145,6 +148,9 @@ describe("chart entry adapters", () => {
     expect(surfacePortCalls.replacements).toHaveLength(1);
     expect(surfacePortCalls.replacements[0]?.candles).toHaveLength(1);
     expect(surfacePortCalls.replacements[0]?.volume).toHaveLength(1);
+    expect(surfacePortCalls.playbackStates.at(-1)).toEqual({
+      enabled: true, offset: 0, processedCount: 0, liveCount: 1,
+    });
   });
 
   it("applies Live viewport requests through the adapter port", async () => {
@@ -241,6 +247,9 @@ describe("chart entry adapters", () => {
     expect(surfacePortCalls.updates).toHaveLength(1);
     expect(surfacePortCalls.updates[0]?.historicalUpdate).toBe(true);
     expect(surfacePortCalls.replacements).toHaveLength(1);
+    expect(surfacePortCalls.playbackStates.at(-1)).toEqual({
+      enabled: true, offset: 0, processedCount: 1, liveCount: 2,
+    });
     wrapper.unmount();
   });
 
