@@ -404,6 +404,11 @@ test("captures deterministic Origin chart and each legend layer toggle", async (
   await installDeterministicOrigin(page);
   await page.goto("/");
   await expect(page.getByTestId("origin-chart-panel")).toHaveAttribute("data-sbar-count", "36");
+  const datasetHost = await page.getByTestId("dataset-workspace").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { flex: style.flex, minWidth: style.minWidth, overflow: style.overflow };
+  });
+  expect(datasetHost).toEqual({ flex: "0 0 auto", minWidth: "0px", overflow: "visible" });
   const datasetControls = await page.locator(".dataset-controls").evaluate((element) => {
     const style = getComputedStyle(element);
     return { position: style.position, zIndex: style.zIndex };
