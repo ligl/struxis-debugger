@@ -5,6 +5,7 @@ import SnapshotReferenceChart from "../../src/components/SnapshotReferenceChart.
 import ChartSurface from "../../src/components/ChartSurface.vue";
 import type { ChartSurfacePort } from "../../src/chart-surface-contract";
 import { SnapshotRangeMarkerPrimitive } from "../../src/snapshot-reference-primitives";
+import { SBarMarkerPrimitive } from "../../src/sbar-marker-primitive";
 import type { SBarDto } from "../../src/origin-types";
 
 const chartMocks = vi.hoisted(() => ({
@@ -290,11 +291,20 @@ describe("SnapshotReferenceChart", () => {
     const port = surface.vm as unknown as ChartSurfacePort;
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
+    const marker = { id: "1700000000000000000", x: 97, y: 40, width: 6, height: 15 };
+    vi.spyOn(port, "getSbarRangeHighlight").mockReturnValue(marker);
+    const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
     surface.vm.$emit("pointerPosition", { x: 100, y: 50 });
     await nextTick();
 
     expect(wrapper.find('[data-testid="snapshot-hover-sbar"]').exists()).toBe(false);
+    expect(markerUpdate).toHaveBeenLastCalledWith(expect.objectContaining({
+      hovered: marker,
+      selected: null,
+      selectedStroke: "#D99A45",
+      selectedWidth: 1.5,
+    }));
     expect(wrapper.get('[data-testid="snapshot-object-hover-label"]').text())
       .toBe("SBAR · 1700000000000000000");
 
@@ -320,6 +330,9 @@ describe("SnapshotReferenceChart", () => {
     const port = surface.vm as unknown as ChartSurfacePort;
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
+    const marker = { id: "1700000000000000000", x: 97, y: 40, width: 6, height: 15 };
+    vi.spyOn(port, "getSbarMarker").mockReturnValue(marker);
+    const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
     const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
       ((param: { point?: { x: number; y: number } }) => void) | undefined;
@@ -327,6 +340,12 @@ describe("SnapshotReferenceChart", () => {
     await nextTick();
 
     expect(wrapper.find('[data-testid="snapshot-selected-sbar"]').exists()).toBe(false);
+    expect(markerUpdate).toHaveBeenLastCalledWith(expect.objectContaining({
+      hovered: null,
+      selected: marker,
+      selectedStroke: "#D99A45",
+      selectedWidth: 1.5,
+    }));
     expect(wrapper.emitted("objectSelect")?.[0]?.[0]).toEqual({
       kind: "sbar",
       id: "1700000000000000000",
