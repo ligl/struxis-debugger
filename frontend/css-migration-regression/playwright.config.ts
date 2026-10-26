@@ -29,7 +29,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "off",
   },
-  projects: [{ name: "css-regression-chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [{ name: "css-regression-chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } }],
   webServer: {
     command: "bun run dev",
     cwd: frontendDir,
