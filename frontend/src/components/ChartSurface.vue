@@ -817,7 +817,7 @@ onBeforeUnmount(() => {
         :style="{ width: `${structureOverlayWidth}px` }"
         aria-hidden="true"
       >
-        <slot name="chart-structure-overlays" :cbar-rectangles="cbarRectangles" :swing-segments="swingSegments" />
+        <slot name="chart-structure-overlays" />
       </svg>
       <slot name="chart-interaction-overlay" />
       <div v-if="showLegend !== false" class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
