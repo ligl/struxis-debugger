@@ -345,6 +345,9 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
 }
 
 class SwingPaneRenderer implements IPrimitivePaneRenderer {
+  private readonly supersampleScale = 2;
+  private supersampleCanvas: HTMLCanvasElement | null = null;
+
   constructor(
     private readonly getSegments: () => readonly SwingSegment[],
     private readonly getInteractionState: () => StructurePrimitiveInteractionState,
@@ -354,27 +357,78 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
     const segments = this.getSegments();
     if (segments.length === 0) return;
     const interaction = this.getInteractionState();
-    target.useMediaCoordinateSpace(({ context }) => {
+    target.useMediaCoordinateSpace(({ context, mediaSize }) => {
       context.save();
       try {
-        context.lineCap = "round";
-        for (const segment of segments) {
-          const selected = segment.id === interaction.selectedId;
-          const hovered = segment.id === interaction.hoveredId;
-          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
-          context.strokeStyle = selected || hovered || !segment.dimmed ? baseColor : dimStructureColor(baseColor);
-          context.lineWidth = selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.25;
-          context.setLineDash([...segment.dash]);
-          context.beginPath();
-          context.moveTo(segment.x1, segment.y1);
-          context.lineTo(segment.x2, segment.y2);
-          context.stroke();
+        const offscreen = this.getSupersampleContext(mediaSize.width, mediaSize.height);
+        if (offscreen) {
+          const { canvas, context: highResolutionContext } = offscreen;
+          highResolutionContext.clearRect(0, 0, canvas.width, canvas.height);
+          this.drawSegments(highResolutionContext, segments, interaction, this.supersampleScale);
+          context.imageSmoothingEnabled = true;
+          context.imageSmoothingQuality = "high";
+          context.drawImage(
+            canvas,
+            0, 0, canvas.width, canvas.height,
+            0, 0, mediaSize.width, mediaSize.height,
+          );
+        } else {
+          // Keep the Primitive usable in environments without an offscreen
+          // canvas (for example, lightweight test harnesses).
+          this.drawSegments(context, segments, interaction, 1);
         }
       } finally {
         context.setLineDash([]);
         context.restore();
       }
     });
+  }
+
+  private getSupersampleContext(
+    width: number,
+    height: number,
+  ): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | null {
+    if (typeof document === "undefined") return null;
+    try {
+      if (!this.supersampleCanvas) this.supersampleCanvas = document.createElement("canvas");
+      const canvas = this.supersampleCanvas;
+      const pixelWidth = Math.max(1, Math.ceil(width * this.supersampleScale));
+      const pixelHeight = Math.max(1, Math.ceil(height * this.supersampleScale));
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+      const context = canvas.getContext("2d");
+      return context ? { canvas, context } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private drawSegments(
+    context: CanvasRenderingContext2D,
+    segments: readonly SwingSegment[],
+    interaction: StructurePrimitiveInteractionState,
+    scale: number,
+  ): void {
+    context.save();
+    try {
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      for (const segment of segments) {
+        const selected = segment.id === interaction.selectedId;
+        const hovered = segment.id === interaction.hoveredId;
+        const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
+        context.strokeStyle = selected || hovered || !segment.dimmed ? baseColor : dimStructureColor(baseColor);
+        context.lineWidth = (selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.25) * scale;
+        context.setLineDash(segment.dash.map((dashLength) => dashLength * scale));
+        context.beginPath();
+        context.moveTo(segment.x1 * scale, segment.y1 * scale);
+        context.lineTo(segment.x2 * scale, segment.y2 * scale);
+        context.stroke();
+      }
+    } finally {
+      context.setLineDash([]);
+      context.restore();
+    }
   }
 }
 
