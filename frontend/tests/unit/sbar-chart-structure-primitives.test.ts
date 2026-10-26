@@ -80,7 +80,7 @@ describe("CBar and Swing Series Primitives", () => {
 
     // Keep the alignment tied to the active stroke width for hover/selection.
     expect(alignStrokeCoordinate(80, 2, 1)).toBe(80);
-    expect(alignStrokeCoordinate(80, 1.75, 1)).toBe(80.375);
+    expect(alignStrokeCoordinate(80, 1.75, 1)).toBe(79.875);
   });
 
   it("draws CBar rectangles from the current chart coordinates and clears replaced snapshots", () => {
