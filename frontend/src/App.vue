@@ -843,3 +843,38 @@ onMounted(async () => {
     </div>
   </main>
 </template>
+
+
+<style scoped>
+/* Development-only browser tooling entry point; not part of the production UI. */
+.devtools-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 176px;
+  padding: 4px;
+  border: 1px solid var(--dbg-border);
+  border-radius: 4px;
+  background: var(--dbg-surface-1, #1b2025);
+  box-shadow: 0 8px 24px #0009;
+}
+
+.devtools-context-menu button {
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--dbg-text-primary, #e3e8eb);
+  text-align: left;
+  cursor: pointer;
+  font: 11px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.devtools-context-menu button:hover,
+.devtools-context-menu button:focus-visible {
+  outline: none;
+  background: var(--dbg-surface-3, #30383f);
+}
+</style>
