@@ -49,7 +49,7 @@ Open the HTML report locally by opening `results/latest/playwright-report/index.
 
 ## Current coverage and known gaps
 
-The suite covers default workspace screenshots, Dataset's deterministic 36-SBar / 3-CBar / 2-Swing chart and four legend toggles, Replay fixtures at 12/36 and 24/36 processed SBars with a selected Snapshot Reference, explicit assertions that the reference is synchronized and playback styling is active, Inspector expanded/collapsed and four dock directions, Diagnostics collapsed and four expanded dock directions, selected computed styles/tokens, and shell geometry at five desktop viewports.
+The suite covers default workspace screenshots, Dataset's deterministic 36-SBar / 3-CBar / 2-Swing chart and four legend toggles, Replay fixtures at 12/36 and 24/36 processed SBars with a selected Snapshot Reference, explicit assertions that the selected reference finished loading without an error, its chart canvas is visible, synchronization is eligible, and playback styling is active, Inspector expanded/collapsed and four dock directions, Diagnostics collapsed and four expanded dock directions, selected computed styles/tokens, and shell geometry at five desktop viewports.
 
 Remaining gaps include exhaustive Replay progress transitions and sync interactions, Inspector dock resizing, the full Inspector/Diagnostics drag-resize matrix, and actual Candidate/Baseline market charts (Compare currently renders `ComparisonChartPlaceholder.vue`). The generated manifest records these gaps. The Replay screenshots exercise the deterministic fixture but remain **unverified until the suite is actually run**. A passing run means only that the currently implemented checks passed; it does not establish complete visual equivalence.
 
