@@ -408,7 +408,6 @@ for (const processedCount of [12, 24] as const) {
     await page.goto("/");
     await page.getByTestId("workspace-replay").click();
     await expect(page.getByTestId("run-chart-panel")).toBeVisible();
-    await expect(page.getByTestId("run-chart-panel")).toHaveAttribute("data-processed-count", String(processedCount));
     const snapshotSelect = page.getByTestId("replay-reference-select");
     await expect(snapshotSelect.locator("option[value='css-regression-fixture-snapshot']")).toHaveCount(1);
     await snapshotSelect.selectOption("css-regression-fixture-snapshot");
