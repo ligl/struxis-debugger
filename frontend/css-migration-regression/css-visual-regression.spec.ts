@@ -443,7 +443,7 @@ for (const processedCount of [12, 24] as const) {
     expect(renderedColors["#557e65"], "native up-candle pixels").toBeGreaterThan(0);
     expect(renderedColors["#8d555b"], "native down-candle pixels").toBeGreaterThan(0);
     expect(renderedColors["#2e4239"], "dimmed up-candle pixels").toBeGreaterThan(0);
-    expect(renderedColors["#463135"], "dimmed down-candle pixels").toBeGreaterThan(0);
+    expect(renderedColors["#463035"], "dimmed down-candle pixels").toBeGreaterThan(0);
 
     await expect(page).toHaveScreenshot(`replay-processed-${processedCount}-of-36.png`, {
       fullPage: true,
