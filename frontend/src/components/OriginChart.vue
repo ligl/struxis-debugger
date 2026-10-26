@@ -299,36 +299,6 @@ watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: 
       @pointer-position="handlePointerPosition"
       @projection-frame="handleProjectionFrame"
     >
-      <template #chart-structure-overlays>
-        <rect
-          v-if="hoveredSbarMarker"
-          class="origin-object-hover-sbar"
-          :x="hoveredSbarMarker.x"
-          :y="hoveredSbarMarker.y"
-          :width="hoveredSbarMarker.width"
-          :height="hoveredSbarMarker.height"
-          data-testid="origin-hover-sbar"
-          :data-sbar-id="hoveredSbarMarker.id"
-          fill="none"
-          stroke="#C3CBD1"
-          stroke-width="1.25"
-          visibility="hidden"
-        />
-        <rect
-          v-if="selectedSbarMarker"
-          class="origin-object-selected-sbar"
-          :x="selectedSbarMarker.x"
-          :y="selectedSbarMarker.y"
-          :width="selectedSbarMarker.width"
-          :height="selectedSbarMarker.height"
-          data-testid="origin-selected-sbar"
-          :data-sbar-id="selectedSbarMarker.id"
-          fill="rgb(217 154 69 / 10%)"
-          stroke="#D99A45"
-          stroke-width="1.25"
-          visibility="hidden"
-        />
-      </template>
       <template #footer-trailing>
         <span class="origin-chart-selection-status" data-testid="origin-chart-selection-status">{{ selectionStatus }}</span>
       </template>
