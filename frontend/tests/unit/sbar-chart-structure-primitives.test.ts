@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { createChartPrimitiveHost } from "../../src/sbar-chart-primitive-host";
 import {
-  alignStrokeCoordinate,
   registerCBarPrimitive,
   registerSwingPrimitive,
   syncStructurePrimitiveControllers,
 } from "../../src/sbar-chart-structure-primitives";
 import type { ISeriesApi, ISeriesPrimitive, Time } from "lightweight-charts";
+import { alignStrokeCoordinate } from "../../src/chart-canvas-pixel-alignment";
 
 function createHarness() {
   const times = new Map<Time, number>([
