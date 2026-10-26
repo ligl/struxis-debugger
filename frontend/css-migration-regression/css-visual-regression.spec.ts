@@ -426,7 +426,7 @@ for (const processedCount of [12, 24] as const) {
     // Assert rendered pixels, not only the full-page screenshot. Processed candles
     // retain their native direction colors; unprocessed candles use the dim palette.
     const renderedColors = await snapshotCanvasHost.evaluate((host) => {
-      const targets = ["#557e65", "#8d555b", "#2e4239", "#463135"];
+      const targets = ["#557e65", "#8d555b", "#2e4239", "#463035"];
       const counts = Object.fromEntries(targets.map((color) => [color, 0])) as Record<string, number>;
       for (const canvas of host.querySelectorAll("canvas")) {
         const context = canvas.getContext("2d", { willReadFrequently: true });
