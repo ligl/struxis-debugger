@@ -58,3 +58,86 @@ const identityLabel = computed(() => {
     <span v-else class="footnote">SAME COMPLETE ORDERED SBAR SEQUENCE REQUIRED</span>
   </div>
 </template>
+
+<style scoped>
+.compare-summary .metric {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 7px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.compare-summary .metric .label {
+  color: var(--dbg-text-muted);
+  font-size: 8px;
+  letter-spacing: .03em;
+}
+
+.compare-summary .metric .value {
+  color: var(--dbg-text-primary);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.compare-summary .compare-divergence { color: var(--dbg-warning) !important; }
+.compare-summary .compare-difference-count { color: var(--dbg-error) !important; }
+.compare-summary .compare-identity-match { color: var(--dbg-success) !important; }
+.compare-summary .compare-identity-mismatch { color: var(--dbg-warning) !important; }
+
+.compare-summary .metric {
+  position: relative;
+  min-width: 0;
+}
+
+.compare-summary .metric + .metric {
+  padding-left: 10px;
+}
+
+.compare-summary .metric + .metric::before {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 1px;
+  background: #2a3136;
+  content: "";
+  pointer-events: none;
+}
+
+.compare-summary .metric .value {
+  overflow: hidden;
+  max-width: 240px;
+  text-overflow: ellipsis;
+}
+
+.compare-summary .footnote {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-summary-error {
+  max-width: 240px;
+  margin: 0;
+  overflow: hidden;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  .compare-summary .footnote {
+    display: none;
+  }
+}
+
+@media (max-width: 1050px) {
+  .compare-summary .metric { gap: 4px; }
+  .compare-summary .metric + .metric { padding-left: 6px; }
+  .compare-summary .metric + .metric::before { top: 8px; bottom: 8px; }
+}
+</style>
