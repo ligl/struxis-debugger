@@ -23,7 +23,7 @@ The script automatically:
 7. Removes the temporary baseline worktree on exit.
 8. Commits the generated baseline (on the first run) and the complete result package to the current local develop history, then pushes develop to origin automatically. This runs even when the candidate test fails or the run stops after result-directory initialization, so the remote repository retains failure evidence.
 
-The first run can take longer because it builds the baseline and installs dependencies in both worktrees. It requires network access for fetching the pinned commit / installing packages, downloading Chromium if needed, and pushing to GitHub. The temporary Playwright config disables server reuse: each run must launch the dev server from the exact baseline or candidate worktree under test, rather than silently attaching to an already-running server from another checkout.
+The first run can take longer because it builds the baseline and installs dependencies in both worktrees. It requires network access for fetching the pinned commit / installing packages, downloading Chromium if needed, and pushing to GitHub. The temporary Playwright config disables server reuse and the runner reserves an unused loopback port for its isolated baseline/candidate servers. This avoids collisions with the normal frontend dev server on port 1421 and prevents silently attaching to another checkout.
 
 ## Result package
 
