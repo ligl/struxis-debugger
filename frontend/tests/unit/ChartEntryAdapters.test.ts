@@ -136,8 +136,9 @@ describe("chart entry adapters", () => {
     expect(((surface.props() as Record<string, unknown>)["snapshotProcessedCount"])).toBeUndefined();
     expect(wrapper.findComponent({ name: "SnapshotPlaybackOverlay" }).exists()).toBe(false);
     expect(wrapper.findComponent({ name: "SnapshotLiveRangeMarkers" }).exists()).toBe(false);
-    expect(surfacePortCalls.primitives).toHaveLength(2);
+    expect(surfacePortCalls.primitives).toHaveLength(3);
     expect(surfacePortCalls.primitives.map((registration) => registration.id)).toEqual([
+      "snapshot-reference:sbar-interaction-markers",
       "snapshot-reference:snapshot-1:background-range-markers",
       "snapshot-reference:snapshot-1:volume-background-range-markers",
     ]);
