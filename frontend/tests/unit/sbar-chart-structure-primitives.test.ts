@@ -135,7 +135,7 @@ describe("CBar and Swing Series Primitives", () => {
     }], h.projection);
     primitive.updateAllViews?.();
     view?.renderer()?.draw(h.target as never);
-    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 70.5, 37, 20);
+    expect(h.context.strokeRect).toHaveBeenCalledWith(7, 70, 37, 20);
 
     controller.setData([], h.projection);
     primitive.updateAllViews?.();
