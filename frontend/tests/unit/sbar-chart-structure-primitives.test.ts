@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createChartPrimitiveHost } from "../../src/sbar-chart-primitive-host";
 import {
+  alignStrokeCoordinate,
   registerCBarPrimitive,
   registerSwingPrimitive,
   syncStructurePrimitiveControllers,
@@ -67,6 +68,21 @@ function createHarness() {
 }
 
 describe("CBar and Swing Series Primitives", () => {
+  it("aligns stroke centerlines so their outer edges land on physical-pixel boundaries", () => {
+    // A one-CSS-pixel stroke at DPR 1 needs half-pixel centerlines.
+    expect(alignStrokeCoordinate(80, 1, 1)).toBe(80.5);
+    expect(alignStrokeCoordinate(80.5, 1, 1)).toBe(80.5);
+
+    // At DPR 2, a one-CSS-pixel stroke is two physical pixels wide and aligns
+    // to integer CSS coordinates.
+    expect(alignStrokeCoordinate(80.1, 1, 2)).toBe(80);
+    expect(alignStrokeCoordinate(80.4, 1, 2)).toBe(80.5);
+
+    // Keep the alignment tied to the active stroke width for hover/selection.
+    expect(alignStrokeCoordinate(80, 2, 1)).toBe(80);
+    expect(alignStrokeCoordinate(80, 1.75, 1)).toBe(80.375);
+  });
+
   it("draws CBar rectangles from the current chart coordinates and clears replaced snapshots", () => {
     const h = createHarness();
     const controller = registerCBarPrimitive(h.host, h.series);
@@ -83,7 +99,7 @@ describe("CBar and Swing Series Primitives", () => {
     const renderer = view?.renderer();
     expect(renderer).not.toBeNull();
     renderer!.draw(h.target as never);
-    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 80, 27, 10);
+    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 80.5, 27, 10);
 
     const rectangleStyles: Array<{ color: string; width: number }> = [];
     h.context.strokeRect.mockImplementation(() => {
@@ -119,7 +135,7 @@ describe("CBar and Swing Series Primitives", () => {
     }], h.projection);
     primitive.updateAllViews?.();
     view?.renderer()?.draw(h.target as never);
-    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 70, 37, 20);
+    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 70.5, 37, 20);
 
     controller.setData([], h.projection);
     primitive.updateAllViews?.();
