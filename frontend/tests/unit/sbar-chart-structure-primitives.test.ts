@@ -153,7 +153,7 @@ describe("CBar and Swing Series Primitives", () => {
 
     controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 1, liveCount: 3 });
     view?.renderer()?.draw(h.target as never);
-    expect(h.context.strokeStyle).toBe("#5e503b");
+    expect(h.context.strokeStyle).toBe("#645336");
     controller.setPlaybackState({ enabled: true, offset: 0, processedCount: 3, liveCount: 3 });
     view?.renderer()?.draw(h.target as never);
     expect(h.context.strokeStyle).toBe("#D6A85D");
