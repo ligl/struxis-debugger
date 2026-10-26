@@ -1733,14 +1733,26 @@ body,
   opacity: .35;
 }
 
-/* RunChart cannot inherit OriginChart.vue's scoped legend-dot rules.
-   Keep the shared Dataset legend markers identical in Replay. */
+/* RunChart cannot inherit ChartSurface.vue's scoped marker-color rules.
+   Use the same centralized tokens as Dataset for both legend color and geometry. */
 .run-chart-legend .legend-dot {
   display: inline-block;
   width: 7px;
   height: 7px;
   flex: 0 0 7px;
   border-radius: 1px;
+}
+.run-chart-legend .sbar-dot {
+  background: var(--dbg-legend-sbar);
+}
+.run-chart-legend .cbar-dot {
+  background: var(--dbg-legend-cbar);
+}
+.run-chart-legend .swing-dot {
+  background: var(--dbg-legend-swing);
+}
+.run-chart-legend .volume-dot {
+  background: var(--dbg-legend-volume);
 }
 
 .run-chart-legend .run-chart-structure-gap {
