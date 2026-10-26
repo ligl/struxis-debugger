@@ -292,7 +292,7 @@ describe("SnapshotReferenceChart", () => {
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
     const marker = { id: "1700000000000000000", x: 97, y: 40, width: 6, height: 15 };
-    vi.spyOn(port, "getSbarRangeHighlight").mockReturnValue(marker);
+    Object.defineProperty(port, "getSbarRangeHighlight", { configurable: true, value: vi.fn().mockReturnValue(marker) });
     const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
     surface.vm.$emit("pointerPosition", { x: 100, y: 50 });
@@ -331,7 +331,7 @@ describe("SnapshotReferenceChart", () => {
     vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
     const marker = { id: "1700000000000000000", x: 97, y: 40, width: 6, height: 15 };
-    vi.spyOn(port, "getSbarMarker").mockReturnValue(marker);
+    Object.defineProperty(port, "getSbarMarker", { configurable: true, value: vi.fn().mockReturnValue(marker) });
     const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
     const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
