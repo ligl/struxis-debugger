@@ -64,7 +64,7 @@ const SurfaceStub = defineComponent({
     });
     return {};
   },
-  template: '<div data-testid="surface-stub"><slot name="chart-structure-overlays" /><slot name="chart-interaction-overlay" /><slot name="footer-trailing" /></div>',
+  template: '<div data-testid="surface-stub"><slot name="chart-interaction-overlay" /><slot name="footer-trailing" /></div>',
 });
 
 describe("chart entry adapters", () => {
