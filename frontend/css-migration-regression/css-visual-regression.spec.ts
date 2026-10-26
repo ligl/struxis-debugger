@@ -1,6 +1,29 @@
 import { expect, test, type Page } from "@playwright/test";
 
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {
+        invoke: async (command: string) => {
+          const origin = (window as typeof window & { __CSS_REGRESSION_ORIGIN__?: unknown }).__CSS_REGRESSION_ORIGIN__ ?? null;
+          switch (command) {
+            case "list_catalog_datasets": return [];
+            case "get_current_origin": return origin;
+            case "get_current_test_dataset": return null;
+            case "list_snapshots": return [];
+            case "get_run_state": return null;
+            case "get_replay_inspector": return null;
+            default: throw new Error(`Unexpected CSS regression IPC command: ${command}`);
+          }
+        },
+      },
+    });
+  });
+});
+
+
 async function installDeterministicOrigin(page: Page) {
   await page.addInitScript(() => {
     const bars = Array.from({ length: 36 }, (_, index) => {
@@ -50,23 +73,7 @@ async function installDeterministicOrigin(page: Page) {
       bars,
       structure,
     };
-    const internals = {
-      invoke: async (command: string) => {
-        switch (command) {
-          case "list_catalog_datasets": return [];
-          case "get_current_origin": return origin;
-          case "get_current_test_dataset": return null;
-          case "list_snapshots": return [];
-          case "get_run_state": return null;
-          case "get_replay_inspector": return null;
-          default: throw new Error(`Unexpected CSS regression fixture IPC command: ${command}`);
-        }
-      },
-    };
-    Object.defineProperty(window, "__TAURI_INTERNALS__", {
-      configurable: true,
-      value: internals,
-    });
+    (window as typeof window & { __CSS_REGRESSION_ORIGIN__?: typeof origin }).__CSS_REGRESSION_ORIGIN__ = origin;
   });
 }
 
