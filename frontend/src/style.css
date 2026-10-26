@@ -4384,11 +4384,11 @@ th, td { padding: 6px 8px; }
 
 .compare-workspace > .compare-summary {
   display: flex;
-  flex: 0 0 36px;
+  flex: 0 0 38px;
   min-width: 0;
-  min-height: 36px;
+  min-height: 38px;
   align-items: center;
-  gap: 22px;
+  gap: 14px;
   padding: 0 12px;
   border-bottom: 1px solid var(--dbg-border);
   background: #14191d;
@@ -4396,7 +4396,7 @@ th, td { padding: 6px 8px; }
 
 .compare-summary .metric {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   align-items: center;
   gap: 7px;
   font-size: 9px;
@@ -4426,7 +4426,17 @@ th, td { padding: 6px 8px; }
 
 .compare-summary .metric + .metric {
   padding-left: 10px;
-  border-left: 1px solid #2a3136;
+}
+
+.compare-summary .metric + .metric::before {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 1px;
+  background: #2a3136;
+  content: "";
+  pointer-events: none;
 }
 
 .compare-summary .metric .value {
@@ -4629,6 +4639,7 @@ th, td { padding: 6px 8px; }
   .compare-workspace > .compare-summary { gap: 8px; }
   .compare-summary .metric { gap: 4px; }
   .compare-summary .metric + .metric { padding-left: 6px; }
+  .compare-summary .metric + .metric::before { top: 8px; bottom: 8px; }
 }
 
 @media (max-width: 1050px) {
