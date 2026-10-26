@@ -55,6 +55,13 @@ export interface ChartSurfaceStructureInteraction {
   id: string;
 }
 
+export interface ChartSurfaceStructurePlaybackState {
+  enabled: boolean;
+  offset: number | null;
+  processedCount: number;
+  liveCount: number;
+}
+
 export interface ChartSurfacePrimitiveOptions {
   /** Series pane to which the consumer-owned Primitive is attached. */
   target?: "candles" | "volume";
@@ -110,4 +117,5 @@ export interface ChartSurfacePort {
     hovered: ChartSurfaceStructureInteraction | null,
     selected: ChartSurfaceStructureInteraction | null,
   ): void;
+  setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): void;
 }
