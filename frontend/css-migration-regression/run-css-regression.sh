@@ -216,9 +216,8 @@ manifest = {
     "candidateTestExitCode": int(os.environ["CSS_REGRESSION_TEST_EXIT"]),
     "result": "passed" if int(os.environ["CSS_REGRESSION_TEST_EXIT"]) == 0 else "failed",
     "knownCoverageGaps": [
-        "Replay progress transitions and Live/Snapshot viewport-crosshair synchronization interactions",
-        "Real Snapshot Reference chart projection parity has not been independently established",
-        "Compare uses ComparisonChartPlaceholder.vue, not real Candidate/Baseline market charts"
+        "Snapshot Reference per-SBar projection oracle is added but has not yet passed a reviewed baseline/candidate run",
+        "Compare uses ComparisonChartPlaceholder.vue because SnapshotCompareResultDto does not expose a complete historical SBar OHLCV sequence"
     ]
 }
 (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
