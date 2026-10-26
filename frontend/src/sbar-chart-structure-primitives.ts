@@ -86,6 +86,7 @@ interface SwingSegment {
   y2: number;
   color: string;
   dash: readonly number[];
+  extending: boolean;
   dimmed: boolean;
 }
 
@@ -423,7 +424,36 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
         context.beginPath();
         context.moveTo(segment.x1 * scale, segment.y1 * scale);
         context.lineTo(segment.x2 * scale, segment.y2 * scale);
-        context.stroke();
+
+        // Extending Swing continues beyond its latest endpoint in the same
+        // projected direction. The arrowhead is solid so direction remains
+        // legible even though the state stroke itself is dashed.
+        const dx = segment.x2 - segment.x1;
+        const dy = segment.y2 - segment.y1;
+        const length = Math.hypot(dx, dy);
+        if (segment.extending && length > 0) {
+          const ux = dx / length;
+          const uy = dy / length;
+          const rayLength = 22;
+          const tipX = segment.x2 + ux * rayLength;
+          const tipY = segment.y2 + uy * rayLength;
+          context.lineTo(tipX * scale, tipY * scale);
+          context.stroke();
+
+          const arrowLength = 7;
+          const arrowHalfWidth = 3.5;
+          const baseX = tipX - ux * arrowLength;
+          const baseY = tipY - uy * arrowLength;
+          context.setLineDash([]);
+          context.beginPath();
+          context.moveTo(tipX * scale, tipY * scale);
+          context.lineTo((baseX - uy * arrowHalfWidth) * scale, (baseY + ux * arrowHalfWidth) * scale);
+          context.moveTo(tipX * scale, tipY * scale);
+          context.lineTo((baseX + uy * arrowHalfWidth) * scale, (baseY - ux * arrowHalfWidth) * scale);
+          context.stroke();
+        } else {
+          context.stroke();
+        }
       }
     } finally {
       context.setLineDash([]);
@@ -460,6 +490,7 @@ class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
         y2: segment.y2,
         color: style.color,
         dash: style.dash,
+        extending: segment.state === "Extending",
         dimmed: this.isDimmedAtSbar(this.objects.find((object) => object.swingId === segment.id)?.sbarEndId),
       };
     });
