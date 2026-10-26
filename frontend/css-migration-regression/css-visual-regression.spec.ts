@@ -977,3 +977,63 @@ test("preserves Compare summary metric geometry and responsive separators", asyn
     footnoteDisplay: "none",
   });
 });
+
+
+test("preserves development context menu positioning, stacking, button geometry and hover styling", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.mouse.click(120, 140, { button: "right" });
+
+  const menu = page.getByTestId("devtools-context-menu");
+  await expect(menu).toBeVisible();
+  const menuStyle = await menu.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const button = element.querySelector<HTMLElement>('[data-testid="open-devtools"]')!;
+    const buttonStyle = getComputedStyle(button);
+    return {
+      left: style.left,
+      top: style.top,
+      position: style.position,
+      zIndex: style.zIndex,
+      minWidth: style.minWidth,
+      padding: style.padding,
+      borderRadius: style.borderRadius,
+      backgroundColor: style.backgroundColor,
+      boxShadow: style.boxShadow,
+      button: {
+        display: buttonStyle.display,
+        width: buttonStyle.width,
+        minHeight: buttonStyle.minHeight,
+        padding: buttonStyle.padding,
+        borderRadius: buttonStyle.borderRadius,
+        backgroundColor: buttonStyle.backgroundColor,
+        color: buttonStyle.color,
+        textAlign: buttonStyle.textAlign,
+        fontSize: buttonStyle.fontSize,
+      },
+    };
+  });
+  expect(menuStyle).toMatchObject({
+    left: "120px",
+    top: "140px",
+    position: "fixed",
+    zIndex: "10000",
+    minWidth: "176px",
+    padding: "4px",
+    borderRadius: "4px",
+    backgroundColor: "rgb(27, 32, 37)",
+    button: {
+      display: "block",
+      minHeight: "30px",
+      padding: "0px 9px",
+      borderRadius: "2px",
+      textAlign: "left",
+      fontSize: "11px",
+    },
+  });
+
+  const firstButton = page.getByTestId("open-devtools");
+  await firstButton.hover();
+  const hoverBackground = await firstButton.evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(hoverBackground).toBe("rgb(48, 56, 63)");
+});
