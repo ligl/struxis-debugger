@@ -38,6 +38,13 @@ export interface StructurePrimitiveInteractionState {
   selectedWidth?: number;
 }
 
+export interface StructurePrimitivePlaybackState {
+  enabled: boolean;
+  offset: number | null;
+  processedCount: number;
+  liveCount: number;
+}
+
 export interface StructurePrimitiveController {
   setData(
     objects: readonly (CBarPrimitiveDto | SwingPrimitiveDto)[],
@@ -45,6 +52,7 @@ export interface StructurePrimitiveController {
   ): void;
   setVisible(visible: boolean): void;
   setInteractionState(state: StructurePrimitiveInteractionState): void;
+  setPlaybackState(state: StructurePrimitivePlaybackState): void;
 }
 
 type PrimitiveDrawTarget = Parameters<IPrimitivePaneRenderer["draw"]>[0];
@@ -62,6 +70,7 @@ const FALLBACK_SWING_STYLE = { color: "#A0A7B0", dash: [4, 3] };
 
 interface CBarRectangle {
   id: string;
+  dimmed: boolean;
   x: number;
   y: number;
   width: number;
@@ -76,6 +85,23 @@ interface SwingSegment {
   y2: number;
   color: string;
   dash: readonly number[];
+  dimmed: boolean;
+}
+
+const STRUCTURE_DIM_BACKGROUND = "#121619";
+const STRUCTURE_DIM_WEIGHT = 0.42;
+
+function dimStructureColor(color: string): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(color);
+  if (!match) return color;
+  const foreground = match[1]!;
+  const background = STRUCTURE_DIM_BACKGROUND.slice(1);
+  const channels = [0, 2, 4].map((offset) => {
+    const fg = Number.parseInt(foreground.slice(offset, offset + 2), 16);
+    const bg = Number.parseInt(background.slice(offset, offset + 2), 16);
+    return Math.round(fg * STRUCTURE_DIM_WEIGHT + bg * (1 - STRUCTURE_DIM_WEIGHT));
+  });
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
 }
 
 function finite(value: number | null | undefined): value is number {
@@ -98,6 +124,9 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     selectedId: null,
     selectedColor: undefined,
     selectedWidth: undefined,
+  };
+  protected playbackState: StructurePrimitivePlaybackState = {
+    enabled: false, offset: null, processedCount: 0, liveCount: 0,
   };
 
   constructor() {
@@ -163,6 +192,30 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     this.requestChartUpdate?.();
   }
 
+  setPlaybackState(state: StructurePrimitivePlaybackState): void {
+    const next = {
+      enabled: state.enabled,
+      offset: state.offset,
+      processedCount: Number.isFinite(state.processedCount) ? Math.max(0, Math.floor(state.processedCount)) : 0,
+      liveCount: Number.isFinite(state.liveCount) ? Math.max(0, Math.floor(state.liveCount)) : 0,
+    };
+    if (this.playbackState.enabled === next.enabled && this.playbackState.offset === next.offset &&
+      this.playbackState.processedCount === next.processedCount && this.playbackState.liveCount === next.liveCount) return;
+    this.playbackState = next;
+    this.refresh();
+  }
+
+  protected isDimmedAtSbar(sbarId: string | undefined): boolean {
+    const state = this.playbackState;
+    if (!state.enabled) return false;
+    if (state.offset === null || !Number.isInteger(state.offset) || state.offset < 0) return true;
+    const index = sbarId === undefined ? undefined : this.projection.indexBySbarId.get(sbarId);
+    if (index === undefined) return true;
+    const count = Math.min(state.liveCount, state.processedCount);
+    const endExclusive = Math.min(this.projection.indexBySbarId.size, state.offset + count);
+    return index < state.offset || index >= endExclusive;
+  }
+
   invalidate(): void {
     this.refresh();
   }
@@ -172,6 +225,7 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
     this.projection = { timeBySbarId: new Map(), indexBySbarId: new Map() };
     this.visible = false;
     this.interactionState = { hoveredId: null, selectedId: null, selectedColor: undefined, selectedWidth: undefined };
+    this.playbackState = { enabled: false, offset: null, processedCount: 0, liveCount: 0 };
     this.clearGeometry();
     this.chart = null;
     this.series = null;
@@ -227,7 +281,8 @@ class CBarPaneRenderer implements IPrimitivePaneRenderer {
         for (const rectangle of rectangles) {
           const selected = rectangle.id === interaction.selectedId;
           const hovered = rectangle.id === interaction.hoveredId;
-          context.strokeStyle = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : "#A0A7B0";
+          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : "#A0A7B0";
+          context.strokeStyle = selected || hovered || !rectangle.dimmed ? baseColor : dimStructureColor(baseColor);
           context.lineWidth = selected ? interaction.selectedWidth ?? 2 : hovered ? 1.75 : 1;
           context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
         }
@@ -254,7 +309,7 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
     const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
       ? Math.max(1, window.devicePixelRatio)
       : 1;
-    this.rectangles = projectCBarRectangles({
+    const rectangles = projectCBarRectangles({
       cbars: this.objects,
       sbarBodyWidth: candlestickBodyWidth(Number(timeScale.options().barSpacing), pixelRatio),
       indexBySbarId: this.projection.indexBySbarId,
@@ -262,6 +317,10 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
       coordinateForSbarId: (sbarId) => this.coordinateForSbarId(sbarId),
       priceToCoordinate: (price) => this.priceToCoordinate(String(price)),
     });
+    const endSbarByCBarId = new Map(this.objects.map((object) => [object.cbarId, object.sbarEndId]));
+    this.rectangles = rectangles.map((rectangle) => ({
+      ...rectangle, dimmed: this.isDimmedAtSbar(endSbarByCBarId.get(rectangle.id)),
+    }));
   }
 
   protected clearGeometry(): void {
@@ -294,7 +353,8 @@ class SwingPaneRenderer implements IPrimitivePaneRenderer {
         for (const segment of segments) {
           const selected = segment.id === interaction.selectedId;
           const hovered = segment.id === interaction.hoveredId;
-          context.strokeStyle = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
+          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
+          context.strokeStyle = selected || hovered || !segment.dimmed ? baseColor : dimStructureColor(baseColor);
           context.lineWidth = selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.25;
           context.setLineDash([...segment.dash]);
           context.beginPath();
@@ -338,6 +398,7 @@ class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
         y2: segment.y2,
         color: style.color,
         dash: style.dash,
+        dimmed: this.isDimmedAtSbar(this.objects.find((object) => object.swingId === segment.id)?.sbarEndId),
       };
     });
   }
@@ -394,6 +455,9 @@ function registerSeriesPrimitive<TObject, TPrimitive extends StructureSeriesPrim
     setInteractionState(state) {
       primitive.setInteractionState(state);
     },
+    setPlaybackState(state) {
+      primitive.setPlaybackState(state);
+    },
   };
 }
 
@@ -431,6 +495,7 @@ export interface StructurePrimitiveSyncOptions {
   swings: readonly SwingPrimitiveDto[];
   projection: StructurePrimitiveProjection;
   cbarVisible: boolean;
+  playbackState?: StructurePrimitivePlaybackState;
   swingVisible: boolean;
   interaction?: StructurePrimitiveInteractionOptions;
 }
@@ -454,6 +519,7 @@ export function syncStructurePrimitiveControllers(
     projection,
     cbarVisible,
     swingVisible,
+    playbackState = { enabled: false, offset: null, processedCount: 0, liveCount: 0 },
     interaction,
   } = options;
 
@@ -461,6 +527,8 @@ export function syncStructurePrimitiveControllers(
   swing?.setData(swings, projection);
   cbar?.setVisible(cbarVisible);
   swing?.setVisible(swingVisible);
+  cbar?.setPlaybackState(playbackState);
+  swing?.setPlaybackState(playbackState);
   if (interaction) {
     setStructurePrimitiveInteractionState({ cbar, swing, ...interaction });
   }
