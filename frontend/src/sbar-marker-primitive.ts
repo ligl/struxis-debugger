@@ -84,7 +84,6 @@ export class SBarMarkerPrimitive implements ISeriesPrimitive<Time> {
       selectedStroke: "#D99A45",
       selectedWidth: 1.25,
     };
-    this.chart = null;
     this.requestUpdate = null;
   }
 
