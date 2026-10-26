@@ -911,9 +911,6 @@ onBeforeUnmount(() => {
         @logical-range-change="handleVisibleRangeChange"
         @projection-frame="updateStructureOverlays"
       >
-        <template #chart-interaction-overlay>
-          <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="run-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
-        </template>
       </ChartSurface>
       <div v-if="!projectionMessage" class="run-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="run-layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
