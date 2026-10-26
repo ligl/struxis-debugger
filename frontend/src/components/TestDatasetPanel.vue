@@ -179,6 +179,8 @@ function displaySbarTime(sbarId: string): string {
 }
 
 .dataset-controls {
+  position: relative;
+  z-index: 2;
   display: flex;
   min-width: 0;
   min-height: 39px;
