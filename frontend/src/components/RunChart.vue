@@ -5,6 +5,7 @@ import ChartSurface from "./ChartSurface.vue";
 import type { ChartSurfacePort } from "../chart-surface-contract";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
+import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import { ReplayCrosshairSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
@@ -49,6 +50,18 @@ const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let cachedProjection: ReturnType<typeof mapSBarsToChart> | null = null;
+const sbarMarkerPrimitive = new SBarMarkerPrimitive();
+let unregisterSbarMarkerPrimitive: (() => void) | null = null;
+
+function syncSbarMarkerPrimitive(): void {
+  sbarMarkerPrimitive.update({
+    hovered: hoveredSbarMarker.value,
+    selected: selectedSbarMarker.value,
+    selectedFill: "rgba(0, 0, 0, 0)",
+    selectedStroke: "#D6A85D",
+    selectedWidth: 1.5,
+  });
+}
 const bars = computed<SBarDto[]>(() => {
   const origin = props.origin;
   const test = props.testDataset;
@@ -708,7 +721,10 @@ function updateProgressSeries(): void {
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
+  unregisterSbarMarkerPrimitive = surface.value?.registerPrimitive("run-sbar-markers", sbarMarkerPrimitive) ?? null;
   updateChart();
+  updateStructureOverlays();
+  syncSbarMarkerPrimitive();
   surface.value?.setLayerVisibility(layerVisibility.value);
   if (props.syncEnabled) {
     if (props.syncRequest?.source === "reference") applySyncRequest(props.syncRequest);
@@ -757,6 +773,7 @@ watch(() => props.selectedObject, () => {
   updateStructureOverlays();
 });
 watch(() => props.targetSbarId, updateStructureOverlays);
+watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: true });
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => props.crosshairSync, (sync) => {
   if (!props.syncEnabled || !sync) {
@@ -808,6 +825,9 @@ onBeforeUnmount(() => {
   }
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
+  unregisterSbarMarkerPrimitive?.();
+  unregisterSbarMarkerPrimitive = null;
+  sbarMarkerPrimitive.dispose();
   scheduleOverlayUpdate.cancel();
   pendingViewportRange = null;
   crosshairSyncGate.clear();
@@ -880,8 +900,8 @@ onBeforeUnmount(() => {
             <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
             <circle :cx="targetSbarX" cy="98%" r="3" fill="#C6A06B" />
           </g>
-          <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="none" stroke="#C3CBD1" stroke-width="1.25" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
-          <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
+          <rect v-if="hoveredSbarMarker" :x="hoveredSbarMarker.x" :y="hoveredSbarMarker.y" :width="hoveredSbarMarker.width" :height="hoveredSbarMarker.height" fill="none" stroke="#C3CBD1" stroke-width="1.25" visibility="hidden" data-testid="run-hover-sbar" :data-sbar-id="hoveredSbarMarker.id" />
+          <rect v-if="selectedSbarMarker" :x="selectedSbarMarker.x" :y="selectedSbarMarker.y" :width="selectedSbarMarker.width" :height="selectedSbarMarker.height" fill="none" stroke="#D6A85D" stroke-width="1.5" visibility="hidden" data-testid="run-selected-sbar" :data-sbar-id="selectedSbarMarker.id" />
         </template>
         <template #chart-interaction-overlay>
           <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="run-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
