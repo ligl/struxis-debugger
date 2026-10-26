@@ -1752,7 +1752,7 @@ body,
 }
 
 .run-chart-legend .swing-dot {
-  background: #B49ACD;
+  background: var(--dbg-chart-swing);
 }
 
 .run-chart-legend .volume-dot {
