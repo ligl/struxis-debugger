@@ -376,7 +376,7 @@ describe("ChartSurface and chart entry adapters", () => {
       y1: 70,
       x2: 200,
       y2: 30,
-      color: "#B49ACD",
+      color: "#8A739F",
       dasharray: "",
     }]);
     expect(wrapper.text()).toContain("CBar");
@@ -580,7 +580,7 @@ describe("ChartSurface and chart entry adapters", () => {
     expect(projectedStructureGeometry(wrapper).swingSegments.map((segment) => [
       segment.state, segment.color, segment.dasharray,
     ])).toEqual([
-      ["Confirmed", "#B49ACD", ""],
+      ["Confirmed", "#8A739F", ""],
       ["Tentative", "#D6A85D", "6 3"],
       ["Extending", "#8FA9C4", "2 3"],
     ]);
