@@ -303,7 +303,6 @@ watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: 
         <span class="origin-chart-selection-status" data-testid="origin-chart-selection-status">{{ selectionStatus }}</span>
       </template>
       <template #chart-interaction-overlay>
-        <div v-if="hoveredObject" class="origin-object-hover-label" data-testid="origin-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
         <div class="origin-selection-overlay" data-testid="origin-selection-overlay" aria-hidden="true">
           <div
             v-if="selectionPending && selectionStartX !== null && previewX !== null"
@@ -346,6 +345,5 @@ watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: 
 <style scoped>
 .origin-chart-adapter { position: relative; display: contents; }
 .origin-selection-line::before { position: absolute; top: -6px; bottom: -6px; left: -8px; width: 17px; content: ""; background: transparent; cursor: ew-resize; }
-.origin-object-hover-label { position: absolute; z-index: 4; top: 7px; right: 10px; max-width: 42%; overflow: hidden; padding: 3px 5px; border: 1px solid #394149; border-radius: 2px; background: rgb(18 22 25 / 92%); color: #b9c2c8; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 .origin-chart-selection-status { min-width: 0; margin-left: auto; overflow: hidden; color: #a5b0b7; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
 </style>
