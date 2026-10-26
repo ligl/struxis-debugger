@@ -27,7 +27,7 @@
   --dbg-chart-volume-up: #557e65;
   --dbg-chart-volume-down: #8d555b;
   --dbg-chart-cbar: #a0a7b0;
-  --dbg-chart-swing: #c6a06b;
+  --dbg-chart-swing: #8A739F;
   --dbg-chart-trend: #91a7b9;
   --dbg-chart-keyzone: #b49a75;
   --dbg-chart-crosshair: #858d97;
@@ -1985,14 +1985,14 @@ body,
   --dbg-chart-volume-up: #345b49;
   --dbg-chart-volume-down: #663a3d;
   --dbg-chart-cbar: #a8b2b9;
-  --dbg-chart-swing: #B49ACD;
+  --dbg-chart-swing: #8A739F;
   --dbg-chart-trend: #91a7b9;
   --dbg-chart-keyzone: #b49a75;
   --dbg-chart-crosshair: #89949d;
-  --dbg-legend-sbar: #75c6a1;
-  --dbg-legend-cbar: #a8b2b9;
+  --dbg-legend-sbar: #4C8066;
+  --dbg-legend-cbar: #737D85;
   --dbg-legend-swing: var(--dbg-chart-swing);
-  --dbg-legend-volume: #8B5558;
+  --dbg-legend-volume: #75464A;
   color: var(--dbg-text-primary);
   background: var(--dbg-bg);
   font-size: 13px;
