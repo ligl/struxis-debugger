@@ -37,8 +37,8 @@ describe("SBarMarkerPrimitive", () => {
 
     expect(requestUpdate).toHaveBeenCalledOnce();
     expect(context.fillRect).toHaveBeenCalledWith(30, 40, 6, 25);
-    expect(context.strokeRect).toHaveBeenNthCalledWith(1, 30, 40, 6, 25);
-    expect(context.strokeRect).toHaveBeenNthCalledWith(2, 10, 20, 6, 30);
+    expect(context.strokeRect).toHaveBeenNthCalledWith(1, 10, 20, 6, 30);
+    expect(context.strokeRect).toHaveBeenNthCalledWith(2, 30, 40, 6, 25);
     expect(context.save).toHaveBeenCalledOnce();
     expect(context.restore).toHaveBeenCalledOnce();
   });
