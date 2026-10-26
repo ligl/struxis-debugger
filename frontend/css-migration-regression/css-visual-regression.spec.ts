@@ -30,7 +30,7 @@ test.beforeEach(async ({ page }) => {
 
 
 async function installDeterministicOrigin(page: Page, replayProcessedCount?: number) {
-  await page.addInitScript(() => {
+  await page.addInitScript((replayProcessedCount?: number) => {
     const bars = Array.from({ length: 36 }, (_, index) => {
       const timestamp = BigInt(1_790_000_000 + index * 60) * 1_000_000_000n;
       const open = 100 + index * 0.35 + Math.sin(index * 0.7) * 1.8;
@@ -144,7 +144,7 @@ async function installDeterministicOrigin(page: Page, replayProcessedCount?: num
       target.__CSS_REGRESSION_SNAPSHOTS__ = [snapshot];
       target.__CSS_REGRESSION_SNAPSHOT_REFERENCE__ = snapshotReference;
     }
-  });
+  }, replayProcessedCount);
 }
 
 const viewports = [
