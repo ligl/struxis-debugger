@@ -1,24 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-10-26T18:54:32.144642+00:00",
   "repository": "ligl/capitus",
   "branch": "develop",
+  "candidateCommit": "ee5b9a590b93a58bbf383c53ecab2d36bb6b3715",
   "baselineCommit": "171254d0bbdad139f51ba1550e8379899d8f6ca6",
-  "candidateCommit": "62174dcf1df7123a451d0b0525e29a8ad0572d9c",
-  "candidateCommitDate": "2026-10-27T02:53:14+08:00",
-  "workingTreeWasCleanAtStart": true,
-  "platform": "Linux 7.0.0-38-generic x86_64",
-  "bunVersion": "1.4.3",
-  "nodeVersion": "v22.22.2",
-  "browser": "Playwright Chromium; Desktop Chrome emulation; 1440x900; DPR 1; dark; en-US; UTC",
-  "baselineScreenshotCount": 22,
-  "candidateTestExitCode": 0,
-  "result": "passed",
-  "knownCoverageGaps": [
-    "Replay processed/unprocessed candle brightness is covered by full-page screenshots at two progress states, but has no targeted per-candle pixel/color assertion",
-    "Real Snapshot Reference chart projection",
-    "Inspector dock resize interaction",
-    "Full Inspector/Diagnostics drag-resize interaction matrix",
-    "Compare uses ComparisonChartPlaceholder.vue, not real Candidate/Baseline market charts"
-  ]
+  "result": "infrastructure_failure",
+  "exitCode": 1,
+  "note": "Run stopped before a complete report was generated; inspect available logs."
 }
