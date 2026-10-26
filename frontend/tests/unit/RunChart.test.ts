@@ -378,17 +378,9 @@ describe("RunChart", () => {
     mocks.crosshairMoveListener?.({ point: { x: 60, y: 190 } });
     await nextTick();
 
-    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("data-sbar-id")).toBe(originBars[1]!.sbarId);
-    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("fill")).toBe("none");
-    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("stroke")).toBe("#C3CBD1");
-    expect(wrapper.get('[data-testid="run-hover-sbar"]').attributes("stroke-width")).toBe("1.25");
-    // The highlight follows the rendered candle body, not the full logical slot.
-    const hoverX = Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("x"));
-    const hoverWidth = Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("width"));
-    expect(hoverX + hoverWidth / 2).toBeCloseTo(60);
-    expect(hoverWidth).toBeLessThan(10);
-    expect(Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("y"))).toBeGreaterThan(0);
-    expect(Number(wrapper.get('[data-testid="run-hover-sbar"]').attributes("height"))).toBeLessThan(20);
+    // SBar hover is rendered by SBarMarkerPrimitive; the compatibility SVG
+    // probe is intentionally absent. The semantic hover label remains adapter-owned.
+    expect(wrapper.find('[data-testid="run-hover-sbar"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe(`SBAR · ${originBars[1]!.sbarId}`);
     expect(wrapper.emitted("objectSelect")).toBeUndefined();
 
