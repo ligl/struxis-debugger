@@ -53,7 +53,10 @@ export class ReplayTargetMarkerPrimitive implements ISeriesPrimitive<Time> {
     this.requestUpdate?.();
   }
 
-  updateAllViews(): void {}
+  updateAllViews(): void {
+    // RunChart supplies the projected X coordinate; this Primitive does not
+    // own a second time-scale mapping or target-selection policy.
+  }
 
   dispose(): void {
     this.state = { x: null, label: false, endpoint: false };
