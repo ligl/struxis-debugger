@@ -536,10 +536,11 @@ for (const panel of ["inspector", "diagnostics"] as const) {
       await expect(page.getByTestId(`${panel}-dock-${initialDirection}`)).toHaveAttribute("aria-pressed", "true");
 
       const source = page.getByTestId(`${panel}-dock-drag-handle`);
-      const target = page.getByTestId("chart-workspace");
+      // The drop handler computes edge ratios from the shell bounding box.
+      const target = page.getByTestId("debugger-shell");
       const targetBounds = await target.boundingBox();
-      expect(targetBounds, "workbench drop target should be rendered").not.toBeNull();
-      if (!targetBounds) throw new Error("workbench drop target has no bounding box");
+      expect(targetBounds, "debugger shell drop target should be rendered").not.toBeNull();
+      if (!targetBounds) throw new Error("debugger shell drop target has no bounding box");
 
       const targetPosition = direction === "left"
         ? { x: 2, y: targetBounds.height / 2 }
