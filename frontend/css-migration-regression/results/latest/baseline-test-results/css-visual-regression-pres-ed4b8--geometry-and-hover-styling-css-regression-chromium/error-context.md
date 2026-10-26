@@ -82,15 +82,6 @@ Call log:
 # Test source
 
 ```ts
-  888  |     const separator = getComputedStyle(nextMetric, "::before");
-  889  |     return {
-  890  |       root: {
-  891  |         display: root.display,
-  892  |         flex: root.flex,
-  893  |         minHeight: root.minHeight,
-  894  |         gap: root.gap,
-  895  |         padding: root.padding,
-  896  |         backgroundColor: root.backgroundColor,
   897  |       },
   898  |       metric: {
   899  |         display: getComputedStyle(metric).display,
@@ -179,61 +170,70 @@ Call log:
   982  | test("preserves development context menu positioning, stacking, button geometry and hover styling", async ({ page }) => {
   983  |   await page.setViewportSize({ width: 1440, height: 900 });
   984  |   await page.goto("/");
-  985  |   await page.mouse.click(120, 140, { button: "right" });
-  986  | 
-  987  |   const menu = page.getByTestId("devtools-context-menu");
-> 988  |   await expect(menu).toBeVisible();
+  985  |   await page.evaluate(() => {
+  986  |     window.dispatchEvent(new MouseEvent("contextmenu", {
+  987  |       bubbles: true,
+  988  |       cancelable: true,
+  989  |       clientX: 120,
+  990  |       clientY: 140,
+  991  |       button: 2,
+  992  |       buttons: 2,
+  993  |     }));
+  994  |   });
+  995  | 
+  996  |   const menu = page.getByTestId("devtools-context-menu");
+> 997  |   await expect(menu).toBeVisible();
        |                      ^ Error: expect(locator).toBeVisible() failed
-  989  |   const menuStyle = await menu.evaluate((element) => {
-  990  |     const style = getComputedStyle(element);
-  991  |     const button = element.querySelector<HTMLElement>('[data-testid="open-devtools"]')!;
-  992  |     const buttonStyle = getComputedStyle(button);
-  993  |     return {
-  994  |       left: style.left,
-  995  |       top: style.top,
-  996  |       position: style.position,
-  997  |       zIndex: style.zIndex,
-  998  |       minWidth: style.minWidth,
-  999  |       padding: style.padding,
-  1000 |       borderRadius: style.borderRadius,
-  1001 |       backgroundColor: style.backgroundColor,
-  1002 |       boxShadow: style.boxShadow,
-  1003 |       button: {
-  1004 |         display: buttonStyle.display,
-  1005 |         width: buttonStyle.width,
-  1006 |         minHeight: buttonStyle.minHeight,
-  1007 |         padding: buttonStyle.padding,
-  1008 |         borderRadius: buttonStyle.borderRadius,
-  1009 |         backgroundColor: buttonStyle.backgroundColor,
-  1010 |         color: buttonStyle.color,
-  1011 |         textAlign: buttonStyle.textAlign,
-  1012 |         fontSize: buttonStyle.fontSize,
-  1013 |       },
-  1014 |     };
-  1015 |   });
-  1016 |   expect(menuStyle).toMatchObject({
-  1017 |     left: "120px",
-  1018 |     top: "140px",
-  1019 |     position: "fixed",
-  1020 |     zIndex: "10000",
-  1021 |     minWidth: "176px",
-  1022 |     padding: "4px",
-  1023 |     borderRadius: "4px",
-  1024 |     backgroundColor: "rgb(27, 32, 37)",
-  1025 |     button: {
-  1026 |       display: "block",
-  1027 |       minHeight: "30px",
-  1028 |       padding: "0px 9px",
-  1029 |       borderRadius: "2px",
-  1030 |       textAlign: "left",
-  1031 |       fontSize: "11px",
-  1032 |     },
-  1033 |   });
-  1034 | 
-  1035 |   const firstButton = page.getByTestId("open-devtools");
-  1036 |   await firstButton.hover();
-  1037 |   const hoverBackground = await firstButton.evaluate((element) => getComputedStyle(element).backgroundColor);
-  1038 |   expect(hoverBackground).toBe("rgb(48, 56, 63)");
-  1039 | });
-  1040 | 
+  998  |   const menuStyle = await menu.evaluate((element) => {
+  999  |     const style = getComputedStyle(element);
+  1000 |     const button = element.querySelector<HTMLElement>('[data-testid="open-devtools"]')!;
+  1001 |     const buttonStyle = getComputedStyle(button);
+  1002 |     return {
+  1003 |       left: style.left,
+  1004 |       top: style.top,
+  1005 |       position: style.position,
+  1006 |       zIndex: style.zIndex,
+  1007 |       minWidth: style.minWidth,
+  1008 |       padding: style.padding,
+  1009 |       borderRadius: style.borderRadius,
+  1010 |       backgroundColor: style.backgroundColor,
+  1011 |       boxShadow: style.boxShadow,
+  1012 |       button: {
+  1013 |         display: buttonStyle.display,
+  1014 |         width: buttonStyle.width,
+  1015 |         minHeight: buttonStyle.minHeight,
+  1016 |         padding: buttonStyle.padding,
+  1017 |         borderRadius: buttonStyle.borderRadius,
+  1018 |         backgroundColor: buttonStyle.backgroundColor,
+  1019 |         color: buttonStyle.color,
+  1020 |         textAlign: buttonStyle.textAlign,
+  1021 |         fontSize: buttonStyle.fontSize,
+  1022 |       },
+  1023 |     };
+  1024 |   });
+  1025 |   expect(menuStyle).toMatchObject({
+  1026 |     left: "120px",
+  1027 |     top: "140px",
+  1028 |     position: "fixed",
+  1029 |     zIndex: "10000",
+  1030 |     minWidth: "176px",
+  1031 |     padding: "4px",
+  1032 |     borderRadius: "4px",
+  1033 |     backgroundColor: "rgb(27, 32, 37)",
+  1034 |     button: {
+  1035 |       display: "block",
+  1036 |       minHeight: "30px",
+  1037 |       padding: "0px 9px",
+  1038 |       borderRadius: "2px",
+  1039 |       textAlign: "left",
+  1040 |       fontSize: "11px",
+  1041 |     },
+  1042 |   });
+  1043 | 
+  1044 |   const firstButton = page.getByTestId("open-devtools");
+  1045 |   await firstButton.hover();
+  1046 |   const hoverBackground = await firstButton.evaluate((element) => getComputedStyle(element).backgroundColor);
+  1047 |   expect(hoverBackground).toBe("rgb(48, 56, 63)");
+  1048 | });
+  1049 | 
 ```
