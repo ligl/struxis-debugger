@@ -501,7 +501,6 @@ describe("ChartSurface and chart entry adapters", () => {
     await nextTick();
 
     expect(wrapper.get('[data-testid="origin-object-hover-label"]').text()).toBe("SWING · swing-hover");
-    expect(wrapper.get('[data-testid="origin-selected-sbar"]').attributes("data-sbar-id")).toBe(bars[0]!.sbarId);
     // Structure hover/selection visuals are rendered by the attached Primitive,
     // not duplicated as SVG nodes. Hover remains transient and Inspector selection stays unchanged.
     expect(wrapper.find('[data-testid="origin-hover-swing"]').exists()).toBe(false);
@@ -511,7 +510,8 @@ describe("ChartSurface and chart entry adapters", () => {
     await wrapper.get('[data-testid="layer-toggle-swing"]').trigger("click");
     await nextTick();
     expect(wrapper.find('[data-testid="origin-object-hover-label"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="origin-selected-sbar"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-selected-sbar"]').exists()).toBe(false);
+    expect(wrapper.props("selectedObject")).toEqual({ kind: "sbar", id: bars[0]!.sbarId, originDatasetId: "origin-hover-state" });
 
     moveHandler?.({});
     await nextTick();
