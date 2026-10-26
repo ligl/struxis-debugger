@@ -812,7 +812,7 @@ onBeforeUnmount(() => {
         @pointerenter="emit('chartActivate')"
       ></div>
       <svg
-        v-if="bars.length > 0"
+        v-if="$slots['chart-structure-overlays'] && bars.length > 0"
         class="origin-structure-overlay origin-structure-interaction-overlay"
         :style="{ width: `${structureOverlayWidth}px` }"
         aria-hidden="true"
@@ -971,11 +971,6 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.origin-structure-overlay .origin-object-selected-sbar {
-  fill: rgb(217 154 69 / 10%);
-  stroke: #D99A45;
-  stroke-width: 1.25;
-}
 
 .origin-chart-legend {
   position: absolute;
