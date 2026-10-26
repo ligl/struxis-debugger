@@ -1,0 +1,55 @@
+[WebServer] $ vite --host 127.0.0.1
+
+Running 22 tests using 1 worker
+
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/workbench-default.png, writing actual.
+  ✓   1 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:241:1 › captures workbench visual and computed-style baseline (1.5s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/workspace-dataset-default.png, writing actual.
+  ✓   2 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the dataset workspace default state (956ms)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/workspace-replay-default.png, writing actual.
+  ✓   3 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the replay workspace default state (1.1s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/workspace-compare-default.png, writing actual.
+  ✓   4 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the compare workspace default state (839ms)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/diagnostics-expanded-left.png, writing actual.
+  ✓   5 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked left (1.2s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/diagnostics-expanded-right.png, writing actual.
+  ✓   6 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked right (1.1s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/diagnostics-expanded-top.png, writing actual.
+  ✓   7 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked top (1.0s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/diagnostics-expanded-bottom.png, writing actual.
+  ✓   8 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked bottom (904ms)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/inspector-expanded-left.png, writing actual.
+  ✓   9 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked left (3.3s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/inspector-expanded-right.png, writing actual.
+  ✓  10 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked right (1.0s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/inspector-expanded-top.png, writing actual.
+  ✓  11 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked top (952ms)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/inspector-expanded-bottom.png, writing actual.
+  ✓  12 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked bottom (945ms)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/inspector-expanded.png, writing actual.
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/inspector-collapsed.png, writing actual.
+  ✓  13 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:319:1 › captures Inspector expanded and collapsed states (1.3s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/diagnostics-collapsed-default.png, writing actual.
+  ✓  14 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:340:1 › captures the default collapsed Diagnostics state (888ms)
+  ✓  15 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at minimum viewport (395ms)
+  ✓  16 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at compact viewport (401ms)
+  ✓  17 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at standard viewport (439ms)
+  ✓  18 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at desktop viewport (412ms)
+  ✓  19 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at wide viewport (480ms)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/dataset-deterministic-chart.png, writing actual.
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/dataset-deterministic-chart-without-sbar.png, writing actual.
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/dataset-deterministic-chart-without-cbar.png, writing actual.
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/dataset-deterministic-chart-without-swing.png, writing actual.
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/dataset-deterministic-chart-without-volume.png, writing actual.
+  ✓  20 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:375:1 › captures deterministic Origin chart and each legend layer toggle (3.3s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/replay-processed-12-of-36.png, writing actual.
+  ✓  21 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 12 processed SBars and unprocessed candle styling (1.1s)
+A snapshot doesn't exist at /tmp/capitus-css-regression.IxBNjP/baseline-worktree/crates/struxis-debugger/frontend/css-migration-regression/baseline/replay-processed-24-of-36.png, writing actual.
+  ✓  22 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 24 processed SBars and unprocessed candle styling (1.0s)
+
+  22 passed (29.7s)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report css-migration-regression/artifacts/report[39m
+[36m[39m

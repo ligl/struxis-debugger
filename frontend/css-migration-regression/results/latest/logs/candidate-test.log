@@ -1,0 +1,33 @@
+[WebServer] $ vite --host 127.0.0.1
+
+Running 22 tests using 1 worker
+
+  ✓   1 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:241:1 › captures workbench visual and computed-style baseline (804ms)
+  ✓   2 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the dataset workspace default state (681ms)
+  ✓   3 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the replay workspace default state (772ms)
+  ✓   4 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:273:3 › captures the compare workspace default state (622ms)
+  ✓   5 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked left (830ms)
+  ✓   6 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked right (781ms)
+  ✓   7 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked top (750ms)
+  ✓   8 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:288:3 › captures expanded Diagnostics docked bottom (757ms)
+  ✓   9 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked left (747ms)
+  ✓  10 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked right (710ms)
+  ✓  11 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked top (692ms)
+  ✓  12 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:305:3 › captures expanded Inspector docked bottom (715ms)
+  ✓  13 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:319:1 › captures Inspector expanded and collapsed states (939ms)
+  ✓  14 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:340:1 › captures the default collapsed Diagnostics state (650ms)
+  ✓  15 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at minimum viewport (419ms)
+  ✓  16 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at compact viewport (401ms)
+  ✓  17 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at standard viewport (448ms)
+  ✓  18 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at desktop viewport (470ms)
+  ✓  19 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:354:3 › preserves shell geometry at wide viewport (490ms)
+  ✓  20 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:375:1 › captures deterministic Origin chart and each legend layer toggle (2.0s)
+  ✓  21 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 12 processed SBars and unprocessed candle styling (944ms)
+  ✓  22 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:405:3 › captures Replay with 24 processed SBars and unprocessed candle styling (917ms)
+
+  22 passed (21.8s)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report css-migration-regression/artifacts/report[39m
+[36m[39m

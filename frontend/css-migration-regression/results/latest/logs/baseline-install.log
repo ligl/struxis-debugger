@@ -1,0 +1,16 @@
+bun install v1.4.3 (c6da4a4d3)
+
++ @playwright/test@1.64.1
++ @vitejs/plugin-vue@5.2.4
++ @vue/test-utils@2.5.1
++ jsdom@25.0.1
++ typescript@5.7.3
++ vite@6.4.4
++ vitest@3.2.7
++ vue-tsc@2.2.12
++ @tauri-apps/api@2.12.3
++ lightweight-charts@5.2.1
++ vue@3.5.44
++ vue-sonner@2.0.9
+
+171 packages installed [169.00ms]
