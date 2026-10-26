@@ -216,7 +216,6 @@ manifest = {
     "candidateTestExitCode": int(os.environ["CSS_REGRESSION_TEST_EXIT"]),
     "result": "passed" if int(os.environ["CSS_REGRESSION_TEST_EXIT"]) == 0 else "failed",
     "knownCoverageGaps": [
-        "Replay processed/unprocessed candle brightness is covered by full-page screenshots at two progress states, but has no targeted per-candle pixel/color assertion",
         "Real Snapshot Reference chart projection",
         "Inspector dock resize interaction",
         "Full Inspector/Diagnostics drag-resize interaction matrix",
