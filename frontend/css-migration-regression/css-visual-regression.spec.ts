@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
+    Object.defineProperty(window, "isTauri", { configurable: true, value: true });
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
       value: {
