@@ -50,7 +50,6 @@ const emit = defineEmits<{
   projectionFrame: [];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
-const structureOverlayWidth = ref(0);
 const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
 let chart: IChartApi | null = null;
@@ -186,9 +185,6 @@ function updateSbarCoordinates(): void {
     return;
   }
   const timeScale = chart.timeScale();
-  structureOverlayWidth.value = typeof timeScale.width === "function"
-    ? timeScale.width()
-    : chartHost.value?.clientWidth ?? 0;
   firstSbarX.value = firstSbarTime === null ? null : timeScale.timeToCoordinate(firstSbarTime);
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
   updateStructureGeometry();
@@ -811,14 +807,6 @@ onBeforeUnmount(() => {
         :aria-label="chartLabel"
         @pointerenter="emit('chartActivate')"
       ></div>
-      <svg
-        v-if="$slots['chart-structure-overlays'] && bars.length > 0"
-        class="origin-structure-overlay origin-structure-interaction-overlay"
-        :style="{ width: `${structureOverlayWidth}px` }"
-        aria-hidden="true"
-      >
-        <slot name="chart-structure-overlays" />
-      </svg>
       <slot name="chart-interaction-overlay" />
       <div v-if="showLegend !== false" class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
@@ -943,26 +931,6 @@ onBeforeUnmount(() => {
   height: 0;
   min-height: 0;
   overflow: hidden;
-}
-
-.origin-structure-overlay {
-  position: absolute;
-  /*
-   * Lightweight Charts creates its own positioned canvas layers. Keep shared
-   * structure and Snapshot playback SVG overlays above those canvases so the
-   * range guides, arrows and masked Live-progress brightness remain visible.
-   */
-  z-index: 4;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.origin-structure-overlay rect,
-.origin-structure-overlay line {
-  vector-effect: non-scaling-stroke;
 }
 
 .origin-chart-host {
