@@ -153,6 +153,22 @@ for (const direction of dockDirections) {
 }
 
 
+
+for (const direction of dockDirections) {
+  test(`captures expanded Inspector docked ${direction}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "inspector-dock-menu", `inspector-dock-${direction}`);
+    await expect(page.getByTestId(`inspector-dock-${direction}`)).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("inspector-panel")).toBeVisible();
+    await expect(page).toHaveScreenshot(`inspector-expanded-${direction}.png`, {
+      fullPage: true,
+      animations: "disabled",
+      caret: "hide",
+    });
+  });
+}
+
 test("captures Inspector expanded and collapsed states", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
