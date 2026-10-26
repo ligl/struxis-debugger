@@ -1,9 +1,10 @@
-import { mount } from "@vue/test-utils";
+import { mount, type VueWrapper } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ChartSurface from "../../src/components/ChartSurface.vue";
 import OriginChart from "../../src/components/OriginChart.vue";
 import type { SBarDto } from "../../src/origin-types";
+import type { ChartSurfaceStructureGeometry } from "../../src/chart-surface-contract";
 
 const chartMocks = vi.hoisted(() => ({
   createChart: vi.fn(),
@@ -56,6 +57,13 @@ function bar(overrides: Partial<SBarDto> = {}): SBarDto {
     volume: "100",
     ...overrides,
   };
+}
+
+function projectedStructureGeometry(wrapper: VueWrapper<any>): ChartSurfaceStructureGeometry {
+  const surface = wrapper.findComponent(ChartSurface).vm as unknown as {
+    getStructureGeometry: () => ChartSurfaceStructureGeometry;
+  };
+  return surface.getStructureGeometry();
 }
 
 function installResizeObserverMock() {
@@ -291,7 +299,6 @@ describe("ChartSurface and chart entry adapters", () => {
     await nextTick();
     expect(wrapper.get('[data-testid="origin-chart-canvas"]').attributes("data-sequence-id"))
       .toBe("origin-1");
-    expect(wrapper.get('[data-testid="origin-structure-overlay"]').attributes("style")).toContain("width: 700px");
     const chartPanel = wrapper.get('[data-testid="origin-chart-panel"]');
     expect(chartPanel.attributes("data-sbar-count")).toBe("2");
     expect(chartPanel.attributes("data-first-sbar-id")).toBe("1700000000000000000");
@@ -354,22 +361,20 @@ describe("ChartSurface and chart entry adapters", () => {
     });
     await nextTick();
 
-    const cbarRectangle = wrapper.get('[data-testid="cbar-range-rectangle"]');
-    expect(cbarRectangle.attributes("data-cbar-id")).toBe("1700000000000000000");
-    expect(cbarRectangle.attributes("x")).toBe("96.5");
-    expect(cbarRectangle.attributes("y")).toBe("30");
-    expect(cbarRectangle.attributes("width")).toBe("107");
-    expect(cbarRectangle.attributes("height")).toBe("40");
-    expect(cbarRectangle.attributes("fill")).toBe("none");
-    const swingSegment = wrapper.get('[data-testid="swing-state-segment"]');
-    expect(swingSegment.attributes("data-swing-id")).toBe("1700000000000000000");
-    expect(swingSegment.attributes("data-swing-state")).toBe("Confirmed");
-    expect(swingSegment.attributes("x1")).toBe("100");
-    expect(swingSegment.attributes("y1")).toBe("70");
-    expect(swingSegment.attributes("x2")).toBe("200");
-    expect(swingSegment.attributes("y2")).toBe("30");
-    expect(swingSegment.attributes("stroke")).toBe("#B49ACD");
-    expect(swingSegment.attributes("stroke-dasharray")).toBeUndefined();
+    const geometry = projectedStructureGeometry(wrapper);
+    expect(geometry.cbarRectangles).toEqual([{
+      id: "1700000000000000000", x: 96.5, y: 30, width: 107, height: 40,
+    }]);
+    expect(geometry.swingSegments).toEqual([{
+      id: "1700000000000000000",
+      state: "Confirmed",
+      x1: 100,
+      y1: 70,
+      x2: 200,
+      y2: 30,
+      color: "#B49ACD",
+      dasharray: "",
+    }]);
     expect(wrapper.text()).toContain("CBar");
     expect(wrapper.text()).toContain("Swing");
     wrapper.unmount();
@@ -564,12 +569,8 @@ describe("ChartSurface and chart entry adapters", () => {
     });
     await nextTick();
 
-    const segments = wrapper.findAll('[data-testid="swing-state-segment"]');
-    expect(segments).toHaveLength(3);
-    expect(segments.map((segment) => [
-      segment.attributes("data-swing-state"),
-      segment.attributes("stroke"),
-      segment.attributes("stroke-dasharray") ?? "",
+    expect(projectedStructureGeometry(wrapper).swingSegments.map((segment) => [
+      segment.state, segment.color, segment.dasharray,
     ])).toEqual([
       ["Confirmed", "#B49ACD", ""],
       ["Tentative", "#D6A85D", "6 3"],
@@ -891,8 +892,7 @@ describe("ChartSurface and chart entry adapters", () => {
 
     expect(chartMocks.candleApplyOptions).toHaveBeenCalledWith({ visible: false });
     expect(chartMocks.volumeApplyOptions).toHaveBeenCalledWith({ visible: false });
-    expect(wrapper.find('[data-testid="cbar-range-rectangle"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="swing-state-segment"]').exists()).toBe(false);
+    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [] });
     expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("false");
 
@@ -906,8 +906,8 @@ describe("ChartSurface and chart entry adapters", () => {
 
     expect(chartMocks.candleApplyOptions).toHaveBeenCalledWith({ visible: true });
     expect(chartMocks.volumeApplyOptions).toHaveBeenCalledWith({ visible: true });
-    expect(wrapper.find('[data-testid="cbar-range-rectangle"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="swing-state-segment"]').exists()).toBe(true);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles).toHaveLength(1);
+    expect(projectedStructureGeometry(wrapper).swingSegments).toHaveLength(1);
     expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("true");
     expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("true");
 
@@ -978,8 +978,7 @@ describe("ChartSurface and chart entry adapters", () => {
       .toContain("SBar 1700000000000000000 has a non-finite close value.");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([]);
-    expect(wrapper.findAll('[data-testid="cbar-range-rectangle"]')).toHaveLength(0);
-    expect(wrapper.findAll('[data-testid="swing-state-segment"]')).toHaveLength(0);
+    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [] });
     wrapper.unmount();
   });
 
