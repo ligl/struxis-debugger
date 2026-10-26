@@ -2,6 +2,8 @@ import { enableAutoUnmount, mount, type VueWrapper } from "@vue/test-utils";
 import { defineComponent, nextTick, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RunChart from "../../src/components/RunChart.vue";
+import ChartSurface from "../../src/components/ChartSurface.vue";
+import type { ChartSurfaceStructureGeometry } from "../../src/chart-surface-contract";
 import type { OriginDatasetDto, RunStateDto, SBarDto, TestDatasetDto } from "../../src/origin-types";
 
 const mocks = vi.hoisted(() => ({
@@ -112,6 +114,13 @@ function runState(overrides: Partial<RunStateDto> = {}): RunStateDto {
     failureDiagnostic: null,
     ...overrides,
   };
+}
+
+function projectedStructureGeometry(wrapper: VueWrapper<any>): ChartSurfaceStructureGeometry {
+  const surface = wrapper.findComponent(ChartSurface).vm as unknown as {
+    getStructureGeometry: () => ChartSurfaceStructureGeometry;
+  };
+  return surface.getStructureGeometry();
 }
 
 function installResizeObserverMock(): void {
@@ -662,9 +671,8 @@ describe("RunChart", () => {
     }) as VueWrapper<any>;
     await nextTick();
 
-    expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-1"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-1"]').attributes("stroke")).toBe("#A0A7B0");
-    expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-1"]').exists()).toBe(true);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.map((item) => item.id)).toContain("cbar-1");
+    expect(projectedStructureGeometry(wrapper).swingSegments.map((item) => item.id)).toContain("swing-1");
     expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("true");
 
     const moveHandler = mocks.crosshairMoveListener;
@@ -673,7 +681,7 @@ describe("RunChart", () => {
     await nextTick();
     expect(wrapper.find('[data-testid="run-hover-swing"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="run-object-hover-label"]').text()).toBe("SWING · swing-1");
-    expect(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-1"]').attributes("stroke")).toBe("#A0A7B0");
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.map((item) => item.id)).toContain("cbar-1");
     expect(wrapper.emitted("objectSelect")).toBeUndefined();
 
     await wrapper.setProps({ selectedObject: null });
@@ -686,7 +694,7 @@ describe("RunChart", () => {
 
     await wrapper.get('[data-testid="run-layer-toggle-cbar"]').trigger("click");
     await nextTick();
-    expect(wrapper.find('[data-testid="run-cbar-rectangle"]').exists()).toBe(false);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles).toHaveLength(0);
     expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
 
     await wrapper.get('[data-testid="run-chart-fit"]').trigger("click");
@@ -730,8 +738,8 @@ describe("RunChart", () => {
       props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure: initialStructure },
     }) as VueWrapper<any>;
     await nextTick();
-    expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="run-swing-segment"][data-swing-id="swing-removed"]').exists()).toBe(true);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.map((item) => item.id)).toContain("cbar-stable");
+    expect(projectedStructureGeometry(wrapper).swingSegments.map((item) => item.id)).toContain("swing-removed");
 
     const candleSetCalls = mocks.candleSetData.mock.calls.length;
     const volumeSetCalls = mocks.volumeSetData.mock.calls.length;
@@ -774,15 +782,14 @@ describe("RunChart", () => {
       borderColor: "#557E65",
       wickColor: "#557E65",
     }, true);
-    expect(wrapper.findAll('[data-testid="run-cbar-rectangle"]')).toHaveLength(2);
-    expect(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-stable"]').attributes("y")).toBe("187");
-    expect(wrapper.find('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-added"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="run-swing-segment"]').exists()).toBe(false);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles).toHaveLength(2);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.find((item) => item.id === "cbar-stable")?.y).toBe(187);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.map((item) => item.id)).toContain("cbar-added");
+    expect(projectedStructureGeometry(wrapper).swingSegments).toHaveLength(0);
 
     await wrapper.setProps({ structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] } });
     await nextTick();
-    expect(wrapper.find('[data-testid="run-cbar-rectangle"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="run-swing-segment"]').exists()).toBe(false);
+    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [] });
     wrapper.unmount();
   });
 
@@ -825,8 +832,7 @@ describe("RunChart", () => {
     });
     await nextTick();
 
-    const rectangle = wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]');
-    const initialX = Number(rectangle.attributes("x"));
+    const initialX = projectedStructureGeometry(wrapper).cbarRectangles.find((item) => item.id === "cbar-zoom")!.x;
     expect(mocks.visibleRangeListener).not.toBeNull();
 
     mocks.coordinateOffset = 100;
@@ -841,11 +847,11 @@ describe("RunChart", () => {
     expect(mocks.animationFrameCallback).toBe(supersededFrame);
 
     await nextTick();
-    expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.find((item) => item.id === "cbar-zoom")!.x).toBe(initialX);
 
     mocks.animationFrameCallback?.(0);
     await nextTick();
-    expect(Number(wrapper.get('[data-testid="run-cbar-rectangle"][data-cbar-id="cbar-zoom"]').attributes("x"))).toBe(initialX + 200);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.find((item) => item.id === "cbar-zoom")!.x).toBe(initialX + 200);
 
     wrapper.unmount();
     expect(mocks.unsubscribeVisibleRangeChange).toHaveBeenCalled();
@@ -1217,10 +1223,8 @@ describe("RunChart", () => {
     });
     await nextTick();
 
-    expect(wrapper.findAll('[data-testid="run-cbar-rectangle"]').map((node) => node.attributes("data-cbar-id")))
-      .toEqual(["cbar-visible"]);
-    expect(wrapper.findAll('[data-testid="run-swing-segment"]').map((node) => node.attributes("data-swing-id")))
-      .toEqual(["swing-visible"]);
+    expect(projectedStructureGeometry(wrapper).cbarRectangles.map((item) => item.id)).toEqual(["cbar-visible"]);
+    expect(projectedStructureGeometry(wrapper).swingSegments.map((item) => item.id)).toEqual(["swing-visible"]);
     wrapper.unmount();
   });
 
