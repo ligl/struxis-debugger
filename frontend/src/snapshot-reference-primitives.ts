@@ -6,6 +6,7 @@ import type {
 } from "lightweight-charts";
 import type { SBarDto } from "./origin-types";
 import { resolveSnapshotLiveRangeIndices } from "./snapshot-playback-geometry";
+import { alignStrokeCoordinate } from "./chart-canvas-pixel-alignment";
 
 type AttachedParameter = Parameters<NonNullable<ISeriesPrimitive<Time>["attached"]>>[0];
 type DrawTarget = Parameters<IPrimitivePaneRenderer["draw"]>[0];
@@ -93,8 +94,12 @@ export class SnapshotRangeMarkerPrimitive implements ISeriesPrimitive<Time> {
         const { start, end } = this.markers!;
         context.strokeStyle = "rgba(119, 131, 140, 0.42)";
         context.lineWidth = 0.9;
+        const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
+          ? Math.max(1, window.devicePixelRatio)
+          : 1;
         context.setLineDash([3, 5]);
-        for (const x of [start, end]) {
+        for (const anchorX of [start, end]) {
+          const x = alignStrokeCoordinate(anchorX, context.lineWidth, pixelRatio);
           context.beginPath();
           context.moveTo(x, 0);
           context.lineTo(x, mediaSize.height);
