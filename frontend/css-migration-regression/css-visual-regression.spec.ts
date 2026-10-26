@@ -1065,3 +1065,87 @@ test("preserves development context menu positioning, stacking, button geometry 
   const hoverBackground = await firstButton.evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(hoverBackground).toBe(resolvedSurface3);
 });
+
+
+test("preserves Replay playback speed menu geometry, options and hover styling", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+
+  const control = page.getByTestId("replay-speed-control");
+  await expect(control).toBeVisible();
+  await control.hover();
+  const menu = page.getByTestId("replay-speed-menu");
+  await expect(menu).toBeVisible();
+
+  const styles = await menu.evaluate((element) => {
+    const root = getComputedStyle(element);
+    const option = element.querySelector<HTMLElement>(".replay-speed-option")!;
+    const optionStyle = getComputedStyle(option);
+    return {
+      root: {
+        position: root.position,
+        zIndex: root.zIndex,
+        top: root.top,
+        right: root.right,
+        display: root.display,
+        width: root.width,
+        flexDirection: root.flexDirection,
+        gap: root.gap,
+        padding: root.padding,
+        borderRadius: root.borderRadius,
+        boxShadow: root.boxShadow,
+      },
+      option: {
+        display: optionStyle.display,
+        minHeight: optionStyle.minHeight,
+        alignItems: optionStyle.alignItems,
+        justifyContent: optionStyle.justifyContent,
+        padding: optionStyle.padding,
+        borderRadius: optionStyle.borderRadius,
+        fontSize: optionStyle.fontSize,
+        textAlign: optionStyle.textAlign,
+      },
+      options: Array.from(element.querySelectorAll<HTMLElement>(".replay-speed-option"))
+        .map((item) => item.textContent?.trim()),
+    };
+  });
+
+  expect(styles.root).toEqual({
+    position: "absolute",
+    zIndex: "1200",
+    top: "28px",
+    right: "0px",
+    display: "flex",
+    width: "86px",
+    flexDirection: "column",
+    gap: "1px",
+    padding: "4px",
+    borderRadius: "4px",
+    boxShadow: "rgba(0, 0, 0, 0.6) 0px 6px 20px 0px",
+  });
+  expect(styles.option).toMatchObject({
+    display: "flex",
+    minHeight: "27px",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0px 7px",
+    borderRadius: "2px",
+    fontSize: "11px",
+    textAlign: "left",
+  });
+  expect(styles.options).toEqual(["0.5x✓", "1x", "2x", "3x", "MAX"]);
+
+  const surface3 = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--dbg-surface-3").trim());
+  const resolvedSurface3 = await page.evaluate((token) => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = token;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  }, surface3);
+  const firstOption = menu.locator(".replay-speed-option").first();
+  await firstOption.hover();
+  await expect.poll(() => firstOption.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(resolvedSurface3);
+});
