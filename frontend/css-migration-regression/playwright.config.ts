@@ -34,7 +34,7 @@ export default defineConfig({
     command: "bun run dev",
     cwd: frontendDir,
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 30_000,
   },
 });
