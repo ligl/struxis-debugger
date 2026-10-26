@@ -37,7 +37,7 @@ describe("ReplayTargetMarkerPrimitive", () => {
     expect(context.moveTo).toHaveBeenCalledWith(42, 0);
     expect(context.lineTo).toHaveBeenCalledWith(42, 200);
     expect(context.setLineDash).toHaveBeenNthCalledWith(1, [5, 4]);
-    expect(context.fillText).toHaveBeenCalledWith("TARGET", 47, 5);
+    expect(context.fillText).toHaveBeenCalledWith("TARGET", 47, 13);
     expect(context.arc).not.toHaveBeenCalled();
   });
 
