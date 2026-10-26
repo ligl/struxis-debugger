@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Time } from "lightweight-charts";
 import type { SBarDto } from "../../src/origin-types";
+import { alignStrokeCoordinate } from "../../src/chart-canvas-pixel-alignment";
 import { SnapshotRangeMarkerPrimitive } from "../../src/snapshot-reference-primitives";
 
 function createBar(index: number): SBarDto {
@@ -45,10 +46,12 @@ describe("SnapshotRangeMarkerPrimitive", () => {
     markers.attached({ chart: chart as never, requestUpdate: vi.fn() } as never);
     markers.update({ bars: [createBar(0), createBar(1), createBar(2)], enabled: true, offset: 0, liveCount: 2, showArrows: true });
     markers.paneViews()[0]!.renderer()!.draw(target as never);
-    expect(context.moveTo).toHaveBeenCalledWith(100, 0);
-    expect(context.lineTo).toHaveBeenCalledWith(100, 360);
-    expect(context.moveTo).toHaveBeenCalledWith(200, 0);
-    expect(context.lineTo).toHaveBeenCalledWith(200, 360);
+    const alignedStart = alignStrokeCoordinate(100, 0.9, 1);
+    const alignedEnd = alignStrokeCoordinate(200, 0.9, 1);
+    expect(context.moveTo).toHaveBeenCalledWith(alignedStart, 0);
+    expect(context.lineTo).toHaveBeenCalledWith(alignedStart, 360);
+    expect(context.moveTo).toHaveBeenCalledWith(alignedEnd, 0);
+    expect(context.lineTo).toHaveBeenCalledWith(alignedEnd, 360);
 
     context.moveTo.mockClear();
     context.lineTo.mockClear();
@@ -56,10 +59,12 @@ describe("SnapshotRangeMarkerPrimitive", () => {
     coordinates.set(1_700_000_060, 245);
     markers.updateAllViews();
     markers.paneViews()[0]!.renderer()!.draw(target as never);
-    expect(context.moveTo).toHaveBeenCalledWith(125, 0);
-    expect(context.lineTo).toHaveBeenCalledWith(125, 360);
-    expect(context.moveTo).toHaveBeenCalledWith(245, 0);
-    expect(context.lineTo).toHaveBeenCalledWith(245, 360);
+    const reprojectedStart = alignStrokeCoordinate(125, 0.9, 1);
+    const reprojectedEnd = alignStrokeCoordinate(245, 0.9, 1);
+    expect(context.moveTo).toHaveBeenCalledWith(reprojectedStart, 0);
+    expect(context.lineTo).toHaveBeenCalledWith(reprojectedStart, 360);
+    expect(context.moveTo).toHaveBeenCalledWith(reprojectedEnd, 0);
+    expect(context.lineTo).toHaveBeenCalledWith(reprojectedEnd, 360);
     markers.dispose();
   });
 
