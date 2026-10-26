@@ -49,7 +49,7 @@ const identityLabel = computed(() => {
     </div>
     <div class="metric">
       <span class="label">IDENTITY</span>
-      <span class="value" data-testid="compare-summary-identity" :class="{ 'compare-identity-match': identityLabel === 'MATCH' }">
+      <span class="value" data-testid="compare-summary-identity"  :class="{ 'compare-identity-match': identityLabel === 'MATCH', 'compare-identity-mismatch': identityLabel === 'MISMATCH' }">
         {{ identityLabel }}
       </span>
     </div>
