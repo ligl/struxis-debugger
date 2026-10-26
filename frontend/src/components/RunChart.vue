@@ -6,6 +6,7 @@ import type { ChartSurfacePort } from "../chart-surface-contract";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
 import { hitTestStructureObject as resolveStructureHit } from "../sbar-chart-structure-hit-test";
 import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
+import { ReplayTargetMarkerPrimitive } from "../replay-target-marker-primitive";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import { ReplayCrosshairSyncGate, isSameLogicalRange, resolveReplayCrosshairCommand, translateReplayViewportRange } from "../replay-chart-sync";
@@ -52,6 +53,16 @@ let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let cachedProjection: ReturnType<typeof mapSBarsToChart> | null = null;
 const sbarMarkerPrimitive = new SBarMarkerPrimitive();
 let unregisterSbarMarkerPrimitive: (() => void) | null = null;
+const targetGuidePrimitive = new ReplayTargetMarkerPrimitive({ x: null, label: true, endpoint: false });
+const targetEndpointPrimitive = new ReplayTargetMarkerPrimitive({ x: null, label: false, endpoint: true });
+let unregisterTargetGuidePrimitive: (() => void) | null = null;
+let unregisterTargetEndpointPrimitive: (() => void) | null = null;
+
+function syncTargetMarkerPrimitives(): void {
+  const x = targetSbarX.value;
+  targetGuidePrimitive.update({ x, label: true, endpoint: false });
+  targetEndpointPrimitive.update({ x, label: false, endpoint: true });
+}
 
 function syncSbarMarkerPrimitive(): void {
   sbarMarkerPrimitive.update({
@@ -723,8 +734,11 @@ onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
   unregisterSbarMarkerPrimitive = surface.value?.registerPrimitive("run-sbar-markers", sbarMarkerPrimitive) ?? null;
   updateChart();
+  unregisterTargetGuidePrimitive = surface.value?.registerPrimitive("run-target-guide", targetGuidePrimitive) ?? null;
+  unregisterTargetEndpointPrimitive = surface.value?.registerPrimitive("run-target-endpoint", targetEndpointPrimitive, { target: "volume" }) ?? null;
   updateStructureOverlays();
   syncSbarMarkerPrimitive();
+  syncTargetMarkerPrimitives();
   surface.value?.setLayerVisibility(layerVisibility.value);
   if (props.syncEnabled) {
     if (props.syncRequest?.source === "reference") applySyncRequest(props.syncRequest);
@@ -773,6 +787,7 @@ watch(() => props.selectedObject, () => {
   updateStructureOverlays();
 });
 watch(() => props.targetSbarId, updateStructureOverlays);
+watch(targetSbarX, syncTargetMarkerPrimitives);
 watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: true });
 watch(() => props.runState?.cursorSbarId, () => updateHoveredObject(undefined));
 watch(() => props.crosshairSync, (sync) => {
@@ -827,7 +842,13 @@ onBeforeUnmount(() => {
   hoveredSbarMarker.value = null;
   unregisterSbarMarkerPrimitive?.();
   unregisterSbarMarkerPrimitive = null;
+  unregisterTargetGuidePrimitive?.();
+  unregisterTargetGuidePrimitive = null;
+  unregisterTargetEndpointPrimitive?.();
+  unregisterTargetEndpointPrimitive = null;
   sbarMarkerPrimitive.dispose();
+  targetGuidePrimitive.dispose();
+  targetEndpointPrimitive.dispose();
   scheduleOverlayUpdate.cancel();
   pendingViewportRange = null;
   crosshairSyncGate.clear();
@@ -895,7 +916,7 @@ onBeforeUnmount(() => {
         @projection-frame="updateStructureOverlays"
       >
         <template #chart-structure-overlays>
-          <g v-if="targetSbarId && targetSbarX !== null" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
+          <g v-if="targetSbarId && targetSbarX !== null" visibility="hidden" data-testid="restart-to-sbar-target" :data-target-sbar-id="targetSbarId">
             <line :x1="targetSbarX" y1="0" :x2="targetSbarX" y2="100%" stroke="#C6A06B" stroke-width="1.25" stroke-dasharray="5 4" />
             <text :x="targetSbarX + 5" y="13" fill="#C6A06B" font-size="9" font-weight="600" letter-spacing="1">TARGET</text>
             <circle :cx="targetSbarX" cy="98%" r="3" fill="#C6A06B" />
