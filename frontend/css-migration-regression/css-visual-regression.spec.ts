@@ -110,6 +110,48 @@ test("captures workbench visual and computed-style baseline", async ({ page }, t
   });
 });
 
+
+const dockDirections = ["left", "right", "top", "bottom"] as const;
+
+async function chooseDockDirection(page: Page, menuTestId: string, optionTestId: string) {
+  await page.getByTestId(menuTestId).locator("summary").click();
+  await page.getByTestId(optionTestId).click();
+}
+
+for (const workspace of [
+  { name: "dataset", testId: "workspace-dataset", title: "DATASET" },
+  { name: "replay", testId: "workspace-replay", title: "REPLAY" },
+  { name: "compare", testId: "workspace-compare", title: "COMPARE" },
+] as const) {
+  test(`captures the ${workspace.name} workspace default state`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await page.getByTestId(workspace.testId).click();
+    await expect(page.getByTestId("workspace-toolbar-title")).toHaveText(workspace.title);
+    await expect(page.getByTestId(`${workspace.name}-workspace`)).toBeVisible();
+    await expect(page).toHaveScreenshot(`workspace-${workspace.name}-default.png`, {
+      fullPage: true,
+      animations: "disabled",
+      caret: "hide",
+    });
+  });
+}
+
+for (const direction of dockDirections) {
+  test(`captures expanded Diagnostics docked ${direction}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await chooseDockDirection(page, "diagnostics-dock-menu", `diagnostics-dock-${direction}`);
+    await page.getByTestId("diagnostics-collapse-toggle").click();
+    await expect(page.getByTestId("diagnostics-dock")).not.toHaveClass(/collapsed/);
+    await expect(page).toHaveScreenshot(`diagnostics-expanded-${direction}.png`, {
+      fullPage: true,
+      animations: "disabled",
+      caret: "hide",
+    });
+  });
+}
+
 for (const viewport of viewports) {
   test(`preserves shell geometry at ${viewport.name} viewport`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
