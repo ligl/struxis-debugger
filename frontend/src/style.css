@@ -1743,22 +1743,6 @@ body,
   border-radius: 1px;
 }
 
-.run-chart-legend .sbar-dot {
-  background: #75c6a1;
-}
-
-.run-chart-legend .cbar-dot {
-  background: #A0A7B0;
-}
-
-.run-chart-legend .swing-dot {
-  background: var(--dbg-chart-swing);
-}
-
-.run-chart-legend .volume-dot {
-  background: #c4a16b;
-}
-
 .run-chart-legend .run-chart-structure-gap {
   color: var(--dbg-warning);
   font-size: 8px;
@@ -1993,6 +1977,10 @@ body,
   --dbg-chart-trend: #91a7b9;
   --dbg-chart-keyzone: #b49a75;
   --dbg-chart-crosshair: #89949d;
+  --dbg-legend-sbar: #75c6a1;
+  --dbg-legend-cbar: #a8b2b9;
+  --dbg-legend-swing: #B49ACD;
+  --dbg-legend-volume: #e17e79;
   color: var(--dbg-text-primary);
   background: var(--dbg-bg);
   font-size: 13px;
