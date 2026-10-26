@@ -1,22 +1,7 @@
 # CSS migration regression result
 
-- **Result:** PASSED
-- **Candidate commit:** `d637e39c3e14d15392abbffbd3f6e281b1d5834b`
-- **Pinned visual baseline:** `171254d0bbdad139f51ba1550e8379899d8f6ca6`
-- **Generated (UTC):** 2026-10-26T19:43:59.452442+00:00
-- **Environment:** Linux 7.0.0-38-generic x86_64; Bun 1.4.3; Node v22.22.2
-- **Baseline screenshots:** 22
-- **Candidate test exit code:** 0
+- Result: INFRASTRUCTURE FAILURE
+- Candidate commit: 4af93b1af9dbe87191d4d61ad7c703144eaf46aa
+- Pinned baseline: 171254d0bbdad139f51ba1550e8379899d8f6ca6
 
-## How to review
-
-1. Read `manifest.json` and `logs/candidate-test.log`.
-2. Open `playwright-report/index.html` locally if the report was generated.
-3. Inspect `test-results/` for screenshot diffs, traces, and failure attachments.
-4. Compare the candidate commit against the pinned baseline commit; the suite's pass/fail result is not a substitute for reviewing intentional visual changes.
-
-## Known coverage gaps
-
-- Replay progress transitions and Live/Snapshot viewport-crosshair synchronization interactions
-- Real Snapshot Reference chart projection parity has not been independently established
-- Compare uses ComparisonChartPlaceholder.vue, not real Candidate/Baseline market charts
+The run stopped before a complete report was generated. Inspect available logs.
