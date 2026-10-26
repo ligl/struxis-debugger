@@ -831,7 +831,8 @@ test("preserves Compare Snapshot Store disclosure geometry and styling", async (
   expect(before.summary.gap).toBe("12px");
   expect(before.summary.padding).toBe("0px 10px");
   expect(before.summary.letterSpacing).toBe("0.48px");
-  expect(before.title.display).toBe("inline-flex");
+  // A flex item blockifies inline-flex to flex in computed style.
+  expect(before.title.display).toBe("flex");
   expect(before.counts.whiteSpace).toBe("nowrap");
 
   await summary.click();
