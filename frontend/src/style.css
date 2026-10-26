@@ -1991,7 +1991,7 @@ body,
   --dbg-chart-crosshair: #89949d;
   --dbg-legend-sbar: #4C8066;
   --dbg-legend-cbar: #737D85;
-  --dbg-legend-swing: var(--dbg-chart-swing);
+  --dbg-legend-swing: #C6A06B;
   --dbg-legend-volume: #75464A;
   color: var(--dbg-text-primary);
   background: var(--dbg-bg);
