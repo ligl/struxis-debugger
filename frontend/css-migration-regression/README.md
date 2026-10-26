@@ -43,7 +43,7 @@ Test artifacts, HTML reports, traces, and result output are written below this t
 ## What this first version checks
 
 - Default workbench screenshot at 1440 × 900.
-- A temporary in-page Tauri IPC stub provides 36 deterministic SBar records and explicit CBar/Swing DTOs for the Dataset chart, without production hooks or external Catalog data.
+- Every test installs a deterministic empty-session Tauri IPC stub before app startup, so workspace/layout tests do not depend on a running Tauri host. The chart test supplies a test-local Origin override with 36 deterministic SBar records and explicit CBar/Swing DTOs, without production hooks or external Catalog data. Unknown IPC commands fail explicitly.
 - Deterministic Dataset chart screenshot plus independent SBar, CBar, Swing, and Volume legend off/on screenshots. The fixture is test-local and is not a production data source.
 - Dataset, Replay, and Compare default-workspace screenshots.
 - Inspector expanded and collapsed screenshots, plus expanded screenshots in all four dock directions.
