@@ -775,3 +775,87 @@ for (const panel of ["inspector", "diagnostics"] as const) {
     });
   }
 }
+
+
+test("preserves Compare Snapshot Store disclosure geometry and styling", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("workspace-compare").click();
+
+  const disclosure = page.getByTestId("snapshot-store-disclosure");
+  const summary = page.getByTestId("snapshot-store-toggle");
+  await expect(disclosure).toBeVisible();
+  await expect(summary).toBeVisible();
+
+  const before = await page.evaluate(() => {
+    const disclosure = document.querySelector<HTMLElement>("[data-testid='snapshot-store-disclosure']")!;
+    const summary = document.querySelector<HTMLElement>("[data-testid='snapshot-store-toggle']")!;
+    const title = document.querySelector<HTMLElement>(".snapshot-store-title")!;
+    const counts = document.querySelector<HTMLElement>(".snapshot-store-counts")!;
+    const disclosureStyle = getComputedStyle(disclosure);
+    const summaryStyle = getComputedStyle(summary);
+    const titleStyle = getComputedStyle(title);
+    const countsStyle = getComputedStyle(counts);
+    const rect = summary.getBoundingClientRect();
+    return {
+      disclosure: {
+        display: disclosureStyle.display,
+        flex: disclosureStyle.flex,
+        marginTop: disclosureStyle.marginTop,
+        borderTopWidth: disclosureStyle.borderTopWidth,
+      },
+      summary: {
+        display: summaryStyle.display,
+        minHeight: summaryStyle.minHeight,
+        gap: summaryStyle.gap,
+        padding: summaryStyle.padding,
+        letterSpacing: summaryStyle.letterSpacing,
+        listStyleType: summaryStyle.listStyleType,
+        height: Math.round(rect.height * 100) / 100,
+      },
+      title: {
+        display: titleStyle.display,
+        gap: titleStyle.gap,
+      },
+      counts: {
+        fontSize: countsStyle.fontSize,
+        whiteSpace: countsStyle.whiteSpace,
+      },
+    };
+  });
+  expect(before.disclosure.display).toBe("block");
+  expect(before.disclosure.flex).toContain("0 0 auto");
+  expect(before.disclosure.marginTop).toBe("6px");
+  expect(before.summary.display).toBe("flex");
+  expect(before.summary.minHeight).toBe("30px");
+  expect(before.summary.gap).toBe("12px");
+  expect(before.summary.padding).toBe("0px 10px");
+  expect(before.summary.letterSpacing).toBe("0.48px");
+  expect(before.title.display).toBe("inline-flex");
+  expect(before.counts.whiteSpace).toBe("nowrap");
+
+  await summary.click();
+  await expect(disclosure).toHaveAttribute("open", "");
+  const expanded = await disclosure.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const panel = element.querySelector<HTMLElement>(".snapshot-panel");
+    if (!panel) throw new Error("Compare Snapshot Store panel root is missing");
+    const panelStyle = getComputedStyle(panel);
+    return {
+      maxHeight: style.maxHeight,
+      overflowY: style.overflowY,
+      panel: {
+        marginTop: panelStyle.marginTop,
+        padding: panelStyle.padding,
+        borderRadius: panelStyle.borderRadius,
+        backgroundColor: panelStyle.backgroundColor,
+      },
+    };
+  });
+  expect(expanded.maxHeight).toBe("342px");
+  expect(expanded.overflowY).toBe("auto");
+  expect(expanded.panel.marginTop).toBe("4px");
+  expect(expanded.panel.padding).toBe("8px");
+  expect(expanded.panel.borderRadius).toBe("3px");
+  expect(expanded.panel.backgroundColor).toBe("rgb(21, 25, 29)");
+});
