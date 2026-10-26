@@ -563,6 +563,85 @@ for (const processedCount of [12, 24] as const) {
   });
 }
 
+
+test("projects every Snapshot Reference candle from the independent SBar fixture oracle", async ({ page }, testInfo) => {
+  const processedCount = 12;
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page, processedCount);
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+  await page.getByTestId("replay-reference-select").selectOption("css-regression-fixture-snapshot");
+
+  const snapshot = page.getByTestId("snapshot-reference-chart");
+  const canvasHost = snapshot.getByTestId("origin-chart-canvas");
+  await expect(snapshot).toHaveAttribute("data-sync-eligible", "true");
+  await expect(snapshot).toHaveAttribute("data-progress-active", "true");
+  await expect(canvasHost).toBeVisible();
+
+  // This oracle is derived from the fixture's domain formula, not from the
+  // production mapSBarsToChart/projectSnapshotPlaybackSeries functions.
+  const expected = Array.from({ length: 36 }, (_, index) => {
+    const direction = Math.sin(index * 1.13);
+    if (index < processedCount) {
+      return direction > 0 ? "#557e65" : direction < 0 ? "#8d555b" : "#858d97";
+    }
+    if (direction > 0) return "#2e4239";
+    if (direction < 0) return "#463035";
+    return "#42484e";
+  });
+
+  const actual = await canvasHost.evaluate((host) => {
+    const colors = [
+      "#557e65", "#8d555b", "#858d97",
+      "#2e4239", "#463035", "#42484e",
+    ];
+    const byX = new Map<number, Map<string, number>>();
+    for (const canvas of host.querySelectorAll("canvas")) {
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context || canvas.width === 0 || canvas.height === 0) continue;
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let y = 0; y < canvas.height; y += 1) {
+        for (let x = 0; x < canvas.width; x += 1) {
+          const offset = (y * canvas.width + x) * 4;
+          if (pixels[offset + 3] !== 255) continue;
+          const color = `#${pixels[offset]!.toString(16).padStart(2, "0")}${pixels[offset + 1]!.toString(16).padStart(2, "0")}${pixels[offset + 2]!.toString(16).padStart(2, "0")}`;
+          if (!colors.includes(color)) continue;
+          const counts = byX.get(x) ?? new Map<string, number>();
+          counts.set(color, (counts.get(color) ?? 0) + 1);
+          byX.set(x, counts);
+        }
+      }
+    }
+
+    const coloredColumns = [...byX.entries()].sort(([a], [b]) => a - b);
+    const groups: Array<{ start: number; end: number; counts: Map<string, number> }> = [];
+    for (const [x, counts] of coloredColumns) {
+      const previous = groups[groups.length - 1];
+      if (!previous || x - previous.end > 4) {
+        groups.push({ start: x, end: x, counts: new Map(counts) });
+      } else {
+        previous.end = x;
+        for (const [color, count] of counts) {
+          previous.counts.set(color, (previous.counts.get(color) ?? 0) + count);
+        }
+      }
+    }
+
+    return groups.map((group) => ({
+      start: group.start,
+      end: group.end,
+      color: [...group.counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+    }));
+  });
+
+  await testInfo.attach("snapshot-candle-projection-oracle.json", {
+    body: JSON.stringify({ expected, actual }, null, 2),
+    contentType: "application/json",
+  });
+  expect(actual, "every fixture SBar should have a distinct rendered candle/volume color column").toHaveLength(36);
+  expect(actual.map((item) => item.color), "rendered candle colors must follow the independent SBar direction/progress oracle").toEqual(expected);
+});
+
 async function expandDiagnosticsIfNeeded(page: Page) {
   const diagnostics = page.getByTestId("diagnostics-dock");
   if (await diagnostics.getAttribute("class").then((value) => value?.includes("collapsed") ?? false)) {
