@@ -419,8 +419,32 @@ for (const processedCount of [12, 24] as const) {
     // Do not accept a screenshot of an empty/unsynchronized reference as a Replay fixture.
     await expect(snapshotChart).toHaveAttribute("data-sync-eligible", "true");
     await expect(snapshotChart).toHaveAttribute("data-progress-active", "true");
-    await expect(snapshotChart.getByTestId("origin-chart-canvas")).toBeVisible();
+    const snapshotCanvasHost = snapshotChart.getByTestId("origin-chart-canvas");
+    await expect(snapshotCanvasHost).toBeVisible();
     await expect(page.getByTestId("run-chart-panel")).toBeVisible();
+
+    // Assert rendered pixels, not only the full-page screenshot. Processed candles
+    // retain their native direction colors; unprocessed candles use the dim palette.
+    const renderedColors = await snapshotCanvasHost.evaluate((host) => {
+      const targets = ["#557e65", "#8d555b", "#2e4239", "#463135"];
+      const counts = Object.fromEntries(targets.map((color) => [color, 0])) as Record<string, number>;
+      for (const canvas of host.querySelectorAll("canvas")) {
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context || canvas.width === 0 || canvas.height === 0) continue;
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        for (let index = 0; index < pixels.length; index += 4) {
+          if (pixels[index + 3] !== 255) continue;
+          const color = `#${pixels[index]!.toString(16).padStart(2, "0")}${pixels[index + 1]!.toString(16).padStart(2, "0")}${pixels[index + 2]!.toString(16).padStart(2, "0")}`;
+          if (color in counts) counts[color] += 1;
+        }
+      }
+      return counts;
+    });
+    expect(renderedColors["#557e65"], "native up-candle pixels").toBeGreaterThan(0);
+    expect(renderedColors["#8d555b"], "native down-candle pixels").toBeGreaterThan(0);
+    expect(renderedColors["#2e4239"], "dimmed up-candle pixels").toBeGreaterThan(0);
+    expect(renderedColors["#463135"], "dimmed down-candle pixels").toBeGreaterThan(0);
+
     await expect(page).toHaveScreenshot(`replay-processed-${processedCount}-of-36.png`, {
       fullPage: true,
       animations: "disabled",
