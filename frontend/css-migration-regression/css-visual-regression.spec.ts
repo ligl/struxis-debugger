@@ -213,7 +213,8 @@ async function captureLayoutContract(page: Page) {
       const element = document.querySelector<HTMLElement>(selector);
       if (!element) return { selector, missing: true as const };
 
-        const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
       return {
         selector,
         missing: false as const,
@@ -1215,6 +1216,7 @@ test("preserves Replay progress bar geometry, colors and fill transition", async
     const fill = element.querySelector<HTMLElement>("i");
     if (!fill) throw new Error("Replay progress fill element is missing");
     const fillStyle = getComputedStyle(fill);
+    const rect = element.getBoundingClientRect();
     return {
       root: {
         width: root.width,
