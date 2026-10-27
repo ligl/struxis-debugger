@@ -17,17 +17,12 @@ Error: expect(received).toEqual(expected) // deep equality
 - Expected  - 1
 + Received  + 1
 
-@@ -1,9 +1,9 @@
   Object {
-    "alignItems": "center",
-    "backgroundColor": "rgb(25, 30, 34)",
--   "color": "rgb(133, 141, 151)",
-+   "color": "rgb(137, 148, 157)",
-    "display": "flex",
-    "flex": "0 0 18px",
-    "fontSize": "8px",
-    "gap": "8px",
-    "height": "18px",
+-   "color": "rgb(160, 167, 176)",
++   "color": "rgb(168, 178, 185)",
+    "fontWeight": "500",
+    "letterSpacing": "normal",
+  }
 ```
 
 # Page snapshot
@@ -157,27 +152,6 @@ Error: expect(received).toEqual(expected) // deep equality
 # Test source
 
 ```ts
-  1247 |   });
-  1248 |   expect(styles.fill).toEqual({
-  1249 |     display: "block",
-  1250 |     height: "4px",
-  1251 |     borderRadius: "5px",
-  1252 |     backgroundColor: "rgb(117, 198, 161)",
-  1253 |     transitionProperty: "width",
-  1254 |     transitionDuration: "0.12s",
-  1255 |     transitionTimingFunction: "linear",
-  1256 |   });
-  1257 |   expect(styles.rect).toEqual({ width: 92, height: 4 });
-  1258 | });
-  1259 | 
-  1260 | test("preserves Replay toolbar error message truncation and typography", async ({ page }) => {
-  1261 |   await page.setViewportSize({ width: 1440, height: 900 });
-  1262 |   await installDeterministicOrigin(page, 12);
-  1263 |   await page.goto("/");
-  1264 |   await page.getByTestId("workspace-replay").click();
-  1265 |   await page.evaluate(() => {
-  1266 |     (window as typeof window & { __CSS_REGRESSION_FAIL_NEXT_STEP__?: boolean }).__CSS_REGRESSION_FAIL_NEXT_STEP__ = true;
-  1267 |   });
   1268 |   await page.getByTestId("run-step").click();
   1269 | 
   1270 |   const error = page.locator("[data-testid='replay-toolbar-controls'] .toolbar-error");
@@ -257,8 +231,7 @@ Error: expect(received).toEqual(expected) // deep equality
   1344 |     };
   1345 |   });
   1346 | 
-> 1347 |   expect(styles.root).toEqual({
-       |                       ^ Error: expect(received).toEqual(expected) // deep equality
+  1347 |   expect(styles.root).toEqual({
   1348 |     display: "flex",
   1349 |     height: "18px",
   1350 |     minHeight: "18px",
@@ -268,7 +241,7 @@ Error: expect(received).toEqual(expected) // deep equality
   1354 |     padding: "0px 8px",
   1355 |     overflow: "hidden",
   1356 |     backgroundColor: "rgb(25, 30, 34)",
-  1357 |     color: "rgb(133, 141, 151)",
+  1357 |     color: "rgb(137, 148, 157)",
   1358 |     fontSize: "8px",
   1359 |     letterSpacing: "0.32px",
   1360 |     rectHeight: 18,
@@ -279,7 +252,8 @@ Error: expect(received).toEqual(expected) // deep equality
   1365 |     textOverflow: "ellipsis",
   1366 |     whiteSpace: "nowrap",
   1367 |   });
-  1368 |   expect(styles.label).toEqual({
+> 1368 |   expect(styles.label).toEqual({
+       |                        ^ Error: expect(received).toEqual(expected) // deep equality
   1369 |     color: "rgb(160, 167, 176)",
   1370 |     fontWeight: "500",
   1371 |     letterSpacing: "normal",
@@ -359,4 +333,22 @@ Error: expect(received).toEqual(expected) // deep equality
   1445 |     fontSize: "12px",
   1446 |     letterSpacing: "0.12px",
   1447 |   });
+  1448 |   expect(styles.description).toEqual({
+  1449 |     maxWidth: "560px",
+  1450 |     fontSize: "10px",
+  1451 |     lineHeight: "16.5px",
+  1452 |   });
+  1453 |   expect(styles.integrity).toEqual({
+  1454 |     marginTop: "4px",
+  1455 |     color: "rgb(137, 148, 157)",
+  1456 |     fontSize: "8px",
+  1457 |     letterSpacing: "0.8px",
+  1458 |   });
+  1459 |   expect(styles.separator).toEqual({
+  1460 |     paddingInline: "3px",
+  1461 |     color: "rgb(179, 138, 80)",
+  1462 |     fontStyle: "normal",
+  1463 |   });
+  1464 | });
+  1465 | 
 ```
