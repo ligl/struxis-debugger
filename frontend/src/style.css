@@ -3969,72 +3969,6 @@ th, td { padding: 6px 8px; }
   font-size: 8px;
 }
 
-.dataset-range-summary {
-  display: flex;
-  flex: 1 1 220px;
-  min-width: 0;
-  align-items: center;
-  gap: 9px;
-}
-
-.dataset-range-selected {
-  display: flex;
-  flex: 0 0 auto;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-  color: var(--dbg-text-secondary);
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  white-space: nowrap;
-}
-
-.dataset-range-selected > span:first-child {
-  color: var(--dbg-text-muted);
-  font-size: 8px;
-  letter-spacing: .04em;
-}
-
-.dataset-range-selected code {
-  color: var(--dbg-text-primary);
-}
-
-.dataset-range-selected strong {
-  color: var(--dbg-success);
-  font-weight: 600;
-}
-
-.dataset-range-pending,
-.dataset-range-empty {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--dbg-text-muted);
-  font-size: 9px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dataset-range-pending code {
-  color: var(--dbg-text-primary);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-
-.dataset-range-status {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--dbg-text-muted);
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dataset-create-button {
-  flex: 0 0 auto;
-  min-height: 28px;
-  padding: 0 9px;
-  white-space: nowrap;
-}
-
 .test-dataset-details {
   position: relative;
   flex: 0 0 auto;
@@ -4077,30 +4011,6 @@ th, td { padding: 6px 8px; }
 
 .test-dataset-details[open] > summary {
   margin-bottom: 6px;
-}
-
-.test-dataset-detail-list {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 7px 12px;
-}
-
-.test-dataset-detail-list > div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.test-dataset-detail-list > div > span {
-  color: var(--dbg-text-muted);
-  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-
-.test-dataset-detail-list code {
-  overflow-wrap: anywhere;
-  color: var(--dbg-text-primary);
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .dataset-controls-message {
