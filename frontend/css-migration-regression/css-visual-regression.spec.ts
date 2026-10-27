@@ -1354,7 +1354,7 @@ test("preserves Snapshot Reference footer metadata geometry and typography", asy
     padding: "0px 8px",
     overflow: "hidden",
     backgroundColor: "rgb(25, 30, 34)",
-    color: "rgb(133, 141, 151)",
+    color: "rgb(137, 148, 157)",
     fontSize: "8px",
     letterSpacing: "0.32px",
     rectHeight: 18,
