@@ -176,4 +176,20 @@ const showStop = () =>
   color: var(--dbg-accent-hover);
   font-size: 10px;
 }
+.replay-progress {
+  width: 92px;
+  height: 4px;
+  flex: 0 0 92px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #343c42;
+}
+
+.replay-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #75c6a1;
+  transition: width 120ms linear;
+}
 </style>
