@@ -223,4 +223,12 @@ const showStop = () =>
 .run-state .run-status-none {
   color: var(--dbg-text-muted);
 }
+
+.toolbar-error {
+  max-width: 160px;
+  overflow: hidden;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>
