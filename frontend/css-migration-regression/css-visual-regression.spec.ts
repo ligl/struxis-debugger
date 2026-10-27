@@ -453,6 +453,7 @@ test("preserves Dataset selected-range label typography", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await installDeterministicOrigin(page);
   await page.goto("/");
+  await page.getByTestId("test-dataset-select-all").click();
   const label = page.locator(".dataset-range-selected > span:first-child");
   await expect(label).toBeVisible();
 
