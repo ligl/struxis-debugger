@@ -1150,6 +1150,50 @@ test("preserves Replay playback speed menu geometry, options and hover styling",
   await expect.poll(() => firstOption.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(resolvedSurface3);
 });
 
+test("preserves Replay run status layout and paused-state color", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page, 12);
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+
+  const state = page.locator("[data-testid='replay-toolbar-controls'] .run-state");
+  const status = state.locator("b");
+  await expect(state).toBeVisible();
+  await expect(status).toHaveClass(/run-status-paused/);
+
+  const styles = await state.evaluate((element) => {
+    const root = getComputedStyle(element);
+    const label = getComputedStyle(element.querySelector("b")!);
+    return {
+      root: {
+        display: root.display,
+        flex: root.flex,
+        alignItems: root.alignItems,
+        gap: root.gap,
+        color: root.color,
+        whiteSpace: root.whiteSpace,
+      },
+      label: {
+        color: label.color,
+        fontWeight: label.fontWeight,
+      },
+    };
+  });
+
+  expect(styles.root).toEqual({
+    display: "flex",
+    flex: "0 0 auto",
+    alignItems: "center",
+    gap: "7px",
+    color: "rgb(133, 141, 151)",
+    whiteSpace: "nowrap",
+  });
+  expect(styles.label).toEqual({
+    color: "rgb(121, 181, 139)",
+    fontWeight: "650",
+  });
+});
+
 test("preserves Replay progress bar geometry, colors and fill transition", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
