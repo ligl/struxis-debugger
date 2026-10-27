@@ -1506,11 +1506,13 @@ test("preserves Snapshot Reference loading spinner geometry and reduced-motion b
     borderTopColor: "rgb(217, 154, 69)",
     borderLeftColor: "rgb(52, 60, 66)",
     borderRadius: "50%",
-    animationName: "snapshot-reference-spin",
     animationDuration: "0.8s",
     animationTimingFunction: "linear",
     animationIterationCount: "infinite",
   });
+  // Vue scopes keyframe names in SFC styles, so the runtime name may carry a
+  // generated hash suffix. Assert the semantic name, not the compiler artifact.
+  expect(normal.animationName).toMatch(/^snapshot-reference-spin(?:-[a-f0-9]+)?$/);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(() => spinner.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("2.4s");
