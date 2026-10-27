@@ -14,15 +14,14 @@
 ```
 Error: expect(received).toEqual(expected) // deep equality
 
-- Expected  - 1
+- Expected  - 0
 + Received  + 1
 
-@@ -1,9 +1,9 @@
+@@ -1,8 +1,9 @@
   Object {
     "animationDuration": "0.8s",
     "animationIterationCount": "infinite",
--   "animationName": "snapshot-reference-spin",
-+   "animationName": "snapshot-reference-spin-9e0fe81f",
++   "animationName": "snapshot-reference-spin",
     "animationTimingFunction": "linear",
     "borderLeftColor": "rgb(52, 60, 66)",
     "borderRadius": "50%",
@@ -245,14 +244,16 @@ Error: expect(received).toEqual(expected) // deep equality
   1506 |     borderTopColor: "rgb(217, 154, 69)",
   1507 |     borderLeftColor: "rgb(52, 60, 66)",
   1508 |     borderRadius: "50%",
-  1509 |     animationName: "snapshot-reference-spin",
-  1510 |     animationDuration: "0.8s",
-  1511 |     animationTimingFunction: "linear",
-  1512 |     animationIterationCount: "infinite",
-  1513 |   });
-  1514 | 
-  1515 |   await page.emulateMedia({ reducedMotion: "reduce" });
-  1516 |   await expect.poll(() => spinner.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("2.4s");
-  1517 | });
-  1518 | 
+  1509 |     animationDuration: "0.8s",
+  1510 |     animationTimingFunction: "linear",
+  1511 |     animationIterationCount: "infinite",
+  1512 |   });
+  1513 |   // Vue scopes keyframe names in SFC styles, so the runtime name may carry a
+  1514 |   // generated hash suffix. Assert the semantic name, not the compiler artifact.
+  1515 |   expect(normal.animationName).toMatch(/^snapshot-reference-spin(?:-[a-f0-9]+)?$/);
+  1516 | 
+  1517 |   await page.emulateMedia({ reducedMotion: "reduce" });
+  1518 |   await expect.poll(() => spinner.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("2.4s");
+  1519 | });
+  1520 | 
 ```
