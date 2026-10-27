@@ -1,21 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-10-27T08:45:08.367768+00:00",
   "repository": "ligl/capitus",
   "branch": "develop",
+  "candidateCommit": "29bbf674dcd866a0bf1bc2f4ea98801198471bc1",
   "baselineCommit": "171254d0bbdad139f51ba1550e8379899d8f6ca6",
-  "candidateCommit": "341f79aa829a94c46039d2a78c9b4f54324f9466",
-  "candidateCommitDate": "2026-10-27T16:40:38+08:00",
-  "workingTreeWasCleanAtStart": true,
-  "platform": "Linux 7.0.0-38-generic x86_64",
-  "bunVersion": "1.4.3",
-  "nodeVersion": "v22.22.2",
-  "browser": "Playwright Chromium; Desktop Chrome emulation; 1440x900; DPR 1; dark; en-US; UTC",
-  "baselineScreenshotCount": 22,
-  "candidateTestExitCode": 0,
-  "result": "passed",
-  "knownCoverageGaps": [
-    "Snapshot Reference per-SBar projection oracle is added but has not yet passed a reviewed baseline/candidate run",
-    "Compare uses ComparisonChartPlaceholder.vue because SnapshotCompareResultDto does not expose a complete historical SBar OHLCV sequence"
-  ]
+  "result": "infrastructure_failure",
+  "exitCode": 1,
+  "note": "Run stopped before a complete report was generated; inspect available logs."
 }
