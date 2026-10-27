@@ -192,4 +192,35 @@ const showStop = () =>
   background: #75c6a1;
   transition: width 120ms linear;
 }
+
+.run-state {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  color: var(--dbg-text-muted);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.run-state b {
+  color: var(--dbg-text-secondary);
+  font-weight: 650;
+}
+
+.run-state .run-status-running,
+.run-state .run-status-paused,
+.run-state .run-status-completed {
+  color: var(--dbg-success);
+}
+
+.run-state .run-status-failed {
+  color: var(--dbg-danger, #e17e79);
+}
+
+.run-state .run-status-ready,
+.run-state .run-status-disposed,
+.run-state .run-status-none {
+  color: var(--dbg-text-muted);
+}
 </style>
