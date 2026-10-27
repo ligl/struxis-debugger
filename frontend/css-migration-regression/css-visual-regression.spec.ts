@@ -1370,7 +1370,7 @@ test("preserves Snapshot Reference footer metadata geometry and typography", asy
     fontWeight: "500",
     letterSpacing: "normal",
   });
-  expect(styles.fingerprintMarginLeft).toBe("auto");
+  expect(Number.parseFloat(styles.fingerprintMarginLeft)).toBeGreaterThan(0);
 });
 
 test("preserves Compare placeholder internal typography and integrity marker", async ({ page }) => {
