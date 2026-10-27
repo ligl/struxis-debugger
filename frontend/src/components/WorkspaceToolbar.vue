@@ -15,6 +15,16 @@ defineProps<{
       <span class="spacer"></span>
       <span class="tag">ORIGIN LOAD</span>
     </template>
+
+<style scoped>
+.workspace-title {
+  flex: 0 0 auto;
+  color: var(--dbg-text-primary);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+</style>
     <template v-else-if="workspaceMode === 'replay'">
       <span class="workspace-title" data-testid="workspace-toolbar-title">REPLAY</span>
       <span class="tag green">TEST DATASET</span>
