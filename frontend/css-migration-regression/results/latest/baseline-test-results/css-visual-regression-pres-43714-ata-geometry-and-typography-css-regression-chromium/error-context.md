@@ -12,17 +12,10 @@
 # Error details
 
 ```
-Error: expect(received).toEqual(expected) // deep equality
+Error: expect(received).toBe(expected) // Object.is equality
 
-- Expected  - 1
-+ Received  + 1
-
-  Object {
--   "color": "rgb(160, 167, 176)",
-+   "color": "rgb(168, 178, 185)",
-    "fontWeight": "500",
-    "letterSpacing": "normal",
-  }
+Expected: "auto"
+Received: "637.422px"
 ```
 
 # Page snapshot
@@ -152,11 +145,6 @@ Error: expect(received).toEqual(expected) // deep equality
 # Test source
 
 ```ts
-  1268 |   await page.getByTestId("run-step").click();
-  1269 | 
-  1270 |   const error = page.locator("[data-testid='replay-toolbar-controls'] .toolbar-error");
-  1271 |   await expect(error).toBeVisible();
-  1272 |   await expect(error).toHaveText("CSS regression fixture forced step failure");
   1273 |   const style = await error.evaluate((element) => {
   1274 |     const computed = getComputedStyle(element);
   1275 |     return {
@@ -252,13 +240,13 @@ Error: expect(received).toEqual(expected) // deep equality
   1365 |     textOverflow: "ellipsis",
   1366 |     whiteSpace: "nowrap",
   1367 |   });
-> 1368 |   expect(styles.label).toEqual({
-       |                        ^ Error: expect(received).toEqual(expected) // deep equality
-  1369 |     color: "rgb(160, 167, 176)",
+  1368 |   expect(styles.label).toEqual({
+  1369 |     color: "rgb(168, 178, 185)",
   1370 |     fontWeight: "500",
   1371 |     letterSpacing: "normal",
   1372 |   });
-  1373 |   expect(styles.fingerprintMarginLeft).toBe("auto");
+> 1373 |   expect(styles.fingerprintMarginLeft).toBe("auto");
+       |                                        ^ Error: expect(received).toBe(expected) // Object.is equality
   1374 | });
   1375 | 
   1376 | test("preserves Compare placeholder internal typography and integrity marker", async ({ page }) => {
