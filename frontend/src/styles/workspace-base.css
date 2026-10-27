@@ -1,0 +1,138 @@
+.debugger-shell {
+  /* The debugger is a desktop workbench, not a centered document page. */
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.topbar,
+.panel-heading,
+.footer-bar,
+.table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topbar {
+  padding: 0 0 17px;
+  border-bottom: 1px solid var(--dbg-border);
+}
+
+.eyebrow,
+.section-index,
+.field-label {
+  margin: 0;
+  color: var(--dbg-accent);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.13em;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin: 7px 0 3px;
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+h3 {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--dbg-text-muted);
+  font: 11px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.runtime-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dbg-text-secondary);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+.runtime-dot,
+.dataset-status {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--dbg-text-muted);
+  border-radius: 50%;
+  background: var(--dbg-surface-3);
+}
+
+.runtime-dot.active,
+.dataset-status.ready {
+  border-color: var(--dbg-success);
+  background: var(--dbg-success);
+  box-shadow: 0 0 8px rgb(121 181 139 / 18%);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.7fr);
+  gap: 14px;
+  flex: 1;
+  align-items: start;
+}
+
+.panel {
+  min-width: 0;
+  border: 1px solid var(--dbg-border);
+  background: var(--dbg-surface-1);
+}
+
+.catalog-panel,
+.result-panel {
+  padding: 16px;
+}
+
+.panel-heading {
+  min-height: 32px;
+  margin-bottom: 15px;
+}
+
+.subtle-button {
+  padding: 6px 9px;
+  border: 1px solid var(--dbg-border);
+  background: var(--dbg-surface-2);
+  color: var(--dbg-text-secondary);
+  cursor: pointer;
+}
+
+.subtle-button:hover:not(:disabled) {
+  border-color: var(--dbg-border-strong);
+  color: var(--dbg-text-primary);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+

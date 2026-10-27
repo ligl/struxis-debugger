@@ -466,11 +466,7 @@ onBeforeUnmount(() => {
     @crosshair-anchor-change="handleCrosshairChange"
     @pointer-position="handlePointerPosition"
     @chart-click="handleChartClick"
-  >
-    <template #chart-interaction-overlay>
-      <div v-if="hoveredObject" class="snapshot-object-hover-label" data-testid="snapshot-object-hover-label" aria-live="off">{{ hoveredObject.kind.toUpperCase() }} · {{ hoveredObject.id }}</div>
-    </template>
-  </ChartSurface>
+  />
 </template>
 
 <style scoped>
@@ -479,21 +475,4 @@ onBeforeUnmount(() => {
   border: 0;
 }
 
-.snapshot-object-hover-label {
-  position: absolute;
-  z-index: 4;
-  top: 7px;
-  right: 10px;
-  max-width: 42%;
-  overflow: hidden;
-  padding: 3px 5px;
-  border: 1px solid #394149;
-  border-radius: 2px;
-  background: rgb(18 22 25 / 92%);
-  color: #b9c2c8;
-  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
-}
 </style>

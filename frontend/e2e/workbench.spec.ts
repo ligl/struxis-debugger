@@ -173,6 +173,22 @@ test("workspace navigation updates the visible workflow", async ({ page }) => {
   await expect(page.locator(".dataset-controls-host")).toBeVisible();
 });
 
+test("empty Live Replay chart stays hidden when the pointer enters its plot area", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+
+  const chart = page.getByTestId("run-chart-canvas");
+  await expect(page.getByTestId("run-chart-empty")).toBeVisible();
+  const bounds = await chart.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  });
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+
+  await expect(chart).toHaveCSS("visibility", "hidden");
+});
+
 test("Dataset catalog controls remain available and Inspector can collapse and restore", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");

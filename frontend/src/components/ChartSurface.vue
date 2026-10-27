@@ -29,6 +29,7 @@ const props = withDefaults(defineProps<{
   panelLabel?: string;
   chartLabel?: string;
   keyboardActive?: boolean;
+  keyboardInitialSbarId?: string | null;
   candleLastValueVisible?: boolean;
   dataMode?: "props" | "external";
 }>(), {
@@ -47,6 +48,8 @@ const emit = defineEmits<{
   pointerPosition: [point: { x: number; y: number } | null];
   logicalRangeChange: [range: { from: number; to: number }];
   crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
+  keyboardCrosshairChange: [anchor: { sbarId: string; price: number }];
+  layerVisibilityChange: [visibility: ChartSurfaceLayerVisibility];
   projectionFrame: [];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
@@ -360,6 +363,7 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
   // Keyboard navigation is a local Crosshair change even when the chart API
   // does not emit subscribeCrosshairMove for setCrosshairPosition.
   emit("crosshairAnchorChange", { sbarId: bar.sbarId, price: Number(bar.close) });
+  emit("keyboardCrosshairChange", { sbarId: bar.sbarId, price: Number(bar.close) });
   applySelectedCrosshair();
   if (crosshairUpdateFrame !== null) cancelAnimationFrame(crosshairUpdateFrame);
   crosshairUpdateFrame = requestAnimationFrame(() => {
@@ -370,7 +374,10 @@ function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
 }
 
 function moveCrosshairBy(delta: number): boolean {
-  const currentIndex = crosshairLogicalIndex ?? 0;
+  const initialIndex = props.keyboardInitialSbarId
+    ? indexBySbarId.get(props.keyboardInitialSbarId)
+    : undefined;
+  const currentIndex = crosshairLogicalIndex ?? initialIndex ?? 0;
   const targetIndex = currentIndex + delta;
   if (targetIndex < 0 || targetIndex >= props.bars.length) return false;
   return moveCrosshairTo(targetIndex);
@@ -401,26 +408,27 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
-  // ReplayWorkspace owns keyboard routing when a chart is embedded in Replay.
-  // Standalone Dataset surfaces retain their local hover/focus activation behavior.
+  // ReplayWorkspace passes its active chart owner into the Surface. Standalone
+  // Dataset surfaces retain local hover/focus activation behavior.
   if (props.keyboardActive === false) return;
   if (
     props.keyboardActive === undefined &&
     (!chartHost.value || (!chartHost.value.matches(":hover") && !chartHost.value.contains(document.activeElement)))
   ) return;
 
-  // Snapshot Reference shares Replay's chart-owner routing, but keeps its
-  // layer state inside ChartSurface so keyboard and legend toggles stay in sync.
-  const isSnapshotLayerShortcut = props.panelClass === "snapshot-reference-chart"
-    && (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "c")
+  // Shared chart entries toggle their own layers. Replay adapters receive the
+  // visibility event to keep domain-owned overlays and controls synchronized.
+  const shortcutKey = event.key.toLowerCase();
+  const isLayerShortcut = (shortcutKey === "b" || shortcutKey === "c" || shortcutKey === "v")
     && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
   if (
-    isSnapshotLayerShortcut &&
+    isLayerShortcut &&
     !event.repeat &&
     !isInteractiveKeyboardTarget(event.target) &&
     !isInteractiveKeyboardTarget(document.activeElement)
   ) {
-    toggleLayer(event.key.toLowerCase() === "b" ? "sbar" : "cbar");
+    if (shortcutKey === "v") toggleAllStructureLayers();
+    else toggleLayer(shortcutKey === "b" ? "sbar" : "cbar");
     event.preventDefault();
     return;
   }
@@ -475,6 +483,22 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   // geometry become consistent in the same interaction turn.
   scheduleOverlayUpdate.flush();
   emit("projectionFrame");
+  emit("layerVisibilityChange", { ...layerVisibility.value });
+}
+
+function toggleAllStructureLayers(): void {
+  const structureLayers = (Object.keys(layerVisibility.value) as Array<keyof typeof layerVisibility.value>)
+    .filter((layer) => layer !== "sbar" && layer !== "volume");
+  if (structureLayers.length === 0) return;
+
+  const shouldShow = structureLayers.some((layer) => !layerVisibility.value[layer]);
+  for (const layer of structureLayers) layerVisibility.value[layer] = shouldShow;
+
+  syncStructurePrimitives();
+  applySbarChartSeriesVisibility(candleSeries, volumeSeries, layerVisibility.value);
+  scheduleOverlayUpdate.flush();
+  emit("projectionFrame");
+  emit("layerVisibilityChange", { ...layerVisibility.value });
 }
 
 function handleVisibleRangeChange(): void {

@@ -183,6 +183,102 @@ describe("ChartSurface and chart entry adapters", () => {
     wrapper.unmount();
   });
 
+  it("toggles Dataset SBar and CBar layers with B and C only while its chart owns the pointer", async () => {
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [bar()],
+        originDatasetId: "origin-layer-shortcuts",
+        structure: null,
+      },
+    });
+    const chartHost = wrapper.get('[data-testid="origin-chart-canvas"]').element;
+    const isHovered = vi.spyOn(chartHost, "matches").mockReturnValue(false);
+
+    const ignored = new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true });
+    document.dispatchEvent(ignored);
+    expect(ignored.defaultPrevented).toBe(false);
+    expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("true");
+
+    isHovered.mockReturnValue(true);
+    const toggleSbar = new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true });
+    document.dispatchEvent(toggleSbar);
+    await nextTick();
+    expect(toggleSbar.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("false");
+
+    const toggleCbar = new KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true });
+    document.dispatchEvent(toggleCbar);
+    await nextTick();
+    expect(toggleCbar.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
+
+    wrapper.unmount();
+  });
+
+  it("toggles every structure layer with V without changing SBar or Volume visibility", async () => {
+    const wrapper = mount(ChartSurface, {
+      props: {
+        bars: [bar()],
+        sequenceId: "origin-structure-shortcut",
+        keyboardActive: true,
+        structure: {
+          cbars: [{
+            cbarId: "cbar-1",
+            sbarStartId: "1700000000000000000",
+            sbarEndId: "1700000000000000000",
+            high: "12",
+            low: "9",
+          }],
+          swings: [{
+            swingId: "swing-1",
+            sbarStartId: "1700000000000000000",
+            sbarEndId: "1700000000000000000",
+            high: "12",
+            low: "9",
+            direction: "Up",
+            state: "Confirmed",
+          }],
+          swingCount: 1,
+        } as never,
+      },
+    });
+    const hideCbar = new KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true });
+    document.dispatchEvent(hideCbar);
+    await nextTick();
+    expect(hideCbar.defaultPrevented).toBe(true);
+
+    const modified = new KeyboardEvent("keydown", { key: "v", ctrlKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(modified);
+    const repeated = new KeyboardEvent("keydown", { key: "v", repeat: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(repeated);
+    expect(modified.defaultPrevented).toBe(false);
+    expect(repeated.defaultPrevented).toBe(false);
+    expect(wrapper.get('[data-testid="layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="layer-toggle-swing"]').attributes("aria-pressed")).toBe("true");
+
+    const showAll = new KeyboardEvent("keydown", { key: "v", bubbles: true, cancelable: true });
+    document.dispatchEvent(showAll);
+    await nextTick();
+    expect(showAll.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="layer-toggle-cbar"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="layer-toggle-swing"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("true");
+    expect(projectedStructureGeometry(wrapper).cbarRectangles).toHaveLength(1);
+    expect(projectedStructureGeometry(wrapper).swingSegments).toHaveLength(1);
+
+    const hideAll = new KeyboardEvent("keydown", { key: "v", bubbles: true, cancelable: true });
+    document.dispatchEvent(hideAll);
+    await nextTick();
+    expect(hideAll.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="layer-toggle-swing"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("true");
+    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [] });
+    wrapper.unmount();
+  });
+
   it("allows shared-chart keyboard zoom-out beyond fit-content", async () => {
     const wrapper = mount(ChartSurface, {
       props: {

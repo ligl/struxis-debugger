@@ -1,0 +1,153 @@
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--dbg-border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
+}
+
+thead {
+  background: var(--dbg-surface-2);
+  color: var(--dbg-text-muted);
+}
+
+th,
+td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--dbg-border);
+  text-align: right;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+th {
+  font-weight: 500;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: var(--dbg-surface-2);
+}
+
+td {
+  color: var(--dbg-text-secondary);
+}
+
+.timestamp-cell {
+  color: var(--dbg-accent);
+}
+
+.source-note {
+  margin: 9px 0 0;
+}
+
+.error-message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px 11px;
+  border: 1px solid var(--dbg-error);
+  background: var(--dbg-error-surface);
+  color: var(--dbg-error);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.error-message small {
+  color: var(--dbg-text-secondary);
+}
+
+.empty-state {
+  padding: 12px;
+  border: 1px dashed var(--dbg-border);
+  color: var(--dbg-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.no-origin {
+  display: grid;
+  min-height: 320px;
+  align-content: center;
+  justify-items: center;
+  padding: 30px;
+  text-align: center;
+}
+
+.no-origin-glyph {
+  color: var(--dbg-text-muted);
+  font: 48px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.no-origin h3 {
+  margin: 13px 0 7px;
+  font-size: 14px;
+}
+
+.no-origin p {
+  max-width: 410px;
+  margin: 0;
+  color: var(--dbg-text-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.footer-bar {
+  padding-top: 10px;
+  border-top: 1px solid var(--dbg-border);
+  color: var(--dbg-text-disabled);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 980px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .debugger-shell {
+    padding: 14px 10px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .runtime-mark {
+    max-width: 110px;
+    text-align: right;
+    line-height: 1.5;
+  }
+
+  .catalog-panel,
+  .result-panel {
+    padding: 11px;
+  }
+
+  .range-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footer-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+
+

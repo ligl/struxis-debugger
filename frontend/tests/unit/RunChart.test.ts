@@ -308,6 +308,40 @@ describe("RunChart", () => {
     wrapper.unmount();
   });
 
+  it("lets ChartSurface own Replay layer shortcuts and keeps the RunChart legend synchronized", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: null, keyboardActive: true },
+    });
+    await nextTick();
+
+    const toggleSbar = new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true });
+    document.dispatchEvent(toggleSbar);
+    await nextTick();
+    expect(toggleSbar.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="run-layer-toggle-sbar"]').attributes("aria-pressed")).toBe("false");
+
+    const toggleCbar = new KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true });
+    document.dispatchEvent(toggleCbar);
+    await nextTick();
+    expect(toggleCbar.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
+
+    const showAllStructure = new KeyboardEvent("keydown", { key: "v", bubbles: true, cancelable: true });
+    document.dispatchEvent(showAllStructure);
+    await nextTick();
+    expect(showAllStructure.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="run-layer-toggle-swing"]').attributes("aria-pressed")).toBe("true");
+
+    const hideAllStructure = new KeyboardEvent("keydown", { key: "v", bubbles: true, cancelable: true });
+    document.dispatchEvent(hideAllStructure);
+    await nextTick();
+    expect(hideAllStructure.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="run-layer-toggle-swing"]').attributes("aria-pressed")).toBe("false");
+    wrapper.unmount();
+  });
+
   it("sets Restart to SBar from the crosshair X on double-click anywhere in the chart area", async () => {
     const wrapper = mount(RunChart, {
       props: { origin: origin(), testDataset: testDataset(), runState: null, targetSbarId: null },

@@ -1,0 +1,1019 @@
+/* Explicit App Shell geometry: four direct regions; chart content begins below the 44px Topbar. */
+.debugger-shell {
+  position: relative;
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workbench-main {
+  position: absolute;
+  inset:
+    calc(44px + var(--diagnostics-reserve-top, 0px) + var(--inspector-reserve-top, 0px))
+    calc(var(--diagnostics-reserve-right, 0px) + var(--inspector-reserve-right, 0px))
+    calc(var(--diagnostics-reserve-bottom, 0px) + var(--inspector-reserve-bottom, 0px))
+    calc(var(--diagnostics-reserve-left, 0px) + var(--inspector-reserve-left, 0px));
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* Keep the Chart Workspace edge 5px above bottom-docked Diagnostics, matching
+   the Inspector-to-Diagnostics gap without shrinking chart content internally. */
+.debugger-shell.diagnostics-dock-bottom .workbench-main {
+  bottom: calc(
+    var(--diagnostics-reserve-bottom, 0px) +
+    var(--inspector-reserve-bottom, 0px) +
+    5px
+  );
+}
+
+.chart-panels {
+  display: grid;
+  grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chart-panels.catalog-is-collapsed {
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.debugger-shell.catalog-is-hidden .chart-panels {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chart-panels > .catalog-rail {
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+  border-right: 1px solid var(--dbg-border);
+  background: var(--dbg-bg);
+}
+
+.chart-panels > .catalog-rail.collapsed {
+  padding: 8px 5px;
+}
+
+.chart-panels > .catalog-rail.collapsed > :not(.rail-heading) {
+  display: none;
+}
+
+.chart-panels > .workspace-content {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.inspector-rail {
+  position: absolute;
+  z-index: 11;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid #3a444b;
+  background: #15191d;
+}
+
+.inspector-rail.dock-left,
+.inspector-rail.dock-right {
+  /* The prototype overlays the toolbar's right/left edge, with a 5px optical
+     gap from the workbench top and from the opposing horizontal dock. */
+  top: calc(44px + var(--inspector-offset-top, 0px) + 5px);
+  bottom: calc(var(--inspector-offset-bottom, 0px) + 5px);
+  width: var(--inspector-width, 300px);
+}
+
+.inspector-rail.dock-left {
+  left: 0;
+  right: auto;
+  border-right: 1px solid #3a444b;
+}
+
+.inspector-rail.dock-right {
+  right: 0;
+  left: auto;
+  border-left: 1px solid #3a444b;
+}
+
+.inspector-rail.dock-top,
+.inspector-rail.dock-bottom {
+  /* Horizontal Inspector docks span the full workbench width, regardless of
+     whether Diagnostics is docked to either side. */
+  left: 0;
+  right: 0;
+  height: var(--inspector-height, 145px);
+  flex-direction: column;
+}
+
+.inspector-rail.dock-top {
+  top: 44px;
+  bottom: auto;
+  border-bottom: 1px solid #3a444b;
+}
+
+.inspector-rail.dock-bottom {
+  bottom: 0;
+  top: auto;
+  border-top: 1px solid #3a444b;
+}
+
+.inspector-rail.collapsed.dock-left,
+.inspector-rail.collapsed.dock-right {
+  width: 42px;
+  padding: 8px 5px;
+}
+
+.inspector-rail.collapsed.dock-top,
+.inspector-rail.collapsed.dock-bottom {
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
+.inspector-rail.collapsed > :not(.rail-heading) {
+  display: none;
+}
+
+.inspector-rail .rail-heading {
+  position: relative;
+  flex: 0 0 36px;
+  min-height: 36px;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #1b2025;
+}
+
+.inspector-rail .panel-title {
+  color: var(--dbg-text-primary, #e3e8eb);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inspector-rail .inspector-object-tag {
+  padding: 3px 6px;
+}
+
+.inspector-rail.collapsed .panel-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: .04em;
+}
+
+.inspector-rail.collapsed .inspector-object-tag,
+.inspector-rail.collapsed .dock-menu {
+  display: none;
+}
+
+.inspector-rail.collapsed .rail-heading {
+  min-height: 36px;
+  padding: 6px 2px;
+}
+
+.inspector-rail.collapsed .rail-heading.collapsed-heading-click-target {
+  cursor: pointer;
+}
+
+.inspector-rail .panel-resize-edge {
+  position: absolute;
+  z-index: 15;
+}
+
+.inspector-rail.dock-left .inspector-resize-edge {
+  top: 0; right: -3px; bottom: 0; left: auto;
+  width: 6px; height: auto; cursor: ew-resize;
+}
+
+.inspector-rail.dock-right .inspector-resize-edge {
+  top: 0; right: auto; bottom: 0; left: -3px;
+  width: 6px; height: auto; cursor: ew-resize;
+}
+
+.inspector-rail.dock-top .inspector-resize-edge {
+  top: auto; right: 0; bottom: -3px; left: 0;
+  width: auto; height: 6px; cursor: ns-resize;
+}
+
+.inspector-rail.dock-bottom .inspector-resize-edge {
+  top: -3px; right: 0; bottom: auto; left: 0;
+  width: auto; height: 6px; cursor: ns-resize;
+}
+
+.inspector-rail.collapsed .inspector-resize-edge {
+  display: none;
+}
+
+.inspector-rail.dock-left .dock-menu-options,
+.inspector-rail.dock-right .dock-menu-options {
+  right: 0;
+}
+
+.diagnostics-dock {
+  position: absolute;
+  z-index: 12;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #3a444b;
+  background: #15191d;
+}
+
+.diagnostics-dock.dock-left,
+.diagnostics-dock.dock-right {
+  top: calc(44px + var(--inspector-reserve-top, 0px) + 5px);
+  bottom: calc(var(--inspector-reserve-bottom, 0px) + 5px);
+  width: var(--diagnostics-width, 330px);
+  height: auto;
+  flex-direction: column;
+}
+
+.diagnostics-dock.dock-left { left: var(--inspector-reserve-left, 0px); right: auto; border-right: 1px solid #3a444b; }
+.diagnostics-dock.dock-right { right: var(--inspector-reserve-right, 0px); left: auto; border-left: 1px solid #3a444b; }
+
+.diagnostics-dock.dock-top,
+.diagnostics-dock.dock-bottom {
+  left: 0;
+  right: 0;
+  width: auto;
+  height: var(--diagnostics-height, 164px);
+  flex-direction: column;
+}
+
+.diagnostics-dock.dock-top { top: calc(44px + var(--inspector-reserve-top, 0px)); bottom: auto; border-bottom: 1px solid #3a444b; }
+.diagnostics-dock.dock-bottom { bottom: var(--inspector-reserve-bottom, 0px); top: auto; border-top: 1px solid #3a444b; }
+
+.diagnostics-dock .diagnostics-heading {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0 9px;
+  background: #1b2025;
+}
+
+.diagnostics-dock .diagnostics-title-block {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.diagnostics-dock .diagnostics-title-block {
+  gap: 0;
+}
+
+.diagnostics-dock .diagnostics-panel-title {
+  color: var(--dbg-text-primary, #e3e8eb);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.diagnostics-dock .diagnostics-tabs {
+  display: flex;
+  flex: 1 1 0%;
+  align-self: stretch;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #39454e transparent;
+}
+
+.diagnostics-dock .diagnostics-tabs button {
+  flex: 0 0 auto;
+  height: 100%;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--dbg-text-secondary);
+  font-size: 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.diagnostics-dock .diagnostics-tabs button.active {
+  border-bottom-color: var(--dbg-accent, #6a9fbe);
+  color: var(--dbg-text-primary, #e2e8ec);
+}
+
+.diagnostics-dock .dock-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.diagnostics-dock .diagnostics-content {
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.diagnostics-dock .panel-resize-edge { position: absolute; z-index: 15; }
+
+.diagnostics-dock.dock-left .diagnostics-resize-edge {
+  top: 0; right: 0; bottom: 0; left: auto;
+  width: 6px; height: auto; cursor: ew-resize;
+}
+
+.diagnostics-dock.dock-right .diagnostics-resize-edge {
+  top: 0; right: auto; bottom: 0; left: 0;
+  width: 6px; height: auto; cursor: ew-resize;
+}
+
+.diagnostics-dock.dock-top .diagnostics-resize-edge {
+  top: auto; right: 0; bottom: 0; left: 0;
+  width: auto; height: 6px; cursor: ns-resize;
+}
+
+.diagnostics-dock.dock-bottom .diagnostics-resize-edge {
+  top: 0; right: 0; bottom: auto; left: 0;
+  width: auto; height: 6px; cursor: ns-resize;
+}
+
+/* Side docks stack the title row above the category row, as in the frozen prototype. */
+.diagnostics-dock.dock-left .diagnostics-heading,
+.diagnostics-dock.dock-right .diagnostics-heading {
+  min-height: 66px;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 7px;
+}
+
+.diagnostics-dock.dock-left .diagnostics-title-block,
+.diagnostics-dock.dock-right .diagnostics-title-block {
+  min-height: 36px;
+}
+
+.diagnostics-dock.dock-left .diagnostics-tabs,
+.diagnostics-dock.dock-right .diagnostics-tabs {
+  flex: 0 0 28px;
+  width: 100%;
+  height: 28px;
+  min-height: 28px;
+}
+
+.diagnostics-dock.dock-left .dock-actions,
+.diagnostics-dock.dock-right .dock-actions {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+}
+
+.diagnostics-dock.dock-left .diagnostics-title-block,
+.diagnostics-dock.dock-right .diagnostics-title-block {
+  padding-right: 64px;
+}
+
+/* Horizontal docks hide only the title block. Categories lead the row and
+   the same action controls follow immediately on their right. */
+.diagnostics-dock.dock-top .diagnostics-heading,
+.diagnostics-dock.dock-bottom .diagnostics-heading {
+  min-height: 36px;
+  height: 36px;
+  flex-direction: row;
+  gap: 10px;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+}
+
+.diagnostics-dock.dock-top .diagnostics-title-block,
+.diagnostics-dock.dock-bottom .diagnostics-title-block {
+  display: none;
+}
+
+.diagnostics-dock.dock-top .diagnostics-tabs,
+.diagnostics-dock.dock-bottom .diagnostics-tabs {
+  flex: 1 1 0%;
+  min-width: 0;
+  order: 0;
+}
+
+.diagnostics-dock.dock-top .dock-actions,
+.diagnostics-dock.dock-bottom .dock-actions {
+  position: static;
+  order: 1;
+  margin-left: 0;
+}
+
+.diagnostics-reopen {
+  position: absolute;
+  z-index: 13;
+  margin: 0;
+}
+
+.debugger-shell.diagnostics-dock-left .diagnostics-reopen { left: 6px; top: 8px; right: auto; bottom: auto; writing-mode: vertical-rl; }
+.debugger-shell.diagnostics-dock-right .diagnostics-reopen { right: 6px; top: 8px; left: auto; bottom: auto; writing-mode: vertical-rl; }
+.debugger-shell.diagnostics-dock-top .diagnostics-reopen { left: 8px; top: 6px; right: auto; bottom: auto; }
+.debugger-shell.diagnostics-dock-bottom .diagnostics-reopen { left: 8px; bottom: 6px; right: auto; top: auto; }
+
+.diagnostics-dock.dock-top .dock-menu-options,
+.diagnostics-dock.dock-bottom .dock-menu-options,
+.inspector-rail.dock-top .dock-menu-options,
+.inspector-rail.dock-bottom .dock-menu-options {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: min(260px, calc(100vw - 24px));
+}
+
+@media (min-width: 1600px) {
+  .chart-panels { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
+  .chart-panels.catalog-is-collapsed { grid-template-columns: 42px minmax(0, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .chart-panels,
+  .chart-panels.catalog-is-collapsed,
+  .debugger-shell.catalog-is-hidden .chart-panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chart-panels > .catalog-rail {
+    max-height: 34vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--dbg-border);
+  }
+}
+
+/* Prototype spacing pass — keep the workbench dense and align controls to shared rows. */
+.debugger-shell {
+  gap: 0;
+}
+
+.workflow-toolbar {
+  display: flex;
+  flex: 0 0 42px;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+.workflow-toolbar > div:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflow-toolbar .section-index {
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+  letter-spacing: .06em;
+}
+
+.workflow-toolbar h2 {
+  min-width: 0;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.subtle-button {
+  min-height: 28px;
+  padding: 0 8px;
+  line-height: 1;
+}
+
+.chart-panels {
+  gap: 0;
+}
+
+.chart-panels > .catalog-rail {
+  padding: 8px;
+  border-right: 1px solid var(--dbg-border);
+}
+
+.chart-panels > .workspace-content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  padding: 5px 6px 0;
+  overflow: auto;
+}
+
+.workspace-mode {
+  min-width: 0;
+  min-height: 0;
+}
+
+.replay-controls,
+.compare-workspace {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0;
+}
+
+.replay-controls > .dual-chart-stack,
+.compare-workspace > .dual-chart-stack {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.inspector-rail {
+  padding: 0;
+}
+
+.inspector-rail .rail-heading {
+  display: flex;
+  flex: 0 0 36px;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #1b2025;
+}
+
+.inspector-rail .rail-heading .panel-dock-drag-handle {
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.inspector-rail .rail-heading .dock-menu {
+  margin-left: auto;
+}
+
+.inspector-rail > .inspector-object {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.diagnostics-dock .diagnostics-heading {
+  flex: 0 0 36px;
+  min-height: 36px;
+  padding: 0 9px;
+}
+
+.diagnostics-dock .diagnostics-content {
+  padding: 8px 10px;
+}
+
+@media (max-width: 1100px) {
+  .workflow-toolbar {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+
+  .workflow-toolbar > div:first-child {
+    gap: 7px;
+  }
+
+  .workflow-toolbar h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .toolbar-actions {
+    gap: 4px;
+  }
+}
+
+/* Match the frozen prototype's Topbar tab anchor and compact control geometry. */
+.workbench-topbar .workspace-tabs {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 44px;
+  transform: translateX(-50%);
+  z-index: 2;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.workbench-topbar .workspace-tab {
+  height: 31px;
+  min-height: 31px;
+  padding: 0 8px;
+  line-height: 1.2;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.workbench-topbar .brand {
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.workbench-topbar .top-right {
+  position: relative;
+  z-index: 3;
+  gap: 14px;
+  margin-left: auto;
+}
+
+@media (max-width: 1050px) {
+  .workbench-topbar .workspace-tab {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .workbench-topbar .top-right {
+    gap: 8px;
+  }
+}
+
+
+/* Frozen-prototype panel dimensions and collapsed rails. */
+.inspector-rail.collapsed.dock-left,
+.inspector-rail.collapsed.dock-right {
+  width: 36px;
+  padding: 0;
+}
+
+.inspector-rail.collapsed .rail-heading {
+  height: 100%;
+  min-height: 36px;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 0;
+}
+
+.inspector-rail.collapsed .panel-dock-drag-handle {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.inspector-rail.collapsed .dock-menu {
+  margin: 0;
+}
+
+.diagnostics-dock.collapsed.dock-left,
+.diagnostics-dock.collapsed.dock-right {
+  width: 36px !important;
+  min-width: 36px;
+}
+
+.diagnostics-dock.collapsed.dock-top,
+.diagnostics-dock.collapsed.dock-bottom {
+  height: 36px !important;
+  min-height: 36px;
+}
+
+.diagnostics-dock.collapsed .diagnostics-content,
+.diagnostics-dock.collapsed .diagnostics-resize-edge {
+  display: none;
+}
+
+.diagnostics-dock.collapsed .diagnostics-heading {
+  height: 100%;
+  min-height: 36px;
+  flex: 1 1 auto;
+}
+
+.diagnostics-dock.collapsed.dock-left .diagnostics-heading,
+.diagnostics-dock.collapsed.dock-right .diagnostics-heading {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 0;
+}
+
+.diagnostics-dock.collapsed.dock-left .diagnostics-tabs,
+.diagnostics-dock.collapsed.dock-right .diagnostics-tabs {
+  display: none;
+}
+
+/* Keep the real Diagnostics title, vertically oriented like the Inspector rail. */
+.diagnostics-dock.collapsed.dock-left .diagnostics-title-block,
+.diagnostics-dock.collapsed.dock-right .diagnostics-title-block {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.diagnostics-dock.collapsed.dock-left .diagnostics-panel-title,
+.diagnostics-dock.collapsed.dock-right .diagnostics-panel-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: .04em;
+}
+
+/* Center the vertical title in the 36px collapsed rail; undo the expanded
+   side-dock action clearance, which otherwise shifts the title off-center. */
+.diagnostics-dock.collapsed.dock-left .diagnostics-title-block,
+.diagnostics-dock.collapsed.dock-right .diagnostics-title-block {
+  width: 100%;
+  justify-content: center;
+  padding-right: 0;
+}
+
+.diagnostics-dock.collapsed.dock-left .diagnostics-heading::before,
+.diagnostics-dock.collapsed.dock-right .diagnostics-heading::before {
+  content: none;
+}
+
+.diagnostics-dock.collapsed.dock-left .dock-actions,
+.diagnostics-dock.collapsed.dock-right .dock-actions {
+  position: static;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* Compact workspace-mode toolbar aligned with the frozen prototype. */
+.toolbar-context {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spacer { flex: 1 1 auto; min-width: 4px; }
+.replay-toolbar-actions {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.replay-transport {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.replay-toolbar-actions .subtle-button {
+  min-height: 27px;
+  padding: 0 7px;
+  border-radius: 2px;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .02em;
+}
+
+.replay-toolbar-actions .replay-play-toggle:not(:disabled) {
+  border-color: #477b66;
+  background: #1c3028;
+  color: #a8d7bf;
+}
+
+.replay-toolbar-actions .replay-play-toggle:hover:not(:disabled) {
+  border-color: #75c6a1;
+}
+
+.replay-toolbar-actions .run-stop-toggle:not(:disabled) {
+  border-color: #665438;
+  background: #2c261c;
+  color: var(--dbg-warning);
+}
+
+.replay-toolbar-actions .run-stop-toggle:hover:not(:disabled) {
+  border-color: #a88956;
+}
+
+
+
+@media (max-width: 1280px) {
+  .replay-toolbar-actions {
+    gap: 5px;
+  }
+
+  .replay-toolbar-actions .subtle-button {
+    padding-inline: 5px;
+    font-size: 8px;
+  }
+
+}
+
+.dataset-controls {
+  display: flex;
+  min-width: 0;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  background: #14191d;
+}
+
+.dataset-controls-label {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.dataset-controls-label .section-index {
+  margin: 0;
+  color: var(--dbg-text-muted);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .06em;
+}
+
+.dataset-controls-label > strong {
+  color: var(--dbg-text-primary);
+  font-size: 10px;
+  letter-spacing: .04em;
+}
+
+.dataset-controls-label .status-label {
+  padding: 2px 5px;
+  font-size: 8px;
+}
+
+.test-dataset-details {
+  position: relative;
+  flex: 0 0 auto;
+  color: var(--dbg-text-secondary);
+  font-size: 9px;
+}
+
+.test-dataset-details > summary,
+.catalog-origin-details > summary {
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.test-dataset-details > summary::-webkit-details-marker,
+.catalog-origin-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.test-dataset-details > summary {
+  padding: 5px 6px;
+  border: 1px solid var(--dbg-border);
+  border-radius: 3px;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+}
+
+.test-dataset-details[open] {
+  position: absolute;
+  z-index: 12;
+  top: calc(100% + 2px);
+  right: 6px;
+  width: min(460px, calc(100vw - 40px));
+  padding: 6px;
+  border: 1px solid var(--dbg-border);
+  border-radius: 4px;
+  background: var(--dbg-surface-1);
+  box-shadow: 0 8px 24px #0008;
+}
+
+.test-dataset-details[open] > summary {
+  margin-bottom: 6px;
+}
+
+.dataset-controls-message {
+  flex: 0 1 auto;
+  max-width: 190px;
+  margin: 0;
+  overflow: hidden;
+  font-size: 9px;
+  text-overflow: ellipsis;
+}
+
+.catalog-origin-details {
+  flex: 0 0 auto;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dbg-border);
+}
+
+.catalog-origin-details > summary {
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .06em;
+}
+
+.catalog-origin-details[open] > .result-panel {
+  margin-top: 8px;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid var(--dbg-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.catalog-origin-details .panel-heading h2 {
+  font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+  .dataset-controls {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .dataset-controls-label {
+    gap: 5px;
+  }
+
+  .dataset-range-summary {
+    flex-basis: 160px;
+    gap: 5px;
+  }
+
+  .dataset-range-status {
+    display: none;
+  }
+
+  .test-dataset-details > summary {
+    padding-inline: 4px;
+  }
+}
+
+
+.chart-panels > .dataset-workspace-content {
+  /* Match the frozen prototype's .dataset-layout .chart-stack inset. */
+  padding: 0;
+  overflow: hidden;
+}
+
+/* The side Inspector is positioned at the exact edge reserved by workbench-main.
+   The left-facing frame belongs to the positioned workspace itself, so inset that
+   workspace by 5px rather than trying to move only its inner grid. Replay/Compare
+   remain unchanged. */
+.debugger-shell:not(.catalog-is-hidden).inspector-dock-left .workbench-main {
+  left: calc(
+    var(--diagnostics-reserve-left, 0px) +
+    var(--inspector-reserve-left, 0px) +
+    5px
+  );
+}
+
+.dataset-workspace-content > .origin-chart-panel {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  margin: 4px 6px 0px;
+}
+
+.dataset-workspace-content > .origin-chart-panel > .origin-chart-viewport {
+  flex: 1 1 auto;
+  height: 0;
+  min-height: 0;
+}
+
+.dataset-workspace-content .origin-chart-host {
+  height: 100%;
+  min-height: 0;
+}
+
+.dataset-workspace-content .origin-chart-panel > .chart-selection-hint {
+  flex: 0 0 auto;
+}
+
+

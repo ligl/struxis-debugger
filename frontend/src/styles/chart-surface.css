@@ -1,0 +1,537 @@
+/* Origin SBar chart — engineering-terminal presentation. */
+.origin-chart-panel {
+  min-width: 0;
+  margin-top: 2px;
+  border: 0;
+  border-bottom: 1px solid var(--dbg-border);
+  background: var(--dbg-surface-1);
+}
+
+/* Origin range selection is a pointer-transparent overlay over the full chart. */
+.origin-chart-viewport {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.origin-selection-overlay {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.origin-selection-shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgb(217 154 69 / 20%);
+}
+
+.origin-selection-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.origin-selection-line-start,
+.origin-selection-line-end {
+  background: #e4b46f;
+  box-shadow: 0 0 0 1px rgb(228 180 111 / 16%);
+}
+
+.origin-selection-line-preview {
+  border-left: 1px dashed #e4b46f;
+}
+
+/* Run chart has an independent chart instance and no Origin range-selection state. */
+.run-chart-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--dbg-border);
+  background: var(--dbg-surface-1);
+}
+
+.run-chart-heading {
+  display: flex;
+  min-width: 0;
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 10px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #191e22;
+}
+
+.run-chart-heading .chart-heading-actions {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.run-chart-heading .chart-tool-button {
+  min-width: 34px;
+  min-height: 22px;
+  padding: 0 6px;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  background: #20262c;
+  color: #c4cdd2;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.run-chart-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.run-chart-title-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.run-chart-name {
+  color: var(--dbg-text-primary);
+  font: 700 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.run-chart-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: #121619;
+}
+
+/* Replay delegates its chart runtime to ChartSurface while keeping its own
+   header, layer legend, selection markers and interaction policy. */
+.run-chart-surface {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.run-chart-surface > .origin-chart-viewport {
+  min-height: 0;
+  height: 100%;
+  flex: 1 1 auto;
+}
+.run-chart-surface .origin-chart-host {
+  height: 100%;
+}
+
+.run-chart-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.run-structure-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.replay-target-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 5px;
+  border: 1px solid rgb(198 160 107 / 45%);
+  color: #C6A06B;
+  background: rgb(198 160 107 / 8%);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.run-chart-legend {
+  pointer-events: auto;
+}
+
+.run-chart-legend .origin-chart-legend-item {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 2px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: #69757d;
+  font: inherit;
+  cursor: pointer;
+}
+
+.run-chart-legend .origin-chart-legend-item.active {
+  color: #c4cdd2;
+}
+
+.run-chart-legend .origin-chart-legend-item:hover:not(:disabled) {
+  border-color: #39434b;
+  background: #1a2025;
+}
+
+.run-chart-legend .origin-chart-legend-item:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.run-chart-message {
+  position: absolute;
+  z-index: 2;
+  top: 5%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: min(540px, calc(100% - 32px));
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--dbg-border);
+  background: rgb(21 26 30 / 94%);
+  color: var(--dbg-text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Stable, chart-sized default state for an unavailable Live Replay projection. */
+.run-chart-surface .origin-chart-host.is-empty {
+  visibility: hidden;
+}
+
+.run-chart-empty {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  padding: clamp(16px, 3vw, 36px);
+  background:
+    radial-gradient(ellipse at 50% 42%, rgb(198 160 107 / 6%), transparent 58%),
+    #121619;
+  pointer-events: none;
+}
+
+.run-chart-empty-card {
+  display: flex;
+  width: min(100%, 520px);
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 24px;
+  border: 1px solid #30383f;
+  border-radius: 3px;
+  background: rgb(21 26 30 / 92%);
+  text-align: center;
+}
+
+.run-chart-empty-kicker {
+  color: #C6A06B;
+  font: 600 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .16em;
+}
+
+.run-chart-empty-title {
+  color: #d6dfe3;
+  font: 600 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .045em;
+}
+
+.run-chart-empty-description {
+  max-width: 440px;
+  margin: 0;
+  color: #89949d;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.run-chart-empty-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 3px;
+  color: #a5b0b7;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .035em;
+}
+
+.run-chart-empty-flow i {
+  color: #C6A06B;
+  font-style: normal;
+}
+
+@media (max-width: 560px) {
+  .run-chart-empty-card {
+    gap: 10px;
+    padding: 18px 14px;
+  }
+
+  .run-chart-empty-title {
+    font-size: 10px;
+  }
+
+  .run-chart-empty-flow {
+    gap: 5px;
+    font-size: 8px;
+  }
+}
+
+.run-chart-stage > .chart-error {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  right: 8px;
+  max-width: min(500px, calc(100% - 16px));
+  margin: 0;
+}
+
+.run-chart-legend {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  right: auto;
+  bottom: auto;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  color: #9aa5ac;
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  pointer-events: none;
+}
+
+/* Keep legend markers in the same visual state as their labels across all charts. */
+.origin-chart-legend-item .legend-dot {
+  opacity: 1;
+}
+
+.origin-chart-legend-item:not(.active):not(:disabled) .legend-dot {
+  opacity: .35;
+}
+
+/* RunChart cannot inherit ChartSurface.vue's scoped marker-color rules.
+   Use the same centralized tokens as Dataset for both legend color and geometry. */
+.run-chart-legend .legend-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 1px;
+}
+.run-chart-legend .sbar-dot {
+  background: var(--dbg-legend-sbar);
+}
+.run-chart-legend .cbar-dot {
+  background: var(--dbg-legend-cbar);
+}
+.run-chart-legend .swing-dot {
+  background: var(--dbg-legend-swing);
+}
+.run-chart-legend .volume-dot {
+  background: var(--dbg-legend-volume);
+}
+
+.run-chart-legend .run-chart-structure-gap {
+  color: var(--dbg-warning);
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
+@media (max-width: 720px) {
+  .run-chart-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+}
+
+.origin-chart-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px 10px;
+  border-bottom: 1px solid var(--dbg-border);
+}
+
+.chart-bar-count {
+  color: var(--dbg-text-muted);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.origin-structure-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.origin-chart-host {
+  width: 100%;
+  min-width: 0;
+  height: 420px;
+}
+
+.origin-chart-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 24px;
+  color: var(--dbg-text-muted);
+  font-size: 11px;
+}
+
+.chart-error {
+  margin: 12px;
+}
+
+@media (max-width: 720px) {
+  .origin-chart-host {
+    height: 320px;
+  }
+
+  .origin-chart-heading {
+    align-items: flex-start;
+  }
+}
+
+
+/* Trading-workstation chart hierarchy: restrained chrome, readable market data, no plot grid. */
+.chart-title-block {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.chart-title-block h3 {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.chart-instrument {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--dbg-text-muted);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.chart-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-tool-button {
+  min-width: 44px;
+  padding: 5px 8px;
+  border: 1px solid var(--dbg-border-strong);
+  background: var(--dbg-surface-2);
+  color: var(--dbg-text-secondary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.chart-tool-button:hover:not(:disabled) {
+  border-color: var(--dbg-accent);
+  color: var(--dbg-text-primary);
+}
+
+.chart-data-strip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #15181b;
+}
+
+.chart-data-strip > span {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 6px;
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.chart-data-strip small {
+  color: var(--dbg-text-muted);
+  font-size: 9px;
+}
+
+.chart-data-strip strong {
+  color: var(--dbg-text-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-data-strip > span:nth-child(2) strong {
+  color: var(--dbg-success);
+}
+
+.chart-data-strip > span:nth-child(3) strong {
+  color: var(--dbg-error);
+}
+
+.chart-data-strip .chart-latest-id {
+  flex: 1 1 180px;
+  justify-content: flex-end;
+  overflow-wrap: anywhere;
+}
+
+.chart-data-strip .chart-latest-id strong {
+  color: var(--dbg-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.origin-chart-host {
+  height: 460px;
+}
+
+@media (max-width: 720px) {
+  .origin-chart-host {
+    height: 340px;
+  }
+
+  .chart-data-strip .chart-latest-id {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
+

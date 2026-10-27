@@ -1,0 +1,158 @@
+/* Compare mirrors the prototype's toolbar controls → summary strip → dual-chart stack. */
+.compare-toolbar-actions {
+  min-width: 0;
+  gap: 6px;
+}
+
+.compare-toolbar-select {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  color: var(--dbg-text-muted);
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.compare-toolbar-select select {
+  width: 142px;
+  max-width: 142px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 5px;
+  overflow: hidden;
+  border: 1px solid var(--dbg-border);
+  border-radius: 3px;
+  background: #111619;
+  color: var(--dbg-text-primary);
+  font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+}
+
+.compare-run-button {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.compare-workspace > .compare-summary {
+  display: flex;
+  flex: 0 0 56px;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--dbg-border);
+  background: #14191d;
+}
+
+
+
+
+
+
+
+
+
+
+
+@media (max-width: 1280px) {
+  .compare-toolbar-select select {
+    width: 112px;
+    max-width: 112px;
+  }
+
+  .compare-workspace > .compare-summary {
+    gap: 12px;
+    padding-inline: 8px;
+  }
+
+}
+
+@media (max-width: 1050px) {
+  .compare-toolbar-actions { gap: 4px; }
+  .compare-toolbar-select { gap: 3px; font-size: 7px; }
+  .compare-toolbar-select select { width: 92px; max-width: 92px; }
+  .compare-run-button { padding-inline: 5px; font-size: 8px; }
+  .compare-workspace > .compare-summary { gap: 8px; }
+}
+
+@media (max-width: 1050px) {
+  .compare-toolbar-select > span { display: none; }
+  .compare-toolbar-select select { width: 100px; max-width: 100px; }
+}
+
+
+/* Collapsed horizontal Inspector rails follow the Diagnostics toolbar geometry. */
+.inspector-rail.collapsed.dock-top,
+.inspector-rail.collapsed.dock-bottom {
+  padding: 0;
+}
+.inspector-rail.collapsed.dock-top .rail-heading,
+.inspector-rail.collapsed.dock-bottom .rail-heading {
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  flex: 0 0 36px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--dbg-border);
+}
+.inspector-rail.collapsed.dock-top .panel-title,
+.inspector-rail.collapsed.dock-bottom .panel-title,
+.inspector-rail.collapsed.dock-top .inspector-object-tag,
+.inspector-rail.collapsed.dock-bottom .inspector-object-tag,
+.inspector-rail.collapsed.dock-top .dock-menu,
+.inspector-rail.collapsed.dock-bottom .dock-menu {
+  display: none;
+}
+.inspector-rail.collapsed.dock-top .rail-heading > .spacer,
+.inspector-rail.collapsed.dock-bottom .rail-heading > .spacer {
+  display: none;
+}
+.inspector-rail.collapsed.dock-top .rail-heading > .rail-toggle,
+.inspector-rail.collapsed.dock-bottom .rail-heading > .rail-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  writing-mode: horizontal-tb;
+  transform: none;
+}
+
+/* A collapsed side rail keeps its reopen control, not the Dock menu. */
+.diagnostics-dock.collapsed.dock-left .dock-actions > .dock-menu,
+.diagnostics-dock.collapsed.dock-right .dock-actions > .dock-menu {
+  display: none;
+}
+.diagnostics-dock.collapsed.dock-left .dock-actions > [data-testid="diagnostics-collapse-toggle"],
+.diagnostics-dock.collapsed.dock-right .dock-actions > [data-testid="diagnostics-collapse-toggle"] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+}
+.diagnostics-dock.collapsed.dock-left .diagnostics-heading,
+.diagnostics-dock.collapsed.dock-right .diagnostics-heading {
+  cursor: pointer;
+}
+
+
+
+
+

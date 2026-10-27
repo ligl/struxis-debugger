@@ -276,7 +276,7 @@ describe("SnapshotReferenceChart", () => {
     wrapper.unmount();
   });
 
-  it("publishes a local SBar hover label while the Primitive owns highlight drawing", async () => {
+  it("publishes local SBar hover feedback without rendering an ID label", async () => {
     const wrapper = mount(SnapshotReferenceChart, {
       props: {
         ...snapshotDefaults,
@@ -303,8 +303,7 @@ describe("SnapshotReferenceChart", () => {
       selectedStroke: "#D99A45",
       selectedWidth: 1.5,
     }));
-    expect(wrapper.get('[data-testid="snapshot-object-hover-label"]').text())
-      .toBe("SBAR · 1700000000000000000");
+    expect(wrapper.find('[data-testid="snapshot-object-hover-label"]').exists()).toBe(false);
 
     surface.vm.$emit("pointerPosition", null);
     await nextTick();

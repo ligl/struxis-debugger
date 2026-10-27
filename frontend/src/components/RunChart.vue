@@ -112,7 +112,6 @@ let lastProcessedCount: number | null = null;
 let lastRunId: string | null = null;
 let lastProgressApplies: boolean | null = null;
 let crosshairLogicalIndex: number | null = null;
-let crosshairUpdateFrame: number | null = null;
 const crosshairSyncGate = new ReplayCrosshairSyncGate();
 let pendingViewportRange: { from: number; to: number } | null = null;
 
@@ -128,125 +127,6 @@ function barAtLogicalIndex(logical: number): SBarDto | null {
   return bars.value[Math.round(logical)] ?? null;
 }
 
-function moveCrosshairTo(index: number, alignToBoundary = false): boolean {
-  if (!surface.value || bars.value.length === 0) return false;
-  const nextIndex = Math.max(0, Math.min(bars.value.length - 1, index));
-  const bar = bars.value[nextIndex];
-  if (!bar) return false;
-  if (!timeBySbarId.has(bar.sbarId)) return false;
-  crosshairLogicalIndex = nextIndex;
-
-  // Keep the selected candle inside the viewport without scrolling the
-  // logical range beyond the Test Dataset's first/last candle. A simple
-  // edge shift can push the range past index 0 or the final index, making
-  // Ctrl+Left / Ctrl+Right appear to land outside the dataset.
-  const range = surface.value?.getVisibleLogicalRange();
-  if (range && Number.isFinite(range.from) && Number.isFinite(range.to)) {
-    const width = range.to - range.from;
-    if (width > 0) {
-      const lastIndex = bars.value.length - 1;
-      let from = range.from;
-      let to = range.to;
-
-      if (alignToBoundary && width < bars.value.length) {
-        // Ctrl+Left / Ctrl+Right are absolute navigation commands. Align the
-        // viewport to the requested dataset edge instead of applying the
-        // ordinary arrow-key margin heuristic, which can leave the target
-        // candle visually at or beyond the edge after range clamping.
-        from = nextIndex === 0 ? -0.5 : lastIndex + 0.5 - width;
-        to = from + width;
-      } else {
-        const margin = Math.min(2, width * 0.08);
-        if (nextIndex < from + margin) {
-          from = nextIndex - margin;
-          to = from + width;
-        } else if (nextIndex > to - margin) {
-          to = nextIndex + margin;
-          from = to - width;
-        }
-
-        // Keep the viewport within the dataset candle-center bounds when it
-        // is narrower than the sequence. Wider viewports retain their zoom.
-        if (width < bars.value.length) {
-          from = Math.max(-0.5, Math.min(from, bars.value.length - 0.5 - width));
-          to = from + width;
-        } else {
-          from = Math.min(from, -0.5);
-          to = from + width;
-        }
-      }
-      if (Math.abs(from - range.from) > 0.001 || Math.abs(to - range.to) > 0.001) {
-        surface.value?.applyViewportRange({ from, to });
-      }
-    }
-  }
-
-  // Pin both axes of the crosshair to the selected candle: horizontal
-  // position uses that SBar's chart time, vertical position uses its close.
-  // Re-apply on the next frame as well because changing the visible logical
-  // range can trigger a chart layout pass; doing this only synchronously can
-  // leave the crosshair at its previous pointer-derived position.
-  const selectedIndex = nextIndex;
-  const applySelectedCrosshair = () => {
-    if (!surface.value || crosshairLogicalIndex !== selectedIndex) return;
-    // Suppress the chart callback caused by our own programmatic positioning,
-    // including the deferred re-application after the viewport layout pass.
-    if (props.syncEnabled) crosshairSyncGate.beginApply();
-    surface.value?.applyCrosshairPosition(bar.sbarId, Number(bar.close));
-  };
-  // Programmatic keyboard navigation does not reliably produce a
-  // subscribeCrosshairMove notification. Publish the selected SBar explicitly
-  // so the synchronized Snapshot chart follows the same keyboard command.
-  if (props.syncEnabled) {
-    crosshairSyncGate.setPeerPositionActive(false);
-    emit("crosshairChange", { source: "live", sbarId: bar.sbarId, price: Number(bar.close) });
-  }
-  applySelectedCrosshair();
-  if (crosshairUpdateFrame !== null) cancelAnimationFrame(crosshairUpdateFrame);
-  crosshairUpdateFrame = requestAnimationFrame(() => {
-    crosshairUpdateFrame = null;
-    applySelectedCrosshair();
-  });
-  return true;
-}
-
-function moveCrosshairBy(delta: number): boolean {
-  const currentIndex = crosshairLogicalIndex ??
-    (props.runState?.cursorSbarId
-      ? bars.value.findIndex((bar) => bar.sbarId === props.runState?.cursorSbarId)
-      : 0);
-  const targetIndex = currentIndex + delta;
-
-  // Dataset navigation is bounded, not cyclic. At either edge, leave the
-  // crosshair and viewport untouched instead of clamping and re-applying the
-  // same candle (or accidentally reinitializing from Replay progress).
-  if (targetIndex < 0 || targetIndex >= bars.value.length) return false;
-  return moveCrosshairTo(targetIndex);
-}
-
-function zoomTimeScale(direction: "in" | "out"): boolean {
-  if (!surface.value || bars.value.length === 0) return false;
-  const range = surface.value.getVisibleLogicalRange();
-  if (!range || !Number.isFinite(range.from) || !Number.isFinite(range.to)) return false;
-  const width = range.to - range.from;
-  if (width <= 0) return false;
-  if (direction === "in" && width <= 2) return false;
-  // Match continuous wheel zoom: zooming out is not capped at fit-content.
-  // The visible logical range may extend beyond the dataset at either end.
-  const nextWidth = direction === "in"
-    ? Math.max(2, width * 0.8)
-    : width * 1.25;
-  if (Math.abs(nextWidth - width) < 0.01) return false;
-  const anchor = crosshairLogicalIndex !== null &&
-    crosshairLogicalIndex >= range.from && crosshairLogicalIndex <= range.to
-    ? crosshairLogicalIndex
-    : (range.from + range.to) / 2;
-  const anchorRatio = (anchor - range.from) / width;
-  const from = anchor - nextWidth * anchorRatio;
-  surface.value?.applyViewportRange({ from, to: from + nextWidth });
-  return true;
-}
-
 function handleChartKeyboard(event: KeyboardEvent): void {
   // Replay target control has higher priority than chart-local navigation.
   // RunChart is mounted only while Replay is active, so T works regardless
@@ -254,89 +134,52 @@ function handleChartKeyboard(event: KeyboardEvent): void {
   const isTargetShortcut = event.key.toLowerCase() === "t" && !event.ctrlKey &&
     !event.altKey && !event.metaKey && !event.shiftKey;
   if (
-    isTargetShortcut &&
-    !event.repeat &&
-    !isInteractiveKeyboardTarget(event.target) &&
-    !isInteractiveKeyboardTarget(document.activeElement)
-  ) {
-    if (props.targetSbarId) {
-      emit("targetCancel");
-      event.preventDefault();
-      return;
-    }
-    if (!chartError.value && !projectionMessage.value && bars.value.length > 0) {
-      // If Snapshot owns the workspace, only a qualified synchronized
-      // Crosshair can be mapped back to the Live Test Dataset. Never use a
-      // stale Live-local index when the two sequences are not sync-eligible.
-      if (
-        props.syncOwner === "snapshot" &&
-        (!props.syncEnabled || !props.crosshairSync?.sbarId)
-      ) {
-        event.preventDefault();
-        return;
-      }
-      const bar = crosshairLogicalIndex === null ? null : barAtLogicalIndex(crosshairLogicalIndex);
-      if (bar) {
-        emit("targetSelect", bar.sbarId);
-        event.preventDefault();
-      }
-    }
-    return;
-  }
-
-  // ReplayWorkspace is the sole owner of chart-local keyboard routing.
-  // Keep the previous local fallback for isolated component mounts / tests.
-  if (props.keyboardActive === false) return;
-
-  // B toggles SBar candles; C toggles the CBar overlay. These shortcuts
-  // are handled only by the active Live chart and never steal input from controls.
-  const isLayerShortcut = (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "c") &&
-    !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
-  if (
-    isLayerShortcut &&
-    !event.repeat &&
-    !isInteractiveKeyboardTarget(event.target) &&
-    !isInteractiveKeyboardTarget(document.activeElement)
-  ) {
-    toggleLayer(event.key.toLowerCase() === "b" ? "sbar" : "cbar");
-    event.preventDefault();
-    return;
-  }
-  if (
-    props.keyboardActive === undefined &&
-    (!document.querySelector(".run-chart-surface .origin-chart-host")?.matches(":hover") && !document.querySelector(".run-chart-surface .origin-chart-host")?.contains(document.activeElement))
-  ) return;
-
-  // Vim normal-mode navigation aliases: h/ j/ k/ l behave exactly like the
-  // corresponding arrow keys, without changing the existing chart commands.
-  const key = ({ h: "ArrowLeft", j: "ArrowDown", k: "ArrowUp", l: "ArrowRight" } as const)[
-    event.key as "h" | "j" | "k" | "l"
-  ] ?? event.key;
-  const isArrowKey = key === "ArrowUp" || key === "ArrowDown" ||
-    key === "ArrowLeft" || key === "ArrowRight";
-  const isFitShortcut = event.ctrlKey && !event.altKey && !event.metaKey &&
-    !event.shiftKey && key === "0";
-  const isBoundaryNavigation = event.ctrlKey && !event.altKey && !event.metaKey &&
-    !event.shiftKey && (key === "ArrowLeft" || key === "ArrowRight");
-  if (
-    (event.repeat && !isArrowKey) ||
-    event.altKey || event.metaKey || (event.ctrlKey && !isBoundaryNavigation && !isFitShortcut) ||
-    (event.shiftKey && !isBoundaryNavigation) ||
+    !isTargetShortcut ||
+    event.repeat ||
     isInteractiveKeyboardTarget(event.target) ||
     isInteractiveKeyboardTarget(document.activeElement)
   ) return;
 
-  if (chartError.value || projectionMessage.value || bars.value.length === 0) return;
+  if (props.targetSbarId) {
+    emit("targetCancel");
+    event.preventDefault();
+    return;
+  }
+  if (!chartError.value && !projectionMessage.value && bars.value.length > 0) {
+    // If Snapshot owns the workspace, only a qualified synchronized
+    // Crosshair can be mapped back to the Live Test Dataset. Never use a
+    // stale Live-local index when the two sequences are not sync-eligible.
+    if (
+      props.syncOwner === "snapshot" &&
+      (!props.syncEnabled || !props.crosshairSync?.sbarId)
+    ) {
+      event.preventDefault();
+      return;
+    }
+    const bar = crosshairLogicalIndex === null ? null : barAtLogicalIndex(crosshairLogicalIndex);
+    if (bar) {
+      emit("targetSelect", bar.sbarId);
+      event.preventDefault();
+    }
+  }
+}
 
-  let handled = false;
-  if (isFitShortcut) handled = fitContentShortcut();
-  else if (isBoundaryNavigation) {
-    handled = moveCrosshairTo(key === "ArrowLeft" ? 0 : bars.value.length - 1, true);
-  } else if (key === "ArrowUp") handled = zoomTimeScale("in");
-  else if (key === "ArrowDown") handled = zoomTimeScale("out");
-  else if (key === "ArrowLeft") handled = moveCrosshairBy(-1);
-  else if (key === "ArrowRight") handled = moveCrosshairBy(1);
-  if (handled) event.preventDefault();
+function handleSurfaceKeyboardCrosshair(anchor: { sbarId: string; price: number }): void {
+  const index = bars.value.findIndex((bar) => bar.sbarId === anchor.sbarId);
+  if (index < 0) return;
+  crosshairLogicalIndex = index;
+  if (!props.syncEnabled) return;
+  crosshairSyncGate.setPeerPositionActive(false);
+  // ChartSurface emits this event immediately before positioning the
+  // Crosshair, so suppress the resulting chart callback from echoing it.
+  crosshairSyncGate.beginApply();
+  emit("crosshairChange", { source: "live", sbarId: anchor.sbarId, price: anchor.price });
+}
+
+function handleSurfaceLayerVisibility(visibility: typeof layerVisibility.value): void {
+  layerVisibility.value = { ...visibility };
+  updateHoveredObject(undefined);
+  scheduleOverlayUpdate.flush();
 }
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
@@ -349,13 +192,6 @@ function toggleLayer(layer: keyof typeof layerVisibility.value): void {
 
 function fitContent(): void {
   surface.value?.fitContent();
-}
-
-function fitContentShortcut(): boolean {
-  if (!surface.value || bars.value.length === 0) return false;
-  fitContent();
-  updateStructureOverlays();
-  return true;
 }
 
 function syncStructurePrimitives(): void {
@@ -834,10 +670,6 @@ watch(() => ({ ...layerVisibility.value }), (visibility) => {
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleChartKeyboard);
   crosshairLogicalIndex = null;
-  if (crosshairUpdateFrame !== null) {
-    cancelAnimationFrame(crosshairUpdateFrame);
-    crosshairUpdateFrame = null;
-  }
   hoveredObject.value = null;
   hoveredSbarMarker.value = null;
   unregisterSbarMarkerPrimitive?.();
@@ -896,7 +728,8 @@ onBeforeUnmount(() => {
         :show-header="false"
         :show-footer="false"
         :show-legend="false"
-        :keyboard-active="false"
+        :keyboard-active="syncOwner === 'snapshot' && !syncEnabled ? false : keyboardActive"
+        :keyboard-initial-sbar-id="crosshairSync?.sbarId ?? runState?.cursorSbarId ?? null"
         :candle-last-value-visible="false"
         data-mode="external"
         panel-class="run-chart-surface"
@@ -910,6 +743,8 @@ onBeforeUnmount(() => {
         @pointer-position="handleSurfacePointer"
         @logical-range-change="handleVisibleRangeChange"
         @projection-frame="updateStructureOverlays"
+        @keyboard-crosshair-change="handleSurfaceKeyboardCrosshair"
+        @layer-visibility-change="handleSurfaceLayerVisibility"
       >
       </ChartSurface>
       <div v-if="!projectionMessage" class="run-chart-legend" role="group" aria-label="Chart layer visibility">
