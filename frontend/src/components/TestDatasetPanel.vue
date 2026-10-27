@@ -430,6 +430,8 @@ function displaySbarTime(sbarId: string): string {
 
 .test-dataset-detail-list {
   display: grid;
+  /* Preserve the effective two-column container layout formerly supplied globally. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0;
   padding: 0 12px 12px;
 }
