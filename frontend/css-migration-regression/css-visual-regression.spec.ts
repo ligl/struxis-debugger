@@ -1368,9 +1368,9 @@ test("preserves Compare placeholder internal typography and integrity marker", a
   });
   expect(styles.integrity).toEqual({
     marginTop: "4px",
-    color: "rgb(127, 137, 143)",
+    color: "rgb(137, 148, 157)",
     fontSize: "8px",
-    letterSpacing: "0.56px",
+    letterSpacing: "0.8px",
   });
   expect(styles.separator).toEqual({
     paddingInline: "3px",
