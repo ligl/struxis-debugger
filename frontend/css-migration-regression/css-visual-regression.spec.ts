@@ -1149,3 +1149,61 @@ test("preserves Replay playback speed menu geometry, options and hover styling",
   await firstOption.hover();
   await expect.poll(() => firstOption.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(resolvedSurface3);
 });
+
+test("preserves Replay progress bar geometry, colors and fill transition", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+
+  const progress = page.locator("[data-testid='replay-toolbar-controls'] .replay-progress");
+  await expect(progress).toBeVisible();
+  const styles = await progress.evaluate((element) => {
+    const root = getComputedStyle(element);
+    const fill = element.querySelector<HTMLElement>("i");
+    if (!fill) throw new Error("Replay progress fill element is missing");
+    const fillStyle = getComputedStyle(fill);
+    const rect = element.getBoundingClientRect();
+    return {
+      root: {
+        width: root.width,
+        height: root.height,
+        flex: root.flex,
+        overflow: root.overflow,
+        borderRadius: root.borderRadius,
+        backgroundColor: root.backgroundColor,
+      },
+      fill: {
+        display: fillStyle.display,
+        height: fillStyle.height,
+        borderRadius: fillStyle.borderRadius,
+        backgroundColor: fillStyle.backgroundColor,
+        transitionProperty: fillStyle.transitionProperty,
+        transitionDuration: fillStyle.transitionDuration,
+        transitionTimingFunction: fillStyle.transitionTimingFunction,
+      },
+      rect: {
+        width: Math.round(rect.width * 100) / 100,
+        height: Math.round(rect.height * 100) / 100,
+      },
+    };
+  });
+
+  expect(styles.root).toEqual({
+    width: "92px",
+    height: "4px",
+    flex: "0 0 92px",
+    overflow: "hidden",
+    borderRadius: "5px",
+    backgroundColor: "rgb(52, 60, 66)",
+  });
+  expect(styles.fill).toEqual({
+    display: "block",
+    height: "4px",
+    borderRadius: "5px",
+    backgroundColor: "rgb(117, 198, 161)",
+    transitionProperty: "width",
+    transitionDuration: "120ms",
+    transitionTimingFunction: "linear",
+  });
+  expect(styles.rect).toEqual({ width: 92, height: 4 });
+});
