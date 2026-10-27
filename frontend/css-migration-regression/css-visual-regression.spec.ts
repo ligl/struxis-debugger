@@ -1215,7 +1215,6 @@ test("preserves Replay progress bar geometry, colors and fill transition", async
     const fill = element.querySelector<HTMLElement>("i");
     if (!fill) throw new Error("Replay progress fill element is missing");
     const fillStyle = getComputedStyle(fill);
-    const rect = element.getBoundingClientRect();
     return {
       root: {
         width: root.width,
