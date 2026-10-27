@@ -140,4 +140,10 @@ const identityLabel = computed(() => {
   .compare-summary .metric + .metric { padding-left: 6px; }
   .compare-summary .metric + .metric::before { top: 8px; bottom: 8px; }
 }
+.compare-summary > div {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line, #343a40);
+}
+
 </style>
