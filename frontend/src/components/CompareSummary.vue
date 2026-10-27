@@ -146,4 +146,8 @@ const identityLabel = computed(() => {
   border: 1px solid var(--line, #343a40);
 }
 
+.compare-summary > div {
+  padding: 9px;
+}
+
 </style>
