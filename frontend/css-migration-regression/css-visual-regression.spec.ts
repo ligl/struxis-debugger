@@ -1288,3 +1288,93 @@ test("preserves Replay toolbar error message truncation and typography", async (
     whiteSpace: "nowrap",
   });
 });
+
+test("preserves Compare placeholder internal typography and integrity marker", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("workspace-compare").click();
+
+  const chart = page.getByTestId("compare-candidate-chart");
+  await expect(chart).toBeVisible();
+  const styles = await chart.evaluate((element) => {
+    const mark = element.querySelector<HTMLElement>(".comparison-chart-empty-mark");
+    const heading = element.querySelector<HTMLElement>(".comparison-chart-empty strong");
+    const description = element.querySelector<HTMLElement>(".comparison-chart-empty p");
+    const integrity = element.querySelector<HTMLElement>(".comparison-chart-integrity");
+    const separator = integrity?.querySelector<HTMLElement>("i");
+    if (!mark || !heading || !description || !integrity || !separator) {
+      throw new Error("Compare placeholder internal elements are missing");
+    }
+    const markStyle = getComputedStyle(mark);
+    const headingStyle = getComputedStyle(heading);
+    const descriptionStyle = getComputedStyle(description);
+    const integrityStyle = getComputedStyle(integrity);
+    const separatorStyle = getComputedStyle(separator);
+    const rect = mark.getBoundingClientRect();
+    return {
+      mark: {
+        display: markStyle.display,
+        width: markStyle.width,
+        height: markStyle.height,
+        borderRadius: markStyle.borderRadius,
+        color: markStyle.color,
+        fontSize: markStyle.fontSize,
+        lineHeight: markStyle.lineHeight,
+        rect: { width: rect.width, height: rect.height },
+      },
+      heading: {
+        marginTop: headingStyle.marginTop,
+        fontSize: headingStyle.fontSize,
+        letterSpacing: headingStyle.letterSpacing,
+      },
+      description: {
+        maxWidth: descriptionStyle.maxWidth,
+        fontSize: descriptionStyle.fontSize,
+        lineHeight: descriptionStyle.lineHeight,
+      },
+      integrity: {
+        marginTop: integrityStyle.marginTop,
+        color: integrityStyle.color,
+        fontSize: integrityStyle.fontSize,
+        letterSpacing: integrityStyle.letterSpacing,
+      },
+      separator: {
+        paddingInline: separatorStyle.paddingInline,
+        color: separatorStyle.color,
+        fontStyle: separatorStyle.fontStyle,
+      },
+    };
+  });
+
+  expect(styles.mark).toEqual({
+    display: "grid",
+    width: "28px",
+    height: "28px",
+    borderRadius: "3px",
+    color: "rgb(137, 148, 157)",
+    fontSize: "18px",
+    lineHeight: "18px",
+    rect: { width: 28, height: 28 },
+  });
+  expect(styles.heading).toEqual({
+    marginTop: "3px",
+    fontSize: "12px",
+    letterSpacing: "0.12px",
+  });
+  expect(styles.description).toEqual({
+    maxWidth: "560px",
+    fontSize: "10px",
+    lineHeight: "16.5px",
+  });
+  expect(styles.integrity).toEqual({
+    marginTop: "4px",
+    color: "rgb(127, 137, 143)",
+    fontSize: "8px",
+    letterSpacing: "0.56px",
+  });
+  expect(styles.separator).toEqual({
+    paddingInline: "3px",
+    color: "rgb(179, 138, 80)",
+    fontStyle: "normal",
+  });
+});
