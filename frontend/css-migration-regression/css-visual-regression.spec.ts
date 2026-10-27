@@ -1518,3 +1518,34 @@ test("preserves Snapshot Reference loading spinner geometry and reduced-motion b
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(() => spinner.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("2.4s");
 });
+
+
+test("preserves Snapshot Reference title row internal layout", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+
+  const panel = page.getByTestId("snapshot-reference-panel");
+  const title = panel.locator(".snapshot-reference-title");
+  await expect(title).toBeVisible();
+
+  const styles = await title.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return {
+      display: computed.display,
+      minWidth: computed.minWidth,
+      alignItems: computed.alignItems,
+      gap: computed.gap,
+      rectHeight: Math.round(rect.height * 100) / 100,
+    };
+  });
+
+  expect(styles).toEqual({
+    display: "flex",
+    minWidth: "0px",
+    alignItems: "center",
+    gap: "7px",
+    rectHeight: 12,
+  });
+});
