@@ -4475,3 +4475,27 @@ th, td { padding: 6px 8px; }
 [data-sonner-toast][data-type="error"] {
   border-color: var(--dbg-error) !important;
 }
+
+
+/* Snapshot Reference footer metadata; retained globally until component-scoped migration is committed. */
+.snapshot-reference-foot {
+  display: flex;
+  height: 18px;
+  min-height: 18px;
+  min-width: 0;
+  flex: 0 0 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  overflow: hidden;
+  background: #191e22;
+  color: var(--dbg-text-muted);
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+}
+.snapshot-reference-foot span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snapshot-reference-foot b { color: var(--dbg-text-secondary); font-weight: 500; letter-spacing: 0; }
+.snapshot-reference-foot .snapshot-reference-state-key { margin-left: auto; }
+@media (max-height: 760px) {
+  .snapshot-reference-foot { gap: 6px; flex-wrap: nowrap; padding: 0 6px; }
+}
