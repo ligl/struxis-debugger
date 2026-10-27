@@ -30,3 +30,47 @@ defineProps<{
     </div>
   </section>
 </template>
+
+<style scoped>
+.comparison-chart-empty > span {
+  color: var(--dbg-text-muted);
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .1em;
+}
+
+.comparison-chart-empty-mark {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #343b40;
+  border-radius: 3px;
+  color: var(--dbg-text-muted);
+  font: 18px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.comparison-chart-empty strong {
+  margin-top: 3px;
+  font-size: 12px;
+  letter-spacing: .01em;
+}
+
+.comparison-chart-empty p {
+  max-width: 560px;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.comparison-chart-integrity {
+  margin-top: 4px;
+  color: #7f898f;
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .07em;
+}
+
+.comparison-chart-integrity i {
+  padding-inline: 3px;
+  color: #b38a50;
+  font-style: normal;
+}
+</style>
