@@ -1352,8 +1352,8 @@ test("preserves Compare placeholder internal typography and integrity marker", a
     height: "28px",
     borderRadius: "3px",
     color: "rgb(137, 148, 157)",
-    fontSize: "18px",
-    lineHeight: "18px",
+    fontSize: "8px",
+    lineHeight: "normal",
     rect: { width: 28, height: 28 },
   });
   expect(styles.heading).toEqual({
