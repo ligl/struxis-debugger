@@ -1,72 +1,117 @@
-[WebServer] $ vite --host 127.0.0.1 --port "53063"
+[WebServer] $ vite --host 127.0.0.1 --port "39853"
 
 Running 62 tests using 1 worker
 
-  ✓   1 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:279:1 › captures workbench visual and computed-style baseline (916ms)
-  ✓   2 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:311:3 › captures the dataset workspace default state (800ms)
-  ✓   3 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:311:3 › captures the replay workspace default state (874ms)
-  ✓   4 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:311:3 › captures the compare workspace default state (684ms)
-  ✓   5 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked left (819ms)
-  ✓   6 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked right (846ms)
-  ✓   7 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked top (825ms)
-  ✓   8 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked bottom (803ms)
-  ✓   9 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked left (809ms)
-  ✓  10 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked right (760ms)
-  ✓  11 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked top (753ms)
-  ✓  12 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked bottom (768ms)
-  ✓  13 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:357:1 › captures Inspector expanded and collapsed states (944ms)
-  ✓  14 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:378:1 › captures the default collapsed Diagnostics state (685ms)
-  ✓  15 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at minimum viewport (456ms)
-  ✓  16 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at compact viewport (489ms)
-  ✓  17 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at standard viewport (493ms)
-  ✓  18 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at desktop viewport (509ms)
+  ✓   1 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:279:1 › captures workbench visual and computed-style baseline (984ms)
+  ✓   2 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:311:3 › captures the dataset workspace default state (906ms)
+  ✓   3 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:311:3 › captures the replay workspace default state (877ms)
+  ✓   4 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:311:3 › captures the compare workspace default state (780ms)
+  ✓   5 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked left (876ms)
+  ✓   6 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked right (852ms)
+  ✓   7 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked top (854ms)
+  ✓   8 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:326:3 › captures expanded Diagnostics docked bottom (823ms)
+  ✓   9 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked left (899ms)
+  ✓  10 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked right (836ms)
+  ✓  11 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked top (949ms)
+  ✓  12 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:343:3 › captures expanded Inspector docked bottom (928ms)
+  ✓  13 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:357:1 › captures Inspector expanded and collapsed states (933ms)
+  ✓  14 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:378:1 › captures the default collapsed Diagnostics state (720ms)
+  ✓  15 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at minimum viewport (472ms)
+  ✓  16 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at compact viewport (488ms)
+  ✓  17 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at standard viewport (454ms)
+  ✓  18 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at desktop viewport (491ms)
   ✓  19 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:392:3 › preserves shell geometry at wide viewport (548ms)
-  ✓  20 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:413:1 › captures deterministic Origin chart and each legend layer toggle (2.2s)
-  ✓  21 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:454:3 › advances Replay progress from 0 to 1 processed SBars (929ms)
-  ✓  22 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:454:3 › advances Replay progress from 12 to 13 processed SBars (915ms)
-  ✓  23 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:454:3 › advances Replay progress from 35 to 36 processed SBars (940ms)
+  ✓  20 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:413:1 › captures deterministic Origin chart and each legend layer toggle (2.1s)
+  ✓  21 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:454:3 › advances Replay progress from 0 to 1 processed SBars (877ms)
+  ✓  22 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:454:3 › advances Replay progress from 12 to 13 processed SBars (908ms)
+  ✓  23 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:454:3 › advances Replay progress from 35 to 36 processed SBars (931ms)
   ✓  24 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:493:1 › synchronizes the Snapshot crosshair when the Live chart owns interaction (1.0s)
-  ✓  25 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:512:1 › synchronizes Snapshot viewport when the Live chart is zoomed (1.3s)
+  ✓  25 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:512:1 › synchronizes Snapshot viewport when the Live chart is zoomed (1.2s)
   ✓  26 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:536:3 › captures Replay with 12 processed SBars and unprocessed candle styling (1.1s)
   ✓  27 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:536:3 › captures Replay with 24 processed SBars and unprocessed candle styling (1.1s)
   -  28 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:588:6 › MANUAL REVIEW REQUIRED: Snapshot Reference per-candle colors (pixel oracle unreliable)
-  ✓  29 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked left (801ms)
-  ✓  30 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked right (714ms)
-  ✓  31 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked top (781ms)
-  ✓  32 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked bottom (722ms)
-  ✓  33 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked left (812ms)
-  ✓  34 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked right (837ms)
-  ✓  35 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked top (773ms)
-  ✓  36 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked bottom (839ms)
-  ✓  37 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked left (653ms)
-  ✓  38 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked right (621ms)
-  ✓  39 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked top (599ms)
-  ✓  40 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked bottom (584ms)
-  ✓  41 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked left (698ms)
-  ✓  42 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked right (670ms)
-  ✓  43 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked top (695ms)
-  ✓  44 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked bottom (705ms)
-  ✓  45 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the left workbench edge (731ms)
-  ✓  46 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the right workbench edge (804ms)
-  ✓  47 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the top workbench edge (736ms)
-  ✓  48 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the bottom workbench edge (690ms)
-  ✓  49 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the left workbench edge (780ms)
-  ✓  50 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the right workbench edge (801ms)
-  ✓  51 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the top workbench edge (753ms)
-  ✓  52 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the bottom workbench edge (746ms)
-  ✓  53 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:801:1 › preserves Compare Snapshot Store disclosure geometry and styling (565ms)
-  ✓  54 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:886:1 › preserves Compare summary metric geometry and responsive separators (551ms)
-  ✓  55 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:993:1 › preserves development context menu positioning, stacking, button geometry and hover styling (576ms)
-  ✓  56 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1080:1 › preserves Replay playback speed menu geometry, options and hover styling (745ms)
-  ✓  57 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1163:1 › preserves Replay run status layout and paused-state color (766ms)
-  ✓  58 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1207:1 › preserves Replay progress bar geometry, colors and fill transition (654ms)
-  ✓  59 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1265:1 › preserves Replay toolbar error message truncation and typography (851ms)
-  ✓  60 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1299:1 › preserves Snapshot Reference footer metadata geometry and typography (884ms)
-  ✓  61 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1381:1 › preserves Compare placeholder internal typography and integrity marker (503ms)
-  ✓  62 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1472:1 › preserves Snapshot Reference loading spinner geometry and reduced-motion behavior (812ms)
+  ✓  29 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked left (772ms)
+  ✓  30 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked right (709ms)
+  ✓  31 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked top (740ms)
+  ✓  32 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes inspector by pointer when docked bottom (735ms)
+  ✓  33 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked left (805ms)
+  ✓  34 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked right (800ms)
+  ✓  35 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked top (776ms)
+  ✓  36 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:738:5 › resizes diagnostics by pointer when docked bottom (758ms)
+  ✓  37 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked left (632ms)
+  ✓  38 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked right (592ms)
+  ✓  39 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked top (602ms)
+  ✓  40 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for inspector docked bottom (565ms)
+  ✓  41 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked left (620ms)
+  ✓  42 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked right (669ms)
+  ✓  43 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked top (608ms)
+  ✓  44 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:751:5 › supports keyboard resize for diagnostics docked bottom (621ms)
+  ✓  45 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the left workbench edge (678ms)
+  ✓  46 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the right workbench edge (719ms)
+  ✓  47 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the top workbench edge (707ms)
+  ✓  48 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags inspector to the bottom workbench edge (674ms)
+  ✓  49 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the left workbench edge (741ms)
+  ✓  50 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the right workbench edge (712ms)
+  ✓  51 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the top workbench edge (722ms)
+  ✓  52 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:768:5 › drags diagnostics to the bottom workbench edge (725ms)
+  ✓  53 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:801:1 › preserves Compare Snapshot Store disclosure geometry and styling (551ms)
+  ✓  54 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:886:1 › preserves Compare summary metric geometry and responsive separators (517ms)
+  ✓  55 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:993:1 › preserves development context menu positioning, stacking, button geometry and hover styling (616ms)
+  ✓  56 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1080:1 › preserves Replay playback speed menu geometry, options and hover styling (748ms)
+  ✓  57 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1163:1 › preserves Replay run status layout and paused-state color (713ms)
+  ✓  58 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1207:1 › preserves Replay progress bar geometry, colors and fill transition (631ms)
+  ✓  59 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1265:1 › preserves Replay toolbar error message truncation and typography (802ms)
+  ✓  60 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1299:1 › preserves Snapshot Reference footer metadata geometry and typography (849ms)
+  ✓  61 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1381:1 › preserves Compare placeholder internal typography and integrity marker (518ms)
+  ✘  62 [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1472:1 › preserves Snapshot Reference loading spinner geometry and reduced-motion behavior (836ms)
 
+
+  1) [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1472:1 › preserves Snapshot Reference loading spinner geometry and reduced-motion behavior 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -1,9 +1,9 @@
+      Object {
+        "animationDuration": "0.8s",
+        "animationIterationCount": "infinite",
+    -   "animationName": "snapshot-reference-spin",
+    +   "animationName": "snapshot-reference-spin-9e0fe81f",
+        "animationTimingFunction": "linear",
+        "borderLeftColor": "rgb(52, 60, 66)",
+        "borderRadius": "50%",
+        "borderTopColor": "rgb(217, 154, 69)",
+        "borderTopStyle": "solid",
+
+      1499 |     };
+      1500 |   });
+    > 1501 |   expect(normal).toEqual({
+           |                  ^
+      1502 |     width: "26px",
+      1503 |     height: "26px",
+      1504 |     borderTopWidth: "2px",
+        at /home/amose/workspace/capitus/crates/struxis-debugger/frontend/css-migration-regression/css-visual-regression.spec.ts:1501:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    css-migration-regression/artifacts/test-results/css-visual-regression-pres-3995e-and-reduced-motion-behavior-css-regression-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: css-migration-regression/artifacts/test-results/css-visual-regression-pres-3995e-and-reduced-motion-behavior-css-regression-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    css-migration-regression/artifacts/test-results/css-visual-regression-pres-3995e-and-reduced-motion-behavior-css-regression-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace css-migration-regression/artifacts/test-results/css-visual-regression-pres-3995e-and-reduced-motion-behavior-css-regression-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [css-regression-chromium] › css-migration-regression/css-visual-regression.spec.ts:1472:1 › preserves Snapshot Reference loading spinner geometry and reduced-motion behavior 
   1 skipped
-  61 passed (52.9s)
+  60 passed (53.3s)
 
 To open last HTML report run:
 [36m[39m
