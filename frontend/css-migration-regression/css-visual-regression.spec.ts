@@ -1202,7 +1202,7 @@ test("preserves Replay progress bar geometry, colors and fill transition", async
     borderRadius: "5px",
     backgroundColor: "rgb(117, 198, 161)",
     transitionProperty: "width",
-    transitionDuration: "120ms",
+    transitionDuration: "0.12s",
     transitionTimingFunction: "linear",
   });
   expect(styles.rect).toEqual({ width: 92, height: 4 });
