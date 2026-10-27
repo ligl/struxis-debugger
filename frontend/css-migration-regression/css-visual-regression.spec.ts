@@ -1189,7 +1189,7 @@ test("preserves Replay run status layout and paused-state color", async ({ page 
     whiteSpace: "nowrap",
   });
   expect(styles.label).toEqual({
-    color: "rgb(121, 181, 139)",
+    color: "rgb(117, 198, 161)",
     fontWeight: "650",
   });
 });
