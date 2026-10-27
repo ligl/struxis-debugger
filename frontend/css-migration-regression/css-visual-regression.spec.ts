@@ -1258,6 +1258,9 @@ test("preserves Replay progress bar geometry, colors and fill transition", async
 });
 
 test("preserves Replay toolbar error message truncation and typography", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page, 12);
+  await page.goto("/");
   await page.getByTestId("workspace-replay").click();
   await page.evaluate(() => {
     (window as typeof window & { __CSS_REGRESSION_FAIL_NEXT_STEP__?: boolean }).__CSS_REGRESSION_FAIL_NEXT_STEP__ = true;
