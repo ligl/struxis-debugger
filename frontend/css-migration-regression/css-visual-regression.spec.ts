@@ -1547,3 +1547,29 @@ test("preserves Snapshot Reference title row internal layout", async ({ page }) 
     gap: "7px",
   });
 });
+
+
+test("preserves workspace toolbar title typography", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const title = page.getByTestId("workspace-toolbar-title");
+  await expect(title).toBeVisible();
+  const styles = await title.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      flex: computed.flex,
+      color: computed.color,
+      fontSize: computed.fontSize,
+      fontWeight: computed.fontWeight,
+      letterSpacing: computed.letterSpacing,
+    };
+  });
+  expect(styles).toEqual({
+    flex: "0 0 auto",
+    color: "rgb(227, 232, 235)",
+    fontSize: "10px",
+    fontWeight: "750",
+    letterSpacing: "0.8px",
+  });
+});
