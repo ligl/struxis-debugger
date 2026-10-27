@@ -3994,14 +3994,6 @@ th, td { padding: 6px 8px; }
 
 
 
-.toolbar-error {
-  max-width: 160px;
-  overflow: hidden;
-  font-size: 9px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 @media (max-width: 1280px) {
   .replay-toolbar-actions {
     gap: 5px;
