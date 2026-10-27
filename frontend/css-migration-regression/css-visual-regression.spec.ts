@@ -1492,6 +1492,98 @@ test("preserves Compare placeholder internal typography and integrity marker", a
 });
 
 
+test("preserves Compare placeholder panel, heading, status and empty-state geometry", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("workspace-compare").click();
+
+  const chart = page.getByTestId("compare-candidate-chart");
+  await expect(chart).toBeVisible();
+  const geometry = await chart.evaluate((element) => {
+    const heading = element.querySelector<HTMLElement>(".comparison-chart-heading");
+    const title = heading?.querySelector<HTMLElement>("h3");
+    const state = heading?.querySelector<HTMLElement>(".comparison-chart-state");
+    const empty = element.querySelector<HTMLElement>(".comparison-chart-empty");
+    if (!heading || !title || !state || !empty) {
+      throw new Error("Compare placeholder surface elements are missing");
+    }
+    const panelStyle = getComputedStyle(element);
+    const headingStyle = getComputedStyle(heading);
+    const titleStyle = getComputedStyle(title);
+    const stateStyle = getComputedStyle(state);
+    const emptyStyle = getComputedStyle(empty);
+    return {
+      panel: {
+        display: panelStyle.display,
+        backgroundColor: panelStyle.backgroundColor,
+        borderTopWidth: panelStyle.borderTopWidth,
+        flexDirection: panelStyle.flexDirection,
+        overflow: panelStyle.overflow,
+      },
+      heading: {
+        display: headingStyle.display,
+        minHeight: headingStyle.minHeight,
+        padding: headingStyle.padding,
+        backgroundColor: headingStyle.backgroundColor,
+      },
+      title: {
+        margin: titleStyle.margin,
+        color: titleStyle.color,
+        fontSize: titleStyle.fontSize,
+        lineHeight: titleStyle.lineHeight,
+        letterSpacing: titleStyle.letterSpacing,
+      },
+      state: {
+        display: stateStyle.display,
+        padding: stateStyle.padding,
+        borderRadius: stateStyle.borderRadius,
+        fontSize: stateStyle.fontSize,
+      },
+      empty: {
+        display: emptyStyle.display,
+        flex: emptyStyle.flex,
+        padding: emptyStyle.padding,
+        backgroundSize: emptyStyle.backgroundSize,
+      },
+    };
+  });
+
+  expect(geometry).toEqual({
+    panel: {
+      display: "flex",
+      backgroundColor: "rgb(18, 22, 25)",
+      borderTopWidth: "1px",
+      flexDirection: "column",
+      overflow: "hidden",
+    },
+    heading: {
+      display: "flex",
+      minHeight: "30px",
+      padding: "2px 10px",
+      backgroundColor: "rgb(25, 30, 34)",
+    },
+    title: {
+      margin: "0px",
+      color: "rgb(220, 225, 229)",
+      fontSize: "11px",
+      lineHeight: "normal",
+      letterSpacing: "0.44px",
+    },
+    state: {
+      display: "inline-flex",
+      padding: "4px 6px",
+      borderRadius: "2px",
+      fontSize: "8px",
+    },
+    empty: {
+      display: "flex",
+      flex: "1 1 auto",
+      padding: "22px 24px",
+      backgroundSize: "32px 32px",
+    },
+  });
+});
+
 test("preserves Snapshot Reference loading spinner geometry and reduced-motion behavior", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await installDeterministicOrigin(page, 12);
