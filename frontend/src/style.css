@@ -3844,13 +3844,6 @@ th, td { padding: 6px 8px; }
 }
 
 /* Compact workspace-mode toolbar aligned with the frozen prototype. */
-.workspace-title {
-  flex: 0 0 auto;
-  color: var(--dbg-text-primary);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: .08em;
-}
 .toolbar-context {
   min-width: 0;
   overflow: hidden;
