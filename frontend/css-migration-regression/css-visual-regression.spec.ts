@@ -1564,9 +1564,9 @@ test("preserves Compare placeholder panel, heading, status and empty-state geome
     },
     title: {
       margin: "0px",
-      color: "rgb(220, 225, 229)",
+      color: "rgb(227, 232, 235)",
       fontSize: "11px",
-      lineHeight: "normal",
+      lineHeight: "11px",
       letterSpacing: "0.44px",
     },
     state: {
