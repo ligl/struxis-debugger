@@ -15,7 +15,12 @@ test.beforeEach(async ({ page }) => {
             case "get_current_test_dataset": return (window as typeof window & { __CSS_REGRESSION_TEST_DATASET__?: unknown }).__CSS_REGRESSION_TEST_DATASET__ ?? null;
             case "list_snapshots": return (window as typeof window & { __CSS_REGRESSION_SNAPSHOTS__?: unknown[] }).__CSS_REGRESSION_SNAPSHOTS__ ?? [];
             case "get_snapshot_reference": {
-              const reference = (window as typeof window & { __CSS_REGRESSION_SNAPSHOT_REFERENCE__?: unknown }).__CSS_REGRESSION_SNAPSHOT_REFERENCE__;
+              const target = window as typeof window & {
+                __CSS_REGRESSION_SNAPSHOT_REFERENCE__?: unknown;
+                __CSS_REGRESSION_HOLD_SNAPSHOT_REFERENCE__?: boolean;
+              };
+              if (target.__CSS_REGRESSION_HOLD_SNAPSHOT_REFERENCE__) return new Promise(() => {});
+              const reference = target.__CSS_REGRESSION_SNAPSHOT_REFERENCE__;
               if (!reference) throw new Error("Unexpected CSS regression IPC command: get_snapshot_reference");
               return reference;
             }
@@ -1461,4 +1466,48 @@ test("preserves Compare placeholder internal typography and integrity marker", a
     color: "rgb(179, 138, 80)",
     fontStyle: "normal",
   });
+});
+
+
+test("preserves Snapshot Reference loading spinner geometry and reduced-motion behavior", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page, 12);
+  await page.addInitScript(() => {
+    (window as typeof window & { __CSS_REGRESSION_HOLD_SNAPSHOT_REFERENCE__?: boolean })
+      .__CSS_REGRESSION_HOLD_SNAPSHOT_REFERENCE__ = true;
+  });
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+  await page.getByTestId("replay-reference-select").selectOption("css-regression-fixture-snapshot");
+
+  const spinner = page.locator('[data-testid="snapshot-reference-loading"] .snapshot-reference-loading-spinner');
+  await expect(spinner).toBeVisible();
+  const normal = await spinner.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      width: style.width,
+      height: style.height,
+      border: style.border,
+      borderTopColor: style.borderTopColor,
+      borderRadius: style.borderRadius,
+      animationName: style.animationName,
+      animationDuration: style.animationDuration,
+      animationTimingFunction: style.animationTimingFunction,
+      animationIterationCount: style.animationIterationCount,
+    };
+  });
+  expect(normal).toEqual({
+    width: "26px",
+    height: "26px",
+    border: "2px solid rgb(52, 60, 66)",
+    borderTopColor: "rgb(214, 168, 93)",
+    borderRadius: "50%",
+    animationName: "snapshot-reference-spin",
+    animationDuration: "0.8s",
+    animationTimingFunction: "linear",
+    animationIterationCount: "infinite",
+  });
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => spinner.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("2.4s");
 });
