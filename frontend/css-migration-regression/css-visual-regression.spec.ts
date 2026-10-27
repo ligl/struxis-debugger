@@ -1498,7 +1498,8 @@ test("preserves Snapshot Reference loading spinner geometry and reduced-motion b
       animationIterationCount: style.animationIterationCount,
     };
   });
-  expect(normal).toEqual({
+  const { animationName, ...normalGeometry } = normal;
+  expect(normalGeometry).toEqual({
     width: "26px",
     height: "26px",
     borderTopWidth: "2px",
@@ -1512,7 +1513,7 @@ test("preserves Snapshot Reference loading spinner geometry and reduced-motion b
   });
   // Vue scopes keyframe names in SFC styles, so the runtime name may carry a
   // generated hash suffix. Assert the semantic name, not the compiler artifact.
-  expect(normal.animationName).toMatch(/^snapshot-reference-spin(?:-[a-f0-9]+)?$/);
+  expect(animationName).toMatch(/^snapshot-reference-spin(?:-[a-f0-9]+)?$/);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(() => spinner.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("2.4s");
