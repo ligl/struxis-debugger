@@ -21,6 +21,11 @@ test.beforeEach(async ({ page }) => {
             }
             case "get_run_state": return (window as typeof window & { __CSS_REGRESSION_RUN_STATE__?: unknown }).__CSS_REGRESSION_RUN_STATE__ ?? null;
             case "step_run": {
+              const failureTarget = window as typeof window & { __CSS_REGRESSION_FAIL_NEXT_STEP__?: boolean };
+              if (failureTarget.__CSS_REGRESSION_FAIL_NEXT_STEP__) {
+                failureTarget.__CSS_REGRESSION_FAIL_NEXT_STEP__ = false;
+                throw new Error("CSS regression fixture forced step failure");
+              }
               const target = window as typeof window & {
                 __CSS_REGRESSION_ORIGIN__?: { bars?: Array<{ sbarId: string }> };
                 __CSS_REGRESSION_RUN_STATE__?: {
@@ -1250,4 +1255,33 @@ test("preserves Replay progress bar geometry, colors and fill transition", async
     transitionTimingFunction: "linear",
   });
   expect(styles.rect).toEqual({ width: 92, height: 4 });
+});
+
+test("preserves Replay toolbar error message truncation and typography", async ({ page }) => {
+  await page.getByTestId("workspace-replay").click();
+  await page.evaluate(() => {
+    (window as typeof window & { __CSS_REGRESSION_FAIL_NEXT_STEP__?: boolean }).__CSS_REGRESSION_FAIL_NEXT_STEP__ = true;
+  });
+  await page.getByTestId("run-step").click();
+
+  const error = page.locator("[data-testid='replay-toolbar-controls'] .toolbar-error");
+  await expect(error).toBeVisible();
+  await expect(error).toHaveText("CSS regression fixture forced step failure");
+  const style = await error.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      maxWidth: computed.maxWidth,
+      overflow: computed.overflow,
+      fontSize: computed.fontSize,
+      textOverflow: computed.textOverflow,
+      whiteSpace: computed.whiteSpace,
+    };
+  });
+  expect(style).toEqual({
+    maxWidth: "160px",
+    overflow: "hidden",
+    fontSize: "9px",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  });
 });
