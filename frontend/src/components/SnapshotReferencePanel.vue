@@ -331,3 +331,66 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
     </footer>
   </section>
 </template>
+
+
+<style scoped>
+.snapshot-reference-loading-spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #343c42;
+  border-top-color: var(--dbg-accent, #D6A85D);
+  border-radius: 50%;
+  animation: snapshot-reference-spin 0.8s linear infinite;
+}
+
+@keyframes snapshot-reference-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snapshot-reference-loading-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+.snapshot-reference-foot {
+  display: flex;
+  height: 18px;
+  min-height: 18px;
+  min-width: 0;
+  flex: 0 0 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  overflow: hidden;
+  background: #191e22;
+  color: var(--dbg-text-muted);
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+}
+
+.snapshot-reference-foot span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snapshot-reference-foot b {
+  color: var(--dbg-text-secondary);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.snapshot-reference-foot .snapshot-reference-state-key {
+  margin-left: auto;
+}
+
+@media (max-height: 760px) {
+  .snapshot-reference-foot {
+    gap: 6px;
+    flex-wrap: nowrap;
+    padding: 0 6px;
+  }
+}
+</style>
