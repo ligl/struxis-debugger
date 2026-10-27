@@ -1289,6 +1289,90 @@ test("preserves Replay toolbar error message truncation and typography", async (
   });
 });
 
+
+
+test("preserves Snapshot Reference footer metadata geometry and typography", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page, 12);
+  await page.goto("/");
+  await page.getByTestId("workspace-replay").click();
+  await page.getByTestId("replay-reference-select").selectOption("css-regression-fixture-snapshot");
+
+  const footer = page.getByTestId("snapshot-reference-metadata");
+  await expect(footer).toBeVisible();
+  await expect(footer.locator("span")).toHaveCount(4);
+  await expect(footer).toContainText("RUN");
+  await expect(footer).toContainText("SBARS");
+  await expect(footer).toContainText("GENERATED");
+  await expect(footer).toContainText("FINGERPRINT");
+
+  const styles = await footer.evaluate((element) => {
+    const root = getComputedStyle(element);
+    const spans = [...element.querySelectorAll<HTMLElement>(":scope > span")];
+    const first = getComputedStyle(spans[0]);
+    const label = getComputedStyle(spans[0].querySelector("b")!);
+    const fingerprint = getComputedStyle(spans[3]);
+    const rect = element.getBoundingClientRect();
+    return {
+      root: {
+        display: root.display,
+        height: root.height,
+        minHeight: root.minHeight,
+        flex: root.flex,
+        alignItems: root.alignItems,
+        gap: root.gap,
+        padding: root.padding,
+        overflow: root.overflow,
+        backgroundColor: root.backgroundColor,
+        color: root.color,
+        fontSize: root.fontSize,
+        letterSpacing: root.letterSpacing,
+        rectHeight: rect.height,
+      },
+      span: {
+        minWidth: first.minWidth,
+        overflow: first.overflow,
+        textOverflow: first.textOverflow,
+        whiteSpace: first.whiteSpace,
+      },
+      label: {
+        color: label.color,
+        fontWeight: label.fontWeight,
+        letterSpacing: label.letterSpacing,
+      },
+      fingerprintMarginLeft: fingerprint.marginLeft,
+    };
+  });
+
+  expect(styles.root).toEqual({
+    display: "flex",
+    height: "18px",
+    minHeight: "18px",
+    flex: "0 0 18px",
+    alignItems: "center",
+    gap: "8px",
+    padding: "0px 8px",
+    overflow: "hidden",
+    backgroundColor: "rgb(25, 30, 34)",
+    color: "rgb(133, 141, 151)",
+    fontSize: "8px",
+    letterSpacing: "0.32px",
+    rectHeight: 18,
+  });
+  expect(styles.span).toEqual({
+    minWidth: "0px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  });
+  expect(styles.label).toEqual({
+    color: "rgb(160, 167, 176)",
+    fontWeight: "500",
+    letterSpacing: "normal",
+  });
+  expect(styles.fingerprintMarginLeft).toBe("auto");
+});
+
 test("preserves Compare placeholder internal typography and integrity marker", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
