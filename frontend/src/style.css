@@ -2802,13 +2802,6 @@ th, td { padding: 6px 8px; }
   background: #191e22;
 }
 
-.snapshot-reference-title {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
-}
-
 .snapshot-reference-sync-indicator {
   display: inline-flex;
   flex: 0 0 auto;
