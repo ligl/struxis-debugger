@@ -1,12 +1,12 @@
 # CSS migration regression result
 
-- **Result:** FAILED
-- **Candidate commit:** `e22a7bddfb8ff6044002f4fe3cba6e3d381fe6b7`
+- **Result:** PASSED
+- **Candidate commit:** `6216b9731cbe5b743591d474d867f7b248e5f593`
 - **Pinned visual baseline:** `171254d0bbdad139f51ba1550e8379899d8f6ca6`
-- **Generated (UTC):** 2026-10-27T12:42:11.718479+00:00
+- **Generated (UTC):** 2026-10-27T12:46:18.293421+00:00
 - **Environment:** Linux 7.0.0-38-generic x86_64; Bun 1.4.3; Node v22.22.2
 - **Baseline screenshots:** 22
-- **Candidate test exit code:** 1
+- **Candidate test exit code:** 0
 
 ## How to review
 
