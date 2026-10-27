@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17191b"/><stop offset="1" stop-color="#080909"/></linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff9a24"/><stop offset="1" stop-color="#ff4b08"/></linearGradient>
+  </defs>
+  <rect x="36" y="36" width="952" height="952" rx="190" fill="url(#bg)" stroke="#ff6a0a" stroke-width="12"/>
+  <g fill="#73777b" opacity=".42">
+    <path d="M604 250h44v140h-44z M620 220h12v200h-12z"/>
+    <path d="M694 220h44v170h-44z M710 180h12v230h-12z"/>
+    <path d="M784 250h44v140h-44z M800 218h12v190h-12z"/>
+    <path d="M180 720h44v120h-44z M196 690h12v180h-12z"/>
+    <path d="M280 700h44v140h-44z M296 670h12v190h-12z"/>
+  </g>
+  <g fill="#f0f0ef">
+    <path d="M128 508 294 342h280l-66 66H322l-40 40h160l80 80-80 80H132l66-66h216l34-34-24-24H128z"/>
+  </g>
+  <path d="M540 500h94l58 58 58-58h94L738 646l112 112h-94l-64-64-64 64h-94l112-112z" fill="url(#amber)"/>
+  <g fill="url(#amber)">
+    <path d="M764 154h46v150h-46z"/><path d="M781 110h12v238h-12z"/>
+  </g>
+</svg>
