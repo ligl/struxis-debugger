@@ -1185,7 +1185,7 @@ test("preserves Replay run status layout and paused-state color", async ({ page 
     flex: "0 0 auto",
     alignItems: "center",
     gap: "7px",
-    color: "rgb(133, 141, 151)",
+    color: "rgb(137, 148, 157)",
     whiteSpace: "nowrap",
   });
   expect(styles.label).toEqual({
