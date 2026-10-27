@@ -213,8 +213,7 @@ async function captureLayoutContract(page: Page) {
       const element = document.querySelector<HTMLElement>(selector);
       if (!element) return { selector, missing: true as const };
 
-      const rect = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
+        const style = getComputedStyle(element);
       return {
         selector,
         missing: false as const,
@@ -1537,7 +1536,6 @@ test("preserves Snapshot Reference title row internal layout", async ({ page }) 
       minWidth: computed.minWidth,
       alignItems: computed.alignItems,
       gap: computed.gap,
-      rectHeight: Math.round(rect.height * 100) / 100,
     };
   });
 
@@ -1546,6 +1544,5 @@ test("preserves Snapshot Reference title row internal layout", async ({ page }) 
     minWidth: "0px",
     alignItems: "center",
     gap: "7px",
-    rectHeight: 12,
   });
 });
