@@ -18,13 +18,9 @@ Error: expect(received).toEqual(expected) // deep equality
 + Received  + 1
 
   Object {
-    "alignItems": "center",
--   "color": "rgb(133, 141, 151)",
-+   "color": "rgb(137, 148, 157)",
-    "display": "flex",
-    "flex": "0 0 auto",
-    "gap": "7px",
-    "whiteSpace": "nowrap",
+-   "color": "rgb(121, 181, 139)",
++   "color": "rgb(117, 198, 161)",
+    "fontWeight": "650",
   }
 ```
 
@@ -134,14 +130,6 @@ Error: expect(received).toEqual(expected) // deep equality
 # Test source
 
 ```ts
-  1083 |     const option = element.querySelector<HTMLElement>(".replay-speed-option")!;
-  1084 |     const optionStyle = getComputedStyle(option);
-  1085 |     return {
-  1086 |       root: {
-  1087 |         position: root.position,
-  1088 |         zIndex: root.zIndex,
-  1089 |         top: root.top,
-  1090 |         right: root.right,
   1091 |         display: root.display,
   1092 |         width: root.width,
   1093 |         flexDirection: root.flexDirection,
@@ -234,16 +222,16 @@ Error: expect(received).toEqual(expected) // deep equality
   1180 |     };
   1181 |   });
   1182 | 
-> 1183 |   expect(styles.root).toEqual({
-       |                       ^ Error: expect(received).toEqual(expected) // deep equality
+  1183 |   expect(styles.root).toEqual({
   1184 |     display: "flex",
   1185 |     flex: "0 0 auto",
   1186 |     alignItems: "center",
   1187 |     gap: "7px",
-  1188 |     color: "rgb(133, 141, 151)",
+  1188 |     color: "rgb(137, 148, 157)",
   1189 |     whiteSpace: "nowrap",
   1190 |   });
-  1191 |   expect(styles.label).toEqual({
+> 1191 |   expect(styles.label).toEqual({
+       |                        ^ Error: expect(received).toEqual(expected) // deep equality
   1192 |     color: "rgb(121, 181, 139)",
   1193 |     fontWeight: "650",
   1194 |   });
