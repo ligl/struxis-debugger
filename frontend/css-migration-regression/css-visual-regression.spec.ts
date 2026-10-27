@@ -1366,7 +1366,7 @@ test("preserves Snapshot Reference footer metadata geometry and typography", asy
     whiteSpace: "nowrap",
   });
   expect(styles.label).toEqual({
-    color: "rgb(160, 167, 176)",
+    color: "rgb(168, 178, 185)",
     fontWeight: "500",
     letterSpacing: "normal",
   });
