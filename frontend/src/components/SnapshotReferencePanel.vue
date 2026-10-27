@@ -334,6 +334,13 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
 
 
 <style scoped>
+.snapshot-reference-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
 .snapshot-reference-loading-spinner {
   width: 26px;
   height: 26px;
