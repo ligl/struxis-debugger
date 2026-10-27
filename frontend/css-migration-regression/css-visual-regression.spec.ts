@@ -449,6 +449,28 @@ test("captures deterministic Origin chart and each legend layer toggle", async (
 });
 
 
+test("preserves Dataset selected-range label typography", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installDeterministicOrigin(page);
+  await page.goto("/");
+  const label = page.locator(".dataset-range-selected > span:first-child");
+  await expect(label).toBeVisible();
+
+  const style = await label.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      color: computed.color,
+      fontSize: computed.fontSize,
+      letterSpacing: computed.letterSpacing,
+    };
+  });
+  expect(style).toEqual({
+    color: "rgb(137, 148, 157)",
+    fontSize: "7px",
+    letterSpacing: "0.28px",
+  });
+});
+
 
 for (const processedCount of [0, 12, 35] as const) {
   test(`advances Replay progress from ${processedCount} to ${processedCount + 1} processed SBars`, async ({ page }) => {
