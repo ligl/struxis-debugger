@@ -194,7 +194,21 @@ function syncStructureInteractionState(): void {
       : geometry?.swingSegments.some((item) => item.id === selectedValue.id))
     ? { kind: selectedValue.kind, id: selectedValue.id }
     : null;
-  surface.value?.setStructureInteractionState(hovered, selected);
+  const hoveredSwing = hovered?.kind === "swing"
+    ? props.structure?.swings.find((item) => item.swingId === hovered.id)
+    : null;
+  const hoveredCbarIds = hoveredSwing
+    ? [...new Set([hoveredSwing.cbarStartId, hoveredSwing.cbarEndId])]
+      .filter((id) => geometry?.cbarRectangles.some((item) => item.id === id))
+    : [];
+  const selectedSwing = selected?.kind === "swing"
+    ? props.structure?.swings.find((item) => item.swingId === selected.id)
+    : null;
+  const selectedCbarIds = selectedSwing
+    ? [...new Set([selectedSwing.cbarStartId, selectedSwing.cbarEndId])]
+      .filter((id) => geometry?.cbarRectangles.some((item) => item.id === id))
+    : [];
+  surface.value?.setStructureInteractionState(hovered, selected, hoveredCbarIds, selectedCbarIds);
 }
 
 function updateSbarInteractionMarkers(): void {

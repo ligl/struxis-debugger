@@ -203,12 +203,26 @@ function syncStructurePrimitives(): void {
     (hoveredObjectValue.kind === "cbar" || hoveredObjectValue.kind === "swing")
     ? { kind: hoveredObjectValue.kind, id: hoveredObjectValue.id }
     : null;
+  const hoveredSwing = hovered?.kind === "swing"
+    ? props.structure?.swings.find((item) => item.swingId === hovered.id)
+    : null;
+  const hoveredCbarIds = hoveredSwing
+    ? [...new Set([hoveredSwing.cbarStartId, hoveredSwing.cbarEndId])]
+      .filter((id) => cbarRectangles.value.some((item) => item.id === id))
+    : [];
   const selected = selectedObjectValue &&
     selectedObjectValue.checkpointSbarId === cursorSbarId &&
     (selectedObjectValue.kind === "cbar" || selectedObjectValue.kind === "swing")
     ? { kind: selectedObjectValue.kind, id: selectedObjectValue.id }
     : null;
-  surface.value?.setStructureInteractionState(hovered, selected);
+  const selectedSwing = selected?.kind === "swing"
+    ? props.structure?.swings.find((item) => item.swingId === selected.id)
+    : null;
+  const selectedCbarIds = selectedSwing
+    ? [...new Set([selectedSwing.cbarStartId, selectedSwing.cbarEndId])]
+      .filter((id) => cbarRectangles.value.some((item) => item.id === id))
+    : [];
+  surface.value?.setStructureInteractionState(hovered, selected, hoveredCbarIds, selectedCbarIds);
 }
 
 function updateStructureOverlays(): void {

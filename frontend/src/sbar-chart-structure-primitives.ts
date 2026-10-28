@@ -34,7 +34,9 @@ export interface StructurePrimitiveProjection {
 
 export interface StructurePrimitiveInteractionState {
   hoveredId: string | null;
+  additionalHoveredIds?: readonly string[];
   selectedId: string | null;
+  additionalSelectedIds?: readonly string[];
   selectedColor?: string;
   selectedWidth?: number;
 }
@@ -186,7 +188,11 @@ abstract class StructureSeriesPrimitive<TObject> implements ISeriesPrimitive<Tim
   setInteractionState(state: StructurePrimitiveInteractionState): void {
     if (
       this.interactionState.hoveredId === state.hoveredId &&
+      (this.interactionState.additionalHoveredIds ?? []).length === (state.additionalHoveredIds ?? []).length &&
+      (this.interactionState.additionalHoveredIds ?? []).every((id, index) => id === state.additionalHoveredIds?.[index]) &&
       this.interactionState.selectedId === state.selectedId &&
+      (this.interactionState.additionalSelectedIds ?? []).length === (state.additionalSelectedIds ?? []).length &&
+      (this.interactionState.additionalSelectedIds ?? []).every((id, index) => id === state.additionalSelectedIds?.[index]) &&
       this.interactionState.selectedColor === state.selectedColor &&
       this.interactionState.selectedWidth === state.selectedWidth
     ) return;
@@ -281,8 +287,8 @@ class CBarPaneRenderer implements IPrimitivePaneRenderer {
       try {
         context.setLineDash([]);
         for (const rectangle of rectangles) {
-          const selected = rectangle.id === interaction.selectedId;
-          const hovered = rectangle.id === interaction.hoveredId;
+          const selected = rectangle.id === interaction.selectedId || interaction.additionalSelectedIds?.includes(rectangle.id) === true;
+          const hovered = rectangle.id === interaction.hoveredId || interaction.additionalHoveredIds?.includes(rectangle.id) === true;
           const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : "#858D97";
           context.strokeStyle = selected || hovered || !rectangle.dimmed ? baseColor : dimStructureColor(baseColor);
           context.lineWidth = selected ? interaction.selectedWidth ?? 2 : hovered ? 1.75 : 1;
@@ -578,8 +584,10 @@ export interface StructurePrimitiveObjectReference {
 
 export interface StructurePrimitiveInteractionOptions {
   hovered?: StructurePrimitiveObjectReference | null;
+  hoveredCbarIds?: readonly string[];
   selected?: StructurePrimitiveObjectReference | null;
   selectedColor?: string;
+  selectedCbarIds?: readonly string[];
   cbarSelectedWidth?: number;
   swingSelectedWidth?: number;
 }
@@ -637,15 +645,18 @@ export function setStructurePrimitiveInteractionState(
     cbar,
     swing,
     hovered = null,
+    hoveredCbarIds = [],
     selected = null,
+    selectedCbarIds = [],
     selectedColor = "#D6A85D",
     cbarSelectedWidth = 2,
     swingSelectedWidth = 2.25,
   } = options;
-
   cbar?.setInteractionState({
     hoveredId: hovered?.kind === "cbar" ? hovered.id : null,
+    additionalHoveredIds: hoveredCbarIds,
     selectedId: selected?.kind === "cbar" ? selected.id : null,
+    additionalSelectedIds: selectedCbarIds,
     selectedColor,
     selectedWidth: cbarSelectedWidth,
   });

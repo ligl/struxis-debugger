@@ -118,7 +118,15 @@ describe("CBar and Swing Series Primitives", () => {
     renderer!.draw(h.target as never);
     expect(rectangleStyles).toContainEqual({ color: "#C3CBD1", width: 1.75 });
     rectangleStyles.length = 0;
+    controller.setInteractionState({ hoveredId: null, additionalHoveredIds: ["cbar-1"], selectedId: null });
+    renderer!.draw(h.target as never);
+    expect(rectangleStyles).toContainEqual({ color: "#C3CBD1", width: 1.75 });
+    rectangleStyles.length = 0;
     controller.setInteractionState({ hoveredId: "cbar-1", selectedId: "cbar-1" });
+    renderer!.draw(h.target as never);
+    expect(rectangleStyles).toContainEqual({ color: "#D99A45", width: 2 });
+    rectangleStyles.length = 0;
+    controller.setInteractionState({ hoveredId: null, selectedId: null, additionalSelectedIds: ["cbar-1"] });
     renderer!.draw(h.target as never);
     expect(rectangleStyles).toContainEqual({ color: "#D99A45", width: 2 });
 
@@ -269,7 +277,9 @@ describe("syncStructurePrimitiveControllers", () => {
       swingVisible: true,
       interaction: {
         hovered: { kind: "swing", id: "sw1" },
+        hoveredCbarIds: ["c1", "c2"],
         selected: { kind: "cbar", id: "c1" },
+        selectedCbarIds: ["c2"],
         selectedColor: "#D6A85D",
         cbarSelectedWidth: 2,
         swingSelectedWidth: 2.25,
@@ -284,7 +294,9 @@ describe("syncStructurePrimitiveControllers", () => {
     expect(swing.setPlaybackState).toHaveBeenCalledWith({ enabled: false, offset: null, processedCount: 0, liveCount: 0 });
     expect(cbar.setInteractionState).toHaveBeenCalledWith({
       hoveredId: null,
+      additionalHoveredIds: ["c1", "c2"],
       selectedId: "c1",
+      additionalSelectedIds: ["c2"],
       selectedColor: "#D6A85D",
       selectedWidth: 2,
     });

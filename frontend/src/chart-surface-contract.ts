@@ -116,6 +116,8 @@ export interface ChartSurfacePort {
   setStructureInteractionState(
     hovered: ChartSurfaceStructureInteraction | null,
     selected: ChartSurfaceStructureInteraction | null,
+    hoveredCbarIds?: readonly string[],
+    selectedCbarIds?: readonly string[],
   ): void;
   setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): void;
 }

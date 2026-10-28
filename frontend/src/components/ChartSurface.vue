@@ -680,12 +680,16 @@ function setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): v
 function setStructureInteractionState(
   hovered: { kind: "cbar" | "swing"; id: string } | null,
   selected: { kind: "cbar" | "swing"; id: string } | null,
+  hoveredCbarIds: readonly string[] = [],
+  selectedCbarIds: readonly string[] = [],
 ): void {
   setStructurePrimitiveInteractionState({
     cbar: cbarPrimitive,
     swing: swingPrimitive,
     hovered,
+    hoveredCbarIds,
     selected,
+    selectedCbarIds,
     selectedColor: "#D99A45",
     cbarSelectedWidth: 2,
     swingSelectedWidth: 2.5,

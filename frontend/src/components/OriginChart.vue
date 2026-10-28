@@ -59,12 +59,29 @@ function syncStructureInteractionState(): void {
   const hovered = hoveredObject.value && (hoveredObject.value.kind === "cbar" || hoveredObject.value.kind === "swing")
     ? { kind: hoveredObject.value.kind, id: hoveredObject.value.id }
     : null;
+  const hoveredCbarIds = hovered?.kind === "swing"
+    ? structureEndpointCbarIds(props.structure, hovered.id, surface.value?.getStructureGeometry().cbarRectangles.map((item) => item.id) ?? [])
+    : [];
   const selected = props.selectedObject &&
     (props.selectedObject.kind === "cbar" || props.selectedObject.kind === "swing") &&
     props.selectedObject.originDatasetId === props.originDatasetId
     ? { kind: props.selectedObject.kind, id: props.selectedObject.id }
     : null;
-  surface.value?.setStructureInteractionState(hovered, selected);
+  const selectedCbarIds = selected?.kind === "swing"
+    ? structureEndpointCbarIds(props.structure, selected.id, surface.value?.getStructureGeometry().cbarRectangles.map((item) => item.id) ?? [])
+    : [];
+  surface.value?.setStructureInteractionState(hovered, selected, hoveredCbarIds, selectedCbarIds);
+}
+
+function structureEndpointCbarIds(
+  structure: ReplayInspectorStructureDto | null,
+  swingId: string,
+  projectedCbarIds: readonly string[],
+): string[] {
+  const swing = structure?.swings.find((item) => item.swingId === swingId);
+  if (!swing) return [];
+  return [...new Set([swing.cbarStartId, swing.cbarEndId])]
+    .filter((id) => projectedCbarIds.includes(id));
 }
 
 function updateSelectionCoordinates(): void {
