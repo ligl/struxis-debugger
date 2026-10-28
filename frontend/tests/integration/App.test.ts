@@ -140,6 +140,9 @@ function mockInitialIpc(origin: OriginDatasetDto | null = null): void {
   invokeMock.mockImplementation((command) => {
     if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
     if (command === "get_current_origin") return Promise.resolve(origin);
+    if (command === "get_current_test_dataset") return Promise.resolve(null);
+    if (command === "list_snapshots") return Promise.resolve([]);
+    if (command === "get_run_state") return Promise.resolve(null);
     return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
   });
 }
