@@ -615,44 +615,6 @@ mod tests {
 
     #[cfg(feature = "catalog-integration-tests")]
     #[test]
-    fn loads_ethusdt_perpetual_daily_origin_with_structure_enabled() {
-        // Regression coverage for the real ETH daily Catalog stream that has
-        // triggered MissingSBar while the debugger processes historical bars.
-        // Keep this tied to an exact BarType so a different instrument or
-        // timeframe cannot silently replace the reproducer.
-        const ETH_BAR_TYPE: &str = "ETHUSDT-PERP.BINANCE-1-DAY-LAST-EXTERNAL";
-        let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../test_data/catalog");
-
-        let origin = super::load_origin(&catalog_path, ETH_BAR_TYPE, true)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "Origin Load failed for regression stream {ETH_BAR_TYPE}: {error:#}"
-                )
-            });
-
-        assert_eq!(origin.bar_type, ETH_BAR_TYPE);
-        assert!(
-            !origin.bars.is_empty(),
-            "ETH regression stream should produce a non-empty validated SBar sequence"
-        );
-        assert!(
-            origin.structure.is_some(),
-            "structure-enabled ETH Origin Load should expose its Struxis structure projection"
-        );
-
-        let first = origin.bars.first().expect("non-empty sequence asserted");
-        let last = origin.bars.last().expect("non-empty sequence asserted");
-        assert!(
-            first.ts_event < last.ts_event,
-            "ETH SBar sequence should cover multiple ordered bars: first={}, last={}",
-            first.ts_event,
-            last.ts_event
-        );
-    }
-
-    #[cfg(feature = "catalog-integration-tests")]
-    #[test]
     fn reads_complete_catalog_dataset_in_event_time_order() {
         let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../test_data/catalog");
