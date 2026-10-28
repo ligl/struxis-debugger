@@ -1,3 +1,5 @@
+#![cfg(feature = "catalog-integration-tests")]
+
 //! Real-Catalog regression test for the ETH perpetual daily stream.
 //!
 //! The debugger is currently a binary crate, so this integration target includes
@@ -39,7 +41,6 @@ mod snapshot_store;
 #[path = "../src/effective_config.rs"]
 mod effective_config;
 
-#[cfg(feature = "catalog-integration-tests")]
 #[test]
 fn loads_ethusdt_perpetual_daily_origin_with_structure_enabled() {
     use std::path::PathBuf;
