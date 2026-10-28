@@ -26,7 +26,7 @@ defineProps<{
           ? "Comparison metadata is available, but this result does not include the historical SBar OHLCV sequence needed to render candles."
           : "Choose two completed Snapshots and run a comparison. Candles will appear only when an authoritative historical SBar sequence is available." }}
       </p>
-      <span class="comparison-chart-integrity">AUTHORITATIVE DATA ONLY <i>·</i> NO SYNTHETIC CANDLES</span>
+      <span class="comparison-chart-integrity">NO SYNTHETIC MARKET DATA</span>
     </div>
   </section>
 </template>
