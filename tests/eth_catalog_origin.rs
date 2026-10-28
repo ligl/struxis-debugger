@@ -1,4 +1,7 @@
 #![cfg(feature = "catalog-integration-tests")]
+// This integration target imports the binary's private modules to exercise the
+// production Catalog loader; unrelated entry points in those modules are unused here.
+#![allow(dead_code)]
 
 //! Real-Catalog regression test for the ETH perpetual daily stream.
 //!
