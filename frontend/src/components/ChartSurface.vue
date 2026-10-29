@@ -77,7 +77,7 @@ let secondSbarTime: Time | null = null;
 let pendingViewportRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
-type TrendRectangle = { id: string; x: number; y: number; width: number; height: number; state: string };
+type TrendSegment = { id: string; x1: number; y1: number; x2: number; y2: number; state: string };
 type SwingSegment = {
   id: string;
   x1: number;
@@ -90,7 +90,7 @@ type SwingSegment = {
 };
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
-const trendRectangles = ref<TrendRectangle[]>([]);
+const trendSegments = ref<TrendSegment[]>([]);
 
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#8A739F", dasharray: "" },
@@ -146,7 +146,7 @@ function updateStructureGeometry(): void {
   if (!chart || !candleSeries) {
     cbarRectangles.value = [];
     swingSegments.value = [];
-    trendRectangles.value = [];
+    trendSegments.value = [];
     return;
   }
   const timeScale = chart.timeScale();
@@ -178,7 +178,7 @@ function updateStructureGeometry(): void {
   });
   cbarRectangles.value = geometry.cbarRectangles;
   swingSegments.value = geometry.swingSegments;
-  trendRectangles.value = geometry.trendRectangles;
+  trendSegments.value = geometry.trendSegments;
 }
 
 const scheduleOverlayUpdate = createStructureProjectionScheduler(() => {
@@ -601,7 +601,7 @@ function updateChart(): void {
     }
     cbarRectangles.value = [];
     swingSegments.value = [];
-    trendRectangles.value = [];
+    trendSegments.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
   }
 }
@@ -677,7 +677,7 @@ function clearCrosshairPosition(): void {
 }
 
 function getStructureGeometry() {
-  return { cbarRectangles: cbarRectangles.value, swingSegments: swingSegments.value, trendRectangles: trendRectangles.value };
+  return { cbarRectangles: cbarRectangles.value, swingSegments: swingSegments.value, trendSegments: trendSegments.value };
 }
 
 function setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): void {
@@ -815,7 +815,7 @@ onBeforeUnmount(() => {
   volumeSeries = null;
   cbarRectangles.value = [];
   swingSegments.value = [];
-  trendRectangles.value = [];
+  trendSegments.value = [];
   sbarIdByLogicalIndex = [];
   indexBySbarId = new Map();
   timeBySbarId = new Map();
