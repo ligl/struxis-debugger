@@ -39,7 +39,7 @@ const emit = defineEmits<{
 
 const surface = ref<ChartSurfacePort | null>(null);
 const chartError = ref("");
-const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
+const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true });
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SwingSegment = { id: string; x1: number; y1: number; x2: number; y2: number; color: string; dasharray: string; state: string };
 type SBarSelectionMarker = { id: string; x: number; y: number; width: number; height: number };
@@ -49,6 +49,7 @@ const hoveredSbarMarker = ref<SBarSelectionMarker | null>(null);
 const hoveredObject = ref<ReplayChartSelection | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
+const trendRectangles = ref<Array<CBarRectangle & { state: string }>>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let cachedProjection: ReturnType<typeof mapSBarsToChart> | null = null;
 const sbarMarkerPrimitive = new SBarMarkerPrimitive();
@@ -200,7 +201,7 @@ function syncStructurePrimitives(): void {
   const selectedObjectValue = props.selectedObject;
   const hovered = hoveredObjectValue &&
     hoveredObjectValue.checkpointSbarId === cursorSbarId &&
-    (hoveredObjectValue.kind === "cbar" || hoveredObjectValue.kind === "swing")
+    (hoveredObjectValue.kind === "cbar" || hoveredObjectValue.kind === "swing" || hoveredObjectValue.kind === "trend")
     ? { kind: hoveredObjectValue.kind, id: hoveredObjectValue.id }
     : null;
   const hoveredSwing = hovered?.kind === "swing"
@@ -212,7 +213,7 @@ function syncStructurePrimitives(): void {
     : [];
   const selected = selectedObjectValue &&
     selectedObjectValue.checkpointSbarId === cursorSbarId &&
-    (selectedObjectValue.kind === "cbar" || selectedObjectValue.kind === "swing")
+    (selectedObjectValue.kind === "cbar" || selectedObjectValue.kind === "swing" || selectedObjectValue.kind === "trend")
     ? { kind: selectedObjectValue.kind, id: selectedObjectValue.id }
     : null;
   const selectedSwing = selected?.kind === "swing"
@@ -232,12 +233,14 @@ function updateStructureOverlays(): void {
     hoveredSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
+    trendRectangles.value = [];
     targetSbarX.value = null;
     return;
   }
   const geometry = port.getStructureGeometry();
   cbarRectangles.value = geometry.cbarRectangles;
   swingSegments.value = geometry.swingSegments;
+  trendRectangles.value = geometry.trendRectangles;
   const selected = props.selectedObject;
   selectedSbarMarker.value = layerVisibility.value.sbar
     && selected?.kind === "sbar"
@@ -322,15 +325,17 @@ const scheduleOverlayUpdate = createStructureProjectionScheduler(() => {
   }
 });
 
-function hitTestStructureObject(x: number, y: number): { kind: "swing" | "cbar"; id: string } | null {
+function hitTestStructureObject(x: number, y: number): { kind: "swing" | "cbar" | "trend"; id: string } | null {
   if (!props.runState?.cursorSbarId) return null;
   const hit = resolveStructureHit({
     x,
     y,
     swings: swingSegments.value,
     cbars: cbarRectangles.value,
+    trends: trendRectangles.value,
     swingVisible: layerVisibility.value.swing,
     cbarVisible: layerVisibility.value.cbar,
+    trendVisible: layerVisibility.value.trend,
   });
   return hit ? { kind: hit.kind, id: hit.id } : null;
 }
@@ -467,6 +472,7 @@ function updateChart(): void {
       selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
+      trendRectangles.value = [];
       surface.value.setStructureInteractionState(null, null);
       targetSbarX.value = null;
       chartError.value = "";
