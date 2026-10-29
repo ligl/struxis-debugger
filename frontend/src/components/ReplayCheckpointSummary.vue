@@ -45,6 +45,7 @@ defineProps<{
         <dl class="inspector-fields">
           <InspectorPropertyField label="CBar Series" :value="String(replayInspector.structure.cbarCount)" test-id="inspector-replay-cbar-count" />
           <InspectorPropertyField label="Swing Series" :value="String(replayInspector.structure.swingCount)" test-id="inspector-replay-swing-count" />
+          <InspectorPropertyField label="Trend Series" :value="String(replayInspector.structure.trendCount)" test-id="inspector-replay-trend-count" />
         </dl>
         <p class="inspector-provenance">Structure counts are from the backend-confirmed checkpoint. Select a structure object on a chart when that chart exposes its authoritative geometry.</p>
       </div>
