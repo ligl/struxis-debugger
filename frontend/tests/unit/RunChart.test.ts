@@ -684,6 +684,10 @@ describe("RunChart", () => {
         createdAt: "2026-10-23T00:00:00Z",
       }],
       swingCount: 1,
+
+      trendCount: 0,
+
+      trends: [],
       swings: [{
         swingId: "swing-1",
         direction: "Up",
@@ -752,6 +756,10 @@ describe("RunChart", () => {
         createdAt: "2026-10-23T00:00:00Z",
       }],
       swingCount: 1,
+
+      trendCount: 0,
+
+      trends: [],
       swings: [{
         swingId: "swing-removed",
         direction: "Up",
@@ -801,6 +809,10 @@ describe("RunChart", () => {
           },
         ],
         swingCount: 0,
+
+        trendCount: 0,
+
+        trends: [],
         swings: [],
       },
     });
@@ -861,6 +873,10 @@ describe("RunChart", () => {
         createdAt: "2026-10-23T00:00:00Z",
       }],
       swingCount: 0,
+
+      trendCount: 0,
+
+      trends: [],
       swings: [],
     };
     const wrapper = mount(RunChart, {
@@ -1249,6 +1265,10 @@ describe("RunChart", () => {
             { cbarId: "cbar-offscreen", sbarStartId: extendedBars[5]!.sbarId, sbarEndId: extendedBars[6]!.sbarId, high: "12", low: "9", spanSbars: 2, fractalType: null, createdAt: "2026-10-25 12:00:00" },
           ],
           swingCount: 2,
+
+          trendCount: 0,
+
+          trends: [],
           swings: [
             { swingId: "swing-visible", direction: "Up", high: "12", low: "9", cbarStartId: "cbar-visible", cbarEndId: "cbar-visible", sbarStartId: extendedBars[1]!.sbarId, sbarEndId: extendedBars[2]!.sbarId, startOi: null, endOi: null, volume: "100", spanSbars: 2, state: "Confirmed", createdAt: "2026-10-25 12:00:00", updatedAt: "2026-10-25 12:00:00" },
             { swingId: "swing-offscreen", direction: "Up", high: "12", low: "9", cbarStartId: "cbar-offscreen", cbarEndId: "cbar-offscreen", sbarStartId: extendedBars[5]!.sbarId, sbarEndId: extendedBars[6]!.sbarId, startOi: null, endOi: null, volume: "100", spanSbars: 2, state: "Confirmed", createdAt: "2026-10-25 12:00:00", updatedAt: "2026-10-25 12:00:00" },
