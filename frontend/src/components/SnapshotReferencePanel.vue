@@ -224,7 +224,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
         });
         return;
       }
-    } else {
+    } else if (selection.kind === "swing") {
       const object = structure?.swings.find((item) => item.swingId === selection.id);
       if (object) {
         emit("objectSelect", {
@@ -233,6 +233,21 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
           checkpointSbarId: checkpoint.sbarId,
           timeframe: current.timeframe,
           kind: "swing",
+          object,
+          bars: current.bars,
+          structure,
+        });
+        return;
+      }
+    } else {
+      const object = structure?.trends.find((item) => item.trendId === selection.id);
+      if (object) {
+        emit("objectSelect", {
+          snapshotId: current.snapshotId,
+          snapshotLabel,
+          checkpointSbarId: checkpoint.sbarId,
+          timeframe: current.timeframe,
+          kind: "trend",
           object,
           bars: current.bars,
           structure,
