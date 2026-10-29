@@ -171,14 +171,16 @@ describe("CBar and Swing Series Primitives", () => {
     const renderer = view?.renderer();
     expect(renderer).not.toBeNull();
     renderer!.draw(h.target as never);
-    expect(h.context.strokeRect).toHaveBeenCalled();
+    expect(h.context.moveTo).toHaveBeenCalledWith(10, 90);
+    expect(h.context.lineTo).toHaveBeenCalledWith(30, 80);
+    expect(h.context.stroke).toHaveBeenCalled();
     expect(h.context.strokeStyle).toBe("#D6A85D");
     expect(h.context.setLineDash).toHaveBeenCalledWith([6, 3]);
 
-    h.context.strokeRect.mockClear();
+    h.context.stroke.mockClear();
     controller.setInteractionState({ hoveredId: null, selectedId: "trend-1", selectedColor: "#D99A45", selectedWidth: 2.25 });
     view?.renderer()?.draw(h.target as never);
-    expect(h.context.strokeRect).toHaveBeenCalled();
+    expect(h.context.stroke).toHaveBeenCalled();
     expect(h.context.strokeStyle).toBe("#D99A45");
 
     controller.setVisible(false);
