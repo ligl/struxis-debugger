@@ -270,8 +270,10 @@ describe("syncStructurePrimitiveControllers", () => {
     syncStructurePrimitiveControllers({
       cbar: cbar as never,
       swing: swing as never,
+      trend: { setData: vi.fn(), setVisible: vi.fn(), setInteractionState: vi.fn(), setPlaybackState: vi.fn() } as never,
       cbars,
       swings,
+      trends: [],
       projection,
       cbarVisible: false,
       swingVisible: true,
@@ -313,11 +315,14 @@ describe("syncStructurePrimitiveControllers", () => {
     syncStructurePrimitiveControllers({
       cbar: cbar as never,
       swing: swing as never,
+      trend: null,
       cbars: [],
       swings: [],
+      trends: [],
       projection,
       cbarVisible: false,
       swingVisible: false,
+      trendVisible: false,
     });
     expect(cbar.setData).toHaveBeenLastCalledWith([], projection);
     expect(swing.setData).toHaveBeenLastCalledWith([], projection);
