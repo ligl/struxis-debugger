@@ -589,7 +589,7 @@ mod tests {
     fn rejects_unrecognized_top_level_state_data_fields() {
         let mut before = record(0, "100", "[]", "[]");
         let after = record(0, "100", "[]", "[]");
-        before.state_data = before.state_data.replace(r#""swings":[]}"#, r#""swings":[],"futureField":true}"#);
+        before.state_data = before.state_data.replace(r#""trends":[]}"#, r#""trends":[],"futureField":true}"#);
 
         let rejection = compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err();
         assert_eq!(rejection.category, CompareRejectCategory::SnapshotIntegrityFailure);
