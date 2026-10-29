@@ -30,6 +30,11 @@ const selectedSwing = computed(() =>
     ? props.context.selectedObject.object
     : null,
 );
+const selectedTrend = computed(() =>
+  props.context.workspace === "dataset" && props.context.selectedObject?.kind === "trend"
+    ? props.context.selectedObject.object
+    : null,
+);
 const originDatasetId = computed(() =>
   props.context.workspace === "dataset" ? props.context.originDatasetId : null,
 );
@@ -98,7 +103,7 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
 <template>
   <section class="inspector-object" data-testid="inspector-object" @contextmenu.stop.prevent="handleInspectorContextMenu">
     <div
-      v-if="workspaceMode === 'dataset' && (selectedSbar || selectedCbar || selectedSwing)"
+      v-if="workspaceMode === 'dataset' && (selectedSbar || selectedCbar || selectedSwing || selectedTrend)"
       class="inspector-runtime-context"
       data-testid="inspector-runtime-context"
     >
@@ -111,6 +116,7 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
         :selected-sbar="selectedSbar"
         :selected-cbar="selectedCbar"
         :selected-swing="selectedSwing"
+        :selected-trend="selectedTrend"
         :origin-dataset-id="originDatasetId"
         :timeframe="timeframe"
         :bars="originBars"
