@@ -3,6 +3,7 @@ import { createChartPrimitiveHost } from "../../src/sbar-chart-primitive-host";
 import {
   registerCBarPrimitive,
   registerSwingPrimitive,
+  registerTrendPrimitive,
   syncStructurePrimitiveControllers,
 } from "../../src/sbar-chart-structure-primitives";
 import type { ISeriesApi, ISeriesPrimitive, Time } from "lightweight-charts";
@@ -150,6 +151,38 @@ describe("CBar and Swing Series Primitives", () => {
     expect(view?.renderer()).toBeNull();
     h.host.dispose();
     expect(h.attached).toHaveLength(0);
+  });
+
+  it("draws Trend ranges with lifecycle styling and supports selection", () => {
+    const h = createHarness();
+    const controller = registerTrendPrimitive(h.host, h.series);
+    controller.setData([{
+      trendId: "trend-1",
+      sbarStartId: "s1",
+      sbarEndId: "s2",
+      high: "20",
+      low: "10",
+      state: "Tentative",
+    }], h.projection);
+
+    const primitive = h.attached[0]!;
+    const view = primitive.paneViews?.()[0];
+    const renderer = view?.renderer();
+    expect(renderer).not.toBeNull();
+    renderer!.draw(h.target as never);
+    expect(h.context.strokeRect).toHaveBeenCalled();
+    expect(h.context.strokeStyle).toBe("#D6A85D");
+    expect(h.context.setLineDash).toHaveBeenCalledWith([6, 3]);
+
+    h.context.strokeRect.mockClear();
+    controller.setInteractionState({ hoveredId: null, selectedId: "trend-1", selectedColor: "#D99A45", selectedWidth: 2.25 });
+    view?.renderer()?.draw(h.target as never);
+    expect(h.context.strokeRect).toHaveBeenCalled();
+    expect(h.context.strokeStyle).toBe("#D99A45");
+
+    controller.setVisible(false);
+    expect(view?.renderer()).toBeNull();
+    h.host.dispose();
   });
 
   it("draws Swing segments with direction and state styling, and honors visibility", () => {
