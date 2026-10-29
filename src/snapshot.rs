@@ -626,7 +626,7 @@ mod tests {
                 sbar_id: "100".into(),
                 ts_event: "100".into(),
                 record_kind: "Full".into(),
-                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into(),
+                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into(),
                 diagnostics: "[]".into(),
             },
             SnapshotCheckpointRecord {
@@ -634,7 +634,7 @@ mod tests {
                 sbar_id: "200".into(),
                 ts_event: "200".into(),
                 record_kind: "Full".into(),
-                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into(),
+                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into(),
                 diagnostics: "[]".into(),
             },
         ]
@@ -683,6 +683,8 @@ mod tests {
             swings: vec![],
             trend_count: 0,
             trends: vec![],
+            trend_count: 0,
+            trends: vec![],
         };
         let canonical = canonical_structure_state(Some(&structure)).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&canonical).unwrap();
@@ -695,7 +697,7 @@ mod tests {
 
     #[test]
     fn snapshot_validation_rejects_unsorted_structure_state() {
-        let unsorted = r#"{"cbarCount":2,"cbars":[{"sbarStartId":"20","cbarId":"10"},{"sbarStartId":"3","cbarId":"2"}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#;
+        let unsorted = r#"{"cbarCount":2,"cbars":[{"sbarStartId":"20","cbarId":"10"},{"sbarStartId":"3","cbarId":"2"}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#;
         let state: serde_json::Value = serde_json::from_str(unsorted).unwrap();
         assert!(validate_canonical_structure_state(&state).is_err());
     }
@@ -703,21 +705,21 @@ mod tests {
     #[test]
     fn snapshot_state_requires_numeric_counts_and_span_and_closed_fractal_values() {
         let string_count: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":"0","cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
+            r#"{"cbarCount":"0","cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&string_count)
             .unwrap_err()
             .contains("cbarCount must be a non-negative JSON integer"));
 
         let string_span: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":"1"}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":"1"}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&string_span)
             .unwrap_err()
             .contains("invalid JSON type"));
 
         let invalid_fractal: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":"Sideways","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":"Sideways","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&invalid_fractal)
             .unwrap_err()
@@ -727,7 +729,7 @@ mod tests {
     #[test]
     fn snapshot_state_rejects_duplicate_domain_ids() {
         let duplicate_ids: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":2,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1},{"cbarId":"1","createdAt":"1","fractalType":null,"high":"3","low":"2","sbarEndId":"4","sbarStartId":"3","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
+            r#"{"cbarCount":2,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1},{"cbarId":"1","createdAt":"1","fractalType":null,"high":"3","low":"2","sbarEndId":"4","sbarStartId":"3","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&duplicate_ids)
             .unwrap_err()
@@ -752,6 +754,8 @@ mod tests {
             swings: vec![],
             trend_count: 0,
             trends: vec![],
+            trend_count: 0,
+            trends: vec![],
         };
         assert!(canonical_structure_state(Some(&structure))
             .unwrap_err()
@@ -762,7 +766,7 @@ mod tests {
     fn canonical_structure_state_without_structure_is_explicitly_empty() {
         assert_eq!(
             canonical_structure_state(None).unwrap(),
-            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         );
     }
 
@@ -903,7 +907,7 @@ mod tests {
             .unwrap_err().contains("canonical unsigned decimal encoding"));
 
         let mut state_records = records();
-        state_records[0].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"01","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into();
+        state_records[0].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"01","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into();
         let state_manifest = manifest(&state_records);
         assert!(validate_snapshot_records(&state_manifest, &state_records, false)
             .unwrap_err().contains("canonical unsigned decimal encoding"));
@@ -962,7 +966,7 @@ mod tests {
         manifest.content_checksum = manifest.calculate_content_checksum(&records).unwrap();
         assert!(verify_complete_snapshot(&manifest, &records).is_ok());
 
-        records[1].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into();
+        records[1].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into();
         assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("checksum mismatch"));
     }
 
