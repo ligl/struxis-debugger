@@ -308,3 +308,39 @@ pub(crate) fn structure_from_state_view(
     })
 }
 
+
+#[cfg(test)]
+mod trend_checkpoint_tests {
+    use super::TrendCheckpoint;
+
+    #[test]
+    fn trend_checkpoint_preserves_domain_precision_and_camel_case() {
+        let trend = TrendCheckpoint {
+            trend_id: "18446744073709551614".into(),
+            direction: "Up".into(),
+            high: "12345678901234567890.123".into(),
+            low: "12345678901234567889.123".into(),
+            swing_start_id: "9007199254740993".into(),
+            swing_end_id: "9007199254740995".into(),
+            sbar_start_id: "1700000000000000001".into(),
+            sbar_end_id: "1700000000000000009".into(),
+            start_oi: Some("100.25".into()),
+            end_oi: None,
+            volume: "987654321.125".into(),
+            span_sbars: 9,
+            state: "Tentative".into(),
+            created_at: "1700000000000000001".into(),
+            updated_at: "1700000000000000009".into(),
+        };
+        let value = serde_json::to_value(trend).unwrap();
+        assert_eq!(value["trendId"], "18446744073709551614");
+        assert_eq!(value["high"], "12345678901234567890.123");
+        assert_eq!(value["swingStartId"], "9007199254740993");
+        assert_eq!(value["sbarStartId"], "1700000000000000001");
+        assert_eq!(value["startOi"], "100.25");
+        assert!(value["endOi"].is_null());
+        assert_eq!(value["spanSbars"], 9);
+        assert_eq!(value["state"], "Tentative");
+        assert!(value.get("trend_id").is_none());
+    }
+}
