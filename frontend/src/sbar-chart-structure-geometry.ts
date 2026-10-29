@@ -132,6 +132,39 @@ export function projectCBarRectangles(
   });
 }
 
+export interface TrendGeometryInput {
+  trendId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  high: string;
+  low: string;
+  state: string;
+}
+
+export function projectTrendRectangles(options: {
+  trends: readonly TrendGeometryInput[];
+  coordinateForSbarId: (sbarId: string) => number | null | undefined;
+  priceToCoordinate: (price: number) => number | null | undefined;
+  sbarBodyWidth?: number;
+  indexBySbarId?: ReadonlyMap<string, number>;
+  visibleRange?: LogicalViewportRange | null;
+}): CBarRectangleGeometry[] {
+  return projectCBarRectangles({
+    cbars: options.trends.map((trend) => ({
+      cbarId: trend.trendId,
+      sbarStartId: trend.sbarStartId,
+      sbarEndId: trend.sbarEndId,
+      high: trend.high,
+      low: trend.low,
+    })),
+    coordinateForSbarId: options.coordinateForSbarId,
+    priceToCoordinate: options.priceToCoordinate,
+    sbarBodyWidth: options.sbarBodyWidth,
+    indexBySbarId: options.indexBySbarId,
+    visibleRange: options.visibleRange,
+  });
+}
+
 export interface SwingGeometryInput {
   swingId: string;
   sbarStartId: string;
@@ -225,6 +258,7 @@ export function projectSwingSegments(
 export interface ProjectStructureOverlayOptions {
   cbars: readonly CBarGeometryInput[];
   swings: readonly SwingGeometryInput[];
+  trends: readonly TrendGeometryInput[];
   indexBySbarId: ReadonlyMap<string, number>;
   visibleRange: LogicalViewportRange | null;
   coordinateForSbarId: (sbarId: string) => number | null | undefined;
@@ -233,12 +267,14 @@ export interface ProjectStructureOverlayOptions {
   sbarBodyWidth?: number;
   cbarVisible: boolean;
   swingVisible: boolean;
+  trendVisible: boolean;
   resolveSwingStyle: (state: string) => { color: string; dasharray: string };
 }
 
 export interface StructureOverlayGeometry {
   cbarRectangles: CBarRectangleGeometry[];
   swingSegments: Array<SwingSegmentGeometry & { color: string; dasharray: string }>;
+  trendRectangles: Array<CBarRectangleGeometry & { state: string }>;
 }
 
 /**
@@ -255,6 +291,7 @@ export function projectStructureOverlayGeometry(
   const {
     cbars,
     swings,
+    trends,
     indexBySbarId,
     visibleRange,
     coordinateForSbarId,
@@ -262,6 +299,7 @@ export function projectStructureOverlayGeometry(
     sbarBodyWidth,
     cbarVisible,
     swingVisible,
+    trendVisible,
     resolveSwingStyle,
   } = options;
 
@@ -275,6 +313,13 @@ export function projectStructureOverlayGeometry(
         priceToCoordinate,
         sbarBodyWidth,
       })
+      : [],
+    trendRectangles: trendVisible
+      ? projectTrendRectangles({ trends, indexBySbarId, visibleRange, coordinateForSbarId, priceToCoordinate, sbarBodyWidth })
+        .map((rectangle) => ({
+          ...rectangle,
+          state: trends.find((trend) => trend.trendId === rectangle.id)?.state ?? "Unknown",
+        }))
       : [],
     swingSegments: swingVisible
       ? projectSwingSegments({
