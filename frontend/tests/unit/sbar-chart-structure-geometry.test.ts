@@ -177,22 +177,22 @@ describe("projectSwingSegments", () => {
 });
 
 
-describe("projectTrendRectangles", () => {
-  it("projects Trend bounds from authoritative SBar endpoints and price range", () => {
-    expect(projectTrendRectangles({
+describe("projectTrendSegments", () => {
+  it("projects Trend direction through authoritative SBar endpoints and range extremes", () => {
+    expect(projectTrendSegments({
       trends: [{
         trendId: "trend-7",
         sbarStartId: "sbar-1",
         sbarEndId: "sbar-3",
         high: "15",
         low: "5",
+        direction: "Up",
         state: "Tentative",
       }],
       indexBySbarId: new Map([["sbar-1", 0], ["sbar-3", 2]]),
       visibleRange: null,
       coordinateForSbarId: (id) => id === "sbar-1" ? 10 : 30,
       priceToCoordinate: (price) => price === 15 ? 10 : 50,
-      sbarBodyWidth: 2,
     })).toEqual([{ id: "trend-7", x1: 10, y1: 50, x2: 30, y2: 10, state: "Tentative" }]);
   });
 });
