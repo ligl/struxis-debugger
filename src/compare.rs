@@ -267,16 +267,19 @@ fn compare_structure_record(
         baseline.checkpoint_index, &baseline.sbar_id, "Swing",
         baseline_state.get("swings"), candidate_state.get("swings"), "swingId", output,
     )?;
+    compare_object_collection(
+        baseline.checkpoint_index, &baseline.sbar_id, "Trend",
+        baseline_state.get("trends"), candidate_state.get("trends"), "trendId", output,
+    )?;
 
-    // A valid Snapshot schema currently has exactly these state fields.
-    // Reject schema drift and internally inconsistent counts rather than
-    // silently producing a partial comparison from malformed state_data.
+    // A valid Snapshot schema has exactly these six fields. Reject legacy
+    // four-field state and schema drift rather than producing partial results.
     for (label, state) in [("baseline", &baseline_state), ("candidate", &candidate_state)] {
         let fields = state.as_object().ok_or_else(|| reject(
             CompareRejectCategory::SnapshotIntegrityFailure,
             format!("{label} state_data must be an object"),
         ))?;
-        for key in ["cbarCount", "cbars", "swingCount", "swings"] {
+        for key in ["cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends"] {
             if !fields.contains_key(key) {
                 return Err(reject(
                     CompareRejectCategory::SnapshotIntegrityFailure,
@@ -285,7 +288,7 @@ fn compare_structure_record(
             }
         }
         if let Some(key) = fields.keys().find(|key| {
-            !["cbarCount", "cbars", "swingCount", "swings"].contains(&key.as_str())
+            !["cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends"].contains(&key.as_str())
         }) {
             return Err(reject(
                 CompareRejectCategory::SnapshotIntegrityFailure,
@@ -295,6 +298,7 @@ fn compare_structure_record(
         for (count_key, collection_key, label_name) in [
             ("cbarCount", "cbars", "CBar"),
             ("swingCount", "swings", "Swing"),
+            ("trendCount", "trends", "Trend"),
         ] {
             let declared_count = fields[count_key].as_u64().ok_or_else(|| reject(
                 CompareRejectCategory::SnapshotIntegrityFailure,
@@ -449,7 +453,7 @@ mod tests {
             ts_event: sbar_id.into(),
             record_kind: "Full".into(),
             state_data: format!(
-                r#"{{"cbarCount":{},"cbars":{},"swingCount":{},"swings":{}}}"#,
+                r#"{{"cbarCount":{},"cbars":{},"swingCount":{},"swings":{},"trendCount":0,"trends":[]}}"#,
                 serde_json::from_str::<Value>(cbars).unwrap().as_array().unwrap().len(),
                 cbars,
                 serde_json::from_str::<Value>(swings).unwrap().as_array().unwrap().len(),
@@ -511,6 +515,34 @@ mod tests {
         assert_eq!(differences.len(), 2);
         assert_eq!(differences[0].kind, DifferenceKind::Removed);
         assert_eq!(differences[1].kind, DifferenceKind::Added);
+    }
+
+    #[test]
+    fn compares_trends_by_domain_id_and_ignores_lifecycle_timestamps() {
+        let before = record(
+            0, "100", "[]", "[]",
+        );
+        let after = record(
+            0, "100", "[]", "[]",
+        );
+        let trend = r#"[{"trendId":"30","direction":"Up","high":"12","low":"9","swingStartId":"20","swingEndId":"25","sbarStartId":"100","sbarEndId":"200","startOi":null,"endOi":null,"volume":"10","spanSbars":2,"state":"Extending","createdAt":"1","updatedAt":"2"}]"#;
+        let changed = trend.replace(r#""high":"12""#, r#""high":"13""#);
+        let before_state: Value = serde_json::from_str(&before.state_data).unwrap();
+        let after_state: Value = serde_json::from_str(&after.state_data).unwrap();
+        let mut before_state = before_state;
+        let mut after_state = after_state;
+        before_state["trendCount"] = Value::from(1);
+        before_state["trends"] = serde_json::from_str(trend).unwrap();
+        after_state["trendCount"] = Value::from(1);
+        after_state["trends"] = serde_json::from_str(&changed).unwrap();
+        let before = SnapshotCheckpointRecord { state_data: serde_json::to_string(&before_state).unwrap(), ..before };
+        let after = SnapshotCheckpointRecord { state_data: serde_json::to_string(&after_state).unwrap(), ..after };
+        let mut differences = Vec::new();
+        compare_structure_record(&before, &after, &mut differences).unwrap();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].object_type, "Trend");
+        assert_eq!(differences[0].object_id, "30");
+        assert_eq!(differences[0].properties[0].field, "high");
     }
 
     #[test]
