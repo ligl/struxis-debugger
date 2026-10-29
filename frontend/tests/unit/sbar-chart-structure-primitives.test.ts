@@ -275,6 +275,7 @@ describe("syncStructurePrimitiveControllers", () => {
       projection,
       cbarVisible: false,
       swingVisible: true,
+      trendVisible: false,
       interaction: {
         hovered: { kind: "swing", id: "sw1" },
         hoveredCbarIds: ["c1", "c2"],
