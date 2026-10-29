@@ -771,6 +771,38 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_state_requires_trend_fields_and_rejects_legacy_schema() {
+        let legacy: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&legacy)
+            .unwrap_err()
+            .contains("trendCount, and trends"));
+
+        let inconsistent: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&inconsistent)
+            .unwrap_err()
+            .contains("trendCount does not match trends length"));
+    }
+
+    #[test]
+    fn snapshot_state_validates_trend_fields_and_enum_values() {
+        let valid: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[{"createdAt":"1","direction":"Up","endOi":null,"high":"12.5","low":"10.5","sbarEndId":"8","sbarStartId":"2","spanSbars":7,"startOi":null,"state":"Tentative","swingEndId":"7","swingStartId":"3","trendId":"4","updatedAt":"9","volume":"123.25"}]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&valid).is_ok());
+
+        let invalid_direction: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[{"createdAt":"1","direction":"Sideways","endOi":null,"high":"12.5","low":"10.5","sbarEndId":"8","sbarStartId":"2","spanSbars":7,"startOi":null,"state":"Tentative","swingEndId":"7","swingStartId":"3","trendId":"4","updatedAt":"9","volume":"123.25"}]}"#,
+        ).unwrap();
+        assert!(validate_canonical_structure_state(&invalid_direction)
+            .unwrap_err()
+            .contains("unsupported value Sideways"));
+    }
+
+    #[test]
     fn canonical_json_preserves_integer_types_and_sorts_object_keys() {
         let input: serde_json::Value = serde_json::from_str(
             r#"{"z":1,"a":{"y":2,"b":3},"items":[{"z":1,"a":2},{"b":1,"a":2}]}"#,
