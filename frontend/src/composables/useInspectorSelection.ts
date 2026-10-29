@@ -4,6 +4,7 @@ import type {
   OriginObjectSelection,
   ReplayInspectorCBarDto,
   ReplayInspectorSwingDto,
+  ReplayInspectorTrendDto,
   SBarDto,
 } from "../origin-types";
 
@@ -33,6 +34,12 @@ export function useInspectorSelection(
     return origin.value?.structure?.swings.find((swing) => swing.swingId === selection.id) ?? null;
   });
 
+  const selectedInspectorTrend = computed<ReplayInspectorTrendDto | null>(() => {
+    const selection = selectedInspectorObject.value;
+    if (selection?.kind !== "trend") return null;
+    return origin.value?.structure?.trends.find((trend) => trend.trendId === selection.id) ?? null;
+  });
+
   function clearSelection(): void {
     selectedInspectorObject.value = null;
   }
@@ -48,14 +55,16 @@ export function useInspectorSelection(
   }
 
   function selectStructureObject(
-    selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>,
+    selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>,
   ): void {
     const currentOrigin = origin.value;
     if (!currentOrigin || selection.originDatasetId !== currentOrigin.originDatasetId) return;
 
     const exists = selection.kind === "cbar"
       ? currentOrigin.structure?.cbars.some((cbar) => cbar.cbarId === selection.id)
-      : currentOrigin.structure?.swings.some((swing) => swing.swingId === selection.id);
+      : selection.kind === "swing"
+        ? currentOrigin.structure?.swings.some((swing) => swing.swingId === selection.id)
+        : currentOrigin.structure?.trends.some((trend) => trend.trendId === selection.id);
     if (!exists) return;
 
     selectedInspectorObject.value = selection;
@@ -70,6 +79,7 @@ export function useInspectorSelection(
     selectedInspectorSbar,
     selectedInspectorCbar,
     selectedInspectorSwing,
+    selectedInspectorTrend,
     selectSbar,
     selectStructureObject,
     clearSelection,
