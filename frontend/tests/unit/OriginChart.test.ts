@@ -275,7 +275,7 @@ describe("ChartSurface and chart entry adapters", () => {
     expect(wrapper.get('[data-testid="layer-toggle-swing"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("true");
     expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("true");
-    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [], trendRectangles: [] });
+    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
     wrapper.unmount();
   });
 
@@ -1012,7 +1012,7 @@ describe("ChartSurface and chart entry adapters", () => {
 
     expect(chartMocks.candleApplyOptions).toHaveBeenCalledWith({ visible: false });
     expect(chartMocks.volumeApplyOptions).toHaveBeenCalledWith({ visible: false });
-    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [], trendRectangles: [] });
+    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
     expect(wrapper.get('[data-testid="layer-toggle-sbar"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="layer-toggle-volume"]').attributes("aria-pressed")).toBe("false");
 
@@ -1098,7 +1098,7 @@ describe("ChartSurface and chart entry adapters", () => {
       .toContain("SBar 1700000000000000000 has a non-finite close value.");
     expect(chartMocks.candleSetData).toHaveBeenCalledWith([]);
     expect(chartMocks.volumeSetData).toHaveBeenCalledWith([]);
-    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [], trendRectangles: [] });
+    expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
     wrapper.unmount();
   });
 
