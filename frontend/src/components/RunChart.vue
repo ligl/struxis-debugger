@@ -49,7 +49,7 @@ const hoveredSbarMarker = ref<SBarSelectionMarker | null>(null);
 const hoveredObject = ref<ReplayChartSelection | null>(null);
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
-const trendRectangles = ref<Array<CBarRectangle & { state: string }>>([]);
+const trendSegments = ref<Array<CBarRectangle & { state: string }>>([]);
 let timeBySbarId: ReadonlyMap<string, Time> = new Map();
 let cachedProjection: ReturnType<typeof mapSBarsToChart> | null = null;
 const sbarMarkerPrimitive = new SBarMarkerPrimitive();
@@ -233,14 +233,14 @@ function updateStructureOverlays(): void {
     hoveredSbarMarker.value = null;
     cbarRectangles.value = [];
     swingSegments.value = [];
-    trendRectangles.value = [];
+    trendSegments.value = [];
     targetSbarX.value = null;
     return;
   }
   const geometry = port.getStructureGeometry();
   cbarRectangles.value = geometry.cbarRectangles;
   swingSegments.value = geometry.swingSegments;
-  trendRectangles.value = geometry.trendRectangles;
+  trendSegments.value = geometry.trendSegments;
   const selected = props.selectedObject;
   selectedSbarMarker.value = layerVisibility.value.sbar
     && selected?.kind === "sbar"
@@ -332,7 +332,7 @@ function hitTestStructureObject(x: number, y: number): { kind: "swing" | "cbar" 
     y,
     swings: swingSegments.value,
     cbars: cbarRectangles.value,
-    trends: trendRectangles.value,
+    trends: trendSegments.value,
     swingVisible: layerVisibility.value.swing,
     cbarVisible: layerVisibility.value.cbar,
     trendVisible: layerVisibility.value.trend,
@@ -472,7 +472,7 @@ function updateChart(): void {
       selectedSbarMarker.value = null;
       cbarRectangles.value = [];
       swingSegments.value = [];
-      trendRectangles.value = [];
+      trendSegments.value = [];
       surface.value.setStructureInteractionState(null, null);
       targetSbarX.value = null;
       chartError.value = "";
