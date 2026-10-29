@@ -236,7 +236,10 @@ const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
     if (snapshotSelection.kind === "cbar") {
       return { kind: "cbar", object: snapshotSelection.object, source: "snapshot" };
     }
-    return { kind: "swing", object: snapshotSelection.object, source: "snapshot" };
+    if (snapshotSelection.kind === "swing") {
+      return { kind: "swing", object: snapshotSelection.object, source: "snapshot" };
+    }
+    return { kind: "trend", object: snapshotSelection.object, source: "snapshot" };
   }
   const selection = selectedReplayChartObject.value;
   const checkpoint = replayInspector.value;
@@ -287,8 +290,12 @@ const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
     const object = checkpoint.structure?.cbars.find((item) => item.cbarId === selection.id);
     return object ? { kind: "cbar", object } : null;
   }
-  const object = checkpoint.structure?.swings.find((item) => item.swingId === selection.id);
-  return object ? { kind: "swing", object } : null;
+  if (selection.kind === "swing") {
+    const object = checkpoint.structure?.swings.find((item) => item.swingId === selection.id);
+    return object ? { kind: "swing", object } : null;
+  }
+  const object = checkpoint.structure?.trends.find((item) => item.trendId === selection.id);
+  return object ? { kind: "trend", object } : null;
 });
 
 watch(
@@ -313,7 +320,7 @@ function handleCompareDifferenceSelection(difference: ObjectDifferenceDto | null
 }
 
 
-function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>): void {
+function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>): void {
   selectInspectorStructureObject(selection);
 }
 
@@ -412,6 +419,7 @@ const {
   selectedInspectorSbar,
   selectedInspectorCbar,
   selectedInspectorSwing,
+  selectedInspectorTrend,
   selectSbar: selectInspectorSbar,
   selectStructureObject: selectInspectorStructureObject,
   clearSelection: clearInspectorSelection,
@@ -424,7 +432,9 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
         ? { kind: "cbar" as const, object: selectedInspectorCbar.value }
         : selectedInspectorSwing.value
           ? { kind: "swing" as const, object: selectedInspectorSwing.value }
-          : null;
+          : selectedInspectorTrend.value
+            ? { kind: "trend" as const, object: selectedInspectorTrend.value }
+            : null;
     return {
       workspace: "dataset",
       originDatasetId: origin.value?.originDatasetId ?? null,
