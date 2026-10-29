@@ -142,7 +142,7 @@ export interface TrendGeometryInput {
   state: string;
 }
 
-export interface TrendSegmentGeometry extends SwingSegmentGeometry {}
+export type TrendSegmentGeometry = SwingSegmentGeometry;
 
 export function projectTrendSegments(options: {
   trends: readonly TrendGeometryInput[];
