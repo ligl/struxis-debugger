@@ -439,6 +439,10 @@ describe("ChartSurface and chart entry adapters", () => {
             createdAt: "1700000000000000000",
           }],
           swingCount: 1,
+
+          trendCount: 0,
+
+          trends: [],
           swings: [{
             swingId: "1700000000000000000",
             direction: "Up",
@@ -508,6 +512,10 @@ describe("ChartSurface and chart entry adapters", () => {
             createdAt: "1700000000000000000",
           }],
           swingCount: 1,
+
+          trendCount: 0,
+
+          trends: [],
           swings: [{
             swingId: "swing-exact",
             direction: "Up",
@@ -570,6 +578,10 @@ describe("ChartSurface and chart entry adapters", () => {
         createdAt: "1700000000000000000",
       }],
       swingCount: 1,
+
+      trendCount: 0,
+
+      trends: [],
       swings: [{
         swingId: "swing-hover",
         direction: "Up",
@@ -663,6 +675,10 @@ describe("ChartSurface and chart entry adapters", () => {
           cbarCount: 0,
           cbars: [],
           swingCount: 3,
+
+          trendCount: 0,
+
+          trends: [],
           swings: [
             { ...baseSwing, swingId: "1", state: "Confirmed" },
             { ...baseSwing, swingId: "2", state: "Tentative" },
