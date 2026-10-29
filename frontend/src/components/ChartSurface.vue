@@ -691,14 +691,15 @@ function setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): v
 }
 
 function setStructureInteractionState(
-  hovered: { kind: "cbar" | "swing"; id: string } | null,
-  selected: { kind: "cbar" | "swing"; id: string } | null,
+  hovered: { kind: "cbar" | "swing" | "trend"; id: string } | null,
+  selected: { kind: "cbar" | "swing" | "trend"; id: string } | null,
   hoveredCbarIds: readonly string[] = [],
   selectedCbarIds: readonly string[] = [],
 ): void {
   setStructurePrimitiveInteractionState({
     cbar: cbarPrimitive,
     swing: swingPrimitive,
+    trend: trendPrimitive,
     hovered,
     hoveredCbarIds,
     selected,
@@ -706,6 +707,7 @@ function setStructureInteractionState(
     selectedColor: "#D99A45",
     cbarSelectedWidth: 2,
     swingSelectedWidth: 2.5,
+    trendSelectedWidth: 2.5,
   });
 }
 
