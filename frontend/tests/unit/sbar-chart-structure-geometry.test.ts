@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectCBarRectangles, projectSwingSegments, projectTrendRectangles, projectStructureOverlayGeometry, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectSwingSegments, projectTrendSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
 
 function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
   return {
@@ -193,7 +193,7 @@ describe("projectTrendRectangles", () => {
       coordinateForSbarId: (id) => id === "sbar-1" ? 10 : 30,
       priceToCoordinate: (price) => price === 15 ? 10 : 50,
       sbarBodyWidth: 2,
-    })).toEqual([{ id: "trend-7", x: 9, y: 10, width: 22, height: 40 }]);
+    })).toEqual([{ id: "trend-7", x1: 10, y1: 50, x2: 30, y2: 10, state: "Tentative" }]);
   });
 });
 
@@ -238,6 +238,6 @@ describe("projectStructureOverlayGeometry", () => {
       resolveSwingStyle: () => ({ color: "#A0A7B0", dasharray: "4 3" }),
     });
 
-    expect(result).toEqual({ cbarRectangles: [], swingSegments: [], trendRectangles: [] });
+    expect(result).toEqual({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
   });
 });
