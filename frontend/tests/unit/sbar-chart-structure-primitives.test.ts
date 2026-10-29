@@ -162,6 +162,7 @@ describe("CBar and Swing Series Primitives", () => {
       sbarEndId: "s2",
       high: "20",
       low: "10",
+      direction: "Up",
       state: "Tentative",
     }], h.projection);
 
