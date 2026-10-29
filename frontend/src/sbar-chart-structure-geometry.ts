@@ -138,28 +138,31 @@ export interface TrendGeometryInput {
   sbarEndId: string;
   high: string;
   low: string;
+  direction: string;
   state: string;
 }
 
-export function projectTrendRectangles(options: {
+export interface TrendSegmentGeometry extends SwingSegmentGeometry {}
+
+export function projectTrendSegments(options: {
   trends: readonly TrendGeometryInput[];
   coordinateForSbarId: (sbarId: string) => number | null | undefined;
   priceToCoordinate: (price: number) => number | null | undefined;
-  sbarBodyWidth?: number;
   indexBySbarId?: ReadonlyMap<string, number>;
   visibleRange?: LogicalViewportRange | null;
-}): CBarRectangleGeometry[] {
-  return projectCBarRectangles({
-    cbars: options.trends.map((trend) => ({
-      cbarId: trend.trendId,
+}): TrendSegmentGeometry[] {
+  return projectSwingSegments({
+    swings: options.trends.map((trend) => ({
+      swingId: trend.trendId,
       sbarStartId: trend.sbarStartId,
       sbarEndId: trend.sbarEndId,
       high: trend.high,
       low: trend.low,
+      direction: trend.direction,
+      state: trend.state,
     })),
     coordinateForSbarId: options.coordinateForSbarId,
     priceToCoordinate: options.priceToCoordinate,
-    sbarBodyWidth: options.sbarBodyWidth,
     indexBySbarId: options.indexBySbarId,
     visibleRange: options.visibleRange,
   });
@@ -274,7 +277,7 @@ export interface ProjectStructureOverlayOptions {
 export interface StructureOverlayGeometry {
   cbarRectangles: CBarRectangleGeometry[];
   swingSegments: Array<SwingSegmentGeometry & { color: string; dasharray: string }>;
-  trendRectangles: Array<CBarRectangleGeometry & { state: string }>;
+  trendSegments: TrendSegmentGeometry[];
 }
 
 /**
@@ -314,12 +317,8 @@ export function projectStructureOverlayGeometry(
         sbarBodyWidth,
       })
       : [],
-    trendRectangles: trendVisible
-      ? projectTrendRectangles({ trends, indexBySbarId, visibleRange, coordinateForSbarId, priceToCoordinate, sbarBodyWidth })
-        .map((rectangle) => ({
-          ...rectangle,
-          state: trends.find((trend) => trend.trendId === rectangle.id)?.state ?? "Unknown",
-        }))
+    trendSegments: trendVisible
+      ? projectTrendSegments({ trends, indexBySbarId, visibleRange, coordinateForSbarId, priceToCoordinate })
       : [],
     swingSegments: swingVisible
       ? projectSwingSegments({
