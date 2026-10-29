@@ -34,6 +34,31 @@ describe("structure hit-test adapter", () => {
     expect(hit).toMatchObject({ kind: "swing", id: "swing-a" });
   });
 
+  it("resolves Trend range borders by stable Trend identity and respects layer visibility", () => {
+    const trends = [{ id: "trend-7", x: 20, y: 20, width: 60, height: 60 }];
+    expect(hitTestStructureObject({
+      x: 20,
+      y: 50,
+      swings: [],
+      cbars: [],
+      trends,
+      swingVisible: false,
+      cbarVisible: false,
+      trendVisible: true,
+    })).toMatchObject({ kind: "trend", id: "trend-7", distance: 0 });
+
+    expect(hitTestStructureObject({
+      x: 20,
+      y: 50,
+      swings: [],
+      cbars: [],
+      trends,
+      swingVisible: false,
+      cbarVisible: false,
+      trendVisible: false,
+    })).toBeNull();
+  });
+
   it("respects visibility and the existing six-pixel tolerance", () => {
     expect(hitTestStructureObject({
       x: 20,
