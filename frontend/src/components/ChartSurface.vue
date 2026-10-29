@@ -212,7 +212,7 @@ function syncStructurePrimitives(): void {
     swings: props.structure?.swings ?? [],
     trends: (props.structure?.trends ?? []).map((trend) => ({
       trendId: trend.trendId, sbarStartId: trend.sbarStartId, sbarEndId: trend.sbarEndId,
-      high: trend.high, low: trend.low, state: trend.state,
+      high: trend.high, low: trend.low, direction: trend.direction, state: trend.state,
     })),
     projection: { timeBySbarId, indexBySbarId },
     cbarVisible: layerVisibility.value.cbar,
