@@ -7,7 +7,7 @@ import type {
 } from "lightweight-charts";
 import type { ChartPrimitiveHost, ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
 import { alignStrokeCoordinate } from "./chart-canvas-pixel-alignment";
-import { candlestickBodyWidth, projectCBarRectangles, projectSwingSegments, projectTrendRectangles } from "./sbar-chart-structure-geometry";
+import { candlestickBodyWidth, projectCBarRectangles, projectSwingSegments, projectTrendSegments } from "./sbar-chart-structure-geometry";
 
 export interface CBarPrimitiveDto {
   cbarId: string;
@@ -360,45 +360,42 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
   }
 }
 
-interface TrendRectangle extends CBarRectangle {
-  color: string;
-  dash: readonly number[];
+interface TrendSegment extends SwingSegment {
+  extending: false;
 }
 
 const TREND_STYLE_BY_STATE: Readonly<Record<string, { color: string; dash: readonly number[] }>> = {
-  Confirmed: { color: "#C6A06B", dash: [] },
+  Confirmed: { color: "#91A7B9", dash: [] },
   Tentative: { color: "#D6A85D", dash: [6, 3] },
   Extending: { color: "#E3E8EB", dash: [2, 3] },
 };
 
 class TrendPaneRenderer implements IPrimitivePaneRenderer {
   constructor(
-    private readonly getRectangles: () => readonly TrendRectangle[],
+    private readonly getSegments: () => readonly TrendSegment[],
     private readonly getInteractionState: () => StructurePrimitiveInteractionState,
   ) {}
 
   draw(target: PrimitiveDrawTarget): void {
-    const rectangles = this.getRectangles();
-    if (rectangles.length === 0) return;
+    const segments = this.getSegments();
+    if (segments.length === 0) return;
     const interaction = this.getInteractionState();
     target.useMediaCoordinateSpace(({ context }) => {
       context.save();
       try {
-        for (const rectangle of rectangles) {
-          const selected = rectangle.id === interaction.selectedId;
-          const hovered = rectangle.id === interaction.hoveredId;
-          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : rectangle.color;
-          context.strokeStyle = selected || hovered || !rectangle.dimmed ? baseColor : dimStructureColor(baseColor);
-          context.lineWidth = selected ? interaction.selectedWidth ?? 2.25 : hovered ? 1.8 : 1.25;
-          context.setLineDash([...rectangle.dash]);
-          const pixelRatio = typeof window !== "undefined" && finite(window.devicePixelRatio)
-            ? Math.max(1, window.devicePixelRatio)
-            : 1;
-          const left = alignStrokeCoordinate(rectangle.x, context.lineWidth, pixelRatio);
-          const top = alignStrokeCoordinate(rectangle.y, context.lineWidth, pixelRatio);
-          const right = alignStrokeCoordinate(rectangle.x + rectangle.width, context.lineWidth, pixelRatio);
-          const bottom = alignStrokeCoordinate(rectangle.y + rectangle.height, context.lineWidth, pixelRatio);
-          context.strokeRect(left, top, right - left, bottom - top);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        for (const segment of segments) {
+          const selected = segment.id === interaction.selectedId;
+          const hovered = segment.id === interaction.hoveredId;
+          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : segment.color;
+          context.strokeStyle = selected || hovered || !segment.dimmed ? baseColor : dimStructureColor(baseColor);
+          context.lineWidth = (selected ? interaction.selectedWidth ?? 2.5 : hovered ? 2 : 1.5);
+          context.setLineDash([...segment.dash]);
+          context.beginPath();
+          context.moveTo(segment.x1, segment.y1);
+          context.lineTo(segment.x2, segment.y2);
+          context.stroke();
         }
       } finally {
         context.setLineDash([]);
@@ -409,24 +406,19 @@ class TrendPaneRenderer implements IPrimitivePaneRenderer {
 }
 
 class TrendSeriesPrimitive extends StructureSeriesPrimitive<TrendPrimitiveDto> {
-  private rectangles: TrendRectangle[] = [];
+  private segments: TrendSegment[] = [];
   private readonly paneRenderer = new TrendPaneRenderer(
-    () => this.rectangles,
+    () => this.segments,
     () => this.interactionState,
   );
 
   protected project(): void {
     if (!this.visible || !this.chart || !this.series) {
-      this.rectangles = [];
+      this.segments = [];
       return;
     }
-    const timeScale = this.chart.timeScale();
-    const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
-      ? Math.max(1, window.devicePixelRatio)
-      : 1;
-    const rectangles = projectTrendRectangles({
+    const segments = projectTrendSegments({
       trends: this.objects,
-      sbarBodyWidth: candlestickBodyWidth(Number(timeScale.options().barSpacing), pixelRatio),
       indexBySbarId: this.projection.indexBySbarId,
       visibleRange: this.getVisibleLogicalRange(),
       coordinateForSbarId: (sbarId) => this.coordinateForSbarId(sbarId),
@@ -434,22 +426,23 @@ class TrendSeriesPrimitive extends StructureSeriesPrimitive<TrendPrimitiveDto> {
     });
     const stateById = new Map(this.objects.map((trend) => [trend.trendId, trend.state]));
     const endSbarById = new Map(this.objects.map((trend) => [trend.trendId, trend.sbarEndId]));
-    this.rectangles = rectangles.map((rectangle) => {
-      const style = TREND_STYLE_BY_STATE[stateById.get(rectangle.id) ?? ""] ?? { color: "#A0A7B0", dash: [4, 3] };
+    this.segments = segments.map((segment) => {
+      const style = TREND_STYLE_BY_STATE[stateById.get(segment.id) ?? ""] ?? { color: "#A0A7B0", dash: [4, 3] };
       return {
-        ...rectangle,
+        ...segment,
         ...style,
-        dimmed: this.isDimmedAtSbar(endSbarById.get(rectangle.id)),
+        extending: false,
+        dimmed: this.isDimmedAtSbar(endSbarById.get(segment.id)),
       };
     });
   }
 
   protected clearGeometry(): void {
-    this.rectangles = [];
+    this.segments = [];
   }
 
   protected hasGeometry(): boolean {
-    return this.rectangles.length > 0;
+    return this.segments.length > 0;
   }
 
   protected createRenderer(): IPrimitivePaneRenderer {
