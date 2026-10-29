@@ -683,8 +683,6 @@ mod tests {
             swings: vec![],
             trend_count: 0,
             trends: vec![],
-            trend_count: 0,
-            trends: vec![],
         };
         let canonical = canonical_structure_state(Some(&structure)).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&canonical).unwrap();
@@ -752,8 +750,6 @@ mod tests {
             }],
             swing_count: 0,
             swings: vec![],
-            trend_count: 0,
-            trends: vec![],
             trend_count: 0,
             trends: vec![],
         };
