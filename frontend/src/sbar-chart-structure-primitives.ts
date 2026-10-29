@@ -23,6 +23,7 @@ export interface TrendPrimitiveDto {
   sbarEndId: string;
   high: string;
   low: string;
+  direction: string;
   state: string;
 }
 
