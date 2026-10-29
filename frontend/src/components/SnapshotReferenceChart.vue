@@ -181,17 +181,21 @@ function applyPlaybackSeriesStyles(): void {
 function syncStructureInteractionState(): void {
   const geometry = surface.value?.getStructureGeometry();
   const hoveredValue = hoveredObject.value;
-  const hovered = hoveredValue && (hoveredValue.kind === "cbar" || hoveredValue.kind === "swing")
+  const hovered = hoveredValue && (hoveredValue.kind === "cbar" || hoveredValue.kind === "swing" || hoveredValue.kind === "trend")
     && (hoveredValue.kind === "cbar"
       ? geometry?.cbarRectangles.some((item) => item.id === hoveredValue.id)
-      : geometry?.swingSegments.some((item) => item.id === hoveredValue.id))
+      : hoveredValue.kind === "swing"
+        ? geometry?.swingSegments.some((item) => item.id === hoveredValue.id)
+        : geometry?.trendRectangles.some((item) => item.id === hoveredValue.id))
     ? { kind: hoveredValue.kind, id: hoveredValue.id }
     : null;
   const selectedValue = selectedObject.value;
-  const selected = selectedValue && (selectedValue.kind === "cbar" || selectedValue.kind === "swing")
+  const selected = selectedValue && (selectedValue.kind === "cbar" || selectedValue.kind === "swing" || selectedValue.kind === "trend")
     && (selectedValue.kind === "cbar"
       ? geometry?.cbarRectangles.some((item) => item.id === selectedValue.id)
-      : geometry?.swingSegments.some((item) => item.id === selectedValue.id))
+      : selectedValue.kind === "swing"
+        ? geometry?.swingSegments.some((item) => item.id === selectedValue.id)
+        : geometry?.trendRectangles.some((item) => item.id === selectedValue.id))
     ? { kind: selectedValue.kind, id: selectedValue.id }
     : null;
   const hoveredSwing = hovered?.kind === "swing"
@@ -237,8 +241,10 @@ function updateHoveredObject(point: { x: number; y: number } | null): void {
       y: point.y,
       swings: geometry.swingSegments,
       cbars: geometry.cbarRectangles,
+      trends: geometry.trendRectangles,
       swingVisible: true,
       cbarVisible: true,
+      trendVisible: true,
     });
     const sbarId = port.getSbarIdAtCoordinate(point.x);
     if (hit) {
@@ -269,11 +275,13 @@ function handleProjectionFrame(): void {
   const hovered = hoveredObject.value;
   if (hovered?.kind === "sbar") {
     if (!surface.value?.getSbarRangeHighlight(hovered.id)) hoveredObject.value = null;
-  } else if (hovered?.kind === "cbar" || hovered?.kind === "swing") {
+  } else if (hovered?.kind === "cbar" || hovered?.kind === "swing" || hovered?.kind === "trend") {
     const geometry = surface.value?.getStructureGeometry();
     const stillProjected = hovered.kind === "cbar"
       ? geometry?.cbarRectangles.some((item) => item.id === hovered.id)
-      : geometry?.swingSegments.some((item) => item.id === hovered.id);
+      : hovered.kind === "swing"
+        ? geometry?.swingSegments.some((item) => item.id === hovered.id)
+        : geometry?.trendRectangles.some((item) => item.id === hovered.id);
     if (!stillProjected) hoveredObject.value = null;
   }
   updateSbarInteractionMarkers();
