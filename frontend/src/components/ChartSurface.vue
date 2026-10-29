@@ -601,6 +601,7 @@ function updateChart(): void {
     }
     cbarRectangles.value = [];
     swingSegments.value = [];
+    trendRectangles.value = [];
     chartError.value = error instanceof Error ? error.message : String(error);
   }
 }
@@ -814,6 +815,7 @@ onBeforeUnmount(() => {
   volumeSeries = null;
   cbarRectangles.value = [];
   swingSegments.value = [];
+  trendRectangles.value = [];
   sbarIdByLogicalIndex = [];
   indexBySbarId = new Map();
   timeBySbarId = new Map();
