@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
+import type { ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, ReplayInspectorTrendDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
 import InspectorDomainId from "./InspectorDomainId.vue";
@@ -10,6 +10,7 @@ const props = defineProps<{
   selectedSbar: SBarDto | null;
   selectedCbar: ReplayInspectorCBarDto | null;
   selectedSwing: ReplayInspectorSwingDto | null;
+  selectedTrend: ReplayInspectorTrendDto | null;
   originDatasetId: string | null;
   timeframe: string | null;
   bars: SBarDto[];
@@ -39,6 +40,22 @@ const swingRelatedObjects = computed(() => {
   ].flatMap((item) => {
     const object = item.kind === "cbar"
       ? props.structure?.cbars.find((cbar) => cbar.cbarId === item.id)
+      : props.bars.find((bar) => bar.sbarId === item.id);
+    return object ? [{ ...item, object }] : [];
+  });
+});
+
+const trendRelatedObjects = computed(() => {
+  const trend = props.selectedTrend;
+  if (!trend) return [];
+  return [
+    { kind: "swing" as const, label: "Start Swing", id: trend.swingStartId },
+    { kind: "swing" as const, label: "End Swing", id: trend.swingEndId },
+    { kind: "sbar" as const, label: "Start SBar", id: trend.sbarStartId },
+    { kind: "sbar" as const, label: "End SBar", id: trend.sbarEndId },
+  ].flatMap((item) => {
+    const object = item.kind === "swing"
+      ? props.structure?.swings.find((swing) => swing.swingId === item.id)
       : props.bars.find((bar) => bar.sbarId === item.id);
     return object ? [{ ...item, object }] : [];
   });
@@ -112,6 +129,64 @@ function formatReplayField(field: string, value: unknown): string {
         >
           <summary>{{ endpoint.label }} <InspectorDomainId :value="endpoint.id" /></summary>
           <dl class="inspector-fields inspector-related-fields">
+            <InspectorPropertyField label="SBar ID" :value="endpoint.object.sbarId" wide />
+            <InspectorPropertyField label="Bar Type" :value="endpoint.object.barType" wide />
+            <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsEvent, timeframe)" :copy-value="endpoint.object.tsEvent" wide />
+            <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsInit, timeframe)" :copy-value="endpoint.object.tsInit" wide />
+            <InspectorPropertyField label="Open" :value="endpoint.object.open" />
+            <InspectorPropertyField label="High" :value="endpoint.object.high" />
+            <InspectorPropertyField label="Close" :value="endpoint.object.close" />
+            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
+            <InspectorPropertyField label="Volume" :value="endpoint.object.volume" />
+          </dl>
+        </details>
+      </section>
+      <p class="inspector-provenance">Values shown from the validated Origin Structure projection.</p>
+    </template>
+    <template v-else-if="selectedTrend">
+      <div class="inspector-object-heading">
+        <div>
+          <p class="section-index">SELECTED DOMAIN OBJECT</p>
+          <h3>Trend</h3>
+        </div>
+        <span class="inspector-object-kind">{{ selectedTrend.state.toUpperCase() }}</span>
+      </div>
+      <dl class="inspector-fields">
+        <InspectorPropertyField label="Trend ID" :value="selectedTrend.trendId" test-id="inspector-trend-trendId" />
+        <InspectorPropertyField label="Direction" :value="selectedTrend.direction" test-id="inspector-trend-direction" />
+        <InspectorPropertyField label="High" :value="selectedTrend.high" test-id="inspector-trend-high" />
+        <InspectorPropertyField label="Low" :value="selectedTrend.low" test-id="inspector-trend-low" />
+        <InspectorPropertyField label="Swing Start ID" :value="selectedTrend.swingStartId" test-id="inspector-trend-swingStartId" />
+        <InspectorPropertyField label="Swing End ID" :value="selectedTrend.swingEndId" test-id="inspector-trend-swingEndId" />
+        <InspectorPropertyField label="SBar Start ID" :value="selectedTrend.sbarStartId" test-id="inspector-trend-sbarStartId" />
+        <InspectorPropertyField label="SBar End ID" :value="selectedTrend.sbarEndId" test-id="inspector-trend-sbarEndId" />
+        <InspectorPropertyField label="Start OI" :value="formatInspectorValue(selectedTrend.startOi)" test-id="inspector-trend-startOi" />
+        <InspectorPropertyField label="End OI" :value="formatInspectorValue(selectedTrend.endOi)" test-id="inspector-trend-endOi" />
+        <InspectorPropertyField label="Volume" :value="selectedTrend.volume" test-id="inspector-trend-volume" />
+        <InspectorPropertyField label="Span SBars" :value="String(selectedTrend.spanSbars)" test-id="inspector-trend-spanSbars" />
+        <InspectorPropertyField label="State" :value="selectedTrend.state" test-id="inspector-trend-state" />
+        <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', selectedTrend.createdAt)" :copy-value="selectedTrend.createdAt" test-id="inspector-trend-createdAt" />
+        <InspectorPropertyField label="Updated At" :value="formatReplayField('updatedAt', selectedTrend.updatedAt)" :copy-value="selectedTrend.updatedAt" test-id="inspector-trend-updatedAt" />
+      </dl>
+      <section class="inspector-related" data-testid="inspector-related-objects">
+        <p class="section-index">RELATED OBJECTS</p>
+        <details
+          v-for="endpoint in trendRelatedObjects"
+          :key="endpoint.label"
+          class="inspector-related-item"
+          :data-testid="'inspector-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
+        >
+          <summary>{{ endpoint.label }} <InspectorDomainId :value="endpoint.id" /></summary>
+          <dl v-if="endpoint.kind === 'swing'" class="inspector-fields inspector-related-fields">
+            <InspectorPropertyField label="Swing ID" :value="endpoint.object.swingId" wide />
+            <InspectorPropertyField label="Direction" :value="endpoint.object.direction" />
+            <InspectorPropertyField label="High" :value="endpoint.object.high" />
+            <InspectorPropertyField label="Low" :value="endpoint.object.low" />
+            <InspectorPropertyField label="SBar Start ID" :value="endpoint.object.sbarStartId" wide />
+            <InspectorPropertyField label="SBar End ID" :value="endpoint.object.sbarEndId" wide />
+            <InspectorPropertyField label="State" :value="endpoint.object.state" />
+          </dl>
+          <dl v-else class="inspector-fields inspector-related-fields">
             <InspectorPropertyField label="SBar ID" :value="endpoint.object.sbarId" wide />
             <InspectorPropertyField label="Bar Type" :value="endpoint.object.barType" wide />
             <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp(endpoint.object.tsEvent, timeframe)" :copy-value="endpoint.object.tsEvent" wide />
