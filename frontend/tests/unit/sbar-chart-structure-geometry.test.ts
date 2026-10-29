@@ -207,6 +207,7 @@ describe("projectStructureOverlayGeometry", () => {
     const result = projectStructureOverlayGeometry({
       cbars: [cbar()],
       swings: [swing()],
+      trends: [],
       indexBySbarId: new Map([["sbar-1", 0], ["sbar-3", 2]]),
       visibleRange: null,
       coordinateForSbarId: () => 10,
