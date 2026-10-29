@@ -2,15 +2,18 @@ import type { CBarRectangleGeometry, SwingSegmentGeometry } from "./sbar-chart-s
 
 export type StructureObjectHit =
   | { kind: "swing"; id: string; distance: number }
-  | { kind: "cbar"; id: string; distance: number };
+  | { kind: "cbar"; id: string; distance: number }
+  | { kind: "trend"; id: string; distance: number };
 
 export interface StructureHitTestOptions {
   x: number;
   y: number;
   swings: readonly SwingSegmentGeometry[];
   cbars: readonly CBarRectangleGeometry[];
+  trends?: readonly CBarRectangleGeometry[];
   swingVisible: boolean;
   cbarVisible: boolean;
+  trendVisible?: boolean;
   tolerance?: number;
 }
 
@@ -45,7 +48,7 @@ function distanceToRectangleBorder(x: number, y: number, rectangle: CBarRectangl
  * checkpoint state. Ties preserve the existing Swing-before-CBar priority.
  */
 export function hitTestStructureObject(options: StructureHitTestOptions): StructureObjectHit | null {
-  const { x, y, swings, cbars, swingVisible, cbarVisible, tolerance = 6 } = options;
+  const { x, y, swings, cbars, trends = [], swingVisible, cbarVisible, trendVisible = false, tolerance = 6 } = options;
   if (!finitePoint(x, y) || !Number.isFinite(tolerance) || tolerance < 0) return null;
 
   const candidates: StructureObjectHit[] = [];
@@ -59,10 +62,15 @@ export function hitTestStructureObject(options: StructureHitTestOptions): Struct
       candidates.push({ kind: "cbar", id: rectangle.id, distance: distanceToRectangleBorder(x, y, rectangle) });
     }
   }
+  if (trendVisible) {
+    for (const rectangle of trends) {
+      candidates.push({ kind: "trend", id: rectangle.id, distance: distanceToRectangleBorder(x, y, rectangle) });
+    }
+  }
 
   candidates.sort((a, b) =>
     a.distance - b.distance ||
-    (a.kind === b.kind ? 0 : a.kind === "swing" ? -1 : 1) ||
+    (a.kind === b.kind ? 0 : ({ swing: 0, cbar: 1, trend: 2 }[a.kind] - { swing: 0, cbar: 1, trend: 2 }[b.kind])) ||
     a.id.localeCompare(b.id),
   );
   const best = candidates[0];
