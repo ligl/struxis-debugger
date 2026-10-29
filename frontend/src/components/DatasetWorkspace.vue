@@ -50,7 +50,7 @@ const emit = defineEmits<{
   createTestDataset: [];
   selectAllSbars: [];
   sbarClick: [sbarId: string];
-  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>];
+  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
