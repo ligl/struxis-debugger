@@ -8,11 +8,13 @@ const mocks = vi.hoisted(() => ({
   applyPriceScaleOptions: vi.fn(),
   registerCBarPrimitive: vi.fn(),
   registerSwingPrimitive: vi.fn(),
+  registerTrendPrimitive: vi.fn(),
 }));
 
 vi.mock("../../src/sbar-chart-structure-primitives", () => ({
   registerCBarPrimitive: mocks.registerCBarPrimitive,
   registerSwingPrimitive: mocks.registerSwingPrimitive,
+  registerTrendPrimitive: mocks.registerTrendPrimitive,
 }));
 
 vi.mock("lightweight-charts", () => ({
@@ -34,6 +36,7 @@ describe("createSbarChartRuntime", () => {
     mocks.priceScale.mockReturnValue({ applyOptions: mocks.applyPriceScaleOptions });
     mocks.registerCBarPrimitive.mockReturnValue({ kind: "cbar-primitive" });
     mocks.registerSwingPrimitive.mockReturnValue({ kind: "swing-primitive" });
+    mocks.registerTrendPrimitive.mockReturnValue({ kind: "trend-primitive" });
     mocks.createChart.mockReturnValue({
       addSeries: mocks.addSeries,
       priceScale: mocks.priceScale,
