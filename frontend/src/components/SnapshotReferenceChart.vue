@@ -310,8 +310,10 @@ function handleChartClick(point: { x: number; y: number | null } | null): void {
     y: point.y,
     swings: geometry.swingSegments,
     cbars: geometry.cbarRectangles,
+    trends: geometry.trendRectangles,
     swingVisible: true,
     cbarVisible: true,
+    trendVisible: true,
   });
   if (structureHit) {
     const selection = { kind: structureHit.kind, id: structureHit.id, checkpointSbarId: anchorSbarId } satisfies ReplayChartSelection;
