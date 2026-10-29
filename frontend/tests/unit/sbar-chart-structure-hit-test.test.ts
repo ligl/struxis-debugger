@@ -34,10 +34,10 @@ describe("structure hit-test adapter", () => {
     expect(hit).toMatchObject({ kind: "swing", id: "swing-a" });
   });
 
-  it("resolves Trend range borders by stable Trend identity and respects layer visibility", () => {
-    const trends = [{ id: "trend-7", x: 20, y: 20, width: 60, height: 60 }];
+  it("resolves Trend line segments by stable Trend identity and respects layer visibility", () => {
+    const trends = [{ id: "trend-7", x1: 10, y1: 10, x2: 90, y2: 90, state: "Tentative" }];
     expect(hitTestStructureObject({
-      x: 20,
+      x: 50,
       y: 50,
       swings: [],
       cbars: [],
