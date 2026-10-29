@@ -10,7 +10,7 @@ export interface StructureHitTestOptions {
   y: number;
   swings: readonly SwingSegmentGeometry[];
   cbars: readonly CBarRectangleGeometry[];
-  trends?: readonly CBarRectangleGeometry[];
+  trends?: readonly SwingSegmentGeometry[];
   swingVisible: boolean;
   cbarVisible: boolean;
   trendVisible?: boolean;
@@ -63,8 +63,8 @@ export function hitTestStructureObject(options: StructureHitTestOptions): Struct
     }
   }
   if (trendVisible) {
-    for (const rectangle of trends) {
-      candidates.push({ kind: "trend", id: rectangle.id, distance: distanceToRectangleBorder(x, y, rectangle) });
+    for (const segment of trends) {
+      candidates.push({ kind: "trend", id: segment.id, distance: distanceToSegment(x, y, segment) });
     }
   }
 
