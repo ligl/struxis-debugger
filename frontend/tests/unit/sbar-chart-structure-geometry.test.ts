@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectCBarRectangles, projectSwingSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectSwingSegments, projectTrendRectangles, projectStructureOverlayGeometry, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
 
 function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
   return {
@@ -176,6 +176,26 @@ describe("projectSwingSegments", () => {
   });
 });
 
+
+describe("projectTrendRectangles", () => {
+  it("projects Trend bounds from authoritative SBar endpoints and price range", () => {
+    expect(projectTrendRectangles({
+      trends: [{
+        trendId: "trend-7",
+        sbarStartId: "sbar-1",
+        sbarEndId: "sbar-3",
+        high: "15",
+        low: "5",
+        state: "Tentative",
+      }],
+      indexBySbarId: new Map([["sbar-1", 0], ["sbar-3", 2]]),
+      visibleRange: null,
+      coordinateForSbarId: (id) => id === "sbar-1" ? 10 : 30,
+      priceToCoordinate: (price) => price === 15 ? 10 : 50,
+      sbarBodyWidth: 2,
+    })).toEqual([{ id: "trend-7", x: 9, y: 10, width: 22, height: 40 }]);
+  });
+});
 
 describe("projectStructureOverlayGeometry", () => {
   it("projects CBar and Swing through one entry point and applies caller-owned Swing style", () => {
