@@ -1,5 +1,5 @@
 import { createChartPrimitiveHost, type ChartPrimitiveHost } from "./sbar-chart-primitive-host";
-import { registerCBarPrimitive, registerSwingPrimitive, type StructurePrimitiveController } from "./sbar-chart-structure-primitives";
+import { registerCBarPrimitive, registerSwingPrimitive, registerTrendPrimitive, type StructurePrimitiveController } from "./sbar-chart-structure-primitives";
 import {
   CandlestickSeries,
   ColorType,
@@ -79,6 +79,7 @@ export interface SBarChartRuntime {
   primitiveHost: ChartPrimitiveHost;
   cbarPrimitive: StructurePrimitiveController;
   swingPrimitive: StructurePrimitiveController;
+  trendPrimitive: StructurePrimitiveController;
 }
 
 /**
@@ -155,8 +156,9 @@ export function createSbarChartRuntime(
   primitiveHost.attach();
   const cbarPrimitive = registerCBarPrimitive(primitiveHost, candleSeries);
   const swingPrimitive = registerSwingPrimitive(primitiveHost, candleSeries);
+  const trendPrimitive = registerTrendPrimitive(primitiveHost, candleSeries);
 
-  return { chart, candleSeries, volumeSeries, primitiveHost, cbarPrimitive, swingPrimitive };
+  return { chart, candleSeries, volumeSeries, primitiveHost, cbarPrimitive, swingPrimitive, trendPrimitive };
 }
 
 /**
