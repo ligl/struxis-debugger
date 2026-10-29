@@ -239,6 +239,10 @@ describe("ChartSurface and chart entry adapters", () => {
             state: "Confirmed",
           }],
           swingCount: 1,
+
+          trendCount: 0,
+
+          trends: [],
         } as never,
       },
     });
@@ -999,6 +1003,10 @@ describe("ChartSurface and chart entry adapters", () => {
             state: "Confirmed",
           }],
           swingCount: 1,
+
+          trendCount: 0,
+
+          trends: [],
         } as never,
       },
     });
