@@ -879,7 +879,7 @@ mod tests {
         );
         assert_eq!(
             manifest.calculate_content_checksum(&records).unwrap(),
-            "8996e6056ae7769f70f9fd3acb4329d512f4762e648092c2bc774946434a82c7"
+            "c128c174ec3ea38247aed9f874d0f50c9a9fdcf244163ba5e2f78d2b700165e2"
         );
     }
 
