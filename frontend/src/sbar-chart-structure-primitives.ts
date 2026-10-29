@@ -7,7 +7,7 @@ import type {
 } from "lightweight-charts";
 import type { ChartPrimitiveHost, ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
 import { alignStrokeCoordinate } from "./chart-canvas-pixel-alignment";
-import { candlestickBodyWidth, projectCBarRectangles, projectSwingSegments } from "./sbar-chart-structure-geometry";
+import { candlestickBodyWidth, projectCBarRectangles, projectSwingSegments, projectTrendRectangles } from "./sbar-chart-structure-geometry";
 
 export interface CBarPrimitiveDto {
   cbarId: string;
@@ -15,6 +15,15 @@ export interface CBarPrimitiveDto {
   sbarEndId: string;
   high: string;
   low: string;
+}
+
+export interface TrendPrimitiveDto {
+  trendId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  high: string;
+  low: string;
+  state: string;
 }
 
 export interface SwingPrimitiveDto {
@@ -50,7 +59,7 @@ export interface StructurePrimitivePlaybackState {
 
 export interface StructurePrimitiveController {
   setData(
-    objects: readonly (CBarPrimitiveDto | SwingPrimitiveDto)[],
+    objects: readonly (CBarPrimitiveDto | SwingPrimitiveDto | TrendPrimitiveDto)[],
     projection: StructurePrimitiveProjection,
   ): void;
   setVisible(visible: boolean): void;
@@ -351,6 +360,103 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
   }
 }
 
+interface TrendRectangle extends CBarRectangle {
+  color: string;
+  dash: readonly number[];
+}
+
+const TREND_STYLE_BY_STATE: Readonly<Record<string, { color: string; dash: readonly number[] }>> = {
+  Confirmed: { color: "#C6A06B", dash: [] },
+  Tentative: { color: "#D6A85D", dash: [6, 3] },
+  Extending: { color: "#E3E8EB", dash: [2, 3] },
+};
+
+class TrendPaneRenderer implements IPrimitivePaneRenderer {
+  constructor(
+    private readonly getRectangles: () => readonly TrendRectangle[],
+    private readonly getInteractionState: () => StructurePrimitiveInteractionState,
+  ) {}
+
+  draw(target: PrimitiveDrawTarget): void {
+    const rectangles = this.getRectangles();
+    if (rectangles.length === 0) return;
+    const interaction = this.getInteractionState();
+    target.useMediaCoordinateSpace(({ context }) => {
+      context.save();
+      try {
+        for (const rectangle of rectangles) {
+          const selected = rectangle.id === interaction.selectedId;
+          const hovered = rectangle.id === interaction.hoveredId;
+          const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : rectangle.color;
+          context.strokeStyle = selected || hovered || !rectangle.dimmed ? baseColor : dimStructureColor(baseColor);
+          context.lineWidth = selected ? interaction.selectedWidth ?? 2.25 : hovered ? 1.8 : 1.25;
+          context.setLineDash(rectangle.dash);
+          const pixelRatio = typeof window !== "undefined" && finite(window.devicePixelRatio)
+            ? Math.max(1, window.devicePixelRatio)
+            : 1;
+          const left = alignStrokeCoordinate(rectangle.x, context.lineWidth, pixelRatio);
+          const top = alignStrokeCoordinate(rectangle.y, context.lineWidth, pixelRatio);
+          const right = alignStrokeCoordinate(rectangle.x + rectangle.width, context.lineWidth, pixelRatio);
+          const bottom = alignStrokeCoordinate(rectangle.y + rectangle.height, context.lineWidth, pixelRatio);
+          context.strokeRect(left, top, right - left, bottom - top);
+        }
+      } finally {
+        context.setLineDash([]);
+        context.restore();
+      }
+    });
+  }
+}
+
+class TrendSeriesPrimitive extends StructureSeriesPrimitive<TrendPrimitiveDto> {
+  private rectangles: TrendRectangle[] = [];
+  private readonly paneRenderer = new TrendPaneRenderer(
+    () => this.rectangles,
+    () => this.interactionState,
+  );
+
+  protected project(): void {
+    if (!this.visible || !this.chart || !this.series) {
+      this.rectangles = [];
+      return;
+    }
+    const timeScale = this.chart.timeScale();
+    const pixelRatio = typeof window !== "undefined" && Number.isFinite(window.devicePixelRatio)
+      ? Math.max(1, window.devicePixelRatio)
+      : 1;
+    const rectangles = projectTrendRectangles({
+      trends: this.objects,
+      sbarBodyWidth: candlestickBodyWidth(Number(timeScale.options().barSpacing), pixelRatio),
+      indexBySbarId: this.projection.indexBySbarId,
+      visibleRange: this.getVisibleLogicalRange(),
+      coordinateForSbarId: (sbarId) => this.coordinateForSbarId(sbarId),
+      priceToCoordinate: (price) => this.priceToCoordinate(String(price)),
+    });
+    const stateById = new Map(this.objects.map((trend) => [trend.trendId, trend.state]));
+    const endSbarById = new Map(this.objects.map((trend) => [trend.trendId, trend.sbarEndId]));
+    this.rectangles = rectangles.map((rectangle) => {
+      const style = TREND_STYLE_BY_STATE[stateById.get(rectangle.id) ?? ""] ?? { color: "#A0A7B0", dash: [4, 3] };
+      return {
+        ...rectangle,
+        ...style,
+        dimmed: this.isDimmedAtSbar(endSbarById.get(rectangle.id)),
+      };
+    });
+  }
+
+  protected clearGeometry(): void {
+    this.rectangles = [];
+  }
+
+  protected hasGeometry(): boolean {
+    return this.rectangles.length > 0;
+  }
+
+  protected createRenderer(): IPrimitivePaneRenderer {
+    return this.paneRenderer;
+  }
+}
+
 class SwingPaneRenderer implements IPrimitivePaneRenderer {
   private readonly supersampleScale = 2;
   private supersampleCanvas: HTMLCanvasElement | null = null;
@@ -577,8 +683,15 @@ export function registerSwingPrimitive(
   return registerSeriesPrimitive<SwingPrimitiveDto, SwingSeriesPrimitive>(host, "structure.swing", series, new SwingSeriesPrimitive());
 }
 
+export function registerTrendPrimitive(
+  host: ChartPrimitiveHost,
+  series: ISeriesApi<"Candlestick">,
+): StructurePrimitiveController {
+  return registerSeriesPrimitive<TrendPrimitiveDto, TrendSeriesPrimitive>(host, "structure.trend", series, new TrendSeriesPrimitive());
+}
+
 export interface StructurePrimitiveObjectReference {
-  kind: "cbar" | "swing";
+  kind: "cbar" | "swing" | "trend";
   id: string;
 }
 
@@ -590,17 +703,21 @@ export interface StructurePrimitiveInteractionOptions {
   selectedCbarIds?: readonly string[];
   cbarSelectedWidth?: number;
   swingSelectedWidth?: number;
+  trendSelectedWidth?: number;
 }
 
 export interface StructurePrimitiveSyncOptions {
   cbar: StructurePrimitiveController | null | undefined;
   swing: StructurePrimitiveController | null | undefined;
+  trend: StructurePrimitiveController | null | undefined;
   cbars: readonly CBarPrimitiveDto[];
   swings: readonly SwingPrimitiveDto[];
+  trends: readonly TrendPrimitiveDto[];
   projection: StructurePrimitiveProjection;
   cbarVisible: boolean;
   playbackState?: StructurePrimitivePlaybackState;
   swingVisible: boolean;
+  trendVisible: boolean;
   interaction?: StructurePrimitiveInteractionOptions;
 }
 
@@ -618,32 +735,39 @@ export function syncStructurePrimitiveControllers(
   const {
     cbar,
     swing,
+    trend,
     cbars,
     swings,
+    trends,
     projection,
     cbarVisible,
     swingVisible,
+    trendVisible,
     playbackState = { enabled: false, offset: null, processedCount: 0, liveCount: 0 },
     interaction,
   } = options;
 
   cbar?.setData(cbars, projection);
   swing?.setData(swings, projection);
+  trend?.setData(trends, projection);
   cbar?.setVisible(cbarVisible);
   swing?.setVisible(swingVisible);
+  trend?.setVisible(trendVisible);
   cbar?.setPlaybackState(playbackState);
   swing?.setPlaybackState(playbackState);
+  trend?.setPlaybackState(playbackState);
   if (interaction) {
-    setStructurePrimitiveInteractionState({ cbar, swing, ...interaction });
+    setStructurePrimitiveInteractionState({ cbar, swing, trend, ...interaction });
   }
 }
 
 export function setStructurePrimitiveInteractionState(
-  options: Pick<StructurePrimitiveSyncOptions, "cbar" | "swing"> & StructurePrimitiveInteractionOptions,
+  options: Pick<StructurePrimitiveSyncOptions, "cbar" | "swing" | "trend"> & StructurePrimitiveInteractionOptions,
 ): void {
   const {
     cbar,
     swing,
+    trend,
     hovered = null,
     hoveredCbarIds = [],
     selected = null,
@@ -651,6 +775,7 @@ export function setStructurePrimitiveInteractionState(
     selectedColor = "#D6A85D",
     cbarSelectedWidth = 2,
     swingSelectedWidth = 2.25,
+    trendSelectedWidth = 2.25,
   } = options;
   cbar?.setInteractionState({
     hoveredId: hovered?.kind === "cbar" ? hovered.id : null,
@@ -665,5 +790,11 @@ export function setStructurePrimitiveInteractionState(
     selectedId: selected?.kind === "swing" ? selected.id : null,
     selectedColor,
     selectedWidth: swingSelectedWidth,
+  });
+  trend?.setInteractionState({
+    hoveredId: hovered?.kind === "trend" ? hovered.id : null,
+    selectedId: selected?.kind === "trend" ? selected.id : null,
+    selectedColor,
+    selectedWidth: trendSelectedWidth,
   });
 }
