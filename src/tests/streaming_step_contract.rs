@@ -162,6 +162,11 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
             Some(state.structure().expect("structure enabled").swings().iter().count())
         );
 
+        assert_eq!(
+            checkpoint.structure.as_ref().map(|structure| structure.trend_count),
+            Some(state.structure().expect("structure enabled").trends().iter().count())
+        );
+
         assert!(
             state.structure().is_some(),
             "structure processing must remain enabled throughout replay"
