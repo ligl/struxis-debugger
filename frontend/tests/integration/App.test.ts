@@ -274,6 +274,10 @@ describe("Origin Load workbench", () => {
         createdAt: "100",
       }],
       swingCount: 1,
+
+      trendCount: 0,
+
+      trends: [],
       swings: [{
         swingId: "swing-100",
         direction: "Up",
@@ -397,6 +401,10 @@ describe("Origin Load workbench", () => {
           createdAt: "1",
         }],
         swingCount: 1,
+
+        trendCount: 0,
+
+        trends: [],
         swings: [{
           swingId: "100",
           direction: "Up",
