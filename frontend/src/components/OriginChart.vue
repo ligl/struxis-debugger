@@ -144,7 +144,7 @@ function handleProjectionFrame(): void {
     ? geometry?.cbarRectangles.some((item) => item.id === hovered.id)
     : hovered.kind === "swing"
       ? geometry?.swingSegments.some((item) => item.id === hovered.id)
-      : geometry?.trendRectangles.some((item) => item.id === hovered.id);
+      : geometry?.trendSegments.some((item) => item.id === hovered.id);
   if (!stillProjected) hoveredObject.value = null;
   syncStructureInteractionState();
 }
@@ -165,7 +165,7 @@ function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelec
     y,
     swings: geometry.swingSegments,
     cbars: geometry.cbarRectangles,
-    trends: geometry.trendRectangles,
+    trends: geometry.trendSegments,
     swingVisible: true,
     cbarVisible: true,
     trendVisible: true,
