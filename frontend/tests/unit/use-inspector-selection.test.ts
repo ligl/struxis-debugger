@@ -30,6 +30,10 @@ function makeOrigin(id = "origin-1"): OriginDatasetDto {
         sbarEndId: "sbar-2", spanSbars: 2, fractalType: null, createdAt: "5",
       }],
       swingCount: 1,
+
+      trendCount: 0,
+
+      trends: [],
       swings: [{
         swingId: "swing-1", direction: "up", high: "13", low: "9",
         cbarStartId: "cbar-1", cbarEndId: "cbar-1", sbarStartId: "sbar-1",
