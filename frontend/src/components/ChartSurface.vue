@@ -1065,7 +1065,7 @@ onBeforeUnmount(() => {
 }
 
 .trend-dot {
-  background: #C6A06B;
+  background: #91A7B9;
 }
 
 .origin-chart-foot {
