@@ -9,7 +9,7 @@ use std::{
 
 use capitus_struxis::{StruxisConfig, StruxisStateKey};
 use crate::{
-    checkpoint::{CBarCheckpoint, ReplayCheckpointProjection, StructureCheckpoint},
+    checkpoint::{CBarCheckpoint, ReplayCheckpointProjection, StructureCheckpoint, TrendCheckpoint},
     compare::{CompareRejectCategory, compare_snapshot_paths},
     dataset::sequence_fingerprint,
     effective_config::EffectiveStruxisConfig,
@@ -88,8 +88,25 @@ fn checkpoint(
             }],
             swing_count: 0,
             swings: Vec::new(),
-            trend_count: 0,
-            trends: Vec::new(),
+            trend_count: 1,
+            trends: vec![TrendCheckpoint {
+                trend_id: "30".into(),
+                direction: "Up".into(),
+                high: high.to_owned(),
+                low: "99.0".into(),
+                swing_start_id: "20".into(),
+                swing_end_id: "25".into(),
+                sbar_start_id: input.bars[0].ts_event.to_string(),
+                sbar_end_id: current_id.clone(),
+                start_oi: None,
+                end_oi: None,
+                volume: "10".into(),
+                span_sbars: (index + 1) as u32,
+                state: "Extending".into(),
+                created_at: "1".into(),
+                updated_at: "2".into(),
+            }],
+
         }),
         diagnostics: if include_diagnostic {
             vec![crate::diagnostics::Diagnostic {
@@ -171,13 +188,17 @@ fn compares_two_verified_sqlite_snapshots_by_domain_identity() {
     let result = compare_snapshot_paths(&baseline_path, &candidate_path)
         .expect("two independently published complete Snapshots should compare");
     assert_eq!(result.checkpoint_count, 2);
-    assert_eq!(result.differences.len(), 1);
+    assert_eq!(result.differences.len(), 2);
     assert_eq!(result.differences[0].checkpoint_index, 1);
     assert_eq!(result.differences[0].object_type, "CBar");
     assert_eq!(result.differences[0].object_id, "1700000000000000000");
     assert_eq!(result.differences[0].kind, crate::compare::DifferenceKind::Modified);
     assert_eq!(result.differences[0].properties.len(), 1);
     assert_eq!(result.differences[0].properties[0].field, "high");
+    assert_eq!(result.differences[1].checkpoint_index, 1);
+    assert_eq!(result.differences[1].object_type, "Trend");
+    assert_eq!(result.differences[1].object_id, "30");
+    assert_eq!(result.differences[1].properties[0].field, "high");
     assert_eq!(
         result.first_structural_divergence.as_ref().map(|value| value.checkpoint_index),
         Some(1),
