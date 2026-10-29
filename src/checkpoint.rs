@@ -11,6 +11,7 @@ use crate::{diagnostics::Diagnostic, run::RunState};
 use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
+    structure::trend::{Trend, TrendSeries},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -109,6 +110,8 @@ pub(crate) struct StructureCheckpoint {
     pub(crate) cbars: Vec<CBarCheckpoint>,
     pub(crate) swing_count: usize,
     pub(crate) swings: Vec<SwingCheckpoint>,
+    pub(crate) trend_count: usize,
+    pub(crate) trends: Vec<TrendCheckpoint>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -142,6 +145,52 @@ pub(crate) struct SwingCheckpoint {
     pub(crate) state: String,
     pub(crate) created_at: String,
     pub(crate) updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TrendCheckpoint {
+    pub(crate) trend_id: String,
+    pub(crate) direction: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) swing_start_id: String,
+    pub(crate) swing_end_id: String,
+    pub(crate) sbar_start_id: String,
+    pub(crate) sbar_end_id: String,
+    pub(crate) start_oi: Option<String>,
+    pub(crate) end_oi: Option<String>,
+    pub(crate) volume: String,
+    pub(crate) span_sbars: u32,
+    pub(crate) state: String,
+    pub(crate) created_at: String,
+    pub(crate) updated_at: String,
+}
+
+impl From<&Trend> for TrendCheckpoint {
+    fn from(trend: &Trend) -> Self {
+        Self {
+            trend_id: trend.id.to_string(),
+            direction: format!("{:?}", trend.direction),
+            high: trend.high.to_string(),
+            low: trend.low.to_string(),
+            swing_start_id: trend.swing_start_id.to_string(),
+            swing_end_id: trend.swing_end_id.to_string(),
+            sbar_start_id: trend.sbar_start_id.to_string(),
+            sbar_end_id: trend.sbar_end_id.to_string(),
+            start_oi: trend.start_oi.map(|value| value.to_string()),
+            end_oi: trend.end_oi.map(|value| value.to_string()),
+            volume: trend.volume.to_string(),
+            span_sbars: trend.span_sbars,
+            state: format!("{:?}", trend.state),
+            created_at: trend.created_at.to_string(),
+            updated_at: trend.updated_at.to_string(),
+        }
+    }
+}
+
+fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
+    series.iter().map(TrendCheckpoint::from).collect()
 }
 
 impl ReplayCheckpointProjection {
@@ -253,6 +302,8 @@ pub(crate) fn structure_from_state_view(
             cbars,
             swing_count: swings.len(),
             swings,
+            trend_count: trends.len(),
+            trends,
         }
     })
 }
