@@ -182,12 +182,14 @@ describe("projectStructureOverlayGeometry", () => {
     const result = projectStructureOverlayGeometry({
       cbars: [cbar()],
       swings: [swing()],
+      trends: [],
       indexBySbarId: new Map([["sbar-1", 0], ["sbar-3", 2]]),
       visibleRange: null,
       coordinateForSbarId: (id) => id === "sbar-1" ? 10 : 30,
       priceToCoordinate: (price) => price === 15 ? 10 : 50,
       cbarVisible: true,
       swingVisible: true,
+      trendVisible: true,
       resolveSwingStyle: (state) => state === "Confirmed"
         ? { color: "#8A739F", dasharray: "" }
         : { color: "#A0A7B0", dasharray: "4 3" },
@@ -211,9 +213,10 @@ describe("projectStructureOverlayGeometry", () => {
       priceToCoordinate: () => 20,
       cbarVisible: false,
       swingVisible: false,
+      trendVisible: false,
       resolveSwingStyle: () => ({ color: "#A0A7B0", dasharray: "4 3" }),
     });
 
-    expect(result).toEqual({ cbarRectangles: [], swingSegments: [] });
+    expect(result).toEqual({ cbarRectangles: [], swingSegments: [], trendRectangles: [] });
   });
 });
