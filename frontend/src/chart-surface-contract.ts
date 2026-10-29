@@ -41,7 +41,7 @@ export interface ChartSurfaceSwingSegment {
 export interface ChartSurfaceStructureGeometry {
   cbarRectangles: ChartSurfaceCBarRectangle[];
   swingSegments: ChartSurfaceSwingSegment[];
-  trendRectangles: Array<ChartSurfaceCBarRectangle & { state: string }>;
+  trendSegments: Array<ChartSurfaceSwingSegment>;
 }
 
 export interface ChartSurfaceLayerVisibility {
