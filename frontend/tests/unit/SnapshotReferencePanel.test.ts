@@ -46,10 +46,10 @@ const reference = {
     sbarId: "100", barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
     tsEvent: "100", tsInit: "100", open: "10", high: "12", low: "9", close: "11", volume: "100",
   }],
-  structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] },
+  structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] },
   structureTimeline: [{
     sbarId: "100",
-    structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] },
+    structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] },
   }],
 } as SnapshotReferenceDto;
 
