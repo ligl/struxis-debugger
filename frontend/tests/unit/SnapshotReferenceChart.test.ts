@@ -289,7 +289,7 @@ describe("SnapshotReferenceChart", () => {
 
     const surface = wrapper.getComponent(ChartSurface);
     const port = surface.vm as unknown as ChartSurfacePort;
-    vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [], trendRectangles: [] });
+    vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
     const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
@@ -325,7 +325,7 @@ describe("SnapshotReferenceChart", () => {
 
     const surface = wrapper.getComponent(ChartSurface);
     const port = surface.vm as unknown as ChartSurfacePort;
-    vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [], trendRectangles: [] });
+    vi.spyOn(port, "getStructureGeometry").mockReturnValue({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
     vi.spyOn(port, "getSbarIdAtCoordinate").mockReturnValue("1700000000000000000");
     const markerUpdate = vi.spyOn(SBarMarkerPrimitive.prototype, "update");
 
