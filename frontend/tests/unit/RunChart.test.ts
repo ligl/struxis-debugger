@@ -835,7 +835,9 @@ describe("RunChart", () => {
     expect(projectedStructureGeometry(wrapper).cbarRectangles.map((item) => item.id)).toContain("cbar-added");
     expect(projectedStructureGeometry(wrapper).swingSegments).toHaveLength(0);
 
-    await wrapper.setProps({ structure: { cbarCount: 0, cbars: [], swingCount: 0, swings: [] } });
+    await wrapper.setProps({ structure: { cbarCount: 0, cbars: [], swingCount: 0,
+ trendCount: 0,
+ trends: [], swings: [] } });
     await nextTick();
     expect(projectedStructureGeometry(wrapper)).toEqual({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
     wrapper.unmount();
