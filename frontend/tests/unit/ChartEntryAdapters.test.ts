@@ -42,7 +42,7 @@ const SurfaceStub = defineComponent({
       clearCrosshairPosition: () => { surfacePortCalls.clears += 1; },
       getSbarCoordinate: (sbarId: string) => sbarId === "1700000000000000000" ? 10 : null,
       getSbarMarker: (sbarId: string) => sbarId === "1700000000000000000" ? { id: sbarId, x: 5, y: 10, width: 6, height: 8 } : null,
-      getStructureGeometry: () => ({ cbarRectangles: [], swingSegments: [] }),
+      getStructureGeometry: () => ({ cbarRectangles: [], swingSegments: [], trendRectangles: [] }),
       setStructureInteractionState: () => {},
       setStructurePlaybackState: (state: { enabled: boolean; offset: number | null; processedCount: number; liveCount: number }) => { surfacePortCalls.playbackStates.push(state); },
       getLogicalCoordinate: (index: number) => index * 10,
