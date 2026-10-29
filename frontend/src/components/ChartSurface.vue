@@ -54,13 +54,14 @@ const emit = defineEmits<{
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
-const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true });
+const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true });
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
 let primitiveHost: ChartPrimitiveHost | null = null;
 let cbarPrimitive: StructurePrimitiveController | null = null;
 let swingPrimitive: StructurePrimitiveController | null = null;
+let trendPrimitive: StructurePrimitiveController | null = null;
 let structurePlaybackState: ChartSurfaceStructurePlaybackState = {
   enabled: false, offset: null, processedCount: 0, liveCount: 0,
 };
@@ -76,6 +77,7 @@ let secondSbarTime: Time | null = null;
 let pendingViewportRange: { from: number; to: number } | null = null;
 type CBarRectangle = { id: string; x: number; y: number; width: number; height: number };
 type SBarMarker = { id: string; x: number; y: number; width: number; height: number };
+type TrendRectangle = { id: string; x: number; y: number; width: number; height: number; state: string };
 type SwingSegment = {
   id: string;
   x1: number;
@@ -88,6 +90,7 @@ type SwingSegment = {
 };
 const cbarRectangles = ref<CBarRectangle[]>([]);
 const swingSegments = ref<SwingSegment[]>([]);
+const trendRectangles = ref<TrendRectangle[]>([]);
 
 const swingStyleByState: Record<string, { color: string; dasharray: string }> = {
   Confirmed: { color: "#8A739F", dasharray: "" },
@@ -143,12 +146,14 @@ function updateStructureGeometry(): void {
   if (!chart || !candleSeries) {
     cbarRectangles.value = [];
     swingSegments.value = [];
+    trendRectangles.value = [];
     return;
   }
   const timeScale = chart.timeScale();
   const geometry = projectStructureOverlayGeometry({
     cbars: props.structure?.cbars ?? [],
     swings: props.structure?.swings ?? [],
+    trends: props.structure?.trends ?? [],
     indexBySbarId,
     visibleRange: timeScale.getVisibleLogicalRange(),
     coordinateForSbarId: (sbarId) => coordinateForSbarId(sbarId),
@@ -161,6 +166,7 @@ function updateStructureGeometry(): void {
     priceToCoordinate: (price) => candleSeries!.priceToCoordinate(price),
     cbarVisible: layerVisibility.value.cbar,
     swingVisible: layerVisibility.value.swing,
+    trendVisible: layerVisibility.value.trend,
     resolveSwingStyle: (state) => {
       const style = swingStyleByState[state];
       if (!style && !unknownSwingStates.has(state)) {
@@ -172,6 +178,7 @@ function updateStructureGeometry(): void {
   });
   cbarRectangles.value = geometry.cbarRectangles;
   swingSegments.value = geometry.swingSegments;
+  trendRectangles.value = geometry.trendRectangles;
 }
 
 const scheduleOverlayUpdate = createStructureProjectionScheduler(() => {
@@ -200,11 +207,17 @@ function syncStructurePrimitives(): void {
   syncStructurePrimitiveControllers({
     cbar: cbarPrimitive,
     swing: swingPrimitive,
+    trend: trendPrimitive,
     cbars: props.structure?.cbars ?? [],
     swings: props.structure?.swings ?? [],
+    trends: (props.structure?.trends ?? []).map((trend) => ({
+      trendId: trend.trendId, sbarStartId: trend.sbarStartId, sbarEndId: trend.sbarEndId,
+      high: trend.high, low: trend.low, state: trend.state,
+    })),
     projection: { timeBySbarId, indexBySbarId },
     cbarVisible: layerVisibility.value.cbar,
     swingVisible: layerVisibility.value.swing,
+    trendVisible: layerVisibility.value.trend,
     playbackState: structurePlaybackState,
   });
 }
@@ -473,7 +486,7 @@ function setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void {
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
 
-  if (layer === "cbar" || layer === "swing") {
+  if (layer === "cbar" || layer === "swing" || layer === "trend") {
     syncStructurePrimitives();
   }
 
@@ -663,7 +676,7 @@ function clearCrosshairPosition(): void {
 }
 
 function getStructureGeometry() {
-  return { cbarRectangles: cbarRectangles.value, swingSegments: swingSegments.value };
+  return { cbarRectangles: cbarRectangles.value, swingSegments: swingSegments.value, trendRectangles: trendRectangles.value };
 }
 
 function setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): void {
@@ -750,6 +763,7 @@ onMounted(() => {
   primitiveHost = runtime.primitiveHost;
   cbarPrimitive = runtime.cbarPrimitive;
   swingPrimitive = runtime.swingPrimitive;
+  trendPrimitive = runtime.trendPrimitive;
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
@@ -855,6 +869,7 @@ onBeforeUnmount(() => {
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.trend }" :aria-pressed="layerVisibility.trend" :disabled="!structure || structure.trends.length === 0" data-testid="layer-toggle-trend" @click="toggleLayer('trend')"><i class="legend-dot trend-dot"></i>Trend</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>
     </div>
@@ -1043,6 +1058,10 @@ onBeforeUnmount(() => {
 
 .volume-dot {
   background: var(--dbg-legend-volume);
+}
+
+.trend-dot {
+  background: #C6A06B;
 }
 
 .origin-chart-foot {
