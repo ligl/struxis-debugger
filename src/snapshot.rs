@@ -196,6 +196,10 @@ pub(crate) fn canonical_structure_state(
             "cbars": [],
             "swingCount": 0,
             "swings": [],
+            "trendCount": 0,
+            "trends": [],
+            "trendCount": 0,
+            "trends": [],
         }),
     };
 
@@ -209,6 +213,10 @@ pub(crate) fn canonical_structure_state(
         .and_then(serde_json::Value::as_array_mut)
         .ok_or_else(|| "Structure state swings must be an array".to_owned())?;
     sort_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    let trends = object.get_mut("trends")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| "Structure state trends must be an array".to_owned())?;
+    sort_domain_objects(trends, "sbarStartId", "trendId", "Trend")?;
     let state = sort_json_object_keys(state);
     validate_canonical_structure_state(&state)?;
 
@@ -228,9 +236,9 @@ fn parse_canonical_u128(value: &str, field: &str) -> Result<u128, String> {
 fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), String> {
     let object = state.as_object()
         .ok_or_else(|| "state_data must be a JSON object".to_owned())?;
-    let expected_fields = ["cbarCount", "cbars", "swingCount", "swings"];
+    let expected_fields = ["cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends"];
     if object.len() != expected_fields.len() || expected_fields.iter().any(|key| !object.contains_key(*key)) {
-        return Err("state_data must contain exactly cbarCount, cbars, swingCount, and swings".to_owned());
+        return Err("state_data must contain exactly cbarCount, cbars, swingCount, swings, trendCount, and trends".to_owned());
     }
     let cbars = object["cbars"].as_array()
         .ok_or_else(|| "state_data cbars must be an array".to_owned())?;
@@ -240,11 +248,18 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         .ok_or_else(|| "state_data cbarCount must be a non-negative JSON integer".to_owned())?;
     let swing_count = object["swingCount"].as_u64()
         .ok_or_else(|| "state_data swingCount must be a non-negative JSON integer".to_owned())?;
+    let trends = object["trends"].as_array()
+        .ok_or_else(|| "state_data trends must be an array".to_owned())?;
+    let trend_count = object["trendCount"].as_u64()
+        .ok_or_else(|| "state_data trendCount must be a non-negative JSON integer".to_owned())?;
     if cbar_count != cbars.len() as u64 {
         return Err("state_data cbarCount does not match cbars length".to_owned());
     }
     if swing_count != swings.len() as u64 {
         return Err("state_data swingCount does not match swings length".to_owned());
+    }
+    if trend_count != trends.len() as u64 {
+        return Err("state_data trendCount does not match trends length".to_owned());
     }
     validate_object_fields(
         cbars,
@@ -269,6 +284,15 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         false,
         "Swing",
     )?;
+    validate_object_fields(
+        trends,
+        &["createdAt", "direction", "endOi", "high", "low", "sbarEndId", "sbarStartId", "spanSbars", "startOi", "state", "swingEndId", "swingStartId", "trendId", "updatedAt", "volume"],
+        &["endOi", "startOi"],
+        &["spanSbars"],
+        "Trend",
+    )?;
+    validate_enum_field(trends, "direction", &["Up", "Down"], false, "Trend")?;
+    validate_enum_field(trends, "state", &["Extending", "Tentative", "Confirmed"], false, "Trend")?;
     validate_unsigned_string_fields(
         cbars,
         &["cbarId", "createdAt", "sbarEndId", "sbarStartId"],
@@ -281,10 +305,18 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         "Swing",
     )?;
     validate_unsigned_number_fields(swings, &["spanSbars"], "Swing")?;
+    validate_unsigned_string_fields(
+        trends,
+        &["createdAt", "sbarEndId", "sbarStartId", "swingEndId", "swingStartId", "trendId", "updatedAt"],
+        "Trend",
+    )?;
+    validate_unsigned_number_fields(trends, &["spanSbars"], "Trend")?;
     validate_unique_domain_ids(cbars, "cbarId", "CBar")?;
     validate_unique_domain_ids(swings, "swingId", "Swing")?;
+    validate_unique_domain_ids(trends, "trendId", "Trend")?;
     validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
     validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
+    validate_sorted_domain_objects(trends, "sbarStartId", "trendId", "Trend")?;
     Ok(())
 }
 
@@ -594,7 +626,7 @@ mod tests {
                 sbar_id: "100".into(),
                 ts_event: "100".into(),
                 record_kind: "Full".into(),
-                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#.into(),
+                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into(),
                 diagnostics: "[]".into(),
             },
             SnapshotCheckpointRecord {
@@ -602,7 +634,7 @@ mod tests {
                 sbar_id: "200".into(),
                 ts_event: "200".into(),
                 record_kind: "Full".into(),
-                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#.into(),
+                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into(),
                 diagnostics: "[]".into(),
             },
         ]
@@ -649,6 +681,8 @@ mod tests {
             ],
             swing_count: 0,
             swings: vec![],
+            trend_count: 0,
+            trends: vec![],
         };
         let canonical = canonical_structure_state(Some(&structure)).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&canonical).unwrap();
@@ -656,11 +690,12 @@ mod tests {
         assert_eq!(parsed["cbars"][1]["cbarId"], "10");
         assert_eq!(parsed["cbarCount"], 2);
         assert_eq!(parsed["swingCount"], 0);
+        assert_eq!(parsed["trendCount"], 0);
     }
 
     #[test]
     fn snapshot_validation_rejects_unsorted_structure_state() {
-        let unsorted = r#"{"cbarCount":2,"cbars":[{"sbarStartId":"20","cbarId":"10"},{"sbarStartId":"3","cbarId":"2"}],"swingCount":0,"swings":[]}"#;
+        let unsorted = r#"{"cbarCount":2,"cbars":[{"sbarStartId":"20","cbarId":"10"},{"sbarStartId":"3","cbarId":"2"}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#;
         let state: serde_json::Value = serde_json::from_str(unsorted).unwrap();
         assert!(validate_canonical_structure_state(&state).is_err());
     }
@@ -668,21 +703,21 @@ mod tests {
     #[test]
     fn snapshot_state_requires_numeric_counts_and_span_and_closed_fractal_values() {
         let string_count: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":"0","cbars":[],"swingCount":0,"swings":[]}"#,
+            r#"{"cbarCount":"0","cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&string_count)
             .unwrap_err()
             .contains("cbarCount must be a non-negative JSON integer"));
 
         let string_span: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":"1"}],"swingCount":0,"swings":[]}"#,
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":"1"}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&string_span)
             .unwrap_err()
             .contains("invalid JSON type"));
 
         let invalid_fractal: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":"Sideways","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[]}"#,
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":"Sideways","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&invalid_fractal)
             .unwrap_err()
@@ -692,7 +727,7 @@ mod tests {
     #[test]
     fn snapshot_state_rejects_duplicate_domain_ids() {
         let duplicate_ids: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":2,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1},{"cbarId":"1","createdAt":"1","fractalType":null,"high":"3","low":"2","sbarEndId":"4","sbarStartId":"3","spanSbars":1}],"swingCount":0,"swings":[]}"#,
+            r#"{"cbarCount":2,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1},{"cbarId":"1","createdAt":"1","fractalType":null,"high":"3","low":"2","sbarEndId":"4","sbarStartId":"3","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&duplicate_ids)
             .unwrap_err()
@@ -715,6 +750,8 @@ mod tests {
             }],
             swing_count: 0,
             swings: vec![],
+            trend_count: 0,
+            trends: vec![],
         };
         assert!(canonical_structure_state(Some(&structure))
             .unwrap_err()
@@ -725,7 +762,7 @@ mod tests {
     fn canonical_structure_state_without_structure_is_explicitly_empty() {
         assert_eq!(
             canonical_structure_state(None).unwrap(),
-            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#,
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#,
         );
     }
 
@@ -866,7 +903,7 @@ mod tests {
             .unwrap_err().contains("canonical unsigned decimal encoding"));
 
         let mut state_records = records();
-        state_records[0].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"01","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[]}"#.into();
+        state_records[0].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"01","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into();
         let state_manifest = manifest(&state_records);
         assert!(validate_snapshot_records(&state_manifest, &state_records, false)
             .unwrap_err().contains("canonical unsigned decimal encoding"));
@@ -925,7 +962,7 @@ mod tests {
         manifest.content_checksum = manifest.calculate_content_checksum(&records).unwrap();
         assert!(verify_complete_snapshot(&manifest, &records).is_ok());
 
-        records[1].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[]}"#.into();
+        records[1].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[],"trendCount":0,"trends":[]}"#.into();
         assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("checksum mismatch"));
     }
 
