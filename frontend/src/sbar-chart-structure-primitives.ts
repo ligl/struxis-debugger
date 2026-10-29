@@ -390,7 +390,7 @@ class TrendPaneRenderer implements IPrimitivePaneRenderer {
           const baseColor = selected ? interaction.selectedColor ?? "#D99A45" : hovered ? "#C3CBD1" : rectangle.color;
           context.strokeStyle = selected || hovered || !rectangle.dimmed ? baseColor : dimStructureColor(baseColor);
           context.lineWidth = selected ? interaction.selectedWidth ?? 2.25 : hovered ? 1.8 : 1.25;
-          context.setLineDash(rectangle.dash);
+          context.setLineDash([...rectangle.dash]);
           const pixelRatio = typeof window !== "undefined" && finite(window.devicePixelRatio)
             ? Math.max(1, window.devicePixelRatio)
             : 1;
