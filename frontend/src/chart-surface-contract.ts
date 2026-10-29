@@ -38,10 +38,19 @@ export interface ChartSurfaceSwingSegment {
   dasharray: string;
 }
 
+export interface ChartSurfaceTrendSegment {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  state: string;
+}
+
 export interface ChartSurfaceStructureGeometry {
   cbarRectangles: ChartSurfaceCBarRectangle[];
   swingSegments: ChartSurfaceSwingSegment[];
-  trendSegments: Array<ChartSurfaceSwingSegment>;
+  trendSegments: ChartSurfaceTrendSegment[];
 }
 
 export interface ChartSurfaceLayerVisibility {
