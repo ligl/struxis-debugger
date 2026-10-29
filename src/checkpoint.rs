@@ -11,6 +11,7 @@ use crate::{diagnostics::Diagnostic, run::RunState};
 use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
+    structure::trend::{Trend, TrendSeries},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -109,6 +110,8 @@ pub(crate) struct StructureCheckpoint {
     pub(crate) cbars: Vec<CBarCheckpoint>,
     pub(crate) swing_count: usize,
     pub(crate) swings: Vec<SwingCheckpoint>,
+    pub(crate) trend_count: usize,
+    pub(crate) trends: Vec<TrendCheckpoint>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -142,6 +145,48 @@ pub(crate) struct SwingCheckpoint {
     pub(crate) state: String,
     pub(crate) created_at: String,
     pub(crate) updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TrendCheckpoint {
+    pub(crate) trend_id: String,
+    pub(crate) direction: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) swing_start_id: String,
+    pub(crate) swing_end_id: String,
+    pub(crate) sbar_start_id: String,
+    pub(crate) sbar_end_id: String,
+    pub(crate) start_oi: Option<String>,
+    pub(crate) end_oi: Option<String>,
+    pub(crate) volume: String,
+    pub(crate) span_sbars: u32,
+    pub(crate) state: String,
+    pub(crate) created_at: String,
+    pub(crate) updated_at: String,
+}
+
+impl From<&Trend> for TrendCheckpoint {
+    fn from(trend: &Trend) -> Self {
+        Self {
+            trend_id: trend.id.to_string(),
+            direction: format!("{:?}", trend.direction),
+            high: trend.high.to_string(),
+            low: trend.low.to_string(),
+            swing_start_id: trend.swing_start_id.to_string(),
+            swing_end_id: trend.swing_end_id.to_string(),
+            sbar_start_id: trend.sbar_start_id.to_string(),
+            sbar_end_id: trend.sbar_end_id.to_string(),
+            start_oi: trend.start_oi.map(|value| value.to_string()),
+            end_oi: trend.end_oi.map(|value| value.to_string()),
+            volume: trend.volume.to_string(),
+            span_sbars: trend.span_sbars,
+            state: format!("{:?}", trend.state),
+            created_at: trend.created_at.to_string(),
+            updated_at: trend.updated_at.to_string(),
+        }
+    }
 }
 
 impl ReplayCheckpointProjection {
@@ -247,11 +292,57 @@ pub(crate) fn structure_from_state_view(
                 updated_at: swing.updated_at.to_string(),
             })
             .collect::<Vec<_>>();
+        let trends = project_trends(structure.trends());
         StructureCheckpoint {
             cbar_count: cbars.len(),
             cbars,
             swing_count: swings.len(),
             swings,
+            trend_count: trends.len(),
+            trends,
         }
     })
+}
+
+fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
+    series.iter().map(TrendCheckpoint::from).collect()
+}
+
+#[cfg(test)]
+mod trend_projection_tests {
+    use super::TrendCheckpoint;
+    use serde_json::json;
+
+    #[test]
+    fn trend_checkpoint_uses_camel_case_and_preserves_exact_values_as_strings() {
+        let checkpoint = TrendCheckpoint {
+            trend_id: "18446744073709551614".into(),
+            direction: "Up".into(),
+            high: "12345678901234567890.123".into(),
+            low: "12345678901234567889.123".into(),
+            swing_start_id: "9007199254740993".into(),
+            swing_end_id: "9007199254740995".into(),
+            sbar_start_id: "1700000000000000001".into(),
+            sbar_end_id: "1700000000000000009".into(),
+            start_oi: Some("100.25".into()),
+            end_oi: None,
+            volume: "987654321.125".into(),
+            span_sbars: 9,
+            state: "Tentative".into(),
+            created_at: "1700000000000000001".into(),
+            updated_at: "1700000000000000009".into(),
+        };
+
+        let value = serde_json::to_value(checkpoint).expect("Trend DTO should serialize");
+
+        assert_eq!(value["trendId"], json!("18446744073709551614"));
+        assert_eq!(value["high"], json!("12345678901234567890.123"));
+        assert_eq!(value["swingStartId"], json!("9007199254740993"));
+        assert_eq!(value["sbarStartId"], json!("1700000000000000001"));
+        assert_eq!(value["startOi"], json!("100.25"));
+        assert_eq!(value["endOi"], serde_json::Value::Null);
+        assert_eq!(value["spanSbars"], json!(9));
+        assert_eq!(value["state"], json!("Tentative"));
+        assert!(value.get("trend_id").is_none());
+    }
 }
