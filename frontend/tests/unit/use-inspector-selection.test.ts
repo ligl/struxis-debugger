@@ -31,9 +31,13 @@ function makeOrigin(id = "origin-1"): OriginDatasetDto {
       }],
       swingCount: 1,
 
-      trendCount: 0,
-
-      trends: [],
+      trendCount: 1,
+      trends: [{
+        trendId: "trend-1", direction: "Up", high: "13", low: "9",
+        swingStartId: "swing-1", swingEndId: "swing-1", sbarStartId: "sbar-1",
+        sbarEndId: "sbar-2", startOi: null, endOi: null, volume: "201",
+        spanSbars: 2, state: "Tentative", createdAt: "5", updatedAt: "6",
+      }],
       swings: [{
         swingId: "swing-1", direction: "up", high: "13", low: "9",
         cbarStartId: "cbar-1", cbarEndId: "cbar-1", sbarStartId: "sbar-1",
@@ -62,6 +66,9 @@ describe("useInspectorSelection", () => {
 
     state.selectStructureObject({ kind: "swing", id: "swing-1", originDatasetId: "origin-1" });
     expect(state.selectedInspectorSwing.value?.direction).toBe("up");
+
+    state.selectStructureObject({ kind: "trend", id: "trend-1", originDatasetId: "origin-1" });
+    expect(state.selectedInspectorTrend.value?.state).toBe("Tentative");
   });
 
   it("ignores stale or unknown object identities without replacing the current selection", () => {
