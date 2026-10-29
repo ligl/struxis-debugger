@@ -144,10 +144,29 @@ export interface ReplayInspectorSwingDto {
   updatedAt: string;
 }
 
+export interface ReplayInspectorTrendDto {
+  trendId: string;
+  direction: string;
+  high: string;
+  low: string;
+  swingStartId: string;
+  swingEndId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  startOi: string | null;
+  endOi: string | null;
+  volume: string;
+  spanSbars: number;
+  state: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type OriginObjectSelection =
   | { kind: "sbar"; id: string; originDatasetId: string }
   | { kind: "cbar"; id: string; originDatasetId: string }
-  | { kind: "swing"; id: string; originDatasetId: string };
+  | { kind: "swing"; id: string; originDatasetId: string }
+  | { kind: "trend"; id: string; originDatasetId: string };
 
 /**
  * Inspector input is workspace-scoped: a selected domain object, a confirmed
@@ -164,6 +183,7 @@ export type InspectorWorkspaceContext =
         | { kind: "sbar"; object: SBarDto }
         | { kind: "cbar"; object: ReplayInspectorCBarDto }
         | { kind: "swing"; object: ReplayInspectorSwingDto }
+        | { kind: "trend"; object: ReplayInspectorTrendDto }
         | null;
     }
   | {
@@ -174,6 +194,7 @@ export type InspectorWorkspaceContext =
         | { kind: "sbar"; object: SBarDto | ReplayInspectorSBarDto; source: "input" | "checkpoint" | "snapshot" }
         | { kind: "cbar"; object: ReplayInspectorCBarDto; source?: "checkpoint" | "snapshot" }
         | { kind: "swing"; object: ReplayInspectorSwingDto; source?: "checkpoint" | "snapshot" }
+        | { kind: "trend"; object: ReplayInspectorTrendDto; source?: "checkpoint" | "snapshot" }
         | null;
       snapshotId: string | null;
       snapshotLabel?: string | null;
@@ -193,10 +214,12 @@ export interface ReplayInspectorStructureDto {
   cbars: ReplayInspectorCBarDto[];
   swingCount: number;
   swings: ReplayInspectorSwingDto[];
+  trendCount: number;
+  trends: ReplayInspectorTrendDto[];
 }
 
 export type ReplayChartSelection = {
-  kind: "sbar" | "cbar" | "swing";
+  kind: "sbar" | "cbar" | "swing" | "trend";
   id: string;
   checkpointSbarId: string | null;
 };
@@ -214,7 +237,8 @@ type ReplaySnapshotSelectionContext = {
 export type ReplaySnapshotInspectorSelection =
   | (ReplaySnapshotSelectionContext & { kind: "sbar"; object: SBarDto })
   | (ReplaySnapshotSelectionContext & { kind: "cbar"; object: ReplayInspectorCBarDto })
-  | (ReplaySnapshotSelectionContext & { kind: "swing"; object: ReplayInspectorSwingDto });
+  | (ReplaySnapshotSelectionContext & { kind: "swing"; object: ReplayInspectorSwingDto })
+  | (ReplaySnapshotSelectionContext & { kind: "trend"; object: ReplayInspectorTrendDto });
 
 export interface ReplayInspectorDto {
   stateKey: string;
