@@ -19,7 +19,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
-  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" }>];
+  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
@@ -56,14 +56,14 @@ const selectionStatus = computed(() => {
 });
 
 function syncStructureInteractionState(): void {
-  const hovered = hoveredObject.value && (hoveredObject.value.kind === "cbar" || hoveredObject.value.kind === "swing")
+  const hovered = hoveredObject.value && (hoveredObject.value.kind === "cbar" || hoveredObject.value.kind === "swing" || hoveredObject.value.kind === "trend")
     ? { kind: hoveredObject.value.kind, id: hoveredObject.value.id }
     : null;
   const hoveredCbarIds = hovered?.kind === "swing"
     ? structureEndpointCbarIds(props.structure, hovered.id, surface.value?.getStructureGeometry().cbarRectangles.map((item) => item.id) ?? [])
     : [];
   const selected = props.selectedObject &&
-    (props.selectedObject.kind === "cbar" || props.selectedObject.kind === "swing") &&
+    (props.selectedObject.kind === "cbar" || props.selectedObject.kind === "swing" || props.selectedObject.kind === "trend") &&
     props.selectedObject.originDatasetId === props.originDatasetId
     ? { kind: props.selectedObject.kind, id: props.selectedObject.id }
     : null;
@@ -110,10 +110,14 @@ function updateSelectedObjectProjection(reveal = false): void {
     const cbar = props.structure?.cbars.find((item) => item.cbarId === selected.id);
     if (!cbar) return;
     anchorIds = [cbar.sbarStartId, cbar.sbarEndId];
-  } else {
+  } else if (selected.kind === "swing") {
     const swing = props.structure?.swings.find((item) => item.swingId === selected.id);
     if (!swing) return;
     anchorIds = [swing.sbarStartId, swing.sbarEndId];
+  } else {
+    const trend = props.structure?.trends.find((item) => item.trendId === selected.id);
+    if (!trend) return;
+    anchorIds = [trend.sbarStartId, trend.sbarEndId];
   }
   surface.value.revealSbarRange(anchorIds);
 }
@@ -138,7 +142,9 @@ function handleProjectionFrame(): void {
   const geometry = surface.value?.getStructureGeometry();
   const stillProjected = hovered.kind === "cbar"
     ? geometry?.cbarRectangles.some((item) => item.id === hovered.id)
-    : geometry?.swingSegments.some((item) => item.id === hovered.id);
+    : hovered.kind === "swing"
+      ? geometry?.swingSegments.some((item) => item.id === hovered.id)
+      : geometry?.trendRectangles.some((item) => item.id === hovered.id);
   if (!stillProjected) hoveredObject.value = null;
   syncStructureInteractionState();
 }
@@ -153,14 +159,16 @@ function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelec
   if (!geometry) return null;
 
   // The Surface publishes only currently projected geometry. The shared hit
-  // tester owns deterministic distance ranking and Swing-before-CBar tie breaks.
+  // tester owns deterministic distance ranking and stable domain-ID selection.
   const hit = resolveStructureHit({
     x,
     y,
     swings: geometry.swingSegments,
     cbars: geometry.cbarRectangles,
+    trends: geometry.trendRectangles,
     swingVisible: true,
     cbarVisible: true,
+    trendVisible: true,
   });
   return hit ? { kind: hit.kind, id: hit.id, originDatasetId: props.originDatasetId } : null;
 }
