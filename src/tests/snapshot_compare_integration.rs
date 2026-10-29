@@ -88,6 +88,8 @@ fn checkpoint(
             }],
             swing_count: 0,
             swings: Vec::new(),
+            trend_count: 0,
+            trends: Vec::new(),
         }),
         diagnostics: if include_diagnostic {
             vec![crate::diagnostics::Diagnostic {
