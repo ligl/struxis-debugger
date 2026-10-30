@@ -105,7 +105,7 @@ input:focus-visible {
   --dbg-legend-sbar: #4C8066;
   --dbg-legend-cbar: #737D85;
   --dbg-legend-swing: #8F795B;
-  --dbg-legend-volume: #75464A;
+  --dbg-legend-volume: #355C7D;
   color: var(--dbg-text-primary);
   background: var(--dbg-bg);
   font-size: 13px;

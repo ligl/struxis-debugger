@@ -1289,6 +1289,11 @@ describe("ChartSurface and chart entry adapters", () => {
     });
     await nextTick();
 
+    const trendLegend = wrapper.get('[data-testid="layer-toggle-trend"]');
+    expect(trendLegend.text()).toContain("Trend");
+    expect(trendLegend.get(".trend-dot").attributes("style")).toContain("rgb(143, 52, 61)");
+    expect(wrapper.find('[data-testid="layer-toggle-volume"] .volume-dot').exists()).toBe(true);
+
     const [cbarPrimitive, , trendPrimitive] = attachedStructurePrimitives();
     const cbarInteraction = vi.spyOn(cbarPrimitive!, "setInteractionState");
     const trendInteraction = vi.spyOn(trendPrimitive!, "setInteractionState");

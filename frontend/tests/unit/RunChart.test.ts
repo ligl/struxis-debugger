@@ -358,6 +358,56 @@ describe("RunChart", () => {
     expect(hideAllStructure.defaultPrevented).toBe(true);
     expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="run-layer-toggle-swing"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="run-layer-toggle-trend"]').attributes("aria-pressed")).toBe("false");
+    wrapper.unmount();
+  });
+
+  it("shows a Confirmed-color Trend legend toggle when the Replay checkpoint contains Trends", async () => {
+    const wrapper = mount(RunChart, {
+      props: { origin: origin(), testDataset: testDataset(), runState: runState(), structure: null },
+    }) as VueWrapper<any>;
+    await nextTick();
+
+    const initialToggle = wrapper.get('[data-testid="run-layer-toggle-trend"]');
+    expect(initialToggle.text()).toContain("Trend");
+    expect(initialToggle.attributes("disabled")).toBeDefined();
+
+    await wrapper.setProps({
+      structure: {
+        cbarCount: 0,
+        cbars: [],
+        swingCount: 0,
+        swings: [],
+        trendCount: 1,
+        trends: [{
+          trendId: "trend-legend",
+          direction: "Up",
+          high: "12",
+          low: "9",
+          swingStartId: "swing-start",
+          swingEndId: "swing-end",
+          sbarStartId: originBars[1]!.sbarId,
+          sbarEndId: originBars[2]!.sbarId,
+          startOi: null,
+          endOi: null,
+          volume: "200",
+          spanSbars: 2,
+          state: "Confirmed",
+          createdAt: "2026-10-23T00:00:00Z",
+          updatedAt: "2026-10-23T00:00:01Z",
+        }],
+      },
+    });
+    await nextTick();
+
+    const trendToggle = wrapper.get('[data-testid="run-layer-toggle-trend"]');
+    expect(trendToggle.attributes("disabled")).toBeUndefined();
+    expect(trendToggle.get(".trend-dot").attributes("style")).toContain("rgb(143, 52, 61)");
+    expect(wrapper.find('[data-testid="run-layer-toggle-volume"] .volume-dot').exists()).toBe(true);
+    expect(trendToggle.attributes("aria-pressed")).toBe("true");
+    await trendToggle.trigger("click");
+    await nextTick();
+    expect(wrapper.get('[data-testid="run-layer-toggle-trend"]').attributes("aria-pressed")).toBe("false");
     wrapper.unmount();
   });
 
