@@ -653,16 +653,114 @@ describe("Origin Load workbench", () => {
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(previous);
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
       if (command === "load_origin") return Promise.reject("replacement failed");
       return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
     });
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-existing"));
+    await expectTestDatasetAvailable(wrapper);
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(wrapper.text()).toContain("replacement failed"));
     expect(wrapper.text()).toContain("origin-existing");
     expect(wrapper.text()).toContain("previous Origin remains available");
+    await expectTestDatasetAvailable(wrapper);
+  });
+
+  it("resets a completed Run before reloading and clears dependent workspace data on success", async () => {
+    const previousOrigin = makeOrigin("origin-existing");
+    const reloadedOrigin = makeOrigin("origin-reloaded");
+    const completedRun = {
+      runId: "run-completed",
+      testDatasetId: testDataset.testDatasetId,
+      inputFingerprint: testDataset.sbarSequenceFingerprint,
+      inputCount: testDataset.sbarCount,
+      status: "completed",
+      processedCount: testDataset.sbarCount,
+      cursorSbarId: testDataset.endSbarId,
+      failureDiagnostic: null,
+    };
+    let resetDone = false;
+    let originLoaded = false;
+    let resolveReset!: () => void;
+    const pendingReset = new Promise<void>((resolve) => {
+      resolveReset = resolve;
+    });
+    let resolveLoad!: (value: OriginDatasetDto) => void;
+    const pendingLoad = new Promise<OriginDatasetDto>((resolve) => {
+      resolveLoad = resolve;
+    });
+
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(previousOrigin);
+      if (command === "get_current_test_dataset") return Promise.resolve(originLoaded ? null : testDataset);
+      if (command === "list_snapshots") return Promise.resolve([]);
+      if (command === "get_replay_inspector") return Promise.resolve(null);
+      if (command === "get_run_state") return Promise.resolve(resetDone ? null : completedRun);
+      if (command === "reset_run") return pendingReset.then(() => { resetDone = true; });
+      if (command === "load_origin") {
+        return pendingLoad.then((loaded) => {
+          originLoaded = true;
+          return loaded;
+        });
+      }
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await expectTestDatasetAvailable(wrapper);
+    await wrapper.get('[data-testid="catalog-load"]').trigger("click");
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("reset_run"));
+    expect(wrapper.find('[data-testid="dataset-origin-loading"]').exists()).toBe(true);
+    expect(invokeMock.mock.calls.some(([command]) => command === "load_origin")).toBe(false);
+
+    resolveReset();
+    await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("load_origin", {
+      datasetId: dataset.id,
+      enableStructure: true,
+    }));
+
+    const resetIndex = invokeMock.mock.calls.findIndex(([command]) => command === "reset_run");
+    const loadIndex = invokeMock.mock.calls.findIndex(([command]) => command === "load_origin");
+    expect(resetIndex).toBeGreaterThan(-1);
+    expect(loadIndex).toBeGreaterThan(resetIndex);
+    expect(wrapper.find('[data-testid="dataset-origin-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-chart-test-stub"]').exists()).toBe(false);
+
+    resolveLoad(reloadedOrigin);
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-reloaded"));
+    expect(wrapper.find('[data-testid="dataset-origin-loading"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="test-dataset-create"]').text()).toContain("CREATE TEST DATASET");
+  });
+
+  it("does not start an Origin reload if Reset cannot confirm an empty Run", async () => {
+    const completedRun = {
+      runId: "run-completed",
+      testDatasetId: testDataset.testDatasetId,
+      inputFingerprint: testDataset.sbarSequenceFingerprint,
+      inputCount: testDataset.sbarCount,
+      status: "completed",
+      processedCount: testDataset.sbarCount,
+      cursorSbarId: testDataset.endSbarId,
+      failureDiagnostic: null,
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "get_run_state") return Promise.resolve(completedRun);
+      if (command === "reset_run") return Promise.reject(new Error("Reset failed"));
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await expectTestDatasetAvailable(wrapper);
+    await wrapper.get('[data-testid="catalog-load"]').trigger("click");
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Reset failed"));
+    expect(invokeMock.mock.calls.some(([command]) => command === "load_origin")).toBe(false);
   });
 
   it("prevents rapid repeated clicks from overlapping Load commands", async () => {

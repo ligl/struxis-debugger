@@ -72,8 +72,13 @@ const {
   waitForIdle: waitForRunIdle,
 } = useRunControl();
 
+const originLoadPreparing = ref(false);
+const originLoading = computed(() => loading.value || originLoadPreparing.value);
+const displayedOriginLoadStatus = computed(
+  () => originLoadPreparing.value ? "loading" : loadStatus.value,
+);
 const canMutateTest = computed(
-  () => !loading.value && !runBusy.value && !snapshotSaveBusy.value &&
+  () => !originLoading.value && !runBusy.value && !snapshotSaveBusy.value &&
     (!runState.value || ["completed", "disposed"].includes(runState.value.status)),
 );
 
@@ -86,7 +91,7 @@ const {
   createTestDataset,
 } = useTestDataset(origin, canMutateTest);
 const canLoadOrigin = computed(
-  () => canMutateTest.value && !testLoading.value,
+  () => canMutateTest.value && !testLoading.value && !compareLoading.value,
 );
 
 const {
@@ -374,11 +379,11 @@ async function createSelectedTestDataset(): Promise<void> {
   }
 }
 const canStartRun = computed(
-  () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
+  () => Boolean(testDataset.value) && !originLoading.value && !testLoading.value &&
     (!runState.value || ["completed", "disposed"].includes(runState.value.status)) && !runBusy.value,
 );
 const canRestartRun = computed(
-  () => Boolean(testDataset.value) && !loading.value && !testLoading.value &&
+  () => Boolean(testDataset.value) && !originLoading.value && !testLoading.value &&
     Boolean(runState.value) && runState.value?.status !== "running" &&
     !runBusy.value,
 );
@@ -585,15 +590,38 @@ async function handleRefreshCatalog(): Promise<void> {
 
 async function handleLoadOrigin(): Promise<void> {
   if (!canLoadOrigin.value) return;
+  originLoadPreparing.value = true;
   try {
+    await stopPlayback();
+    await waitForRunIdle();
+    if (runState.value) {
+      const resetSucceeded = await executeRunCommand("reset");
+      const resetStateConfirmed = resetSucceeded && await refreshRunState();
+      if (!resetSucceeded || !resetStateConfirmed || runState.value !== null) {
+        notifyError(
+          "Origin load failed",
+          runError.value || "Replay Reset did not confirm an empty Run state; Origin was not reloaded.",
+        );
+        return;
+      }
+
+      replayInspector.value = null;
+      replayInspectorError.value = "";
+      selectedReplayChartObject.value = null;
+      selectedReplaySnapshotObject.value = null;
+      targetSbarId.value = null;
+    }
     await startLoad();
     if (loadStatus.value === "failed") notifyError("Origin load failed", loadError.value);
   } catch (error) {
     notifyError("Origin load failed", error instanceof Error ? error.message : String(error));
+  } finally {
+    originLoadPreparing.value = false;
   }
 }
 
 async function handleCompare(baselineSnapshotId: string, candidateSnapshotId: string): Promise<void> {
+  if (originLoading.value) return;
   await runCompare(baselineSnapshotId, candidateSnapshotId);
   if (compareError.value) notifyError("Snapshot comparison failed", compareError.value);
 }
@@ -631,13 +659,20 @@ useReplayKeyboardShortcut(
 );
 
 async function startLoad(): Promise<void> {
-  if (!canLoadOrigin.value) return;
   await loadSelectedOrigin(async (loadedOrigin) => {
     originHandoffDuringStartup = true;
     clearInspectorSelection();
     resetForOrigin();
     // Keep cross-domain handoff in the page composition root.
     prepareForOrigin(loadedOrigin);
+    replayInspector.value = null;
+    replayInspectorError.value = "";
+    selectedReplayChartObject.value = null;
+    selectedReplaySnapshotObject.value = null;
+    selectedCompareDifference.value = null;
+    compareResult.value = null;
+    compareError.value = "";
+    targetSbarId.value = null;
     const currentTestDataset = await refreshCurrentTestDataset();
     initializeFromTestDataset(currentTestDataset);
     if (testError.value) notifyError("Test Dataset refresh failed", testError.value);
@@ -698,7 +733,7 @@ onMounted(async () => {
             <CompareToolbarControls
               v-show="workspaceMode === 'compare'"
               :snapshots="snapshots"
-              :compare-loading="compareLoading"
+              :compare-loading="compareLoading || originLoading"
               @compare="handleCompare"
             />
           </template>
@@ -722,12 +757,12 @@ onMounted(async () => {
               :selected-dataset="selectedDataset"
               :instrument-groups="instrumentGroups"
               :refreshing="refreshing"
-              :loading="loading"
+              :loading="originLoading"
               :mutation-busy="!canLoadOrigin"
               :discovery-error="discoveryError"
               :enable-structure="enableStructure"
               :origin="origin"
-              :load-status="loadStatus"
+              :load-status="displayedOriginLoadStatus"
               :load-error="loadError"
               :format-domain-timestamp="formatDomainTimestamp"
               :test-dataset="testDataset"
@@ -758,6 +793,7 @@ onMounted(async () => {
               @cancel-range-selection="cancelOriginRangeSelection"
             />
             <ReplayWorkspace
+              :key="origin?.originDatasetId ?? 'no-origin'"
               :active="workspaceMode === 'replay'"
               :origin="origin"
               :test-dataset="testDataset"
@@ -779,7 +815,7 @@ onMounted(async () => {
               :snapshots-loading="snapshotsLoading"
               :snapshots-error="snapshotsError"
               :compare-result="compareResult"
-              :compare-loading="compareLoading"
+              :compare-loading="compareLoading || originLoading"
               :compare-error="compareError"
               :format-lifecycle-timestamp="formatLifecycleTimestamp"
               @refresh-snapshots="handleRefreshSnapshots"

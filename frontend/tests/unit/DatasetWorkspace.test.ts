@@ -95,8 +95,19 @@ describe("DatasetWorkspace", () => {
     const wrapper = mountDatasetWorkspace(null, "loading");
 
     expect(wrapper.get('[data-testid="dataset-chart-empty"]').attributes("data-load-status")).toBe("loading");
-    expect(wrapper.text()).toContain("LOADING ORIGIN DATA");
+    const loadingStatus = wrapper.get('[data-testid="dataset-origin-loading"]');
+    expect(loadingStatus.attributes("role")).toBe("status");
+    expect(loadingStatus.get('[data-testid="dataset-origin-loading-spinner"]').attributes("aria-hidden")).toBe("true");
+    expect(loadingStatus.text()).toContain("LOADING ORIGIN DATA");
     expect(wrapper.text()).toContain("validating the selected SBar sequence");
+  });
+
+  it("replaces the previously loaded chart with the loading state during a reload", () => {
+    const wrapper = mountDatasetWorkspace(origin, "loading");
+
+    expect(wrapper.find('[data-testid="dataset-origin-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="origin-chart-stub"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="dataset-chart-empty"]').attributes("data-load-status")).toBe("loading");
   });
 
   it("renders the real chart after Origin data is available", () => {

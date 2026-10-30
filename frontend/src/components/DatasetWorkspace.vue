@@ -65,13 +65,13 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
   <div v-show="active" class="dataset-controls-host" data-testid="dataset-workspace">
     <TestDatasetPanel
       :origin="origin"
-      :test-dataset="testDataset"
-      :start-sbar-id="startSbarId"
-      :end-sbar-id="endSbarId"
-      :range-selection-ready="rangeSelectionReady"
-      :range-selection-pending="rangeSelectionPending"
-      :selected-range-count="selectedRangeCount"
-      :range-selection-status="rangeSelectionStatus"
+      :test-dataset="loading ? null : testDataset"
+      :start-sbar-id="loading ? '' : startSbarId"
+      :end-sbar-id="loading ? '' : endSbarId"
+      :range-selection-ready="!loading && rangeSelectionReady"
+      :range-selection-pending="!loading && rangeSelectionPending"
+      :selected-range-count="loading ? 0 : selectedRangeCount"
+      :range-selection-status="loading ? 'Loading Origin data…' : rangeSelectionStatus"
       :test-loading="testLoading"
       :can-mutate-test="canMutateTest"
       :test-error="testError"
@@ -102,7 +102,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
     </TestDatasetPanel>
   </div>
   <OriginChart
-    v-if="origin"
+    v-if="origin && loadStatus !== 'loading'"
     v-show="active"
     :bars="origin.bars"
     :structure="origin.structure"
@@ -126,22 +126,28 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
     aria-label="Origin chart empty state"
   >
     <div class="dataset-chart-empty-content">
-      <svg class="dataset-chart-empty-icon" viewBox="0 0 64 48" aria-hidden="true">
+      <svg v-if="loadStatus !== 'loading'" class="dataset-chart-empty-icon" viewBox="0 0 64 48" aria-hidden="true">
         <path d="M5 5.5H59M5 21.5H59M5 37.5H59" />
         <path d="M13 12V28M25 7V35M37 17V39M49 10V30" />
         <path d="M9 17H17M21 25H29M33 31H41M45 21H53" />
       </svg>
-      <span class="dataset-chart-empty-eyebrow">DATASET / ORIGIN</span>
-      <h2>{{ loadStatus === "loading" ? "LOADING ORIGIN DATA" : "ORIGIN DATA NOT LOADED" }}</h2>
-      <p v-if="loadStatus === 'loading'">Reading and validating the selected SBar sequence…</p>
-      <p v-else>Select a dataset in Catalog, then click <strong>LOAD</strong> to populate the chart.</p>
-      <div v-if="loadStatus !== 'loading'" class="dataset-chart-empty-flow" aria-label="Load workflow">
-        <span>SELECT DATASET</span>
-        <span class="dataset-chart-empty-arrow">→</span>
-        <span>LOAD</span>
-        <span class="dataset-chart-empty-arrow">→</span>
-        <span>INSPECT SBARS</span>
+      <span v-if="loadStatus !== 'loading'" class="dataset-chart-empty-eyebrow">DATASET / ORIGIN</span>
+      <div v-if="loadStatus === 'loading'" class="dataset-chart-empty-loading" role="status" aria-live="polite" data-testid="dataset-origin-loading">
+        <span class="dataset-chart-empty-loading-spinner" aria-hidden="true" data-testid="dataset-origin-loading-spinner"></span>
+        <strong>LOADING ORIGIN DATA</strong>
+        <span>Reading and validating the selected SBar sequence…</span>
       </div>
+      <template v-else>
+        <h2>ORIGIN DATA NOT LOADED</h2>
+        <p>Select a dataset in Catalog, then click <strong>LOAD</strong> to populate the chart.</p>
+        <div class="dataset-chart-empty-flow" aria-label="Load workflow">
+          <span>SELECT DATASET</span>
+          <span class="dataset-chart-empty-arrow">→</span>
+          <span>LOAD</span>
+          <span class="dataset-chart-empty-arrow">→</span>
+          <span>INSPECT SBARS</span>
+        </div>
+      </template>
     </div>
   </section>
 </template>
@@ -213,6 +219,39 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
   font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
+.dataset-chart-empty-loading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: #89949d;
+  text-align: center;
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.dataset-chart-empty-loading strong {
+  color: #d6dfe3;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+}
+
+.dataset-chart-empty-loading-spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #343c42;
+  border-top-color: #D6A85D;
+  border-radius: 50%;
+  animation: dataset-origin-spin 0.8s linear infinite;
+}
+
+@keyframes dataset-origin-spin {
+  to { transform: rotate(360deg); }
+}
+
 .dataset-chart-empty-flow {
   display: flex;
   align-items: center;
@@ -221,6 +260,12 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
   color: #a5b0b7;
   font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: .04em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dataset-chart-empty-loading-spinner {
+    animation-duration: 2.4s;
+  }
 }
 
 .dataset-chart-empty-arrow {
