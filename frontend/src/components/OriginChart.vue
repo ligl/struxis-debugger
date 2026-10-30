@@ -61,7 +61,9 @@ function syncStructureInteractionState(): void {
     : null;
   const hoveredCbarIds = hovered?.kind === "swing"
     ? structureEndpointCbarIds(props.structure, hovered.id, surface.value?.getStructureGeometry().cbarRectangles.map((item) => item.id) ?? [])
-    : [];
+    : hovered?.kind === "trend"
+      ? trendEndpointCbarIds(props.structure, hovered.id, surface.value?.getStructureGeometry().cbarRectangles.map((item) => item.id) ?? [])
+      : [];
   const selected = props.selectedObject &&
     (props.selectedObject.kind === "cbar" || props.selectedObject.kind === "swing" || props.selectedObject.kind === "trend") &&
     props.selectedObject.originDatasetId === props.originDatasetId
@@ -69,7 +71,9 @@ function syncStructureInteractionState(): void {
     : null;
   const selectedCbarIds = selected?.kind === "swing"
     ? structureEndpointCbarIds(props.structure, selected.id, surface.value?.getStructureGeometry().cbarRectangles.map((item) => item.id) ?? [])
-    : [];
+    : selected?.kind === "trend"
+      ? trendEndpointCbarIds(props.structure, selected.id, surface.value?.getStructureGeometry().cbarRectangles.map((item) => item.id) ?? [])
+      : [];
   surface.value?.setStructureInteractionState(hovered, selected, hoveredCbarIds, selectedCbarIds);
 }
 
@@ -81,6 +85,19 @@ function structureEndpointCbarIds(
   const swing = structure?.swings.find((item) => item.swingId === swingId);
   if (!swing) return [];
   return [...new Set([swing.cbarStartId, swing.cbarEndId])]
+    .filter((id) => projectedCbarIds.includes(id));
+}
+
+function trendEndpointCbarIds(
+  structure: ReplayInspectorStructureDto | null,
+  trendId: string,
+  projectedCbarIds: readonly string[],
+): string[] {
+  const trend = structure?.trends.find((item) => item.trendId === trendId);
+  const firstSwing = structure?.swings.find((item) => item.swingId === trend?.swingStartId);
+  const lastSwing = structure?.swings.find((item) => item.swingId === trend?.swingEndId);
+  if (!firstSwing || !lastSwing) return [];
+  return [...new Set([firstSwing.cbarStartId, lastSwing.cbarEndId])]
     .filter((id) => projectedCbarIds.includes(id));
 }
 
@@ -154,7 +171,7 @@ function handlePointerPosition(point: { x: number; y: number } | null): void {
   updateHoveredObject(point);
 }
 
-function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" }> | null {
+function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }> | null {
   const geometry = surface.value?.getStructureGeometry();
   if (!geometry) return null;
 

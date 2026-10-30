@@ -366,9 +366,9 @@ interface TrendSegment extends SwingSegment {
 }
 
 const TREND_STYLE_BY_STATE: Readonly<Record<string, { color: string; dash: readonly number[] }>> = {
-  Confirmed: { color: "#91A7B9", dash: [] },
-  Tentative: { color: "#D6A85D", dash: [6, 3] },
-  Extending: { color: "#E3E8EB", dash: [2, 3] },
+  Confirmed: { color: "#8F343D", dash: [] },
+  Tentative: { color: "#A64A53", dash: [6, 3] },
+  Extending: { color: "#76252E", dash: [2, 3] },
 };
 
 class TrendPaneRenderer implements IPrimitivePaneRenderer {
@@ -428,7 +428,7 @@ class TrendSeriesPrimitive extends StructureSeriesPrimitive<TrendPrimitiveDto> {
     const stateById = new Map(this.objects.map((trend) => [trend.trendId, trend.state]));
     const endSbarById = new Map(this.objects.map((trend) => [trend.trendId, trend.sbarEndId]));
     this.segments = segments.map((segment) => {
-      const style = TREND_STYLE_BY_STATE[stateById.get(segment.id) ?? ""] ?? { color: "#A0A7B0", dash: [4, 3] };
+      const style = TREND_STYLE_BY_STATE[stateById.get(segment.id) ?? ""] ?? { color: "#8F343D", dash: [4, 3] };
       return {
         ...segment,
         ...style,

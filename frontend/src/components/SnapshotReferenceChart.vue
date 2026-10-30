@@ -201,17 +201,41 @@ function syncStructureInteractionState(): void {
   const hoveredSwing = hovered?.kind === "swing"
     ? props.structure?.swings.find((item) => item.swingId === hovered.id)
     : null;
+  const hoveredTrend = hovered?.kind === "trend"
+    ? props.structure?.trends.find((item) => item.trendId === hovered.id)
+    : null;
+  const hoveredTrendStart = hoveredTrend
+    ? props.structure?.swings.find((item) => item.swingId === hoveredTrend.swingStartId)
+    : null;
+  const hoveredTrendEnd = hoveredTrend
+    ? props.structure?.swings.find((item) => item.swingId === hoveredTrend.swingEndId)
+    : null;
   const hoveredCbarIds = hoveredSwing
     ? [...new Set([hoveredSwing.cbarStartId, hoveredSwing.cbarEndId])]
       .filter((id) => geometry?.cbarRectangles.some((item) => item.id === id))
-    : [];
+    : hoveredTrendStart && hoveredTrendEnd
+      ? [...new Set([hoveredTrendStart.cbarStartId, hoveredTrendEnd.cbarEndId])]
+        .filter((id) => geometry?.cbarRectangles.some((item) => item.id === id))
+      : [];
   const selectedSwing = selected?.kind === "swing"
     ? props.structure?.swings.find((item) => item.swingId === selected.id)
+    : null;
+  const selectedTrend = selected?.kind === "trend"
+    ? props.structure?.trends.find((item) => item.trendId === selected.id)
+    : null;
+  const selectedTrendStart = selectedTrend
+    ? props.structure?.swings.find((item) => item.swingId === selectedTrend.swingStartId)
+    : null;
+  const selectedTrendEnd = selectedTrend
+    ? props.structure?.swings.find((item) => item.swingId === selectedTrend.swingEndId)
     : null;
   const selectedCbarIds = selectedSwing
     ? [...new Set([selectedSwing.cbarStartId, selectedSwing.cbarEndId])]
       .filter((id) => geometry?.cbarRectangles.some((item) => item.id === id))
-    : [];
+    : selectedTrendStart && selectedTrendEnd
+      ? [...new Set([selectedTrendStart.cbarStartId, selectedTrendEnd.cbarEndId])]
+        .filter((id) => geometry?.cbarRectangles.some((item) => item.id === id))
+      : [];
   surface.value?.setStructureInteractionState(hovered, selected, hoveredCbarIds, selectedCbarIds);
 }
 

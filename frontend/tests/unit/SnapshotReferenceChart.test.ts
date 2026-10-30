@@ -91,6 +91,25 @@ const snapshotDefaults = {
   processedCount: 0,
 };
 
+type InteractionPrimitive = {
+  setInteractionState(state: {
+    hoveredId: string | null;
+    selectedId: string | null;
+    additionalHoveredIds?: readonly string[];
+    additionalSelectedIds?: readonly string[];
+  }): void;
+};
+
+function attachedStructurePrimitives(): InteractionPrimitive[] {
+  const chart = chartMocks.createChart.mock.results.at(-1)?.value as {
+    addSeries: { mock: { results: Array<{ value: unknown }> } };
+  };
+  const candleSeries = chart.addSeries.mock.results[0]?.value as {
+    attachPrimitive: { mock: { calls: Array<[unknown]> } };
+  };
+  return candleSeries.attachPrimitive.mock.calls.map(([primitive]) => primitive as InteractionPrimitive);
+}
+
 function installChartMock() {
   const chart = {
     addSeries: vi.fn()
@@ -345,6 +364,131 @@ describe("SnapshotReferenceChart", () => {
       kind: "sbar",
       id: "1700000000000000000",
       checkpointSbarId: "1700000000000000000",
+    });
+    wrapper.unmount();
+  });
+
+  it("highlights only projected Trend endpoint CBars on hover and selection", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        high: "13",
+        low: "10",
+      }),
+    ];
+    const structure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-start",
+        high: "12",
+        low: "9",
+        sbarStartId: bars[0]!.sbarId,
+        sbarEndId: bars[0]!.sbarId,
+        spanSbars: 1,
+        fractalType: null,
+        createdAt: "2026-10-23T00:00:00Z",
+      }],
+      swingCount: 2,
+      swings: [
+        {
+          swingId: "swing-start",
+          direction: "Up",
+          high: "12",
+          low: "9",
+          cbarStartId: "cbar-start",
+          cbarEndId: "cbar-start",
+          sbarStartId: bars[0]!.sbarId,
+          sbarEndId: bars[0]!.sbarId,
+          startOi: null,
+          endOi: null,
+          volume: "100",
+          spanSbars: 1,
+          state: "Confirmed",
+          createdAt: "2026-10-23T00:00:00Z",
+          updatedAt: "2026-10-23T00:00:00Z",
+        },
+        {
+          swingId: "swing-end",
+          direction: "Up",
+          high: "12",
+          low: "9",
+          cbarStartId: "cbar-end",
+          cbarEndId: "cbar-end",
+          sbarStartId: bars[1]!.sbarId,
+          sbarEndId: bars[1]!.sbarId,
+          startOi: null,
+          endOi: null,
+          volume: "100",
+          spanSbars: 1,
+          state: "Confirmed",
+          createdAt: "2026-10-23T00:00:01Z",
+          updatedAt: "2026-10-23T00:00:01Z",
+        },
+      ],
+      trendCount: 1,
+      trends: [{
+        trendId: "trend-1",
+        direction: "Up",
+        high: "12",
+        low: "9",
+        swingStartId: "swing-start",
+        swingEndId: "swing-end",
+        sbarStartId: bars[0]!.sbarId,
+        sbarEndId: bars[1]!.sbarId,
+        startOi: null,
+        endOi: null,
+        volume: "200",
+        spanSbars: 1,
+        state: "Confirmed",
+        createdAt: "2026-10-23T00:00:00Z",
+        updatedAt: "2026-10-23T00:00:01Z",
+      }],
+    };
+    const wrapper = mount(SnapshotReferenceChart, {
+      props: {
+        ...snapshotDefaults,
+        bars,
+        snapshotId: "snapshot-trend-endpoints",
+        structure,
+      },
+    });
+    await nextTick();
+
+    const surface = wrapper.getComponent(ChartSurface);
+    const [cbarPrimitive, , trendPrimitive] = attachedStructurePrimitives();
+    const cbarInteraction = vi.spyOn(cbarPrimitive!, "setInteractionState");
+    const trendInteraction = vi.spyOn(trendPrimitive!, "setInteractionState");
+
+    surface.vm.$emit("pointerPosition", { x: 150, y: 50 });
+    await nextTick();
+    expect(cbarInteraction).toHaveBeenLastCalledWith(expect.objectContaining({
+      additionalHoveredIds: ["cbar-start"],
+      additionalSelectedIds: [],
+    }));
+    expect(trendInteraction).toHaveBeenLastCalledWith(expect.objectContaining({
+      hoveredId: "trend-1",
+      selectedId: null,
+    }));
+
+    const clickHandler = chartMocks.subscribeClick.mock.calls[0]?.[0] as
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+    clickHandler?.({ point: { x: 150, y: 50 } });
+    await nextTick();
+    expect(cbarInteraction).toHaveBeenLastCalledWith(expect.objectContaining({
+      additionalHoveredIds: ["cbar-start"],
+      additionalSelectedIds: ["cbar-start"],
+    }));
+    expect(trendInteraction).toHaveBeenLastCalledWith(expect.objectContaining({
+      hoveredId: "trend-1",
+      selectedId: "trend-1",
+    }));
+    expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toEqual({
+      kind: "trend",
+      id: "trend-1",
+      checkpointSbarId: bars[1]!.sbarId,
     });
     wrapper.unmount();
   });

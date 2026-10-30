@@ -174,8 +174,27 @@ describe("CBar and Swing Series Primitives", () => {
     expect(h.context.moveTo).toHaveBeenCalledWith(10, 90);
     expect(h.context.lineTo).toHaveBeenCalledWith(30, 80);
     expect(h.context.stroke).toHaveBeenCalled();
-    expect(h.context.strokeStyle).toBe("#D6A85D");
+    expect(h.context.strokeStyle).toBe("#A64A53");
     expect(h.context.setLineDash).toHaveBeenCalledWith([6, 3]);
+
+    controller.setInteractionState({ hoveredId: null, selectedId: null, selectedColor: "#D99A45", selectedWidth: 2.25 });
+    for (const [state, color, dash] of [
+      ["Confirmed", "#8F343D", []],
+      ["Extending", "#76252E", [2, 3]],
+    ] as const) {
+      controller.setData([{
+        trendId: "trend-1",
+        sbarStartId: "s1",
+        sbarEndId: "s2",
+        high: "20",
+        low: "10",
+        direction: "Up",
+        state,
+      }], h.projection);
+      view?.renderer()?.draw(h.target as never);
+      expect(h.context.strokeStyle).toBe(color);
+      expect(h.context.setLineDash).toHaveBeenCalledWith(dash);
+    }
 
     h.context.stroke.mockClear();
     controller.setInteractionState({ hoveredId: null, selectedId: "trend-1", selectedColor: "#D99A45", selectedWidth: 2.25 });

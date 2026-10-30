@@ -70,6 +70,25 @@ function projectedStructureGeometry(wrapper: VueWrapper<any>): ChartSurfaceStruc
   return surface.getStructureGeometry();
 }
 
+type InteractionPrimitive = {
+  setInteractionState(state: {
+    hoveredId: string | null;
+    selectedId: string | null;
+    additionalHoveredIds?: readonly string[];
+    additionalSelectedIds?: readonly string[];
+  }): void;
+};
+
+function attachedStructurePrimitives(): InteractionPrimitive[] {
+  const chart = chartMocks.createChart.mock.results.at(-1)?.value as {
+    addSeries: { mock: { results: Array<{ value: unknown }> } };
+  };
+  const candleSeries = chart.addSeries.mock.results[0]?.value as {
+    attachPrimitive: { mock: { calls: Array<[unknown]> } };
+  };
+  return candleSeries.attachPrimitive.mock.calls.map(([primitive]) => primitive as InteractionPrimitive);
+}
+
 function installResizeObserverMock() {
   class ResizeObserverMock {
     observe = chartMocks.observe;
@@ -1161,5 +1180,133 @@ describe("ChartSurface and chart entry adapters", () => {
     expect(chartMocks.disconnect).toHaveBeenCalledOnce();
     expect(chartMocks.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalledOnce();
     expect(chartMocks.chartRemove).toHaveBeenCalledOnce();
+  });
+
+  it("highlights a hovered Trend's projected endpoint CBars without replacing its selection", async () => {
+    const bars = [
+      bar(),
+      bar({
+        sbarId: "1700000060000000000",
+        tsEvent: "1700000060000000000",
+        tsInit: "1700000060000000001",
+        high: "13",
+        low: "10",
+      }),
+    ];
+    const structure = {
+      cbarCount: 2,
+      cbars: [
+        {
+          cbarId: "cbar-start",
+          high: "12",
+          low: "9",
+          sbarStartId: bars[0]!.sbarId,
+          sbarEndId: bars[0]!.sbarId,
+          startOi: null,
+          endOi: null,
+          volume: "100",
+          spanSbars: 1,
+          fractalType: null,
+          createdAt: "1700000000000000000",
+        },
+        {
+          cbarId: "cbar-end",
+          high: "13",
+          low: "9",
+          sbarStartId: bars[1]!.sbarId,
+          sbarEndId: bars[1]!.sbarId,
+          startOi: null,
+          endOi: null,
+          volume: "100",
+          spanSbars: 1,
+          fractalType: null,
+          createdAt: "1700000060000000000",
+        },
+      ],
+      swingCount: 2,
+      swings: [
+        {
+          swingId: "swing-start",
+          direction: "Up",
+          high: "12",
+          low: "9",
+          cbarStartId: "cbar-start",
+          cbarEndId: "cbar-start",
+          sbarStartId: bars[0]!.sbarId,
+          sbarEndId: bars[0]!.sbarId,
+          startOi: null,
+          endOi: null,
+          volume: "100",
+          spanSbars: 1,
+          state: "Confirmed",
+          createdAt: "1700000000000000000",
+          updatedAt: "1700000000000000000",
+        },
+        {
+          swingId: "swing-end",
+          direction: "Up",
+          high: "13",
+          low: "12",
+          cbarStartId: "cbar-end",
+          cbarEndId: "cbar-end",
+          sbarStartId: bars[1]!.sbarId,
+          sbarEndId: bars[1]!.sbarId,
+          startOi: null,
+          endOi: null,
+          volume: "100",
+          spanSbars: 1,
+          state: "Confirmed",
+          createdAt: "1700000060000000000",
+          updatedAt: "1700000060000000000",
+        },
+      ],
+      trendCount: 1,
+      trends: [{
+        trendId: "trend-1",
+        direction: "Up",
+        high: "13",
+        low: "9",
+        swingStartId: "swing-start",
+        swingEndId: "swing-end",
+        sbarStartId: bars[0]!.sbarId,
+        sbarEndId: bars[1]!.sbarId,
+        startOi: null,
+        endOi: null,
+        volume: "200",
+        spanSbars: 2,
+        state: "Confirmed",
+        createdAt: "1700000000000000000",
+        updatedAt: "1700000060000000000",
+      }],
+    };
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars,
+        originDatasetId: "origin-trend-endpoints",
+        structure,
+        selectedObject: { kind: "trend", id: "trend-1", originDatasetId: "origin-trend-endpoints" },
+      },
+    });
+    await nextTick();
+
+    const [cbarPrimitive, , trendPrimitive] = attachedStructurePrimitives();
+    const cbarInteraction = vi.spyOn(cbarPrimitive!, "setInteractionState");
+    const trendInteraction = vi.spyOn(trendPrimitive!, "setInteractionState");
+    const crosshairMove = chartMocks.subscribeCrosshairMove.mock.calls[0]?.[0] as
+      ((param: { point?: { x: number; y: number } }) => void) | undefined;
+    expect(crosshairMove).toBeTypeOf("function");
+    crosshairMove?.({ point: { x: 150, y: 50 } });
+    await nextTick();
+
+    expect(cbarInteraction).toHaveBeenLastCalledWith(expect.objectContaining({
+      additionalHoveredIds: ["cbar-start", "cbar-end"],
+      additionalSelectedIds: ["cbar-start", "cbar-end"],
+    }));
+    expect(trendInteraction).toHaveBeenLastCalledWith(expect.objectContaining({
+      hoveredId: "trend-1",
+      selectedId: "trend-1",
+    }));
+    expect(wrapper.emitted("objectClick")).toBeUndefined();
+    wrapper.unmount();
   });
 });
