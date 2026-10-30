@@ -597,6 +597,42 @@ mod tests {
             .unwrap_or_else(|error| panic!("Origin Load with structure enabled failed: {error:#}"));
         assert!(!with_structure.bars.is_empty());
         assert_eq!(with_structure.bar_type, BAR_TYPE);
+        let structure = with_structure
+            .structure
+            .as_ref()
+            .expect("Origin Load with structure enabled must return a structure checkpoint");
+        assert!(
+            structure.trend_count > 0,
+            "the catalog Origin dataset must produce at least one Trend; effective Swings: {:#?}",
+            structure.swings
+        );
+        assert_eq!(
+            structure.trend_count,
+            structure.trends.len(),
+            "the catalog checkpoint Trend count must match its projected Trend records"
+        );
+        assert_eq!(
+            structure
+                .trends
+                .iter()
+                .filter(|trend| trend.state == "Extending")
+                .count(),
+            1,
+            "the catalog checkpoint must project exactly one active Extending Trend"
+        );
+        let latest_swing = structure
+            .swings
+            .last()
+            .expect("a Trend-bearing catalog checkpoint must contain effective Swings");
+        let active_trend = structure
+            .trends
+            .iter()
+            .find(|trend| trend.state == "Extending")
+            .expect("the Trend projection must contain its active Extending Trend");
+        assert_eq!(
+            active_trend.swing_end_id, latest_swing.swing_id,
+            "the active Trend projection must cover the latest effective Swing"
+        );
 
         let without_structure = super::load_origin(&catalog_path, BAR_TYPE, false)
             .unwrap_or_else(|error| panic!("Origin Load with structure disabled failed: {error:#}"));
