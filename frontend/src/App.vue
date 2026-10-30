@@ -851,6 +851,7 @@ onMounted(async () => {
         <ObjectInspector
           v-if="!inspectorCollapsed"
           :context="inspectorContext"
+          :origin="origin"
           :origin-bars="origin?.bars ?? []"
           :origin-structure="origin?.structure ?? null"
         />

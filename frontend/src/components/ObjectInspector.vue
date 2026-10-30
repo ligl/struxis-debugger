@@ -4,10 +4,12 @@ import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
 import ReplayObjectDetails from "./ReplayObjectDetails.vue";
-import type { InspectorWorkspaceContext, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { InspectorWorkspaceContext, OriginDatasetDto, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import { formatDomainTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
   context: InspectorWorkspaceContext;
+  origin: OriginDatasetDto | null;
   originBars: SBarDto[];
   originStructure: ReplayInspectorStructureDto | null;
 }>();
@@ -79,6 +81,11 @@ const replaySnapshotStructure = computed(() =>
   props.context.workspace === "replay" ? props.context.snapshotStructure : null,
 );
 
+function formatStructureCount(count: number | undefined): string {
+  if (!props.origin?.enableStructure) return "DISABLED";
+  return count?.toLocaleString() ?? "UNAVAILABLE";
+}
+
 const copyStatus = ref("");
 
 async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
@@ -112,7 +119,48 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
       <span>STRUCTURE <code>{{ structureEnabled ? "ENABLED" : "DISABLED" }}</code></span>
     </div>
     <template v-if="workspaceMode === 'dataset'">
+      <section
+        v-if="origin && !selectedSbar && !selectedCbar && !selectedSwing && !selectedTrend"
+        class="inspector-dataset-summary"
+        data-testid="inspector-dataset-summary"
+      >
+        <div class="inspector-object-heading">
+          <div>
+            <p class="section-index">LOADED ORIGIN DATASET</p>
+            <h3>{{ origin.instrumentId }}</h3>
+          </div>
+          <span class="inspector-object-kind">DATASET</span>
+        </div>
+        <dl class="inspector-fields">
+          <div class="inspector-field">
+            <dt>Origin Dataset ID</dt>
+            <dd data-testid="inspector-dataset-id">{{ origin.originDatasetId }}</dd>
+          </div>
+          <div class="inspector-field">
+            <dt>Timeframe</dt>
+            <dd data-testid="inspector-dataset-timeframe">{{ origin.timeframe }}</dd>
+          </div>
+        </dl>
+        <div class="inspector-dataset-counts" aria-label="Dataset object counts">
+          <div><span>SBAR</span><strong data-testid="inspector-dataset-sbar-count">{{ origin.sbarCount.toLocaleString() }}</strong></div>
+          <div><span>CBAR</span><strong data-testid="inspector-dataset-cbar-count">{{ formatStructureCount(origin.structure?.cbarCount) }}</strong></div>
+          <div><span>SWING</span><strong data-testid="inspector-dataset-swing-count">{{ formatStructureCount(origin.structure?.swingCount) }}</strong></div>
+          <div><span>TREND</span><strong data-testid="inspector-dataset-trend-count">{{ formatStructureCount(origin.structure?.trendCount) }}</strong></div>
+        </div>
+        <div class="inspector-dataset-range">
+          <p class="section-index">SBAR EVENT-TIME RANGE · UTC</p>
+          <div>
+            <span>FIRST · {{ origin.firstSbarId }}</span>
+            <strong data-testid="inspector-dataset-first-time">{{ formatDomainTimestamp(origin.firstTsEvent, origin.timeframe) }}</strong>
+          </div>
+          <div>
+            <span>LAST · {{ origin.lastSbarId }}</span>
+            <strong data-testid="inspector-dataset-last-time">{{ formatDomainTimestamp(origin.lastTsEvent, origin.timeframe) }}</strong>
+          </div>
+        </div>
+      </section>
       <DatasetObjectDetails
+        v-else
         :selected-sbar="selectedSbar"
         :selected-cbar="selectedCbar"
         :selected-swing="selectedSwing"

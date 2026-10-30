@@ -176,12 +176,37 @@ describe("Origin Load workbench", () => {
       }),
     );
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
+    expect(wrapper.get('[data-testid="inspector-dataset-sbar-count"]').text()).toBe("2");
+    expect(wrapper.get('[data-testid="inspector-dataset-cbar-count"]').text()).toBe("UNAVAILABLE");
     expect(wrapper.text()).toContain("2");
     expect(wrapper.text()).toContain("Origin SBar chart");
   });
 
   it("inspects exact SBar fields from the selected validated Origin bar", async () => {
     const origin = makeOrigin("origin-inspector");
+    origin.firstTsEvent = "1000000000";
+    origin.lastTsEvent = "3600000000000";
+    origin.structure = {
+      cbarCount: 1,
+      cbars: [{
+        cbarId: "cbar-1", high: "13.00", low: "9.00", sbarStartId: "100", sbarEndId: "200",
+        spanSbars: 2, fractalType: null, createdAt: "100",
+      }],
+      swingCount: 1,
+      swings: [{
+        swingId: "swing-1", direction: "up", high: "13.00", low: "9.00",
+        cbarStartId: "cbar-1", cbarEndId: "cbar-1", sbarStartId: "100", sbarEndId: "200",
+        startOi: null, endOi: null, volume: "220", spanSbars: 2, state: "confirmed",
+        createdAt: "100", updatedAt: "200",
+      }],
+      trendCount: 1,
+      trends: [{
+        trendId: "trend-1", direction: "up", high: "13.00", low: "9.00",
+        swingStartId: "swing-1", swingEndId: "swing-1", sbarStartId: "100", sbarEndId: "200",
+        startOi: null, endOi: null, volume: "220", spanSbars: 2, state: "confirmed",
+        createdAt: "100", updatedAt: "200",
+      }],
+    };
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(origin);
@@ -192,8 +217,17 @@ describe("Origin Load workbench", () => {
 
     const wrapper = mountApp();
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-inspector"));
+    expect(wrapper.find('[data-testid="inspector-dataset-summary"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="inspector-dataset-sbar-count"]').text()).toBe("2");
+    expect(wrapper.get('[data-testid="inspector-dataset-cbar-count"]').text()).toBe("1");
+    expect(wrapper.get('[data-testid="inspector-dataset-swing-count"]').text()).toBe("1");
+    expect(wrapper.get('[data-testid="inspector-dataset-trend-count"]').text()).toBe("1");
+    expect(wrapper.get('[data-testid="inspector-dataset-first-time"]').text()).toBe("1970-01-01 00:00");
+    expect(wrapper.get('[data-testid="inspector-dataset-last-time"]').text()).toBe("1970-01-01 01:00");
+
     await wrapper.get('[data-testid="origin-sbar-click-200"]').trigger("click");
 
+    expect(wrapper.find('[data-testid="inspector-dataset-summary"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="inspector-sbar-id"]').text()).toBe("200");
     expect(wrapper.get('[data-testid="inspector-sbar-ts-event"]').text()).toBe("1970-01-01 00:00");
     expect(wrapper.get('[data-testid="inspector-sbar-ts-init"]').text()).toBe("1970-01-01 00:00");
@@ -593,7 +627,9 @@ describe("Origin Load workbench", () => {
       }),
     );
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-without-structure"));
-    expect(wrapper.text()).toContain("DISABLED");
+    expect(wrapper.get('[data-testid="inspector-dataset-cbar-count"]').text()).toBe("DISABLED");
+    expect(wrapper.get('[data-testid="inspector-dataset-swing-count"]').text()).toBe("DISABLED");
+    expect(wrapper.get('[data-testid="inspector-dataset-trend-count"]').text()).toBe("DISABLED");
   });
 
   it("groups datasets by Instrument and keeps unresolved entries visible but unloadable", async () => {

@@ -245,6 +245,59 @@ th, td { padding: 6px 8px; }
   color: var(--dbg-text-secondary);
   font: inherit;
 }
+.inspector-dataset-summary {
+  min-width: 0;
+}
+.inspector-dataset-summary > .inspector-fields {
+  padding-top: 4px;
+}
+.inspector-dataset-counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 12px;
+  border: 1px solid var(--dbg-border);
+  background: var(--dbg-border);
+}
+.inspector-dataset-counts > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  background: var(--dbg-panel);
+}
+.inspector-dataset-counts span,
+.inspector-dataset-range span {
+  color: var(--dbg-text-muted);
+  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+}
+.inspector-dataset-counts strong {
+  color: var(--dbg-text-primary);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.inspector-dataset-range {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+.inspector-dataset-range .section-index {
+  margin: 0;
+}
+.inspector-dataset-range > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.inspector-dataset-range strong {
+  color: var(--dbg-text-primary);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
 
 .inspector-object-heading {
   display: flex;
@@ -468,6 +521,5 @@ th, td { padding: 6px 8px; }
 .panel-dock-drag-handle:active {
   cursor: grabbing;
 }
-
 
 
