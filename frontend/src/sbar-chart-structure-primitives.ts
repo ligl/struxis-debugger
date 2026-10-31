@@ -7,10 +7,18 @@ import type {
 } from "lightweight-charts";
 import type { ChartPrimitiveHost, ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
 import { alignStrokeCoordinate } from "./chart-canvas-pixel-alignment";
-import { candlestickBodyWidth, projectCBarRectangles, projectSwingSegments, projectTrendSegments } from "./sbar-chart-structure-geometry";
+import { candlestickBodyWidth, projectCBarRectangles, projectFeatureRectangles, projectSwingSegments, projectTrendSegments } from "./sbar-chart-structure-geometry";
 
 export interface CBarPrimitiveDto {
   cbarId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  high: string;
+  low: string;
+}
+
+export interface FeaturePrimitiveDto {
+  featureId: string;
   sbarStartId: string;
   sbarEndId: string;
   high: string;
@@ -60,7 +68,7 @@ export interface StructurePrimitivePlaybackState {
 
 export interface StructurePrimitiveController {
   setData(
-    objects: readonly (CBarPrimitiveDto | SwingPrimitiveDto | TrendPrimitiveDto)[],
+    objects: readonly (CBarPrimitiveDto | FeaturePrimitiveDto | SwingPrimitiveDto | TrendPrimitiveDto)[],
     projection: StructurePrimitiveProjection,
   ): void;
   setVisible(visible: boolean): void;
@@ -345,6 +353,78 @@ class CBarSeriesPrimitive extends StructureSeriesPrimitive<CBarPrimitiveDto> {
     const endSbarByCBarId = new Map(this.objects.map((object) => [object.cbarId, object.sbarEndId]));
     this.rectangles = rectangles.map((rectangle) => ({
       ...rectangle, dimmed: this.isDimmedAtSbar(endSbarByCBarId.get(rectangle.id)),
+    }));
+  }
+
+  protected clearGeometry(): void {
+    this.rectangles = [];
+  }
+
+  protected hasGeometry(): boolean {
+    return this.rectangles.length > 0;
+  }
+
+  protected createRenderer(): IPrimitivePaneRenderer {
+    return this.paneRenderer;
+  }
+}
+
+interface FeatureRectangle extends CBarRectangle {
+  dimmed: boolean;
+}
+
+class FeaturePaneRenderer implements IPrimitivePaneRenderer {
+  constructor(private readonly getRectangles: () => readonly FeatureRectangle[]) {}
+
+  draw(target: PrimitiveDrawTarget): void {
+    const rectangles = this.getRectangles();
+    if (rectangles.length === 0) return;
+    target.useMediaCoordinateSpace(({ context }) => {
+      context.save();
+      try {
+        context.setLineDash([]);
+        context.strokeStyle = "#D6A85D";
+        context.lineWidth = 1.25;
+        for (const rectangle of rectangles) {
+          context.strokeStyle = rectangle.dimmed ? dimStructureColor("#D6A85D") : "#D6A85D";
+          const pixelRatio = typeof window !== "undefined" && finite(window.devicePixelRatio)
+            ? Math.max(1, window.devicePixelRatio)
+            : 1;
+          const left = alignStrokeCoordinate(rectangle.x, context.lineWidth, pixelRatio);
+          const top = alignStrokeCoordinate(rectangle.y, context.lineWidth, pixelRatio);
+          const right = alignStrokeCoordinate(rectangle.x + rectangle.width, context.lineWidth, pixelRatio);
+          const bottom = alignStrokeCoordinate(rectangle.y + rectangle.height, context.lineWidth, pixelRatio);
+          context.strokeRect(left, top, right - left, bottom - top);
+        }
+      } finally {
+        context.restore();
+      }
+    });
+  }
+}
+
+class FeatureSeriesPrimitive extends StructureSeriesPrimitive<FeaturePrimitiveDto> {
+  private rectangles: FeatureRectangle[] = [];
+  private readonly paneRenderer = new FeaturePaneRenderer(() => this.rectangles);
+
+  protected project(): void {
+    if (!this.visible || !this.chart || !this.series) {
+      this.rectangles = [];
+      return;
+    }
+    const timeScale = this.chart.timeScale();
+    const rectangles = projectFeatureRectangles({
+      features: this.objects,
+      sbarBodyWidth: candlestickBodyWidth(Number(timeScale.options().barSpacing), typeof window !== "undefined" && finite(window.devicePixelRatio) ? Math.max(1, window.devicePixelRatio) : 1),
+      indexBySbarId: this.projection.indexBySbarId,
+      visibleRange: this.getVisibleLogicalRange(),
+      coordinateForSbarId: (sbarId) => this.coordinateForSbarId(sbarId),
+      priceToCoordinate: (price) => this.priceToCoordinate(String(price)),
+    });
+    const endSbarById = new Map(this.objects.map((feature) => [feature.featureId, feature.sbarEndId]));
+    this.rectangles = rectangles.map((rectangle) => ({
+      ...rectangle,
+      dimmed: this.isDimmedAtSbar(endSbarById.get(rectangle.id)),
     }));
   }
 
@@ -670,6 +750,13 @@ export function registerCBarPrimitive(
   return registerSeriesPrimitive<CBarPrimitiveDto, CBarSeriesPrimitive>(host, "structure.cbar", series, new CBarSeriesPrimitive());
 }
 
+export function registerFeaturePrimitive(
+  host: ChartPrimitiveHost,
+  series: ISeriesApi<"Candlestick">,
+): StructurePrimitiveController {
+  return registerSeriesPrimitive<FeaturePrimitiveDto, FeatureSeriesPrimitive>(host, "structure.feature", series, new FeatureSeriesPrimitive());
+}
+
 export function registerSwingPrimitive(
   host: ChartPrimitiveHost,
   series: ISeriesApi<"Candlestick">,
@@ -704,9 +791,12 @@ export interface StructurePrimitiveSyncOptions {
   cbar: StructurePrimitiveController | null | undefined;
   swing: StructurePrimitiveController | null | undefined;
   trend: StructurePrimitiveController | null | undefined;
+  feature: StructurePrimitiveController | null | undefined;
+  featureVisible: boolean;
   cbars: readonly CBarPrimitiveDto[];
   swings: readonly SwingPrimitiveDto[];
   trends: readonly TrendPrimitiveDto[];
+  features: readonly FeaturePrimitiveDto[];
   projection: StructurePrimitiveProjection;
   cbarVisible: boolean;
   playbackState?: StructurePrimitivePlaybackState;
@@ -730,9 +820,12 @@ export function syncStructurePrimitiveControllers(
     cbar,
     swing,
     trend,
+    feature,
+    featureVisible,
     cbars,
     swings,
     trends,
+    features,
     projection,
     cbarVisible,
     swingVisible,
@@ -744,12 +837,15 @@ export function syncStructurePrimitiveControllers(
   cbar?.setData(cbars, projection);
   swing?.setData(swings, projection);
   trend?.setData(trends, projection);
+  feature?.setData(features, projection);
   cbar?.setVisible(cbarVisible);
   swing?.setVisible(swingVisible);
   trend?.setVisible(trendVisible);
+  feature?.setVisible(featureVisible);
   cbar?.setPlaybackState(playbackState);
   swing?.setPlaybackState(playbackState);
   trend?.setPlaybackState(playbackState);
+  feature?.setPlaybackState(playbackState);
   if (interaction) {
     setStructurePrimitiveInteractionState({ cbar, swing, trend, ...interaction });
   }
