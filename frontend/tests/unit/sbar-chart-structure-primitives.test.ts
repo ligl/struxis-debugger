@@ -4,6 +4,7 @@ import {
   registerCBarPrimitive,
   registerSwingPrimitive,
   registerTrendPrimitive,
+  registerFeaturePrimitive,
   syncStructurePrimitiveControllers,
 } from "../../src/sbar-chart-structure-primitives";
 import type { ISeriesApi, ISeriesPrimitive, Time } from "lightweight-charts";
@@ -301,6 +302,12 @@ describe("syncStructurePrimitiveControllers", () => {
       setInteractionState: vi.fn(),
       setPlaybackState: vi.fn(),
     };
+    const feature = {
+      setData: vi.fn(),
+      setVisible: vi.fn(),
+      setInteractionState: vi.fn(),
+      setPlaybackState: vi.fn(),
+    };
     const swing = {
       setData: vi.fn(),
       setVisible: vi.fn(),
@@ -326,9 +333,12 @@ describe("syncStructurePrimitiveControllers", () => {
       cbar: cbar as never,
       swing: swing as never,
       trend: { setData: vi.fn(), setVisible: vi.fn(), setInteractionState: vi.fn(), setPlaybackState: vi.fn() } as never,
+      feature: feature as never,
+      featureVisible: true,
       cbars,
       swings,
       trends: [],
+      features: [],
       projection,
       cbarVisible: false,
       swingVisible: true,
@@ -346,6 +356,8 @@ describe("syncStructurePrimitiveControllers", () => {
 
     expect(cbar.setData).toHaveBeenCalledWith(cbars, projection);
     expect(swing.setData).toHaveBeenCalledWith(swings, projection);
+    expect(feature.setData).toHaveBeenCalledWith([], projection);
+    expect(feature.setVisible).toHaveBeenCalledWith(true);
     expect(cbar.setVisible).toHaveBeenCalledWith(false);
     expect(swing.setVisible).toHaveBeenCalledWith(true);
     expect(cbar.setPlaybackState).toHaveBeenCalledWith({ enabled: false, offset: null, processedCount: 0, liveCount: 0 });
@@ -371,9 +383,12 @@ describe("syncStructurePrimitiveControllers", () => {
       cbar: cbar as never,
       swing: swing as never,
       trend: null,
+      feature: feature as never,
+      featureVisible: false,
       cbars: [],
       swings: [],
       trends: [],
+      features: [],
       projection,
       cbarVisible: false,
       swingVisible: false,
