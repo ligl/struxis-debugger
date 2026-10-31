@@ -227,7 +227,7 @@ export interface ReplayInspectorStructureDto {
   swings: ReplayInspectorSwingDto[];
   trendCount: number;
   trends: ReplayInspectorTrendDto[];
-  featureSequence: ReplayInspectorFeatureElementDto[] | null;
+  featureSequence?: ReplayInspectorFeatureElementDto[] | null;
 }
 
 export type ReplayChartSelection = {
