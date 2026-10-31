@@ -1261,6 +1261,15 @@ describe("ChartSurface and chart entry adapters", () => {
         },
       ],
       trendCount: 1,
+      featureSequence: [{
+        featureId: "swing-start:swing-end",
+        high: "12",
+        low: "10",
+        sourceStartSwingId: "swing-start",
+        sourceEndSwingId: "swing-end",
+        sbarStartId: bars[0]!.sbarId,
+        sbarEndId: bars[1]!.sbarId,
+      }],
       trends: [{
         trendId: "trend-1",
         direction: "Up",
@@ -1293,6 +1302,11 @@ describe("ChartSurface and chart entry adapters", () => {
     expect(trendLegend.text()).toContain("Trend");
     expect(trendLegend.get(".trend-dot").attributes("style")).toContain("rgb(143, 52, 61)");
     expect(wrapper.find('[data-testid="layer-toggle-volume"] .volume-dot').exists()).toBe(true);
+    const featureLegend = wrapper.get('[data-testid="layer-toggle-feature"]');
+    expect(featureLegend.attributes("disabled")).toBeUndefined();
+    await featureLegend.trigger("click");
+    await nextTick();
+    expect(featureLegend.attributes("aria-pressed")).toBe("false");
 
     const [cbarPrimitive, , trendPrimitive] = attachedStructurePrimitives();
     const cbarInteraction = vi.spyOn(cbarPrimitive!, "setInteractionState");
