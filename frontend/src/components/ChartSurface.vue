@@ -1071,6 +1071,10 @@ onBeforeUnmount(() => {
   background: var(--dbg-legend-swing);
 }
 
+.feature-dot {
+  background: #D6A85D;
+}
+
 .volume-dot {
   background: var(--dbg-legend-volume);
 }
