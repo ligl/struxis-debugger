@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectCBarRectangles, projectSwingSegments, projectTrendSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectFeatureRectangles, projectSwingSegments, projectTrendSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type FeatureGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
 
 function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
   return {
@@ -11,6 +11,41 @@ function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
     ...overrides,
   };
 }
+
+describe("projectFeatureRectangles", () => {
+  it("projects merged feature bounds across the first and last contributing Swing SBar ranges", () => {
+    const feature: FeatureGeometryInput = {
+      featureId: "swing-2:swing-6",
+      sbarStartId: "sbar-2",
+      sbarEndId: "sbar-8",
+      high: "18.50",
+      low: "12.25",
+    };
+    const result = projectFeatureRectangles({
+      features: [feature],
+      coordinateForSbarId: (id) => id === "sbar-2" ? 20 : id === "sbar-8" ? 80 : null,
+      priceToCoordinate: (price) => price === 18.5 ? 10 : price === 12.25 ? 50 : null,
+      sbarBodyWidth: 8,
+    });
+
+    expect(result).toEqual([{ id: "swing-2:swing-6", x: 16, y: 10, width: 68, height: 40 }]);
+  });
+
+  it("omits a feature rectangle when either source Swing boundary is unavailable", () => {
+    const result = projectFeatureRectangles({
+      features: [{
+        featureId: "feature-1",
+        sbarStartId: "missing",
+        sbarEndId: "sbar-8",
+        high: "18.50",
+        low: "12.25",
+      }],
+      coordinateForSbarId: (id) => id === "sbar-8" ? 80 : null,
+      priceToCoordinate: (price) => price,
+    });
+    expect(result).toEqual([]);
+  });
+});
 
 describe("projectCBarRectangles", () => {
   it("projects anchor and price coordinates into normalized rectangle geometry", () => {
