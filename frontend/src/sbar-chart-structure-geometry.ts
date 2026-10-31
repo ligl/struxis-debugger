@@ -132,6 +132,45 @@ export function projectCBarRectangles(
   });
 }
 
+export interface FeatureGeometryInput {
+  featureId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  high: string;
+  low: string;
+}
+
+/**
+ * Projects a merged Trend feature element to its source-Swing SBar interval.
+ * The feature's vertical bounds are authoritative Struxis prices; its
+ * horizontal bounds are resolved from the first and last contributing Swings.
+ */
+export function projectFeatureRectangles(options: {
+  features: readonly FeatureGeometryInput[];
+  coordinateForSbarId: (sbarId: string) => number | null | undefined;
+  priceToCoordinate: (price: number) => number | null | undefined;
+  sbarBodyWidth?: number;
+  indexBySbarId?: ReadonlyMap<string, number>;
+  visibleRange?: LogicalViewportRange | null;
+  viewportOverscan?: number;
+}): CBarRectangleGeometry[] {
+  return projectCBarRectangles({
+    cbars: options.features.map((feature) => ({
+      cbarId: feature.featureId,
+      sbarStartId: feature.sbarStartId,
+      sbarEndId: feature.sbarEndId,
+      high: feature.high,
+      low: feature.low,
+    })),
+    coordinateForSbarId: options.coordinateForSbarId,
+    priceToCoordinate: options.priceToCoordinate,
+    sbarBodyWidth: options.sbarBodyWidth,
+    indexBySbarId: options.indexBySbarId,
+    visibleRange: options.visibleRange,
+    viewportOverscan: options.viewportOverscan,
+  });
+}
+
 export interface TrendGeometryInput {
   trendId: string;
   sbarStartId: string;
