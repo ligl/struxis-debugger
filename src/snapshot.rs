@@ -245,7 +245,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         "trends",
     ];
     let has_feature_sequence = object.contains_key("featureSequence");
-    if object.len() != expected_fields.len() + usize::from(has_feature_sequence)
+    if object.len() != expected_fields.len() + if has_feature_sequence { 1 } else { 0 }
         || expected_fields.iter().any(|key| !object.contains_key(*key))
     {
         return Err(
