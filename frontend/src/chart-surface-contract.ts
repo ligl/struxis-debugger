@@ -59,6 +59,7 @@ export interface ChartSurfaceLayerVisibility {
   cbar: boolean;
   swing: boolean;
   trend: boolean;
+  feature: boolean;
 }
 
 export interface ChartSurfaceStructureInteraction {
