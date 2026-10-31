@@ -112,6 +112,7 @@ pub(crate) struct StructureCheckpoint {
     pub(crate) swings: Vec<SwingCheckpoint>,
     pub(crate) trend_count: usize,
     pub(crate) trends: Vec<TrendCheckpoint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) feature_sequence: Option<Vec<FeatureElementCheckpoint>>,
 }
 
