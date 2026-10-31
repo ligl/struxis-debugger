@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import type { OriginDatasetDto } from "../origin-types";
-defineProps<{
+const props = defineProps<{
   origin: OriginDatasetDto | null;
   loadStatus: "idle" | "loading" | "loaded" | "failed";
   loadError: string;
   formatDomainTimestamp: (value: string | null, timeframe: string | null) => string;
 }>();
+
+function formatStructureCount(count: number | undefined): string {
+  if (!props.origin?.enableStructure) return "DISABLED";
+  return count?.toLocaleString() ?? "UNAVAILABLE";
+}
 
 function formatStateKeyTimeframe(timeframe: string): string {
   const match = timeframe.trim().match(/^(\d+)\s*[- ]?\s*(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)S?$/i);
@@ -52,6 +57,18 @@ function formatStateKeyTimeframe(timeframe: string): string {
         <div class="metric">
           <span>SBAR COUNT</span>
           <strong data-testid="origin-sbar-count">{{ origin.sbarCount.toLocaleString() }}</strong>
+        </div>
+        <div class="metric">
+          <span>CBAR COUNT</span>
+          <strong data-testid="origin-cbar-count">{{ formatStructureCount(origin.structure?.cbarCount) }}</strong>
+        </div>
+        <div class="metric">
+          <span>SWING COUNT</span>
+          <strong data-testid="origin-swing-count">{{ formatStructureCount(origin.structure?.swingCount) }}</strong>
+        </div>
+        <div class="metric">
+          <span>TREND COUNT</span>
+          <strong data-testid="origin-trend-count">{{ formatStructureCount(origin.structure?.trendCount) }}</strong>
         </div>
         <div class="metric">
           <span>STRUXIS STATE KEY</span>
