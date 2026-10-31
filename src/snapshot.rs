@@ -236,12 +236,22 @@ fn parse_canonical_u128(value: &str, field: &str) -> Result<u128, String> {
 fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), String> {
     let object = state.as_object()
         .ok_or_else(|| "state_data must be a JSON object".to_owned())?;
-    let expected_fields = ["cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends"];
+    let expected_fields = [
+        "cbarCount",
+        "cbars",
+        "swingCount",
+        "swings",
+        "trendCount",
+        "trends",
+    ];
     let has_feature_sequence = object.contains_key("featureSequence");
     if object.len() != expected_fields.len() + usize::from(has_feature_sequence)
         || expected_fields.iter().any(|key| !object.contains_key(*key))
     {
-        return Err("state_data must contain the six required structure fields and optional featureSequence".to_owned());
+        return Err(
+            "state_data must contain the six required structure fields and optional featureSequence"
+                .to_owned(),
+        );
     }
     let cbars = object["cbars"].as_array()
         .ok_or_else(|| "state_data cbars must be an array".to_owned())?;
@@ -322,11 +332,20 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     validate_sorted_domain_objects(trends, "sbarStartId", "trendId", "Trend")?;
 
     if let Some(feature_sequence) = object.get("featureSequence") {
-        let features = feature_sequence.as_array()
+        let features = feature_sequence
+            .as_array()
             .ok_or_else(|| "state_data featureSequence must be an array when present".to_owned())?;
         validate_object_fields(
             features,
-            &["featureId", "high", "low", "sbarEndId", "sbarStartId", "sourceEndSwingId", "sourceStartSwingId"],
+            &[
+                "featureId",
+                "high",
+                "low",
+                "sbarEndId",
+                "sbarStartId",
+                "sourceEndSwingId",
+                "sourceStartSwingId",
+            ],
             &[],
             &[],
             "FeatureElement",
@@ -338,16 +357,25 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         )?;
         let mut previous_end = None;
         for (index, feature) in features.iter().enumerate() {
-            let start = feature["sourceStartSwingId"].as_str()
+            let start = feature["sourceStartSwingId"]
+                .as_str()
                 .expect("FeatureElement fields were validated")
                 .parse::<u128>()
-                .map_err(|_| format!("FeatureElement[{index}].sourceStartSwingId is invalid"))?;
-            let end = feature["sourceEndSwingId"].as_str()
+                .map_err(|_| {
+                    format!("FeatureElement[{index}].sourceStartSwingId is invalid")
+                })?;
+            let end = feature["sourceEndSwingId"]
+                .as_str()
                 .expect("FeatureElement fields were validated")
                 .parse::<u128>()
-                .map_err(|_| format!("FeatureElement[{index}].sourceEndSwingId is invalid"))?;
+                .map_err(|_| {
+                    format!("FeatureElement[{index}].sourceEndSwingId is invalid")
+                })?;
             if start > end || previous_end.is_some_and(|previous| start <= previous) {
-                return Err("state_data featureSequence must be ordered by non-overlapping source Swing intervals".to_owned());
+                return Err(
+                    "state_data featureSequence must be ordered by non-overlapping source Swing intervals"
+                        .to_owned(),
+                );
             }
             previous_end = Some(end);
         }
