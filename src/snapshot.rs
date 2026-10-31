@@ -336,7 +336,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             &["sbarEndId", "sbarStartId", "sourceEndSwingId", "sourceStartSwingId"],
             "FeatureElement",
         )?;
-        let mut previous_start = None;
+        let mut previous_end = None;
         for (index, feature) in features.iter().enumerate() {
             let start = feature["sourceStartSwingId"].as_str()
                 .expect("FeatureElement fields were validated")
@@ -346,10 +346,10 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
                 .expect("FeatureElement fields were validated")
                 .parse::<u128>()
                 .map_err(|_| format!("FeatureElement[{index}].sourceEndSwingId is invalid"))?;
-            if start > end || previous_start.is_some_and(|previous| start <= previous) {
+            if start > end || previous_end.is_some_and(|previous| start <= previous) {
                 return Err("state_data featureSequence must be ordered by non-overlapping source Swing intervals".to_owned());
             }
-            previous_start = Some(start);
+            previous_end = Some(end);
         }
         validate_unique_domain_ids(features, "featureId", "FeatureElement")?;
     }
