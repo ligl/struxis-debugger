@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { CrosshairMode, type CandlestickData, type HistogramData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from "lightweight-charts";
 import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import { setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
+import { registerFeaturePrimitive, setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
 import { candlestickBodyWidth, projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
@@ -54,7 +54,7 @@ const emit = defineEmits<{
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
-const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true });
+const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true, feature: true });
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
@@ -62,6 +62,7 @@ let primitiveHost: ChartPrimitiveHost | null = null;
 let cbarPrimitive: StructurePrimitiveController | null = null;
 let swingPrimitive: StructurePrimitiveController | null = null;
 let trendPrimitive: StructurePrimitiveController | null = null;
+let featurePrimitive: StructurePrimitiveController | null = null;
 let structurePlaybackState: ChartSurfaceStructurePlaybackState = {
   enabled: false, offset: null, processedCount: 0, liveCount: 0,
 };
@@ -208,8 +209,14 @@ function syncStructurePrimitives(): void {
     cbar: cbarPrimitive,
     swing: swingPrimitive,
     trend: trendPrimitive,
+    feature: featurePrimitive,
+    featureVisible: layerVisibility.value.feature,
     cbars: props.structure?.cbars ?? [],
     swings: props.structure?.swings ?? [],
+    features: (props.structure?.featureSequence ?? []).map((feature) => ({
+      featureId: feature.featureId, sbarStartId: feature.sbarStartId, sbarEndId: feature.sbarEndId,
+      high: feature.high, low: feature.low,
+    })),
     trends: (props.structure?.trends ?? []).map((trend) => ({
       trendId: trend.trendId, sbarStartId: trend.sbarStartId, sbarEndId: trend.sbarEndId,
       high: trend.high, low: trend.low, direction: trend.direction, state: trend.state,
@@ -486,7 +493,7 @@ function setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void {
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
 
-  if (layer === "cbar" || layer === "swing" || layer === "trend") {
+  if (layer === "cbar" || layer === "swing" || layer === "trend" || layer === "feature") {
     syncStructurePrimitives();
   }
 
@@ -689,6 +696,8 @@ function setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): v
   };
   cbarPrimitive?.setPlaybackState(structurePlaybackState);
   swingPrimitive?.setPlaybackState(structurePlaybackState);
+  trendPrimitive?.setPlaybackState(structurePlaybackState);
+  featurePrimitive?.setPlaybackState(structurePlaybackState);
 }
 
 function setStructureInteractionState(
@@ -767,6 +776,7 @@ onMounted(() => {
   cbarPrimitive = runtime.cbarPrimitive;
   swingPrimitive = runtime.swingPrimitive;
   trendPrimitive = runtime.trendPrimitive;
+  featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
@@ -874,6 +884,7 @@ onBeforeUnmount(() => {
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.trend }" :aria-pressed="layerVisibility.trend" :disabled="!structure || structure.trends.length === 0" data-testid="layer-toggle-trend" @click="toggleLayer('trend')"><i class="legend-dot trend-dot" style="background-color: #8F343D"></i>Trend</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.feature }" :aria-pressed="layerVisibility.feature" :disabled="!structure || !structure.featureSequence?.length" data-testid="layer-toggle-feature"><i class="legend-dot feature-dot"></i>Feature</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>
     </div>
