@@ -11,7 +11,7 @@ use crate::{diagnostics::Diagnostic, run::RunState};
 use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
-    structure::trend::{FeatureElement, Trend, TrendSeries},
+    structure::trend::{Trend, TrendSeries},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -210,21 +210,15 @@ fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
 fn project_feature_sequence(
     structure: &capitus_struxis::structure::structure::Structure,
 ) -> Option<Vec<FeatureElementCheckpoint>> {
-    structure.feature_sequence().map(|elements| {
+    structure.feature_sequence().and_then(|elements| {
         elements
             .iter()
-            .map(|element: &FeatureElement| {
+            .map(|element| {
                 let start_id = element.source_start_id();
                 let end_id = element.source_end_id();
-                let start_swing = structure
-                    .swings()
-                    .get_swing(start_id)
-                    .expect("FeatureElement source start must exist in the active SwingSeries");
-                let end_swing = structure
-                    .swings()
-                    .get_swing(end_id)
-                    .expect("FeatureElement source end must exist in the active SwingSeries");
-                FeatureElementCheckpoint {
+                let start_swing = structure.swings().get_swing(start_id)?;
+                let end_swing = structure.swings().get_swing(end_id)?;
+                Some(FeatureElementCheckpoint {
                     feature_id: format!("{start_id}:{end_id}"),
                     high: element.high().to_string(),
                     low: element.low().to_string(),
@@ -232,7 +226,7 @@ fn project_feature_sequence(
                     source_end_swing_id: end_id.to_string(),
                     sbar_start_id: start_swing.sbar_start_id.to_string(),
                     sbar_end_id: end_swing.sbar_end_id.to_string(),
-                }
+                })
             })
             .collect()
     })
