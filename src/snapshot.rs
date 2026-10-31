@@ -1041,4 +1041,66 @@ mod tests {
         assert!(!encoded.contains("open"));
         assert!(!encoded.contains("volume"));
     }
+
+    #[test]
+    fn accepts_optional_feature_sequence_with_ordered_source_intervals() {
+        let state = serde_json::json!({
+            "cbarCount": 0,
+            "cbars": [],
+            "swingCount": 0,
+            "swings": [],
+            "trendCount": 0,
+            "trends": [],
+            "featureSequence": [{
+                "featureId": "20:40",
+                "high": "123.450",
+                "low": "120.125",
+                "sourceStartSwingId": "20",
+                "sourceEndSwingId": "40",
+                "sbarStartId": "200",
+                "sbarEndId": "400"
+            }, {
+                "featureId": "60:80",
+                "high": "124.000",
+                "low": "121.000",
+                "sourceStartSwingId": "60",
+                "sourceEndSwingId": "80",
+                "sbarStartId": "600",
+                "sbarEndId": "800"
+            }]
+        });
+        assert!(validate_canonical_structure_state(&state).is_ok());
+    }
+
+    #[test]
+    fn rejects_overlapping_feature_source_intervals() {
+        let state = serde_json::json!({
+            "cbarCount": 0,
+            "cbars": [],
+            "swingCount": 0,
+            "swings": [],
+            "trendCount": 0,
+            "trends": [],
+            "featureSequence": [{
+                "featureId": "20:60",
+                "high": "123",
+                "low": "120",
+                "sourceStartSwingId": "20",
+                "sourceEndSwingId": "60",
+                "sbarStartId": "200",
+                "sbarEndId": "600"
+            }, {
+                "featureId": "40:80",
+                "high": "124",
+                "low": "121",
+                "sourceStartSwingId": "40",
+                "sourceEndSwingId": "80",
+                "sbarStartId": "400",
+                "sbarEndId": "800"
+            }]
+        });
+        assert!(validate_canonical_structure_state(&state)
+            .unwrap_err()
+            .contains("non-overlapping"));
+    }
 }
