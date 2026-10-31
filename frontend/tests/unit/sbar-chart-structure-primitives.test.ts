@@ -101,7 +101,7 @@ describe("CBar and Swing Series Primitives", () => {
     expect(renderer).not.toBeNull();
     renderer!.draw(h.target as never);
     expect(h.context.strokeStyle).toBe("#D6A85D");
-    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 80.5, 27, 10);
+    expect(h.context.strokeRect).toHaveBeenCalledWith(6.625, 79.625, 27, 10);
 
     controller.setData([], h.projection);
     expect(primitive.paneViews?.()[0]?.renderer()).toBeNull();
