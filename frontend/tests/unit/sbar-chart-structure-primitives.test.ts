@@ -85,6 +85,28 @@ describe("CBar and Swing Series Primitives", () => {
     expect(alignStrokeCoordinate(80, 1.75, 1)).toBe(79.875);
   });
 
+  it("draws merged Trend feature rectangles with the dedicated feature style", () => {
+    const h = createHarness();
+    const controller = registerFeaturePrimitive(h.host, h.series);
+    controller.setData([{
+      featureId: "sw2:sw6",
+      sbarStartId: "s1",
+      sbarEndId: "s2",
+      high: "20",
+      low: "10",
+    }], h.projection);
+
+    const primitive = h.attached[0]!;
+    const renderer = primitive.paneViews?.()[0]?.renderer();
+    expect(renderer).not.toBeNull();
+    renderer!.draw(h.target as never);
+    expect(h.context.strokeStyle).toBe("#D6A85D");
+    expect(h.context.strokeRect).toHaveBeenCalledWith(6.5, 80.5, 27, 10);
+
+    controller.setData([], h.projection);
+    expect(primitive.paneViews?.()[0]?.renderer()).toBeNull();
+  });
+
   it("draws CBar rectangles from the current chart coordinates and clears replaced snapshots", () => {
     const h = createHarness();
     const controller = registerCBarPrimitive(h.host, h.series);
