@@ -351,6 +351,7 @@ describe("RunChart", () => {
     expect(showAllStructure.defaultPrevented).toBe(true);
     expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("true");
     expect(wrapper.get('[data-testid="run-layer-toggle-swing"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="run-layer-toggle-feature"]').attributes("aria-pressed")).toBe("true");
 
     const hideAllStructure = new KeyboardEvent("keydown", { key: "v", bubbles: true, cancelable: true });
     document.dispatchEvent(hideAllStructure);
@@ -359,6 +360,7 @@ describe("RunChart", () => {
     expect(wrapper.get('[data-testid="run-layer-toggle-cbar"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="run-layer-toggle-swing"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="run-layer-toggle-trend"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="run-layer-toggle-feature"]').attributes("aria-pressed")).toBe("false");
     wrapper.unmount();
   });
 
@@ -379,6 +381,15 @@ describe("RunChart", () => {
         swingCount: 0,
         swings: [],
         trendCount: 1,
+        featureSequence: [{
+          featureId: "swing-start:swing-end",
+          high: "11",
+          low: "10",
+          sourceStartSwingId: "swing-start",
+          sourceEndSwingId: "swing-end",
+          sbarStartId: originBars[1]!.sbarId,
+          sbarEndId: originBars[2]!.sbarId,
+        }],
         trends: [{
           trendId: "trend-legend",
           direction: "Up",
@@ -402,6 +413,14 @@ describe("RunChart", () => {
 
     const trendToggle = wrapper.get('[data-testid="run-layer-toggle-trend"]');
     expect(trendToggle.attributes("disabled")).toBeUndefined();
+    const featureToggle = wrapper.get('[data-testid="run-layer-toggle-feature"]');
+    expect(featureToggle.attributes("disabled")).toBeUndefined();
+    await featureToggle.trigger("click");
+    await nextTick();
+    expect(featureToggle.attributes("aria-pressed")).toBe("false");
+    await featureToggle.trigger("click");
+    await nextTick();
+
     expect(trendToggle.get(".trend-dot").attributes("style")).toContain("rgb(143, 52, 61)");
     expect(wrapper.find('[data-testid="run-layer-toggle-volume"] .volume-dot').exists()).toBe(true);
     expect(trendToggle.attributes("aria-pressed")).toBe("true");
