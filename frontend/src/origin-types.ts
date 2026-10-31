@@ -209,6 +209,17 @@ export type InspectorWorkspaceContext =
       candidateSnapshotId: string | null;
     };
 
+export interface ReplayInspectorFeatureElementDto {
+  /** Stable projection identity derived from the first and last source Swing IDs. */
+  featureId: string;
+  high: string;
+  low: string;
+  sourceStartSwingId: string;
+  sourceEndSwingId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+}
+
 export interface ReplayInspectorStructureDto {
   cbarCount: number;
   cbars: ReplayInspectorCBarDto[];
@@ -216,6 +227,7 @@ export interface ReplayInspectorStructureDto {
   swings: ReplayInspectorSwingDto[];
   trendCount: number;
   trends: ReplayInspectorTrendDto[];
+  featureSequence: ReplayInspectorFeatureElementDto[] | null;
 }
 
 export type ReplayChartSelection = {
