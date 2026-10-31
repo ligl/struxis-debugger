@@ -349,7 +349,27 @@ pub(crate) fn structure_from_state_view(
 
 #[cfg(test)]
 mod trend_checkpoint_tests {
-    use super::TrendCheckpoint;
+    use super::{FeatureElementCheckpoint, TrendCheckpoint};
+
+    #[test]
+    fn feature_element_checkpoint_preserves_price_precision_and_source_anchors() {
+        let feature = FeatureElementCheckpoint {
+            feature_id: "9007199254740993:9007199254740999".into(),
+            high: "12345678901234567890.123456".into(),
+            low: "12345678901234567889.654321".into(),
+            source_start_swing_id: "9007199254740993".into(),
+            source_end_swing_id: "9007199254740999".into(),
+            sbar_start_id: "1700000000000000001".into(),
+            sbar_end_id: "1700000000000000009".into(),
+        };
+        let value = serde_json::to_value(feature).unwrap();
+        assert_eq!(value["high"], "12345678901234567890.123456");
+        assert_eq!(value["low"], "12345678901234567889.654321");
+        assert_eq!(value["sourceStartSwingId"], "9007199254740993");
+        assert_eq!(value["sourceEndSwingId"], "9007199254740999");
+        assert_eq!(value["sbarStartId"], "1700000000000000001");
+        assert_eq!(value["sbarEndId"], "1700000000000000009");
+    }
 
     #[test]
     fn trend_checkpoint_preserves_domain_precision_and_camel_case() {
