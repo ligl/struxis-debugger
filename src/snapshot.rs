@@ -237,8 +237,11 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     let object = state.as_object()
         .ok_or_else(|| "state_data must be a JSON object".to_owned())?;
     let expected_fields = ["cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends"];
-    if object.len() != expected_fields.len() || expected_fields.iter().any(|key| !object.contains_key(*key)) {
-        return Err("state_data must contain exactly cbarCount, cbars, swingCount, swings, trendCount, and trends".to_owned());
+    let has_feature_sequence = object.contains_key("featureSequence");
+    if object.len() != expected_fields.len() + usize::from(has_feature_sequence)
+        || expected_fields.iter().any(|key| !object.contains_key(*key))
+    {
+        return Err("state_data must contain the six required structure fields and optional featureSequence".to_owned());
     }
     let cbars = object["cbars"].as_array()
         .ok_or_else(|| "state_data cbars must be an array".to_owned())?;
@@ -317,6 +320,39 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
     validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
     validate_sorted_domain_objects(trends, "sbarStartId", "trendId", "Trend")?;
+
+    if let Some(feature_sequence) = object.get("featureSequence") {
+        let features = feature_sequence.as_array()
+            .ok_or_else(|| "state_data featureSequence must be an array when present".to_owned())?;
+        validate_object_fields(
+            features,
+            &["featureId", "high", "low", "sbarEndId", "sbarStartId", "sourceEndSwingId", "sourceStartSwingId"],
+            &[],
+            &[],
+            "FeatureElement",
+        )?;
+        validate_unsigned_string_fields(
+            features,
+            &["sbarEndId", "sbarStartId", "sourceEndSwingId", "sourceStartSwingId"],
+            "FeatureElement",
+        )?;
+        let mut previous_start = None;
+        for (index, feature) in features.iter().enumerate() {
+            let start = feature["sourceStartSwingId"].as_str()
+                .expect("FeatureElement fields were validated")
+                .parse::<u128>()
+                .map_err(|_| format!("FeatureElement[{index}].sourceStartSwingId is invalid"))?;
+            let end = feature["sourceEndSwingId"].as_str()
+                .expect("FeatureElement fields were validated")
+                .parse::<u128>()
+                .map_err(|_| format!("FeatureElement[{index}].sourceEndSwingId is invalid"))?;
+            if start > end || previous_start.is_some_and(|previous| start <= previous) {
+                return Err("state_data featureSequence must be ordered by non-overlapping source Swing intervals".to_owned());
+            }
+            previous_start = Some(start);
+        }
+        validate_unique_domain_ids(features, "featureId", "FeatureElement")?;
+    }
     Ok(())
 }
 
