@@ -11,7 +11,7 @@ use crate::{diagnostics::Diagnostic, run::RunState};
 use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
-    structure::trend::{Trend, TrendSeries},
+    structure::trend::{FeatureElement, Trend, TrendSeries},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -112,6 +112,19 @@ pub(crate) struct StructureCheckpoint {
     pub(crate) swings: Vec<SwingCheckpoint>,
     pub(crate) trend_count: usize,
     pub(crate) trends: Vec<TrendCheckpoint>,
+    pub(crate) feature_sequence: Option<Vec<FeatureElementCheckpoint>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FeatureElementCheckpoint {
+    pub(crate) feature_id: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) source_start_swing_id: String,
+    pub(crate) source_end_swing_id: String,
+    pub(crate) sbar_start_id: String,
+    pub(crate) sbar_end_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -191,6 +204,28 @@ impl From<&Trend> for TrendCheckpoint {
 
 fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
     series.iter().map(TrendCheckpoint::from).collect()
+}
+
+fn project_feature_sequence(structure: &capitus_struxis::structure::structure::Structure) -> Option<Vec<FeatureElementCheckpoint>> {
+    structure.feature_sequence().map(|elements| {
+        elements.iter().map(|element: &FeatureElement| {
+            let start_id = element.source_start_id();
+            let end_id = element.source_end_id();
+            let start_swing = structure.swings().get_swing(start_id)
+                .expect("FeatureElement source start must exist in the active SwingSeries");
+            let end_swing = structure.swings().get_swing(end_id)
+                .expect("FeatureElement source end must exist in the active SwingSeries");
+            FeatureElementCheckpoint {
+                feature_id: format!("{start_id}:{end_id}"),
+                high: element.high().to_string(),
+                low: element.low().to_string(),
+                source_start_swing_id: start_id.to_string(),
+                source_end_swing_id: end_id.to_string(),
+                sbar_start_id: start_swing.sbar_start_id.to_string(),
+                sbar_end_id: end_swing.sbar_end_id.to_string(),
+            }
+        }).collect()
+    })
 }
 
 impl ReplayCheckpointProjection {
@@ -297,6 +332,7 @@ pub(crate) fn structure_from_state_view(
             })
             .collect::<Vec<_>>();
         let trends = project_trends(structure.trends());
+        let feature_sequence = project_feature_sequence(structure);
         StructureCheckpoint {
             cbar_count: cbars.len(),
             cbars,
@@ -304,6 +340,7 @@ pub(crate) fn structure_from_state_view(
             swings,
             trend_count: trends.len(),
             trends,
+            feature_sequence,
         }
     })
 }
