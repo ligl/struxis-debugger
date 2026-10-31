@@ -106,6 +106,7 @@ fn checkpoint(
                 created_at: "1".into(),
                 updated_at: "2".into(),
             }],
+            feature_sequence: None,
 
         }),
         diagnostics: if include_diagnostic {
