@@ -484,7 +484,7 @@ function handleChartKeyboard(event: KeyboardEvent): void {
 }
 
 function setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void {
-  layerVisibility.value = { ...visibility };
+  layerVisibility.value = { ...visibility, feature: visibility.feature ?? true };
   applySbarChartSeriesVisibility(candleSeries, volumeSeries, visibility);
   syncStructurePrimitives();
   scheduleOverlayUpdate.flush();
@@ -776,7 +776,7 @@ onMounted(() => {
   cbarPrimitive = runtime.cbarPrimitive;
   swingPrimitive = runtime.swingPrimitive;
   trendPrimitive = runtime.trendPrimitive;
-  featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
+  if (primitiveHost && candleSeries) featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
