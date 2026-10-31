@@ -207,25 +207,34 @@ fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
     series.iter().map(TrendCheckpoint::from).collect()
 }
 
-fn project_feature_sequence(structure: &capitus_struxis::structure::structure::Structure) -> Option<Vec<FeatureElementCheckpoint>> {
+fn project_feature_sequence(
+    structure: &capitus_struxis::structure::structure::Structure,
+) -> Option<Vec<FeatureElementCheckpoint>> {
     structure.feature_sequence().map(|elements| {
-        elements.iter().map(|element: &FeatureElement| {
-            let start_id = element.source_start_id();
-            let end_id = element.source_end_id();
-            let start_swing = structure.swings().get_swing(start_id)
-                .expect("FeatureElement source start must exist in the active SwingSeries");
-            let end_swing = structure.swings().get_swing(end_id)
-                .expect("FeatureElement source end must exist in the active SwingSeries");
-            FeatureElementCheckpoint {
-                feature_id: format!("{start_id}:{end_id}"),
-                high: element.high().to_string(),
-                low: element.low().to_string(),
-                source_start_swing_id: start_id.to_string(),
-                source_end_swing_id: end_id.to_string(),
-                sbar_start_id: start_swing.sbar_start_id.to_string(),
-                sbar_end_id: end_swing.sbar_end_id.to_string(),
-            }
-        }).collect()
+        elements
+            .iter()
+            .map(|element: &FeatureElement| {
+                let start_id = element.source_start_id();
+                let end_id = element.source_end_id();
+                let start_swing = structure
+                    .swings()
+                    .get_swing(start_id)
+                    .expect("FeatureElement source start must exist in the active SwingSeries");
+                let end_swing = structure
+                    .swings()
+                    .get_swing(end_id)
+                    .expect("FeatureElement source end must exist in the active SwingSeries");
+                FeatureElementCheckpoint {
+                    feature_id: format!("{start_id}:{end_id}"),
+                    high: element.high().to_string(),
+                    low: element.low().to_string(),
+                    source_start_swing_id: start_id.to_string(),
+                    source_end_swing_id: end_id.to_string(),
+                    sbar_start_id: start_swing.sbar_start_id.to_string(),
+                    sbar_end_id: end_swing.sbar_end_id.to_string(),
+                }
+            })
+            .collect()
     })
 }
 
