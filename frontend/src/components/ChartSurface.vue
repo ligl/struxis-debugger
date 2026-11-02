@@ -484,7 +484,7 @@ function handleChartKeyboard(event: KeyboardEvent): void {
 }
 
 function setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void {
-  layerVisibility.value = { ...visibility, feature: visibility.feature ?? true };
+  layerVisibility.value = { ...visibility, feature: visibility.feature ?? false };
   applySbarChartSeriesVisibility(candleSeries, volumeSeries, visibility);
   syncStructurePrimitives();
   scheduleOverlayUpdate.flush();
@@ -1072,8 +1072,7 @@ onBeforeUnmount(() => {
 }
 
 .feature-dot {
-  background-color: #6F5735;
-  background: #D6A85D;
+  background: #6F5735;
 }
 
 .volume-dot {
