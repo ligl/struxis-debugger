@@ -54,7 +54,7 @@ const emit = defineEmits<{
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
-const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true, feature: true });
+const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true, feature: false });
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
@@ -884,7 +884,7 @@ onBeforeUnmount(() => {
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.trend }" :aria-pressed="layerVisibility.trend" :disabled="!structure || structure.trends.length === 0" data-testid="layer-toggle-trend" @click="toggleLayer('trend')"><i class="legend-dot trend-dot" style="background-color: #8F343D"></i>Trend</button>
-        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.feature }" :aria-pressed="layerVisibility.feature" :disabled="!structure || !structure.featureSequence?.length" data-testid="layer-toggle-feature" @click="toggleLayer('feature')"><i class="legend-dot feature-dot"></i>Feature</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.feature }" :aria-pressed="layerVisibility.feature" :disabled="!structure || !structure.featureSequence?.length" data-testid="layer-toggle-feature" @click="toggleLayer('feature')"><i class="legend-dot feature-dot"></i>FeatSeq</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>
     </div>
@@ -1072,6 +1072,7 @@ onBeforeUnmount(() => {
 }
 
 .feature-dot {
+  background-color: #6F5735;
   background: #D6A85D;
 }
 
