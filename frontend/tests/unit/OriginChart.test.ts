@@ -1303,10 +1303,13 @@ describe("ChartSurface and chart entry adapters", () => {
     expect(trendLegend.get(".trend-dot").attributes("style")).toContain("rgb(143, 52, 61)");
     expect(wrapper.find('[data-testid="layer-toggle-volume"] .volume-dot').exists()).toBe(true);
     const featureLegend = wrapper.get('[data-testid="layer-toggle-feature"]');
+    expect(featureLegend.text()).toContain("FeatSeq");
+    expect(featureLegend.attributes("aria-pressed")).toBe("false");
     expect(featureLegend.attributes("disabled")).toBeUndefined();
+    expect(featureLegend.get(".feature-dot").attributes("style")).toContain("rgb(111, 87, 53)");
     await featureLegend.trigger("click");
     await nextTick();
-    expect(featureLegend.attributes("aria-pressed")).toBe("false");
+    expect(featureLegend.attributes("aria-pressed")).toBe("true");
 
     const [cbarPrimitive, , trendPrimitive] = attachedStructurePrimitives();
     const cbarInteraction = vi.spyOn(cbarPrimitive!, "setInteractionState");
