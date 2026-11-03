@@ -625,8 +625,40 @@ function updateChart(): void {
   }
 }
 
+function ensureDrawingManager(): DrawingManager | null {
+  if (drawingManager) return drawingManager;
+  if (!chart || !candleSeries) return null;
+  drawingManager = new DrawingManager(chart, candleSeries, {
+    magnet: "weak",
+    stayInDrawingMode: false,
+    // The candlestick series contains OHLC only. Supply real SBar volume for
+    // volume-profile and VWAP tools instead of letting them use equal weights.
+    bars: () => props.bars.flatMap((bar) => {
+      const time = timeBySbarId.get(bar.sbarId);
+      if (time === undefined) return [];
+      return [{
+        time,
+        open: Number(bar.open),
+        high: Number(bar.high),
+        low: Number(bar.low),
+        close: Number(bar.close),
+        volume: Number(bar.volume),
+      }];
+    }),
+  });
+  stopDrawingListeners.push(
+    drawingManager.on("tool", (kind) => { drawingTool.value = kind; }),
+    drawingManager.on("change", (items) => { drawingCount.value = items.length; }),
+    drawingManager.on("selection", (ids) => { selectedDrawingCount.value = ids.length; }),
+    drawingManager.on("textEdit", (drawing) => handleDrawingTextEdit(drawing)),
+    drawingManager.on("tableEdit", (drawing, cell) => handleDrawingTableEdit(drawing, cell)),
+  );
+  return drawingManager;
+}
+
 function setDrawingTool(kind: DrawingKind | null): void {
-  drawingManager?.setTool(kind);
+  const manager = kind ? ensureDrawingManager() : drawingManager;
+  manager?.setTool(kind);
 }
 
 function toggleDrawingToolbar(): void {
@@ -638,7 +670,7 @@ function exportDrawings(): string {
 }
 
 function importDrawings(json: string): number {
-  return drawingManager?.importJSON(json) ?? 0;
+  return ensureDrawingManager()?.importJSON(json) ?? 0;
 }
 
 function clearDrawings(): void {
@@ -650,8 +682,8 @@ function setDrawingsVisible(visible: boolean): void {
 }
 
 function handleDrawingTextEdit(drawing: Drawing): void {
-  const text = window.prompt("Drawing text", drawing.text ?? "");
-  if (text !== null && drawingManager) drawingManager.update({ ...drawing, text });
+  const text = window.prompt("Drawing text", "");
+  if (text !== null && drawingManager) drawingManager.update({ ...drawing, text } as Drawing);
   else drawingManager?.setTool(null);
 }
 
@@ -825,31 +857,6 @@ onMounted(() => {
   swingPrimitive = runtime.swingPrimitive;
   trendPrimitive = runtime.trendPrimitive;
   if (primitiveHost && candleSeries) featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
-  drawingManager = new DrawingManager(chart, candleSeries, {
-    magnet: "weak",
-    stayInDrawingMode: false,
-    // Supply volume explicitly: the candlestick series itself contains OHLC
-    // only, but volume tools need real SBar volume rather than equal weights.
-    bars: () => props.bars.flatMap((bar) => {
-      const time = timeBySbarId.get(bar.sbarId);
-      if (time === undefined) return [];
-      return [{
-        time,
-        open: Number(bar.open),
-        high: Number(bar.high),
-        low: Number(bar.low),
-        close: Number(bar.close),
-        volume: Number(bar.volume),
-      }];
-    }),
-  });
-  stopDrawingListeners.push(
-    drawingManager.on("tool", (kind) => { drawingTool.value = kind; }),
-    drawingManager.on("change", (items) => { drawingCount.value = items.length; }),
-    drawingManager.on("selection", (ids) => { selectedDrawingCount.value = ids.length; }),
-    drawingManager.on("textEdit", (drawing) => handleDrawingTextEdit(drawing)),
-    drawingManager.on("tableEdit", (drawing, cell) => handleDrawingTableEdit(drawing, cell)),
-  );
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
