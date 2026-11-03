@@ -686,7 +686,8 @@ function setDrawingsVisible(visible: boolean): void {
 }
 
 function handleDrawingTextEdit(drawing: Drawing): void {
-  const text = window.prompt("Drawing text", "");
+  const currentText = (drawing as Drawing & { text?: string }).text ?? "";
+  const text = window.prompt("Drawing text", currentText);
   if (text !== null && drawingManager) drawingManager.update({ ...drawing, text } as Drawing);
   else drawingManager?.setTool(null);
 }
