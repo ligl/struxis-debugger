@@ -1,7 +1,8 @@
-import { configDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vite";
+import { configDefaults } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 
-export default defineConfig({
+const config = {
   plugins: [vue()],
   clearScreen: false,
   server: {
@@ -14,4 +15,9 @@ export default defineConfig({
     clearMocks: true,
     exclude: [...configDefaults.exclude, "e2e/**"],
   },
-});
+};
+
+// Use the workspace Vite type instance for plugins. Vitest may resolve its own
+// Vite copy; importing defineConfig from vitest/config can make plugin types
+// incompatible even when both copies are the same Vite release.
+export default defineConfig(config as Parameters<typeof defineConfig>[0]);
