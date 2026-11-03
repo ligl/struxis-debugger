@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DrawingKind } from "lightweight-charts-drawing";
 
-defineProps<{ activeTool: DrawingKind | null; expanded: boolean }>();
+defineProps<{ activeTool: DrawingKind | null; expanded: boolean; drawingCount: number; selectedCount: number }>();
 const emit = defineEmits<{
   select: [tool: DrawingKind | null];
   toggle: [];
@@ -83,6 +83,7 @@ function choose(kind: DrawingKind): void {
         @click="emit('toggle')"
       >{{ expanded ? "‹" : "✎" }}</button>
       <span v-if="expanded" class="drawing-toolbar-title">DRAWINGS</span>
+      <span v-if="expanded" class="drawing-toolbar-count" data-testid="drawing-count">{{ drawingCount }} / {{ selectedCount }}</span>
       <button
         v-if="expanded"
         class="drawing-tool-clear"
@@ -174,7 +175,7 @@ function choose(kind: DrawingKind): void {
   font-weight: 700;
   letter-spacing: .08em;
 }
-.drawing-tool-clear {
+.drawing-toolbar-count {\n  margin-left: auto;\n  color: #7f8b92;\n  font-size: 8px;\n}\n.drawing-tool-clear {
   margin-left: auto;
   padding: 3px 5px;
   border: 1px solid #343b40;
