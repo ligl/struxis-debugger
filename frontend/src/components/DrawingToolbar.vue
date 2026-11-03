@@ -82,6 +82,22 @@ function toggleGroup(label: string): void {
   activeGroup.value = activeGroup.value === label ? null : label;
 }
 
+
+function toolGlyph(kind: DrawingKind): string {
+  if (kind.includes("horizontal") || kind === "price-range") return "horizontal";
+  if (kind.includes("vertical") || kind.includes("time-zone") || kind.includes("fib-time") || kind === "date-range") return "vertical";
+  if (kind.includes("channel") || kind.includes("pitchfork") || kind.includes("pitchfan")) return "channel";
+  if (kind.includes("fib") || kind.includes("gann")) return "fib";
+  if (kind.includes("pattern") || kind.includes("elliott") || kind === "cyclic-lines" || kind === "time-cycles") return "pattern";
+  if (kind.includes("position") || kind.includes("forecast") || kind.includes("range") || kind.includes("volume-profile") || kind.includes("vwap") || kind === "sector" || kind === "ghost-feed" || kind === "bar-pattern") return "measure";
+  if (kind.includes("arrow")) return "arrow";
+  if (kind.includes("rectangle") || kind === "triangle") return "shape";
+  if (kind.includes("circle") || kind.includes("ellipse") || kind.includes("arc") || kind.includes("spiral")) return "circle";
+  if (kind === "brush" || kind === "highlighter" || kind === "path" || kind === "polyline" || kind.includes("curve") || kind === "sine-line") return "brush";
+  if (kind === "text" || kind === "note" || kind === "price-note" || kind === "pin" || kind === "table" || kind === "callout" || kind === "comment" || kind === "price-label" || kind === "signpost" || kind === "flag-mark") return "text";
+  return "trend";
+}
+
 function selectGroupForTool(kind: DrawingKind): string | null {
   return groups.find((group) => group.tools.some((tool) => tool.kind === kind))?.label ?? null;
 }
@@ -169,11 +185,10 @@ function selectGroupForTool(kind: DrawingKind): string | null {
 
     <section v-if="props.expanded && activeGroup" class="drawing-flyout" aria-label="Drawing tools">
       <header class="drawing-flyout-header">
-        <div>
-          <span class="drawing-flyout-eyebrow">DRAWING TOOLS</span>
-          <h3>{{ activeGroup }}</h3>
-        </div>
-        <button class="drawing-flyout-close" type="button" aria-label="Close tool panel" title="Close tool panel" @click="activeGroup = null">×</button>
+        <h3>{{ activeGroup }}</h3>
+        <button class="drawing-flyout-close" type="button" aria-label="Close tool panel" title="Close tool panel" @click="activeGroup = null">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" /></svg>
+        </button>
       </header>
       <div class="drawing-flyout-tools">
         <button
@@ -187,15 +202,24 @@ function selectGroupForTool(kind: DrawingKind): string | null {
           :data-tool-kind="tool.kind"
           @click="chooseActiveGroupTool(tool.kind)"
         >
-          <span class="drawing-tool-glyph" aria-hidden="true">{{ tool.label.slice(0, 1).toUpperCase() }}</span>
+          <svg class="drawing-tool-glyph" :data-glyph="toolGlyph(tool.kind)" viewBox="0 0 24 24" aria-hidden="true">
+            <template v-if="toolGlyph(tool.kind) === 'horizontal'"><path d="M3 12h18M6 8v8M18 8v8" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'vertical'"><path d="M12 3v18M8 6h8M8 18h8" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'channel'"><path d="m3 17 18-10M3 21l18-10M3 13l18-10" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'fib'"><path d="M4 5h16M4 9h16M4 14h16M4 19h16M7 3v18M17 3v18" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'pattern'"><path d="m3 18 5-10 5 6 4-9 4 13" /><circle cx="3" cy="18" r="1" /><circle cx="8" cy="8" r="1" /><circle cx="13" cy="14" r="1" /><circle cx="17" cy="5" r="1" /><circle cx="21" cy="18" r="1" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'measure'"><path d="M4 19V5M20 19V5M4 8h16M4 16h16M8 6v4M16 14v4" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'arrow'"><path d="M4 19 19 4M9 4h10v10" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'shape'"><path d="M5 5h14v14H5z" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'circle'"><circle cx="12" cy="12" r="8" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'brush'"><path d="M4 17c4-9 7 4 11-5s5-5 5-5M4 20h6" /></template>
+            <template v-else-if="toolGlyph(tool.kind) === 'text'"><path d="M4 6h16M12 6v13M8 19h8" /></template>
+            <template v-else><path d="m3 17 7-10 5 5 6-7" /><circle cx="3" cy="17" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="21" cy="5" r="1" /></template>
+          </svg>
           <span>{{ tool.label }}</span>
           <svg v-if="props.activeTool === tool.kind" class="drawing-tool-check" viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>
         </button>
       </div>
-      <footer class="drawing-flyout-footer">
-        <span>{{ groups.find((group) => group.label === activeGroup)?.tools.length ?? 0 }} TOOLS</span>
-        <span v-if="props.activeTool">{{ selectGroupForTool(props.activeTool) === activeGroup ? "ACTIVE TOOL" : "" }}</span>
-      </footer>
     </section>
   </aside>
 </template>
@@ -206,9 +230,9 @@ function selectGroupForTool(kind: DrawingKind): string | null {
   z-index: 8;
   top: 38px;
   bottom: 10px;
-  left: 8px;
+  left: 7px;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   max-height: calc(100% - 48px);
   color: #c5cbd0;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -217,18 +241,18 @@ function selectGroupForTool(kind: DrawingKind): string | null {
 .drawing-rail,
 .drawing-flyout {
   pointer-events: auto;
-  border: 1px solid #30383e;
-  background: rgb(22 27 31 / 97%);
-  box-shadow: 0 5px 20px rgb(0 0 0 / 32%);
+  background: rgb(20 24 28 / 94%);
+  border: 1px solid rgb(67 76 83 / 72%);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 24%);
 }
 .drawing-rail {
   display: flex;
-  width: 42px;
-  flex: 0 0 42px;
+  width: 40px;
+  flex: 0 0 40px;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 .drawing-rail-top,
 .drawing-rail-bottom {
@@ -237,35 +261,29 @@ function selectGroupForTool(kind: DrawingKind): string | null {
   flex-direction: column;
   align-items: center;
 }
-.drawing-rail-top {
-  padding-top: 5px;
-}
-.drawing-rail-bottom {
-  padding-bottom: 5px;
-}
+.drawing-rail-top { padding-top: 4px; }
+.drawing-rail-bottom { padding-bottom: 4px; }
 .drawing-rail-button {
   position: relative;
   display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 3px;
   background: transparent;
-  color: #aab3b9;
+  color: #929da4;
   cursor: pointer;
-  transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease;
+  transition: background-color 100ms ease, color 100ms ease;
 }
 .drawing-rail-button:hover {
-  border-color: #414a50;
   background: #2a3136;
-  color: #edf0f2;
+  color: #e4e9ec;
 }
 .drawing-rail-button.active {
-  border-color: #695536;
-  background: #3a3022;
-  color: #e3b96f;
+  background: #332c21;
+  color: #dfb66f;
 }
 .drawing-rail-button.has-active-tool:not(.active)::after {
   position: absolute;
@@ -278,145 +296,148 @@ function selectGroupForTool(kind: DrawingKind): string | null {
   content: "";
 }
 .drawing-rail-button svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.65;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .drawing-category-icon {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.55;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .drawing-rail-separator {
-  width: 24px;
+  width: 22px;
   height: 1px;
-  margin: 5px 0 4px;
+  margin: 4px 0;
   background: #343c42;
 }
-.drawing-rail-spacer {
-  flex: 1 1 auto;
-}
+.drawing-rail-spacer { flex: 1 1 auto; }
 .drawing-count {
   display: grid;
-  min-width: 21px;
-  height: 18px;
+  min-width: 19px;
+  height: 17px;
   place-items: center;
-  margin: 0 0 4px;
-  border-radius: 3px;
-  background: #293137;
-  color: #aeb8be;
+  margin: 0 0 3px;
+  color: #89949b;
   font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 .drawing-flyout {
   display: flex;
-  width: 238px;
-  min-width: 238px;
+  width: 224px;
+  min-width: 224px;
   max-height: 100%;
   flex-direction: column;
-  margin-left: 5px;
+  margin-left: 4px;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 3px;
+  background: rgb(23 28 32 / 97%);
 }
 .drawing-flyout-header {
   display: flex;
-  min-height: 58px;
-  flex: 0 0 58px;
+  min-height: 39px;
+  flex: 0 0 39px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 10px 0 12px;
   border-bottom: 1px solid #30383e;
-  background: #20272c;
-}
-.drawing-flyout-eyebrow {
-  color: #7f8b92;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: .12em;
 }
 .drawing-flyout-header h3 {
-  margin: 4px 0 0;
-  color: #e0e5e8;
-  font-size: 12px;
+  margin: 0;
+  color: #dce2e5;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: .01em;
 }
 .drawing-flyout-close {
   display: grid;
-  width: 25px;
-  height: 25px;
+  width: 23px;
+  height: 23px;
   place-items: center;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 3px;
   background: transparent;
-  color: #8d989f;
-  font-size: 19px;
+  color: #87939a;
   cursor: pointer;
 }
 .drawing-flyout-close:hover {
-  border-color: #424c53;
   background: #2b3339;
   color: #e1e6e9;
 }
+.drawing-flyout-close svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
 .drawing-flyout-tools {
-  display: grid;
+  display: flex;
   min-height: 0;
-  grid-template-columns: 1fr 1fr;
-  gap: 3px;
+  flex-direction: column;
+  gap: 1px;
   overflow: auto;
-  padding: 8px;
+  padding: 5px;
   scrollbar-color: #465159 transparent;
   scrollbar-width: thin;
 }
 .drawing-tool-item {
+  position: relative;
   display: flex;
   min-width: 0;
-  min-height: 35px;
+  min-height: 30px;
+  flex: 0 0 30px;
   align-items: center;
-  gap: 7px;
-  padding: 4px 6px;
-  border: 1px solid transparent;
-  border-radius: 3px;
+  gap: 10px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 2px;
   background: transparent;
   color: #aeb8be;
   font-family: inherit;
-  font-size: 10px;
-  line-height: 1.25;
+  font-size: 11px;
+  line-height: 1;
   text-align: left;
   cursor: pointer;
 }
 .drawing-tool-item:hover {
-  border-color: #414b52;
   background: #2a3238;
   color: #e6ebee;
 }
 .drawing-tool-item.active {
-  border-color: #725b38;
-  background: #3a3022;
-  color: #f0d29b;
+  background: #332c21;
+  color: #edcc91;
+}
+.drawing-tool-item.active::before {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: #d6a85d;
+  content: "";
 }
 .drawing-tool-glyph {
-  display: grid;
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
-  place-items: center;
-  border: 1px solid #3a444a;
-  border-radius: 3px;
-  color: #9ca8af;
-  font-size: 9px;
-  font-weight: 600;
+  fill: none;
+  stroke: #a0abb1;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.drawing-tool-item.active .drawing-tool-glyph {
-  border-color: #80663e;
-  color: #e3b96f;
-}
+.drawing-tool-item:hover .drawing-tool-glyph { stroke: #e0e6e9; }
+.drawing-tool-item.active .drawing-tool-glyph { stroke: #e2ba73; }
 .drawing-tool-item > span:nth-child(2) {
   min-width: 0;
   overflow: hidden;
@@ -434,25 +455,10 @@ function selectGroupForTool(kind: DrawingKind): string | null {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.drawing-flyout-footer {
-  display: flex;
-  min-height: 24px;
-  flex: 0 0 24px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  border-top: 1px solid #30383e;
-  color: #748189;
-  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .06em;
-}
 @media (max-width: 760px) {
   .drawing-flyout {
-    width: min(218px, calc(100vw - 66px));
-    min-width: min(218px, calc(100vw - 66px));
-  }
-  .drawing-flyout-tools {
-    grid-template-columns: 1fr;
+    width: min(218px, calc(100vw - 64px));
+    min-width: min(218px, calc(100vw - 64px));
   }
 }
 </style>
