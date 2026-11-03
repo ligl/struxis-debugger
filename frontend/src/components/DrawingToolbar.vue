@@ -67,7 +67,7 @@ const groups: { label: string; tools: { label: string; kind: DrawingKind }[] }[]
 ];
 
 
-const activeGroup = ref<string | null>(groups[0]?.label ?? null);
+const activeGroup = ref<string | null>(null);
 
 function choose(kind: DrawingKind, group: string): void {
   activeGroup.value = group;
