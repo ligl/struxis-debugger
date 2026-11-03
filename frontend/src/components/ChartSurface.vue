@@ -52,6 +52,7 @@ const emit = defineEmits<{
   crosshairAnchorChange: [anchor: { sbarId: string | null; price: number | null }];
   keyboardCrosshairChange: [anchor: { sbarId: string; price: number }];
   layerVisibilityChange: [visibility: ChartSurfaceLayerVisibility];
+  drawingsChange: [json: string];
   projectionFrame: [];
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
@@ -648,7 +649,10 @@ function ensureDrawingManager(): DrawingManager | null {
   });
   stopDrawingListeners.push(
     drawingManager.on("tool", (kind) => { drawingTool.value = kind; }),
-    drawingManager.on("change", (items) => { drawingCount.value = items.length; }),
+    drawingManager.on("change", (items) => {
+      drawingCount.value = items.length;
+      emit("drawingsChange", drawingManager?.exportJSON() ?? "[]");
+    }),
     drawingManager.on("selection", (ids) => { selectedDrawingCount.value = ids.length; }),
     drawingManager.on("textEdit", (drawing) => handleDrawingTextEdit(drawing)),
     drawingManager.on("tableEdit", (drawing, cell) => handleDrawingTableEdit(drawing, cell)),
