@@ -175,7 +175,11 @@ function choose(kind: DrawingKind): void {
   font-weight: 700;
   letter-spacing: .08em;
 }
-.drawing-toolbar-count {\n  margin-left: auto;\n  color: #7f8b92;\n  font-size: 8px;\n}\n.drawing-tool-clear {
+.drawing-toolbar-count {
+  margin-left: auto;
+  color: #7f8b92;
+  font-size: 8px;
+}\n.drawing-tool-clear {
   margin-left: auto;
   padding: 3px 5px;
   border: 1px solid #343b40;
