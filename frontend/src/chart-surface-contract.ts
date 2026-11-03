@@ -1,4 +1,5 @@
 import type { CandlestickData, HistogramData, ISeriesPrimitive, Time, UTCTimestamp } from "lightweight-charts";
+import type { DrawingKind } from "lightweight-charts-drawing";
 
 /**
  * Neutral imperative port exposed by ChartSurface to its business adapters.
@@ -125,6 +126,12 @@ export interface ChartSurfacePort {
   revealSbarRange(anchorIds: string[]): boolean;
   getStructureGeometry(): ChartSurfaceStructureGeometry;
   setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void;
+  /** Drawing objects are chart-local and remain separate from Struxis structures. */
+  setDrawingTool(kind: DrawingKind | null): void;
+  exportDrawings(): string;
+  importDrawings(json: string): number;
+  clearDrawings(): void;
+  setDrawingsVisible(visible: boolean): void;
   setStructureInteractionState(
     hovered: ChartSurfaceStructureInteraction | null,
     selected: ChartSurfaceStructureInteraction | null,
