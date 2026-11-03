@@ -3,6 +3,19 @@ import { describe, expect, it } from "vitest";
 import DrawingToolbar from "../../src/components/DrawingToolbar.vue";
 
 describe("DrawingToolbar", () => {
+
+  it("renders drawing-specific SVG glyphs in a compact single-column picker", async () => {
+    const wrapper = mount(DrawingToolbar, {
+      props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
+    });
+
+    const trendLine = wrapper.get('[data-tool-kind="trend-line"]');
+    expect(trendLine.find("svg.drawing-tool-glyph").exists()).toBe(true);
+    expect(trendLine.find(".drawing-tool-glyph").attributes("data-glyph")).toBe("trend");
+    expect(wrapper.get(".drawing-flyout-tools").classes()).toContain("drawing-flyout-tools");
+    expect(wrapper.find(".drawing-flyout-footer").exists()).toBe(false);
+  });
+
   it("emits collapse and expand requests without changing the active drawing tool", async () => {
     const wrapper = mount(DrawingToolbar, {
       props: { activeTool: "trend-line", expanded: true, drawingCount: 2, selectedCount: 1 },
