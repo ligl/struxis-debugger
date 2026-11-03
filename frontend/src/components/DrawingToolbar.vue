@@ -123,7 +123,30 @@ function selectGroupForTool(kind: DrawingKind): string | null {
         :data-testid="'drawing-category-' + index"
         @click="toggleGroup(group.label)"
       >
-        <span class="drawing-category-glyph" aria-hidden="true">{{ ["↗", "⌁", "ƒ", "△", "↕", "◇", "T"][index] }}</span>
+        <svg class="drawing-category-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <template v-if="index === 0">
+            <path d="m4 18 15-12M5 7l.01 0M18 17l.01 0" />
+            <circle cx="4" cy="18" r="1.5" /><circle cx="19" cy="6" r="1.5" />
+          </template>
+          <template v-else-if="index === 1">
+            <path d="m4 17 14-10M4 12l14-5M4 21l14-10" />
+          </template>
+          <template v-else-if="index === 2">
+            <path d="M4 6h16M4 10h16M4 14h16M4 18h16M8 4v16M16 4v16" />
+          </template>
+          <template v-else-if="index === 3">
+            <path d="m4 18 6-12 10 12H4Z" /><path d="m10 6 4 12" />
+          </template>
+          <template v-else-if="index === 4">
+            <path d="M5 4v16M19 4v16M5 8h14M5 16h14M9 6v4M15 14v4" />
+          </template>
+          <template v-else-if="index === 5">
+            <rect x="4" y="4" width="9" height="9" rx="1" /><circle cx="17" cy="16" r="4" />
+          </template>
+          <template v-else>
+            <path d="M5 6h14M12 6v13M8 19h8" />
+          </template>
+        </svg>
         <span v-if="group.tools.some((tool) => tool.kind === props.activeTool)" class="drawing-category-indicator"></span>
       </button>
 
@@ -263,11 +286,14 @@ function selectGroupForTool(kind: DrawingKind): string | null {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.drawing-category-glyph {
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 19px;
-  font-weight: 500;
-  line-height: 1;
+.drawing-category-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .drawing-rail-separator {
   width: 24px;
