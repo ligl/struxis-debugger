@@ -32,9 +32,13 @@ describe("DrawingToolbar", () => {
       props: { activeTool: "trend-line", expanded: false, drawingCount: 2, selectedCount: 1 },
     });
     expect(collapsed.get('[data-testid="drawing-toolbar"]').classes()).toContain("is-collapsed");
+    expect(collapsed.find(".drawing-rail").exists()).toBe(false);
+    expect(collapsed.find(".drawing-count").exists()).toBe(false);
     expect(collapsed.get('[data-testid="drawing-toolbar-toggle"]').attributes("aria-expanded")).toBe("false");
     expect(collapsed.get('[data-testid="drawing-toolbar-toggle"]').attributes("aria-label")).toBe("Expand drawing toolbar");
     expect(collapsed.find('[data-tool-kind="trend-line"]').exists()).toBe(false);
+    await collapsed.get('[data-testid="drawing-toolbar-toggle"]').trigger("click");
+    expect(collapsed.emitted("toggle")).toHaveLength(1);
   });
 
   it("emits the selected drawing kind", async () => {
