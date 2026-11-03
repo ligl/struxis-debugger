@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { DrawingManager, type DrawingKind, type Drawing } from "lightweight-charts-drawing";
+import DrawingToolbar from "./DrawingToolbar.vue";
 import { CrosshairMode, type CandlestickData, type HistogramData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from "lightweight-charts";
 import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
@@ -55,6 +57,12 @@ const emit = defineEmits<{
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true, feature: false });
+const drawingTool = ref<DrawingKind | null>(null);
+const drawingToolbarExpanded = ref(true);
+const drawingCount = ref(0);
+const selectedDrawingCount = ref(0);
+let drawingManager: DrawingManager | null = null;
+const stopDrawingListeners: Array<() => void> = [];
 let chart: IChartApi | null = null;
 let candleSeries: ISeriesApi<"Candlestick"> | null = null;
 let volumeSeries: ISeriesApi<"Histogram"> | null = null;
@@ -289,6 +297,8 @@ function revealSbarRange(anchorIds: string[]): boolean {
 
 function handleChartClick(param: { point?: { x: number; y: number } | undefined }): void {
   if (chartError.value || props.bars.length === 0) return;
+  // Drawing placement and selected-object interaction own the click gesture.
+  if (drawingManager?.tool() || drawingManager?.selection().length) return;
   const point = param.point;
   emit("chartClick", point && Number.isFinite(point.x)
     ? { x: point.x, y: Number.isFinite(point.y) ? point.y : null }
@@ -428,6 +438,8 @@ function zoomTimeScale(direction: "in" | "out"): boolean {
 }
 
 function handleChartKeyboard(event: KeyboardEvent): void {
+  // The drawing engine owns chart shortcuts while placing or editing drawings.
+  if (drawingManager?.tool() || drawingManager?.selection().length) return;
   // ReplayWorkspace passes its active chart owner into the Surface. Standalone
   // Dataset surfaces retain local hover/focus activation behavior.
   if (props.keyboardActive === false) return;
@@ -613,6 +625,43 @@ function updateChart(): void {
   }
 }
 
+function setDrawingTool(kind: DrawingKind | null): void {
+  drawingManager?.setTool(kind);
+}
+
+function toggleDrawingToolbar(): void {
+  drawingToolbarExpanded.value = !drawingToolbarExpanded.value;
+}
+
+function exportDrawings(): string {
+  return drawingManager?.exportJSON() ?? "[]";
+}
+
+function importDrawings(json: string): number {
+  return drawingManager?.importJSON(json) ?? 0;
+}
+
+function clearDrawings(): void {
+  drawingManager?.clear();
+}
+
+function setDrawingsVisible(visible: boolean): void {
+  drawingManager?.setDrawingsVisible(visible);
+}
+
+function handleDrawingTextEdit(drawing: Drawing): void {
+  const text = window.prompt("Drawing text", drawing.text ?? "");
+  if (text !== null && drawingManager) drawingManager.update({ ...drawing, text });
+  else drawingManager?.setTool(null);
+}
+
+function handleDrawingTableEdit(drawing: Drawing, cell: [number, number]): void {
+  const current = drawing.style.table?.[cell[0]]?.[cell[1]] ?? "";
+  const text = window.prompt("Table cell", String(current));
+  if (text !== null) drawingManager?.setTableCellText(drawing.id, cell, text);
+  drawingManager?.endTableEdit();
+}
+
 function getVisibleLogicalRange(): { from: number; to: number } | null {
   const range = chart?.timeScale().getVisibleLogicalRange();
   return range && Number.isFinite(range.from) && Number.isFinite(range.to)
@@ -759,7 +808,7 @@ function registerPrimitive(
   });
 }
 
-defineExpose({ registerPrimitive, replaceSeriesData, updateSeriesData, fitContent: fitContentPort, setLayerVisibility, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState, setStructurePlaybackState });
+defineExpose({ registerPrimitive, replaceSeriesData, updateSeriesData, fitContent: fitContentPort, setLayerVisibility, setDrawingTool, exportDrawings, importDrawings, clearDrawings, setDrawingsVisible, getTimeCoordinate, getTimeAtCoordinate, getLogicalIndexAtCoordinate, getPriceAtCoordinate, getVisibleLogicalRange, applyViewportRange, applyCrosshairPosition, clearCrosshairPosition, getSbarCoordinate, getLogicalCoordinate, getPriceCoordinate, getSbarIdAtCoordinate, getSbarIdAtClientX, hasSbarId, getSbarMarker: markerForSbar, getSbarRangeHighlight: sbarRangeHighlight, revealSbarRange, getStructureGeometry, setStructureInteractionState, setStructurePlaybackState });
 
 onMounted(() => {
   document.addEventListener("keydown", handleChartKeyboard);
@@ -777,6 +826,31 @@ onMounted(() => {
   swingPrimitive = runtime.swingPrimitive;
   trendPrimitive = runtime.trendPrimitive;
   if (primitiveHost && candleSeries) featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
+  drawingManager = new DrawingManager(chart, candleSeries, {
+    magnet: "weak",
+    stayInDrawingMode: false,
+    // Supply volume explicitly: the candlestick series itself contains OHLC
+    // only, but volume tools need real SBar volume rather than equal weights.
+    bars: () => props.bars.flatMap((bar) => {
+      const time = timeBySbarId.get(bar.sbarId);
+      if (time === undefined) return [];
+      return [{
+        time,
+        open: Number(bar.open),
+        high: Number(bar.high),
+        low: Number(bar.low),
+        close: Number(bar.close),
+        volume: Number(bar.volume),
+      }];
+    }),
+  });
+  stopDrawingListeners.push(
+    drawingManager.on("tool", (kind) => { drawingTool.value = kind; }),
+    drawingManager.on("change", (items) => { drawingCount.value = items.length; }),
+    drawingManager.on("selection", (ids) => { selectedDrawingCount.value = ids.length; }),
+    drawingManager.on("textEdit", (drawing) => handleDrawingTextEdit(drawing)),
+    drawingManager.on("tableEdit", (drawing, cell) => handleDrawingTableEdit(drawing, cell)),
+  );
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
@@ -816,6 +890,12 @@ onBeforeUnmount(() => {
     crosshairUpdateFrame = null;
   }
   pendingViewportRange = null;
+  for (const stop of stopDrawingListeners.splice(0)) stop();
+  drawingManager?.destroy();
+  drawingManager = null;
+  drawingTool.value = null;
+  drawingCount.value = 0;
+  selectedDrawingCount.value = 0;
   disposeSbarChartRuntime(chart, primitiveHost);
   primitiveHost = null;
   cbarPrimitive = null;
@@ -878,6 +958,12 @@ onBeforeUnmount(() => {
         :aria-label="chartLabel"
         @pointerenter="emit('chartActivate')"
       ></div>
+      <DrawingToolbar
+        :active-tool="drawingTool"
+        :expanded="drawingToolbarExpanded"
+        @select="setDrawingTool"
+        @toggle="toggleDrawingToolbar"
+      />
       <slot name="chart-interaction-overlay" />
       <div v-if="showLegend !== false" class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
