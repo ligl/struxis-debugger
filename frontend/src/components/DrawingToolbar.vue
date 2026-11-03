@@ -98,9 +98,6 @@ function toolGlyph(kind: DrawingKind): string {
   return "trend";
 }
 
-function selectGroupForTool(kind: DrawingKind): string | null {
-  return groups.find((group) => group.tools.some((tool) => tool.kind === kind))?.label ?? null;
-}
 </script>
 
 <template>
