@@ -656,8 +656,7 @@ function handleDrawingTextEdit(drawing: Drawing): void {
 }
 
 function handleDrawingTableEdit(drawing: Drawing, cell: [number, number]): void {
-  const current = drawing.style.table?.[cell[0]]?.[cell[1]] ?? "";
-  const text = window.prompt("Table cell", String(current));
+  const text = window.prompt("Table cell", "");
   if (text !== null) drawingManager?.setTableCellText(drawing.id, cell, text);
   drawingManager?.endTableEdit();
 }
@@ -961,6 +960,8 @@ onBeforeUnmount(() => {
       <DrawingToolbar
         :active-tool="drawingTool"
         :expanded="drawingToolbarExpanded"
+        :drawing-count="drawingCount"
+        :selected-count="selectedDrawingCount"
         @select="setDrawingTool"
         @toggle="toggleDrawingToolbar"
       />
