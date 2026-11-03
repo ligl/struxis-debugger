@@ -747,6 +747,7 @@ mod tests {
             swings: vec![],
             trend_count: 0,
             trends: vec![],
+            feature_sequence: None,
         };
         let canonical = canonical_structure_state(Some(&structure)).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&canonical).unwrap();
@@ -816,6 +817,7 @@ mod tests {
             swings: vec![],
             trend_count: 0,
             trends: vec![],
+            feature_sequence: None,
         };
         assert!(canonical_structure_state(Some(&structure))
             .unwrap_err()
