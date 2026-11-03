@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createChartPrimitiveHost } from "../../src/sbar-chart-primitive-host";
 import {
   registerCBarPrimitive,
@@ -9,6 +9,8 @@ import {
 } from "../../src/sbar-chart-structure-primitives";
 import type { ISeriesApi, ISeriesPrimitive, Time } from "lightweight-charts";
 import { alignStrokeCoordinate } from "../../src/chart-canvas-pixel-alignment";
+
+afterEach(() => vi.restoreAllMocks());
 
 function createHarness() {
   const times = new Map<Time, number>([
@@ -231,6 +233,9 @@ describe("CBar and Swing Series Primitives", () => {
   });
 
   it("draws Swing segments with direction and state styling, and honors visibility", () => {
+    // jsdom exposes getContext but emits a not-implemented error; exercise the
+    // renderer fallback path without producing misleading test-console errors.
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
     const h = createHarness();
     const controller = registerSwingPrimitive(h.host, h.series);
     controller.setData([{
