@@ -1,8 +1,6 @@
 # Struxis Debugger
 
-Struxis Debugger is an independent engineering application for developing, replaying, debugging, and verifying Struxis market-structure behavior. It is not a Terminal page, mode, workspace, or sub-application.
-
-The application directly composes Nautilus and Struxis. Its own Tauri runtime owns the replay session lifecycle, IPC commands, and read-only snapshot DTOs. It does not depend on `capitus-terminal` or `capitus-node`.
+Struxis Debugger is an independent Tauri desktop application for inspecting and replaying Nautilus / Strategy / Struxis market-structure processing. It owns its application state, IPC, Replay Worker lifecycle, Snapshot storage, and Vue frontend. It does not depend on `capitus-terminal` or `capitus-node`.
 
 ## Prerequisites
 
@@ -12,27 +10,28 @@ The application directly composes Nautilus and Struxis. Its own Tauri runtime ow
 
 ## Development
 
-Install the frontend dependencies once, from the frontend directory:
+Install frontend dependencies:
 
 ```bash
 cd crates/struxis-debugger/frontend
 bun install --frozen-lockfile
 ```
 
-Then use the Debugger directory as the Bun command entrypoint:
+Start the frontend:
 
 ```bash
 cd crates/struxis-debugger
 bun run dev
 ```
 
-In a separate terminal, start the Tauri application from the same Debugger directory:
+In another terminal:
 
 ```bash
+cd crates/struxis-debugger
 cargo tauri dev
 ```
 
-The Vite development server uses port 1421, separate from Terminal's port 1420. The root-level `package.json` forwards frontend scripts to `frontend/package.json`; the frontend remains the sole owner of frontend dependencies and script implementations.
+Vite uses port 1421, separate from Terminal's port 1420. The crate-level package scripts forward to `frontend/package.json`.
 
 ## Validation
 
@@ -41,14 +40,22 @@ From the repository root:
 ```bash
 cargo check -p capitus-struxis-debugger
 cargo test -p capitus-struxis-debugger
-cd crates/struxis-debugger
-bun run check
 ```
 
-The same root-level entrypoint also supports `bun run test`, `bun run typecheck`, `bun run build`, and `bun run test:watch`.
+From `crates/struxis-debugger`:
 
-For UI diagnostics, right-click anywhere in the Debugger window and choose **复制文档 HTML** to copy the current rendered document markup to the clipboard. The copied HTML excludes the context menu itself; paste it into a support conversation when reporting a UI issue.
+```bash
+bun run check
+bun run test:e2e
+bun run test:e2e:desktop
+```
+
+`check` runs Vitest, type checking, and the frontend build. Browser E2E and Tauri desktop E2E are separate scopes. Record actual local command results.
 
 ## Architecture
 
-The [Struxis Debugger system design](../../docs/architecture/struxis/debugger.md) is the system design entry point. The authoritative UI / UE baseline is [UI / UE principles](../../docs/architecture/struxis/debugger/ui-ue-principles.md), and the three-workspace UI architecture is [Dataset / Replay / Compare](../../docs/architecture/struxis/debugger/workspaces.md). The frozen [Struxis Debugger UI/UE prototype](../../docs/architecture/struxis/debugger/struxis-debugger-ui-prototype.html) is the visual and layout reference. Supporting documents cover layout, chart/data contracts, replay lifecycle, snapshots, comparison, and validation. The current implementation is a disposable prototype; after the design set is completed and approved, the existing Debugger implementation will be removed and rebuilt against these documents. Application lifecycle, UI composition, state, IPC, and release decisions remain independent from Terminal.
+[Struxis Debugger architecture](../../docs/architecture/struxis/debugger.md) is the single maintained architecture document and describes the current implementation. When it conflicts with source, current source wins.
+
+The [frozen UI prototype](../../docs/architecture/struxis/debugger/struxis-debugger-ui-prototype.html) is retained only as a visual reference, not as the authority for current component structure or implemented behavior.
+
+For UI diagnostics, right-click in the Debugger window and choose **复制文档 HTML** to copy the current rendered document markup. The copied HTML excludes the context menu itself.
