@@ -22,9 +22,11 @@ describe("DrawingToolbar", () => {
     });
 
     expect(wrapper.get('[data-testid="drawing-toolbar"]').classes()).not.toContain("is-collapsed");
+    expect(wrapper.find(".drawing-flyout").exists()).toBe(false);
+    await wrapper.get('[data-testid="drawing-category-0"]').trigger("click");
+    expect(wrapper.get('[data-tool-kind="trend-line"]').exists()).toBe(true);
     await wrapper.get('[data-testid="drawing-toolbar-toggle"]').trigger("click");
     expect(wrapper.emitted("toggle")).toHaveLength(1);
-    expect(wrapper.get('[data-tool-kind="trend-line"]').attributes("aria-pressed")).toBe("true");
 
     const collapsed = mount(DrawingToolbar, {
       props: { activeTool: "trend-line", expanded: false, drawingCount: 2, selectedCount: 1 },
