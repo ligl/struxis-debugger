@@ -27,6 +27,7 @@ describe("DrawingToolbar", () => {
       props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
     });
 
+    await wrapper.get('[data-testid="drawing-category-2"]').trigger("click");
     await wrapper.get('[data-tool-kind="fib-retracement"]').trigger("click");
     expect(wrapper.emitted("select")).toEqual([["fib-retracement"]]);
   });
