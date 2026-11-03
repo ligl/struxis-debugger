@@ -355,7 +355,9 @@ function selectGroupForTool(kind: DrawingKind): string | null {
   border-radius: 3px;
   background: transparent;
   color: #aeb8be;
-  font: 10px/1.25 inherit;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.25;
   text-align: left;
   cursor: pointer;
 }
