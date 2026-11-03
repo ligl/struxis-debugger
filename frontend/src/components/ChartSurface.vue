@@ -868,6 +868,14 @@ onMounted(() => {
   applyCrosshairOptions();
 });
 
+watch(() => props.sequenceId, (sequenceId, previousSequenceId) => {
+  // Drawings belong to one chart sequence. Never carry manual annotations
+  // into a different Dataset / Replay sequence by accidental component reuse.
+  if (previousSequenceId !== undefined && sequenceId !== previousSequenceId) {
+    drawingManager?.clear();
+  }
+});
+
 watch(() => [props.bars, props.sequenceId, props.dataMode] as const, () => {
   updateChart();
   // Dataset identity changes rebuild both the index and series; publish their
