@@ -74,6 +74,10 @@ function choose(kind: DrawingKind, group: string): void {
   emit("select", kind);
 }
 
+function chooseActiveGroupTool(kind: DrawingKind): void {
+  if (activeGroup.value) choose(kind, activeGroup.value);
+}
+
 function toggleGroup(label: string): void {
   activeGroup.value = activeGroup.value === label ? null : label;
 }
@@ -158,7 +162,7 @@ function selectGroupForTool(kind: DrawingKind): string | null {
           :aria-pressed="props.activeTool === tool.kind"
           :title="tool.label"
           :data-tool-kind="tool.kind"
-          @click="choose(tool.kind, activeGroup!)"
+          @click="chooseActiveGroupTool(tool.kind)"
         >
           <span class="drawing-tool-glyph" aria-hidden="true">{{ tool.label.slice(0, 1).toUpperCase() }}</span>
           <span>{{ tool.label }}</span>
