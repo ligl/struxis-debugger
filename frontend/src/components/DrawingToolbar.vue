@@ -229,7 +229,7 @@ function toolGlyph(kind: DrawingKind): string {
   bottom: 10px;
   left: 7px;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   max-height: calc(100% - 48px);
   color: #c5cbd0;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -332,6 +332,7 @@ function toolGlyph(kind: DrawingKind): string {
   min-width: 224px;
   max-height: 100%;
   flex-direction: column;
+  align-self: flex-start;
   margin-left: 4px;
   overflow: hidden;
   border-radius: 3px;
