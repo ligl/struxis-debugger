@@ -152,7 +152,7 @@ function selectGroupForTool(kind: DrawingKind): string | null {
 
       <div class="drawing-rail-spacer"></div>
       <div class="drawing-rail-bottom">
-        <span class="drawing-count" data-testid="drawing-count" :title="drawingCount + ' drawings · ' + selectedCount + ' selected">{{ drawingCount }}</span>
+        <span class="drawing-count" data-testid="drawing-count" :title="drawingCount + ' drawings · ' + selectedCount + ' selected'">{{ drawingCount }}</span>
         <button
           class="drawing-rail-button drawing-collapse-button"
           type="button"
