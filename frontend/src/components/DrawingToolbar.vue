@@ -107,7 +107,7 @@ function toolGlyph(kind: DrawingKind): string {
     aria-label="Drawing tools"
     data-testid="drawing-toolbar"
   >
-    <nav class="drawing-rail" aria-label="Drawing tool categories">
+    <nav v-if="props.expanded" class="drawing-rail" aria-label="Drawing tool categories">
       <div class="drawing-rail-top">
         <button
           class="drawing-rail-button drawing-select-button"
@@ -180,6 +180,19 @@ function toolGlyph(kind: DrawingKind): string {
       </div>
     </nav>
 
+    <button
+      v-else
+      class="drawing-restore-button"
+      type="button"
+      aria-label="Expand drawing toolbar"
+      title="Show drawing tools"
+      aria-expanded="false"
+      data-testid="drawing-toolbar-toggle"
+      @click="emit('toggle')"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 7 7-7 7" /></svg>
+    </button>
+
     <section v-if="props.expanded && activeGroup" class="drawing-flyout" aria-label="Drawing tools">
       <header class="drawing-flyout-header">
         <h3>{{ activeGroup }}</h3>
@@ -234,6 +247,43 @@ function toolGlyph(kind: DrawingKind): string {
   color: #c5cbd0;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   pointer-events: none;
+}
+.drawing-toolbar.is-collapsed {
+  top: auto;
+  bottom: 10px;
+  left: 7px;
+  max-height: none;
+}
+.drawing-restore-button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: #7c878e;
+  opacity: .42;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 120ms ease, opacity 120ms ease, background-color 120ms ease;
+}
+.drawing-restore-button:hover,
+.drawing-restore-button:focus-visible {
+  background: rgb(30 36 40 / 88%);
+  color: #d0d7db;
+  opacity: .92;
+}
+.drawing-restore-button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .drawing-rail,
 .drawing-flyout {
