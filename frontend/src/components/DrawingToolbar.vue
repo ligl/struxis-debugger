@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import type { DrawingKind } from "lightweight-charts-drawing";
 
 const props = defineProps<{ activeTool: DrawingKind | null; expanded: boolean; drawingCount: number; selectedCount: number }>();
@@ -10,11 +10,20 @@ const emit = defineEmits<{
 
 const groups: { label: string; tools: { label: string; kind: DrawingKind }[] }[] = [
   { label: "Lines", tools: [
-    { label: "Trend line", kind: "trend-line" }, { label: "Ray", kind: "ray" },
-    { label: "Info line", kind: "info-line" }, { label: "Extended line", kind: "extended-line" },
-    { label: "Trend angle", kind: "trend-angle" }, { label: "Horizontal line", kind: "horizontal-line" },
-    { label: "Horizontal ray", kind: "horizontal-ray" }, { label: "Vertical line", kind: "vertical-line" },
+    { label: "Horizontal line", kind: "horizontal-line" }, { label: "Horizontal ray", kind: "horizontal-ray" },
+    { label: "Vertical line", kind: "vertical-line" }, { label: "Trend line", kind: "trend-line" },
+    { label: "Ray", kind: "ray" }, { label: "Info line", kind: "info-line" },
+    { label: "Extended line", kind: "extended-line" }, { label: "Trend angle", kind: "trend-angle" },
     { label: "Cross line", kind: "cross-line" },
+  ] },
+  { label: "Brushes & shapes", tools: [
+    { label: "Rectangle", kind: "rectangle" }, { label: "Rotated rectangle", kind: "rotated-rectangle" },
+    { label: "Brush", kind: "brush" }, { label: "Highlighter", kind: "highlighter" },
+    { label: "Arrow marker", kind: "arrow-marker" }, { label: "Arrow", kind: "arrow" },
+    { label: "Arrow up", kind: "arrow-mark-up" }, { label: "Arrow down", kind: "arrow-mark-down" },
+    { label: "Path", kind: "path" }, { label: "Circle", kind: "circle" }, { label: "Ellipse", kind: "ellipse" },
+    { label: "Polyline", kind: "polyline" }, { label: "Triangle", kind: "triangle" },
+    { label: "Arc", kind: "arc" }, { label: "Curve", kind: "curve" }, { label: "Double curve", kind: "double-curve" },
   ] },
   { label: "Channels & pitchforks", tools: [
     { label: "Parallel channel", kind: "parallel-channel" }, { label: "Regression trend", kind: "regression-trend" },
@@ -49,15 +58,6 @@ const groups: { label: string; tools: { label: string; kind: DrawingKind }[] }[]
     { label: "Anchored volume profile", kind: "anchored-volume-profile" }, { label: "Price range", kind: "price-range" },
     { label: "Date range", kind: "date-range" }, { label: "Date & price range", kind: "date-and-price-range" },
   ] },
-  { label: "Brushes & shapes", tools: [
-    { label: "Brush", kind: "brush" }, { label: "Highlighter", kind: "highlighter" },
-    { label: "Arrow marker", kind: "arrow-marker" }, { label: "Arrow", kind: "arrow" },
-    { label: "Arrow up", kind: "arrow-mark-up" }, { label: "Arrow down", kind: "arrow-mark-down" },
-    { label: "Rectangle", kind: "rectangle" }, { label: "Rotated rectangle", kind: "rotated-rectangle" },
-    { label: "Path", kind: "path" }, { label: "Circle", kind: "circle" }, { label: "Ellipse", kind: "ellipse" },
-    { label: "Polyline", kind: "polyline" }, { label: "Triangle", kind: "triangle" },
-    { label: "Arc", kind: "arc" }, { label: "Curve", kind: "curve" }, { label: "Double curve", kind: "double-curve" },
-  ] },
   { label: "Text & annotations", tools: [
     { label: "Text", kind: "text" }, { label: "Note", kind: "note" }, { label: "Price note", kind: "price-note" },
     { label: "Pin", kind: "pin" }, { label: "Table", kind: "table" }, { label: "Callout", kind: "callout" },
@@ -68,6 +68,16 @@ const groups: { label: string; tools: { label: string; kind: DrawingKind }[] }[]
 
 
 const activeGroup = ref<string | null>(null);
+const toolbarElement = ref<HTMLElement | null>(null);
+
+function handleDocumentPointerDown(event: PointerEvent): void {
+  if (!toolbarElement.value?.contains(event.target as Node)) {
+    activeGroup.value = null;
+  }
+}
+
+onMounted(() => document.addEventListener("pointerdown", handleDocumentPointerDown));
+onBeforeUnmount(() => document.removeEventListener("pointerdown", handleDocumentPointerDown));
 
 function choose(kind: DrawingKind, group: string): void {
   activeGroup.value = group;
@@ -102,6 +112,7 @@ function toolGlyph(kind: DrawingKind): string {
 
 <template>
   <aside
+    ref="toolbarElement"
     class="drawing-toolbar"
     :class="{ 'is-collapsed': !props.expanded, 'has-flyout': props.expanded && activeGroup !== null }"
     aria-label="Drawing tools"
@@ -137,14 +148,17 @@ function toolGlyph(kind: DrawingKind): string {
         @click="toggleGroup(group.label)"
       >
         <svg class="drawing-category-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <template v-if="index === 0">
+          <template v-if="group.label === 'Lines'">
             <path d="m4 18 15-12M5 7l.01 0M18 17l.01 0" />
             <circle cx="4" cy="18" r="1.5" /><circle cx="19" cy="6" r="1.5" />
           </template>
-          <template v-else-if="index === 1">
+          <template v-else-if="group.label === 'Brushes & shapes'">
+            <rect x="4" y="4" width="9" height="9" rx="1" /><circle cx="17" cy="16" r="4" />
+          </template>
+          <template v-else-if="group.label === 'Channels & pitchforks'">
             <path d="m4 17 14-10M4 12l14-5M4 21l14-10" />
           </template>
-          <template v-else-if="index === 2">
+          <template v-else-if="index === 3">
             <path d="M4 6h16M4 10h16M4 14h16M4 18h16M8 4v16M16 4v16" />
           </template>
           <template v-else-if="index === 3">
@@ -152,9 +166,6 @@ function toolGlyph(kind: DrawingKind): string {
           </template>
           <template v-else-if="index === 4">
             <path d="M5 4v16M19 4v16M5 8h14M5 16h14M9 6v4M15 14v4" />
-          </template>
-          <template v-else-if="index === 5">
-            <rect x="4" y="4" width="9" height="9" rx="1" /><circle cx="17" cy="16" r="4" />
           </template>
           <template v-else>
             <path d="M5 6h14M12 6v13M8 19h8" />
