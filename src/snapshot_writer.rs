@@ -1,7 +1,7 @@
 //! SQLite-backed Snapshot recording and finalization.
 //!
-//! Checkpoints are committed individually. A Snapshot is only published after
-//! final checksum verification through an independent read-only connection.
+//! Explicit Snapshot saves batch the completed trajectory in one SQLite
+//! transaction. A Snapshot is only published after read-only verification.
 
 use std::{
     fs::{self, File},
@@ -17,8 +17,9 @@ use crate::{
     replay::LoadedInput,
     run::{RunState, RunStatus},
     snapshot::{
-        canonical_structure_state, verify_complete_snapshot, SnapshotCheckpointRecord,
-        SnapshotManifest, STATUS_COMPLETE, STATUS_FAILED, STATUS_RECORDING,
+        canonical_structure_state, validate_snapshot_records, verify_complete_snapshot,
+        SnapshotCheckpointRecord, SnapshotManifest, STATUS_COMPLETE, STATUS_FAILED,
+        STATUS_RECORDING,
     },
     worker::CheckpointSink,
 };
@@ -127,24 +128,7 @@ impl SnapshotWriter {
         )?;
         let result = (|| {
             writer.initialize(&initial_state, effective_config)?;
-            for (expected_index, checkpoint) in checkpoints.iter().enumerate() {
-                if checkpoint.checkpoint_index != expected_index {
-                    return Err(format!(
-                        "Owned Checkpoint trajectory is not contiguous: expected index {expected_index}, got {}",
-                        checkpoint.checkpoint_index
-                    ));
-                }
-                let expected_sbar_id = input.bars[expected_index].ts_event.to_string();
-                if checkpoint.sbar_id != expected_sbar_id
-                    || checkpoint.ts_event != expected_sbar_id
-                {
-                    return Err(format!(
-                        "Owned Checkpoint SBar mismatch at index {expected_index}: expected {expected_sbar_id}, got {} / {}",
-                        checkpoint.sbar_id, checkpoint.ts_event
-                    ));
-                }
-                writer.commit_owned_checkpoint(checkpoint)?;
-            }
+            writer.commit_owned_checkpoints(checkpoints)?;
             writer.finalize(completed_state)?;
             writer.manifest.as_ref()
                 .map(|manifest| manifest.snapshot_id.clone())
@@ -155,6 +139,98 @@ impl SnapshotWriter {
             let _ = <Self as CheckpointSink>::fail(&mut writer, error);
         }
         result
+    }
+
+    /// Persists an explicit completed trajectory atomically. The Recording
+    /// Manifest is advanced once, after every row has been inserted successfully.
+    fn commit_owned_checkpoints(&mut self, checkpoints: &[OwnedCheckpoint]) -> Result<(), String> {
+        let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
+        if manifest.status != STATUS_RECORDING {
+            return Err(format!("Cannot append checkpoints to Snapshot in {}", manifest.status));
+        }
+        if !self.checkpoints.is_empty() {
+            return Err("Completed trajectory batch requires an empty Snapshot writer".into());
+        }
+        if checkpoints.len() != self.input.count {
+            return Err(format!(
+                "Completed trajectory batch count mismatch: expected {}, got {}",
+                self.input.count, checkpoints.len()
+            ));
+        }
+
+        let mut records = Vec::with_capacity(checkpoints.len());
+        for (expected_index, checkpoint) in checkpoints.iter().enumerate() {
+            if checkpoint.checkpoint_index != expected_index {
+                return Err(format!(
+                    "Owned Checkpoint trajectory is not contiguous: expected index {expected_index}, got {}",
+                    checkpoint.checkpoint_index
+                ));
+            }
+            let expected_sbar_id = self.input.bar_ids.get(expected_index)
+                .ok_or_else(|| format!("Checkpoint index {expected_index} exceeds the fixed input sequence"))?;
+            if checkpoint.sbar_id != *expected_sbar_id
+                || checkpoint.ts_event != *expected_sbar_id
+            {
+                return Err(format!(
+                    "Owned Checkpoint SBar mismatch at index {expected_index}: expected {expected_sbar_id}, got {} / {}",
+                    checkpoint.sbar_id, checkpoint.ts_event
+                ));
+            }
+            if checkpoint.state_key != self.input.state_key {
+                return Err(format!(
+                    "Checkpoint StruxisStateKey mismatch: expected={}, actual={}",
+                    self.input.state_key, checkpoint.state_key
+                ));
+            }
+            for diagnostic in &checkpoint.diagnostics {
+                if diagnostic.checkpoint_index != Some(expected_index) {
+                    return Err(format!(
+                        "Checkpoint diagnostic index mismatch at checkpoint {expected_index}: expected Some({expected_index}), actual={:?}",
+                        diagnostic.checkpoint_index
+                    ));
+                }
+            }
+            records.push(SnapshotCheckpointRecord {
+                checkpoint_index: expected_index,
+                sbar_id: checkpoint.sbar_id.clone(),
+                ts_event: checkpoint.ts_event.clone(),
+                record_kind: "Full".into(),
+                state_data: canonical_structure_state(checkpoint.structure.as_ref())?,
+                diagnostics: canonical_diagnostics_json(&checkpoint.diagnostics)?,
+            });
+        }
+
+        let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
+        let tx = connection.transaction().map_err(|e| format!("Begin checkpoint batch transaction: {e}"))?;
+        {
+            let mut insert = tx.prepare(
+                "INSERT INTO snapshot_checkpoints(checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics)
+                 VALUES(?1,?2,?3,?4,?5,?6)"
+            ).map_err(|e| format!("Prepare checkpoint batch insert: {e}"))?;
+            for record in &records {
+                insert.execute(params![
+                    i64::try_from(record.checkpoint_index)
+                        .map_err(|_| "Checkpoint index exceeds SQLite INTEGER range")?,
+                    record.sbar_id,
+                    record.ts_event,
+                    record.record_kind,
+                    record.state_data,
+                    record.diagnostics
+                ]).map_err(|e| format!(
+                    "Insert checkpoint {}: {e}", record.checkpoint_index
+                ))?;
+            }
+        }
+        manifest.checkpoint_count = records.len();
+        tx.execute(
+            "UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?]
+        ).map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
+        tx.commit().map_err(|e| format!("Commit checkpoint batch transaction: {e}"))?;
+
+        self.checkpoints = records;
+        self.manifest = Some(manifest);
+        Ok(())
     }
 
     fn commit_owned_checkpoint(&mut self, checkpoint: &OwnedCheckpoint) -> Result<(), String> {
@@ -254,12 +330,18 @@ impl SnapshotWriter {
         }
         manifest.status = STATUS_COMPLETE.to_owned();
         manifest.checkpoint_count = self.checkpoints.len();
+        // Validate record relationships in memory, then calculate the checksum
+        // once. The independent read-only reopen below verifies the persisted
+        // bytes and recomputes the checksum against the database contents.
+        validate_snapshot_records(&manifest, &self.checkpoints, true)?;
         manifest.content_checksum = manifest.calculate_content_checksum(&self.checkpoints)?;
-        verify_complete_snapshot(&manifest, &self.checkpoints)?;
 
         let connection = self.connection.as_mut()
             .ok_or_else(|| "Snapshot database connection is not open".to_owned())?;
         let tx = connection.transaction().map_err(|e| format!("Begin finalization transaction: {e}"))?;
+        tx.execute_batch(
+            "CREATE INDEX IF NOT EXISTS snapshot_checkpoints_sbar_id ON snapshot_checkpoints(sbar_id);"
+        ).map_err(|e| format!("Create Snapshot SBar index: {e}"))?;
         tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
             params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
             .map_err(|e| format!("Persist final Manifest: {e}"))?;
@@ -373,8 +455,7 @@ impl CheckpointSink for SnapshotWriter {
              CREATE TABLE snapshot_checkpoints(
                checkpoint_index INTEGER PRIMARY KEY CHECK(checkpoint_index>=0),
                sbar_id TEXT NOT NULL, ts_event TEXT NOT NULL, record_kind TEXT NOT NULL,
-               state_data TEXT NOT NULL, diagnostics TEXT NOT NULL);
-             CREATE INDEX snapshot_checkpoints_sbar_id ON snapshot_checkpoints(sbar_id);"
+               state_data TEXT NOT NULL, diagnostics TEXT NOT NULL);"
         ).map_err(|e| format!("Create Snapshot schema: {e}"))?;
         tx.execute("INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
             params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
