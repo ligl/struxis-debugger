@@ -177,20 +177,18 @@ function toolGlyph(kind: DrawingKind): string {
 
       <div class="drawing-rail-spacer"></div>
       <div class="drawing-rail-bottom">
-        <div class="drawing-count-row">
-          <span class="drawing-count" data-testid="drawing-count" :title="drawingCount + ' drawings · ' + selectedCount + ' selected'">{{ drawingCount }}</span>
-          <button
-            class="drawing-rail-button drawing-clear-button"
-            type="button"
-            :disabled="drawingCount === 0"
-            aria-label="Delete all drawings"
-            title="Delete all drawings"
-            data-testid="drawing-clear-all"
-            @click="emit('clear')"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" /></svg>
-          </button>
-        </div>
+        <button
+          class="drawing-rail-button drawing-clear-button"
+          type="button"
+          :disabled="drawingCount === 0"
+          :aria-label="'Delete all drawings (' + drawingCount + ')'"
+          :title="drawingCount + ' drawings · ' + selectedCount + ' selected · Delete all'"
+          data-testid="drawing-clear-all"
+          @click="emit('clear')"
+        >
+          <span class="drawing-count" data-testid="drawing-count">{{ drawingCount }}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" /></svg>
+        </button>
         <button
           class="drawing-rail-button drawing-collapse-button"
           type="button"
@@ -334,18 +332,20 @@ function toolGlyph(kind: DrawingKind): string {
 }
 .drawing-rail-top { padding-top: 4px; }
 .drawing-rail-bottom { padding-bottom: 4px; }
-.drawing-count-row {
-  display: flex;
-  width: 100%;
+.drawing-clear-button {
+  width: 32px;
+  height: 36px;
+  flex: 0 0 36px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0;
+  padding: 1px 0;
 }
-.drawing-clear-button {
-  width: 18px;
-  height: 24px;
-  flex: 0 0 18px;
+.drawing-clear-button .drawing-count {
+  min-width: 0;
+  height: 11px;
+  line-height: 11px;
 }
 .drawing-clear-button svg {
   width: 14px;
