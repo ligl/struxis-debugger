@@ -999,6 +999,7 @@ onBeforeUnmount(() => {
         :selected-count="selectedDrawingCount"
         @select="setDrawingTool"
         @toggle="toggleDrawingToolbar"
+        @clear="clearDrawings"
       />
       <slot name="chart-interaction-overlay" />
       <div v-if="showLegend !== false" class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
