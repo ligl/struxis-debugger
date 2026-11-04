@@ -648,6 +648,18 @@ function ensureDrawingManager(): DrawingManager | null {
     }),
   });
   stopDrawingListeners.push(
+    drawingManager.on("add", (drawing) => {
+      const lineTools: readonly DrawingKind[] = [
+        "trend-line", "ray", "info-line", "extended-line", "trend-angle",
+        "horizontal-line", "horizontal-ray", "vertical-line", "cross-line",
+      ];
+      if (lineTools.includes(drawing.kind) && drawing.style.width !== 1) {
+        drawingManager?.update({
+          ...drawing,
+          style: { ...drawing.style, width: 1 },
+        });
+      }
+    }),
     drawingManager.on("tool", (kind) => { drawingTool.value = kind; }),
     drawingManager.on("change", (items) => {
       drawingCount.value = items.length;
