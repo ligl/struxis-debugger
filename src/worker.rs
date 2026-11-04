@@ -406,6 +406,7 @@ struct WorkerSession {
     next_index: usize,
     latest_inspector: Option<ReplayInspectorProjection>,
     owned_checkpoints: Vec<OwnedCheckpoint>,
+    completed_checkpoints: Option<Arc<[OwnedCheckpoint]>>,
     instrument_id: String,
     effective_config: EffectiveStruxisConfig,
 }
@@ -511,6 +512,7 @@ impl WorkerSession {
             next_index: 0,
             latest_inspector: None,
             owned_checkpoints: Vec::with_capacity(checkpoint_capacity),
+            completed_checkpoints: None,
             instrument_id,
             effective_config,
         })
@@ -751,19 +753,29 @@ fn worker_loop(
                         "Snapshot save requires Completed Run, got {:?}",
                         session.state.status
                     ))
-                } else if session.owned_checkpoints.len() != session.input.bars.len() {
+                } else if session.completed_checkpoints.as_ref()
+                    .map_or(session.owned_checkpoints.len(), |items| items.len())
+                    != session.input.bars.len()
+                {
                     Err(format!(
                         "Completed Run trajectory is incomplete: input={}, checkpoints={}",
                         session.input.bars.len(),
                         session.owned_checkpoints.len()
                     ))
                 } else {
+                    let checkpoints = if let Some(checkpoints) = &session.completed_checkpoints {
+                        Arc::clone(checkpoints)
+                    } else {
+                        let checkpoints = Arc::from(std::mem::take(&mut session.owned_checkpoints));
+                        session.completed_checkpoints = Some(Arc::clone(&checkpoints));
+                        checkpoints
+                    };
                     Ok(Arc::new(ReplaySnapshotData {
                         state: session.state.clone(),
                         input: Arc::clone(&session.input),
                         instrument_id: session.instrument_id.clone(),
                         effective_config: session.effective_config.clone(),
-                        checkpoints: Arc::from(std::mem::take(&mut session.owned_checkpoints)),
+                        checkpoints,
                     }))
                 };
                 let _ = reply.send(result);
