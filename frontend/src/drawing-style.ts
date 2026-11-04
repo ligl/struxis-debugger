@@ -9,7 +9,7 @@ function normalizeLineWidths(style: DrawingStyle): DrawingStyle {
   const normalized: DrawingStyle = {
     ...style,
     width: 1,
-    ...(style.borderWidth === undefined ? {} : { borderWidth: 1 }),
+    borderWidth: 1,
   };
 
   if (style.levels) normalized.levels = style.levels.map((line) => ({ ...line, width: 1 }));
