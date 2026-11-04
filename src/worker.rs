@@ -766,7 +766,8 @@ fn worker_loop(
                     let checkpoints = if let Some(checkpoints) = &session.completed_checkpoints {
                         Arc::clone(checkpoints)
                     } else {
-                        let checkpoints = Arc::from(std::mem::take(&mut session.owned_checkpoints));
+                        let checkpoints: Arc<[OwnedCheckpoint]> =
+                            Arc::from(std::mem::take(&mut session.owned_checkpoints));
                         session.completed_checkpoints = Some(Arc::clone(&checkpoints));
                         checkpoints
                     };
