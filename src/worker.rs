@@ -14,7 +14,7 @@ use std::{
 };
 
 #[cfg(test)]
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use capitus_strategy::StruxisDemo;
 use capitus_struxis::{NautilusRuntime, Struxis, StruxisConfig};
