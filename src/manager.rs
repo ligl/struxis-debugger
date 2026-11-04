@@ -5,6 +5,8 @@
 //! for explicit Snapshot save. Restart never creates a replacement unless the
 //! previous worker's terminal response and thread join both confirm release.
 
+use std::sync::Arc;
+
 use crate::{
     checkpoint::{ReplayInspectorProjection, ReplayStepResult},
     replay::{ReplayCommandGate, ReplayCommandKind},
@@ -20,7 +22,7 @@ use crate::worker::CheckpointSink;
 pub(crate) struct ReplayManager {
     active: Option<ReplayWorker>,
     /// Immutable completed trajectory retained independently of worker/runtime ownership.
-    completed_result: Option<ReplaySnapshotData>,
+    completed_result: Option<Arc<ReplaySnapshotData>>,
     /// Last user-visible processing state; may outlive the worker that produced it.
     last_state: Option<RunState>,
     last_inspector: Option<ReplayInspectorProjection>,
@@ -80,10 +82,10 @@ impl ReplayManager {
         Ok(initial_state)
     }
 
-    pub(crate) fn snapshot_data(&mut self) -> Result<ReplaySnapshotData, String> {
+    pub(crate) fn snapshot_data(&mut self) -> Result<Arc<ReplaySnapshotData>, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::GetState)?;
         if let Some(result) = self.completed_result.as_ref() {
-            return Ok(result.clone());
+            return Ok(Arc::clone(result));
         }
         self.active
             .as_mut()
