@@ -74,6 +74,26 @@ describe("DrawingToolbar", () => {
     expect(shapeKinds.slice(0, 2)).toEqual(["rectangle", "rotated-rectangle"]);
   });
 
+  it("emits a clear request from the delete-all control", async () => {
+    const wrapper = mount(DrawingToolbar, {
+      props: { activeTool: null, expanded: true, drawingCount: 3, selectedCount: 1 },
+    });
+
+    const clearButton = wrapper.get('[data-testid="drawing-clear-all"]');
+    expect(clearButton.attributes("disabled")).toBeUndefined();
+    await clearButton.trigger("click");
+    expect(wrapper.emitted("clear")).toHaveLength(1);
+    expect(wrapper.get(".drawing-count-row").find(".drawing-count").text()).toBe("3");
+  });
+
+  it("disables delete-all when there are no drawings", () => {
+    const wrapper = mount(DrawingToolbar, {
+      props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
+    });
+
+    expect(wrapper.get('[data-testid="drawing-clear-all"]').attributes("disabled")).toBeDefined();
+  });
+
   it("emits the selected drawing kind", async () => {
     const wrapper = mount(DrawingToolbar, {
       props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
