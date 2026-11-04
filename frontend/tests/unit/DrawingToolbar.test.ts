@@ -9,6 +9,9 @@ describe("DrawingToolbar", () => {
       props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
     });
 
+    expect(wrapper.find(".drawing-flyout").exists()).toBe(false);
+    await wrapper.get('[data-testid="drawing-category-0"]').trigger("click");
+
     const trendLine = wrapper.get('[data-tool-kind="trend-line"]');
     expect(trendLine.find("svg.drawing-tool-glyph").exists()).toBe(true);
     expect(trendLine.find(".drawing-tool-glyph").attributes("data-glyph")).toBe("trend");
