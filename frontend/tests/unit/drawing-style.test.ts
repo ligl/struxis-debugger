@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { defaultStyleFor, setDefaultStyleOverride } from "lightweight-charts-drawing";
+import {
+  defaultStyleFor,
+  OVERLAY_SPECS,
+  setDefaultStyleOverride,
+  type DrawingKind,
+} from "lightweight-charts-drawing";
 import { configureDrawingStyleDefaults } from "../../src/drawing-style";
 
 describe("drawing style defaults", () => {
@@ -7,15 +12,27 @@ describe("drawing style defaults", () => {
     setDefaultStyleOverride(() => undefined);
   });
 
-  it("applies the configured stroke width before a drawing is placed", () => {
+  it("uses a 1px stroke for every drawing tool before placement", () => {
     configureDrawingStyleDefaults();
 
-    expect(defaultStyleFor("trend-line").width).toBe(1);
-    expect(defaultStyleFor("rectangle").width).toBe(1);
-    expect(defaultStyleFor("circle").width).toBe(1);
-    expect(defaultStyleFor("brush").width).toBe(1);
-    // Highlighter's factory width is 20px, so this also proves the override
-    // replaces a non-1px tool default rather than merely preserving it.
-    expect(defaultStyleFor("highlighter").width).toBe(1);
+    for (const kind of Object.keys(OVERLAY_SPECS) as DrawingKind[]) {
+      expect(defaultStyleFor(kind).width, kind).toBe(1);
+    }
+  });
+
+  it("normalizes independent widths used by compound drawing tools", () => {
+    configureDrawingStyleDefaults();
+
+    const fib = defaultStyleFor("fib-retracement");
+    expect(fib.levels?.every((level) => level.width === 1)).toBe(true);
+
+    const gann = defaultStyleFor("gann-box");
+    expect(gann.levels?.every((level) => level.width === 1)).toBe(true);
+    expect(gann.vLevels?.every((level) => level.width === 1)).toBe(true);
+
+    const regression = defaultStyleFor("regression-trend");
+    expect(regression.regressionLines?.base.width).toBe(1);
+    expect(regression.regressionLines?.up.width).toBe(1);
+    expect(regression.regressionLines?.down.width).toBe(1);
   });
 });
