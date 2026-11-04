@@ -93,7 +93,7 @@ enum WorkerCommand {
 #[derive(Clone)]
 pub(crate) struct ReplaySnapshotData {
     pub(crate) state: RunState,
-    pub(crate) input: LoadedInput,
+    pub(crate) input: Arc<LoadedInput>,
     pub(crate) instrument_id: String,
     pub(crate) effective_config: EffectiveStruxisConfig,
     pub(crate) checkpoints: Arc<[OwnedCheckpoint]>,
@@ -401,7 +401,7 @@ impl Drop for ReplayWorker {
 struct WorkerSession {
     engine: BacktestEngine,
     struxis: Struxis,
-    input: LoadedInput,
+    input: Arc<LoadedInput>,
     state: RunState,
     next_index: usize,
     latest_inspector: Option<ReplayInspectorProjection>,
@@ -506,7 +506,7 @@ impl WorkerSession {
         Ok(Self {
             engine,
             struxis,
-            input: config.input,
+            input: Arc::new(config.input),
             state,
             next_index: 0,
             latest_inspector: None,
@@ -760,7 +760,7 @@ fn worker_loop(
                 } else {
                     Ok(Arc::new(ReplaySnapshotData {
                         state: session.state.clone(),
-                        input: session.input.clone(),
+                        input: Arc::clone(&session.input),
                         instrument_id: session.instrument_id.clone(),
                         effective_config: session.effective_config.clone(),
                         checkpoints: Arc::from(std::mem::take(&mut session.owned_checkpoints)),
