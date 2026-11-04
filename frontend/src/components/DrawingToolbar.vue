@@ -341,6 +341,15 @@ function toolGlyph(kind: DrawingKind): string {
   justify-content: center;
   gap: 1px;
 }
+.drawing-clear-button {
+  width: 18px;
+  height: 24px;
+  flex: 0 0 18px;
+}
+.drawing-clear-button svg {
+  width: 14px;
+  height: 14px;
+}
 .drawing-clear-button:disabled {
   opacity: .3;
   cursor: default;
@@ -408,7 +417,7 @@ function toolGlyph(kind: DrawingKind): string {
 .drawing-rail-spacer { flex: 1 1 auto; }
 .drawing-count {
   display: grid;
-  min-width: 19px;
+  min-width: 16px;
   height: 32px;
   place-items: center;
   margin: 0;
