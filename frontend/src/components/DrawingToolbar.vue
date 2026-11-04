@@ -337,9 +337,10 @@ function toolGlyph(kind: DrawingKind): string {
 .drawing-count-row {
   display: flex;
   width: 100%;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 0;
 }
 .drawing-clear-button {
   width: 18px;
