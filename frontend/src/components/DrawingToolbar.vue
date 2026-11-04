@@ -6,6 +6,7 @@ const props = defineProps<{ activeTool: DrawingKind | null; expanded: boolean; d
 const emit = defineEmits<{
   select: [tool: DrawingKind | null];
   toggle: [];
+  clear: [];
 }>();
 
 const groups: { label: string; tools: { label: string; kind: DrawingKind }[] }[] = [
@@ -176,7 +177,20 @@ function toolGlyph(kind: DrawingKind): string {
 
       <div class="drawing-rail-spacer"></div>
       <div class="drawing-rail-bottom">
-        <span class="drawing-count" data-testid="drawing-count" :title="drawingCount + ' drawings · ' + selectedCount + ' selected'">{{ drawingCount }}</span>
+        <div class="drawing-count-row">
+          <span class="drawing-count" data-testid="drawing-count" :title="drawingCount + ' drawings · ' + selectedCount + ' selected'">{{ drawingCount }}</span>
+          <button
+            class="drawing-rail-button drawing-clear-button"
+            type="button"
+            :disabled="drawingCount === 0"
+            aria-label="Delete all drawings"
+            title="Delete all drawings"
+            data-testid="drawing-clear-all"
+            @click="emit('clear')"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" /></svg>
+          </button>
+        </div>
         <button
           class="drawing-rail-button drawing-collapse-button"
           type="button"
@@ -320,6 +334,21 @@ function toolGlyph(kind: DrawingKind): string {
 }
 .drawing-rail-top { padding-top: 4px; }
 .drawing-rail-bottom { padding-bottom: 4px; }
+.drawing-count-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.drawing-clear-button:disabled {
+  opacity: .3;
+  cursor: default;
+}
+.drawing-clear-button:disabled:hover {
+  background: transparent;
+  color: #929da4;
+}
 .drawing-rail-button {
   position: relative;
   display: grid;
@@ -380,9 +409,9 @@ function toolGlyph(kind: DrawingKind): string {
 .drawing-count {
   display: grid;
   min-width: 19px;
-  height: 17px;
+  height: 32px;
   place-items: center;
-  margin: 0 0 3px;
+  margin: 0;
   color: #89949b;
   font: 9px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
