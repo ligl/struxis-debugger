@@ -9,7 +9,7 @@
 //! save operation after completion; it never participates in Start or Step.
 
 use std::{
-    sync::mpsc::{self, Receiver, SyncSender},
+    sync::{Arc, mpsc::{self, Receiver, SyncSender}},
     thread::{self, JoinHandle},
 };
 
@@ -82,7 +82,7 @@ pub(crate) struct ReplayWorkerConfig {
 enum WorkerCommand {
     GetState(SyncSender<RunState>),
     GetInspector(SyncSender<Option<ReplayInspectorProjection>>),
-    SnapshotData(SyncSender<Result<ReplaySnapshotData, String>>),
+    SnapshotData(SyncSender<Result<Arc<ReplaySnapshotData>, String>>),
     Step(SyncSender<Result<ReplayStepResult, String>>),
     FastForwardToSBar(String, SyncSender<Result<ReplayStepResult, String>>),
     Stop(SyncSender<Result<RunState, String>>),
@@ -96,7 +96,7 @@ pub(crate) struct ReplaySnapshotData {
     pub(crate) input: LoadedInput,
     pub(crate) instrument_id: String,
     pub(crate) effective_config: EffectiveStruxisConfig,
-    pub(crate) checkpoints: Vec<OwnedCheckpoint>,
+    pub(crate) checkpoints: Arc<[OwnedCheckpoint]>,
 }
 
 /// Handle to the worker. It never exposes Nautilus runtime objects.
@@ -194,7 +194,7 @@ impl ReplayWorker {
 
     /// Exports a stable copy of a Completed Run's trajectory for explicit saving.
     /// No active Nautilus / Struxis runtime objects cross this boundary.
-    pub(crate) fn snapshot_data(&mut self) -> Result<ReplaySnapshotData, String> {
+    pub(crate) fn snapshot_data(&mut self) -> Result<Arc<ReplaySnapshotData>, String> {
         if self.terminal_state.is_some() {
             return Err("Snapshot save rejected: Run runtime has already been released".into());
         }
@@ -758,13 +758,13 @@ fn worker_loop(
                         session.owned_checkpoints.len()
                     ))
                 } else {
-                    Ok(ReplaySnapshotData {
+                    Ok(Arc::new(ReplaySnapshotData {
                         state: session.state.clone(),
                         input: session.input.clone(),
                         instrument_id: session.instrument_id.clone(),
                         effective_config: session.effective_config.clone(),
-                        checkpoints: session.owned_checkpoints.clone(),
-                    })
+                        checkpoints: Arc::from(std::mem::take(&mut session.owned_checkpoints)),
+                    }))
                 };
                 let _ = reply.send(result);
             }
