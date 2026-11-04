@@ -16,7 +16,8 @@ describe("drawing style defaults", () => {
     configureDrawingStyleDefaults();
 
     for (const kind of Object.keys(OVERLAY_SPECS) as DrawingKind[]) {
-      expect(defaultStyleFor(kind).width, kind).toBe(1);
+      expect(defaultStyleFor(kind).width, `${kind} stroke`).toBe(1);
+      expect(defaultStyleFor(kind).borderWidth, `${kind} border`).toBe(1);
     }
   });
 
