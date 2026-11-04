@@ -649,11 +649,14 @@ function ensureDrawingManager(): DrawingManager | null {
   });
   stopDrawingListeners.push(
     drawingManager.on("add", (drawing) => {
-      const lineTools: readonly DrawingKind[] = [
+      const onePixelTools: readonly DrawingKind[] = [
         "trend-line", "ray", "info-line", "extended-line", "trend-angle",
         "horizontal-line", "horizontal-ray", "vertical-line", "cross-line",
+        "rectangle", "rotated-rectangle", "brush", "highlighter", "arrow-marker",
+        "arrow", "arrow-mark-up", "arrow-mark-down", "path", "circle", "ellipse",
+        "polyline", "triangle", "arc", "curve", "double-curve",
       ];
-      if (lineTools.includes(drawing.kind) && drawing.style.width !== 1) {
+      if (onePixelTools.includes(drawing.kind) && drawing.style.width !== 1) {
         drawingManager?.update({
           ...drawing,
           style: { ...drawing.style, width: 1 },
