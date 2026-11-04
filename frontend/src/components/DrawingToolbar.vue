@@ -275,7 +275,7 @@ function toolGlyph(kind: DrawingKind): string {
 }
 .drawing-toolbar.is-collapsed {
   top: auto;
-  bottom: 10px;
+  bottom: 2px;
   left: 0;
   max-height: none;
 }
