@@ -83,7 +83,8 @@ describe("DrawingToolbar", () => {
     expect(clearButton.attributes("disabled")).toBeUndefined();
     await clearButton.trigger("click");
     expect(wrapper.emitted("clear")).toHaveLength(1);
-    expect(wrapper.get(".drawing-count-row").find(".drawing-count").text()).toBe("3");
+    expect(clearButton.find(".drawing-count").text()).toBe("3");
+    expect(clearButton.find("svg").exists()).toBe(true);
   });
 
   it("disables delete-all when there are no drawings", () => {
