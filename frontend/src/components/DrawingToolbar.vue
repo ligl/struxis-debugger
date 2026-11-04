@@ -158,13 +158,13 @@ function toolGlyph(kind: DrawingKind): string {
           <template v-else-if="group.label === 'Channels & pitchforks'">
             <path d="m4 17 14-10M4 12l14-5M4 21l14-10" />
           </template>
-          <template v-else-if="index === 3">
+          <template v-else-if="group.label === 'Fibonacci & Gann'">
             <path d="M4 6h16M4 10h16M4 14h16M4 18h16M8 4v16M16 4v16" />
           </template>
-          <template v-else-if="index === 3">
+          <template v-else-if="group.label === 'Patterns & waves'">
             <path d="m4 18 6-12 10 12H4Z" /><path d="m10 6 4 12" />
           </template>
-          <template v-else-if="index === 4">
+          <template v-else-if="group.label === 'Forecast & measurement'">
             <path d="M5 4v16M19 4v16M5 8h14M5 16h14M9 6v4M15 14v4" />
           </template>
           <template v-else>
