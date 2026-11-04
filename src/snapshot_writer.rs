@@ -233,17 +233,6 @@ impl SnapshotWriter {
         Ok(())
     }
 
-    fn commit_owned_checkpoint(&mut self, checkpoint: &OwnedCheckpoint) -> Result<(), String> {
-        self.commit_checkpoint_payload(
-            checkpoint.checkpoint_index,
-            &checkpoint.sbar_id,
-            &checkpoint.state_key,
-            Some(&checkpoint.sbar_id),
-            checkpoint.structure.as_ref(),
-            &checkpoint.diagnostics,
-        )
-    }
-
     fn commit_checkpoint_payload(
         &mut self,
         index: usize,
