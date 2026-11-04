@@ -52,7 +52,7 @@ describe("DrawingToolbar", () => {
 
     await wrapper.get('[data-testid="drawing-category-0"]').trigger("click");
     expect(wrapper.find(".drawing-flyout").exists()).toBe(true);
-    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     await wrapper.vm.$nextTick();
     expect(wrapper.find(".drawing-flyout").exists()).toBe(false);
     wrapper.unmount();
