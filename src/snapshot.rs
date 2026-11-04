@@ -3,6 +3,8 @@
 //! This module fixes owned persistence DTOs and deterministic checksum inputs.
 //! It does not claim to be the SQLite storage backend or publish Snapshots.
 
+use std::io::{BufWriter, Write};
+
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -70,7 +72,8 @@ struct SnapshotManifestChecksumView {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-struct SnapshotCheckpointChecksumView {
+#[cfg(test)]
+pub(crate) struct SnapshotCheckpointChecksumView {
     checkpoint_index: String,
     sbar_id: String,
     ts_event: String,
@@ -80,6 +83,7 @@ struct SnapshotCheckpointChecksumView {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[cfg(test)]
 struct SnapshotChecksumPayload {
     manifest: SnapshotManifestChecksumView,
     checkpoints: Vec<SnapshotCheckpointChecksumView>,
@@ -89,12 +93,11 @@ impl SnapshotManifest {
     /// Canonical checksum payload. Field order follows snapshot-compare.md;
     /// integer values are encoded as decimal strings and embedded JSON remains
     /// JSON values rather than being double-encoded strings.
+    #[cfg(test)]
     pub(crate) fn calculate_content_checksum(
         &self,
         checkpoints: &[SnapshotCheckpointRecord],
     ) -> Result<String, String> {
-        let effective_config: serde_json::Value = serde_json::from_str(&self.effective_config)
-            .map_err(|error| format!("Invalid effective_config JSON for checksum: {error}"))?;
         let mut canonical_checkpoints = Vec::with_capacity(checkpoints.len());
         for checkpoint in checkpoints {
             canonical_checkpoints.push(SnapshotCheckpointChecksumView {
@@ -108,33 +111,137 @@ impl SnapshotManifest {
                     .map_err(|error| format!("Invalid diagnostics JSON for checksum: {error}"))?,
             });
         }
+        let effective_config: serde_json::Value = serde_json::from_str(&self.effective_config)
+            .map_err(|error| format!("Invalid effective_config JSON for checksum: {error}"))?;
+        self.calculate_content_checksum_from_views(effective_config, canonical_checkpoints)
+    }
+
+    /// Hashes embedded state and diagnostics JSON verbatim after their canonical form is established.
+    pub(crate) fn calculate_content_checksum_from_canonical_records(
+        &self,
+        checkpoints: &[SnapshotCheckpointRecord],
+    ) -> Result<String, String> {
+        let effective_config = serde_json::from_str(&self.effective_config)
+            .map_err(|error| format!("Invalid effective_config JSON for checksum: {error}"))?;
+        let manifest_view = self.checksum_manifest_view(effective_config);
+        let mut hasher = Sha256::new();
+        hasher.update(SNAPSHOT_HASH_PREFIX);
+        {
+            let sink = Sha256Writer(&mut hasher);
+            let mut writer = BufWriter::with_capacity(64 * 1024, sink);
+            writer
+                .write_all(b"{\"manifest\":")
+                .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+            serde_json::to_writer(&mut writer, &manifest_view)
+                .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
+            writer
+                .write_all(b",\"checkpoints\":[")
+                .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+            for (index, checkpoint) in checkpoints.iter().enumerate() {
+                if index > 0 {
+                    writer
+                        .write_all(b",")
+                        .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+                }
+                writer
+                    .write_all(b"{\"checkpoint_index\":")
+                    .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+                serde_json::to_writer(&mut writer, &checkpoint.checkpoint_index.to_string())
+                    .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
+                writer
+                    .write_all(b",\"sbar_id\":")
+                    .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+                serde_json::to_writer(&mut writer, &checkpoint.sbar_id)
+                    .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
+                writer
+                    .write_all(b",\"ts_event\":")
+                    .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+                serde_json::to_writer(&mut writer, &checkpoint.ts_event)
+                    .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
+                writer
+                    .write_all(b",\"record_kind\":")
+                    .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+                serde_json::to_writer(&mut writer, &checkpoint.record_kind)
+                    .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
+                writer
+                    .write_all(b",\"state_data\":")
+                    .and_then(|()| writer.write_all(checkpoint.state_data.as_bytes()))
+                    .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+                writer
+                    .write_all(b",\"diagnostics\":")
+                    .and_then(|()| writer.write_all(checkpoint.diagnostics.as_bytes()))
+                    .and_then(|()| writer.write_all(b"}"))
+                    .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+            }
+            writer
+                .write_all(b"]}")
+                .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+            writer
+                .flush()
+                .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+        }
+        Ok(digest_hex(&hasher.finalize()))
+    }
+
+    #[cfg(test)]
+    fn calculate_content_checksum_from_views(
+        &self,
+        effective_config: serde_json::Value,
+        canonical_checkpoints: Vec<SnapshotCheckpointChecksumView>,
+    ) -> Result<String, String> {
         let payload = SnapshotChecksumPayload {
-            manifest: SnapshotManifestChecksumView {
-                snapshot_id: self.snapshot_id.clone(),
-                run_id: self.run_id.clone(),
-                state_key: self.state_key.clone(),
-                instrument_id: self.instrument_id.clone(),
-                bar_type: self.bar_type.clone(),
-                input_start_sbar_id: self.input_start_sbar_id.clone(),
-                input_end_sbar_id: self.input_end_sbar_id.clone(),
-                input_start_ts_event: self.input_start_ts_event.clone(),
-                input_end_ts_event: self.input_end_ts_event.clone(),
-                snapshot_generated_at: self.snapshot_generated_at.clone(),
-                input_bar_count: self.input_bar_count.to_string(),
-                sbar_sequence_fingerprint: self.sbar_sequence_fingerprint.clone(),
-                config_fingerprint: self.config_fingerprint.clone(),
-                effective_config,
-                status: self.status.clone(),
-                checkpoint_count: self.checkpoint_count.to_string(),
-            },
+            manifest: self.checksum_manifest_view(effective_config),
             checkpoints: canonical_checkpoints,
         };
-        let encoded = serde_json::to_vec(&payload)
-            .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
-        let mut input = Vec::with_capacity(SNAPSHOT_HASH_PREFIX.len() + encoded.len());
-        input.extend_from_slice(SNAPSHOT_HASH_PREFIX);
-        input.extend_from_slice(&encoded);
-        Ok(sha256_hex(&input))
+        let mut hasher = Sha256::new();
+        hasher.update(SNAPSHOT_HASH_PREFIX);
+        {
+            let sink = Sha256Writer(&mut hasher);
+            let mut writer = BufWriter::with_capacity(64 * 1024, sink);
+            serde_json::to_writer(&mut writer, &payload)
+                .map_err(|error| format!("Snapshot checksum encoding failed: {error}"))?;
+            writer
+                .flush()
+                .map_err(|error| format!("Snapshot checksum write failed: {error}"))?;
+        }
+        Ok(digest_hex(&hasher.finalize()))
+    }
+
+    fn checksum_manifest_view(
+        &self,
+        effective_config: serde_json::Value,
+    ) -> SnapshotManifestChecksumView {
+        SnapshotManifestChecksumView {
+            snapshot_id: self.snapshot_id.clone(),
+            run_id: self.run_id.clone(),
+            state_key: self.state_key.clone(),
+            instrument_id: self.instrument_id.clone(),
+            bar_type: self.bar_type.clone(),
+            input_start_sbar_id: self.input_start_sbar_id.clone(),
+            input_end_sbar_id: self.input_end_sbar_id.clone(),
+            input_start_ts_event: self.input_start_ts_event.clone(),
+            input_end_ts_event: self.input_end_ts_event.clone(),
+            snapshot_generated_at: self.snapshot_generated_at.clone(),
+            input_bar_count: self.input_bar_count.to_string(),
+            sbar_sequence_fingerprint: self.sbar_sequence_fingerprint.clone(),
+            config_fingerprint: self.config_fingerprint.clone(),
+            effective_config,
+            status: self.status.clone(),
+            checkpoint_count: self.checkpoint_count.to_string(),
+        }
+    }
+}
+
+struct Sha256Writer<'a>(&'a mut Sha256);
+
+impl Write for Sha256Writer<'_> {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.update(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }
 
@@ -144,15 +251,14 @@ pub(crate) fn verify_complete_snapshot(
     checkpoints: &[SnapshotCheckpointRecord],
 ) -> Result<(), String> {
     validate_snapshot_records(manifest, checkpoints, true)?;
-    let expected = manifest.calculate_content_checksum(checkpoints)?;
+    let expected = manifest.calculate_content_checksum_from_canonical_records(checkpoints)?;
     if expected != manifest.content_checksum {
         return Err("Snapshot content_checksum mismatch".to_owned());
     }
     Ok(())
 }
 
-pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
-    let digest = Sha256::digest(bytes);
+fn digest_hex(digest: &[u8]) -> String {
     let mut output = String::with_capacity(64);
     for byte in digest {
         use std::fmt::Write as _;
@@ -161,23 +267,63 @@ pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     output
 }
 
-/// Recursively sorts JSON object keys without changing any field's JSON type.
-fn sort_json_object_keys(value: serde_json::Value) -> serde_json::Value {
+fn append_json_string(
+    value: &impl Serialize,
+    output: &mut String,
+    scratch: &mut Vec<u8>,
+) -> Result<(), String> {
+    scratch.clear();
+    serde_json::to_writer(&mut *scratch, value)
+        .map_err(|error| format!("Cannot encode canonical JSON string: {error}"))?;
+    let encoded = std::str::from_utf8(scratch)
+        .map_err(|error| format!("Canonical JSON encoder produced invalid UTF-8: {error}"))?;
+    output.push_str(encoded);
+    Ok(())
+}
+
+fn append_sorted_json(
+    value: &serde_json::Value,
+    output: &mut String,
+    scratch: &mut Vec<u8>,
+) -> Result<(), String> {
     match value {
-        serde_json::Value::Array(values) => serde_json::Value::Array(
-            values.into_iter().map(sort_json_object_keys).collect(),
-        ),
-        serde_json::Value::Object(values) => {
-            let mut entries: Vec<_> = values.into_iter().collect();
-            entries.sort_by(|left, right| left.0.cmp(&right.0));
-            let mut sorted = serde_json::Map::new();
-            for (key, value) in entries {
-                sorted.insert(key, sort_json_object_keys(value));
+        serde_json::Value::Null => output.push_str("null"),
+        serde_json::Value::Bool(value) => output.push_str(if *value { "true" } else { "false" }),
+        serde_json::Value::Number(value) => append_json_string(value, output, scratch)?,
+        serde_json::Value::String(value) => append_json_string(value, output, scratch)?,
+        serde_json::Value::Array(values) => {
+            output.push('[');
+            for (index, value) in values.iter().enumerate() {
+                if index > 0 {
+                    output.push(',');
+                }
+                append_sorted_json(value, output, scratch)?;
             }
-            serde_json::Value::Object(sorted)
+            output.push(']');
         }
-        other => other,
+        serde_json::Value::Object(values) => {
+            let mut entries: Vec<_> = values.iter().collect();
+            entries.sort_unstable_by(|left, right| left.0.cmp(right.0));
+            output.push('{');
+            for (index, (key, value)) in entries.into_iter().enumerate() {
+                if index > 0 {
+                    output.push(',');
+                }
+                append_json_string(key, output, scratch)?;
+                output.push(':');
+                append_sorted_json(value, output, scratch)?;
+            }
+            output.push('}');
+        }
     }
+    Ok(())
+}
+
+fn canonical_json_string(value: &serde_json::Value) -> Result<String, String> {
+    let mut output = String::new();
+    let mut scratch = Vec::new();
+    append_sorted_json(value, &mut output, &mut scratch)?;
+    Ok(output)
 }
 
 /// Builds canonical Snapshot state_data from the owned structure projection.
@@ -217,11 +363,7 @@ pub(crate) fn canonical_structure_state(
         .and_then(serde_json::Value::as_array_mut)
         .ok_or_else(|| "Structure state trends must be an array".to_owned())?;
     sort_domain_objects(trends, "sbarStartId", "trendId", "Trend")?;
-    let state = sort_json_object_keys(state);
-    validate_canonical_structure_state(&state)?;
-
-    serde_json::to_string(&state)
-        .map_err(|error| format!("Cannot encode canonical structure state: {error}"))
+    canonical_json_string(&state)
 }
 
 fn parse_canonical_u128(value: &str, field: &str) -> Result<u128, String> {
@@ -516,7 +658,7 @@ fn validate_sorted_domain_objects(
 }
 
 fn sort_domain_objects(
-    objects: &mut [serde_json::Value],
+    objects: &mut Vec<serde_json::Value>,
     anchor_field: &str,
     id_field: &str,
     kind: &str,
@@ -537,12 +679,12 @@ fn sort_domain_objects(
         )?;
         keys.push((anchor, id));
     }
-    let mut order: Vec<usize> = (0..objects.len()).collect();
-    order.sort_by_key(|index| keys[*index]);
-    let original = objects.to_vec();
-    for (target, source) in order.into_iter().enumerate() {
-        objects[target] = original[source].clone();
-    }
+    let mut keyed_objects = keys
+        .into_iter()
+        .zip(std::mem::take(objects))
+        .collect::<Vec<_>>();
+    keyed_objects.sort_by_key(|(key, _)| *key);
+    objects.extend(keyed_objects.into_iter().map(|(_, object)| object));
     Ok(())
 }
 
@@ -652,11 +794,13 @@ pub(crate) fn validate_snapshot_records(
         }
         let state: serde_json::Value = serde_json::from_str(&checkpoint.state_data)
             .map_err(|error| format!("Invalid state_data JSON: {error}"))?;
+
         validate_canonical_structure_state(&state)?;
-        let state = sort_json_object_keys(state);
-        if serde_json::to_string(&state).map_err(|error| error.to_string())? != checkpoint.state_data {
+
+        if canonical_json_string(&state)? != checkpoint.state_data {
             return Err(format!("Checkpoint {} state_data is not canonical JSON", checkpoint.checkpoint_index));
         }
+
         crate::diagnostics::validate_checkpoint_diagnostics_json(
             &checkpoint.diagnostics,
             checkpoint.checkpoint_index,
@@ -866,12 +1010,11 @@ mod tests {
 
     #[test]
     fn canonical_json_preserves_integer_types_and_sorts_object_keys() {
-        let input: serde_json::Value = serde_json::from_str(
+        let value: serde_json::Value = serde_json::from_str(
             r#"{"z":1,"a":{"y":2,"b":3},"items":[{"z":1,"a":2},{"b":1,"a":2}]}"#,
         ).unwrap();
-        let sorted = sort_json_object_keys(input);
         assert_eq!(
-            serde_json::to_string(&sorted).unwrap(),
+            canonical_json_string(&value).unwrap(),
             r#"{"a":{"b":3,"y":2},"items":[{"a":2,"z":1},{"a":2,"b":1}],"z":1}"#
         );
     }
@@ -942,6 +1085,22 @@ mod tests {
         assert_eq!(
             manifest.calculate_content_checksum(&records).unwrap(),
             "c128c174ec3ea38247aed9f874d0f50c9a9fdcf244163ba5e2f78d2b700165e2"
+        );
+        assert_eq!(
+            manifest.calculate_content_checksum_from_canonical_records(&records).unwrap(),
+            "c128c174ec3ea38247aed9f874d0f50c9a9fdcf244163ba5e2f78d2b700165e2"
+        );
+    }
+
+    #[test]
+    fn raw_checksum_matches_value_checksum_for_canonical_nested_json() {
+        let mut records = records();
+        records[0].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"2","fractalType":null,"high":"3","low":"1","sbarEndId":"4","sbarStartId":"2","spanSbars":2}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into();
+        let manifest = manifest(&records);
+
+        assert_eq!(
+            manifest.calculate_content_checksum_from_canonical_records(&records).unwrap(),
+            manifest.calculate_content_checksum(&records).unwrap(),
         );
     }
 
@@ -1057,7 +1216,8 @@ mod tests {
     fn complete_snapshot_verification_detects_tampering() {
         let mut records = records();
         let mut manifest = manifest(&records);
-        manifest.content_checksum = manifest.calculate_content_checksum(&records).unwrap();
+        manifest.content_checksum =
+            manifest.calculate_content_checksum_from_canonical_records(&records).unwrap();
         assert!(verify_complete_snapshot(&manifest, &records).is_ok());
 
         records[1].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into();

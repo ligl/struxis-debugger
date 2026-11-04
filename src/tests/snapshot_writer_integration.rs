@@ -542,7 +542,7 @@ fn snapshot_writer_rejects_diagnostic_from_another_checkpoint() {
         .expect("Published Snapshot should be readable");
     assert_eq!(manifest.checkpoint_count, 1);
     assert_eq!(records.len(), 1);
-    crate::diagnostics::validate_canonical_diagnostics_json(&records[0].diagnostics)
+    crate::diagnostics::validate_checkpoint_diagnostics_json(&records[0].diagnostics, 0)
         .expect("Persisted diagnostics must use canonical DTO encoding");
     assert!(
         records[0].diagnostics.contains(r#""checkpointIndex":0"#),
@@ -557,4 +557,3 @@ fn snapshot_writer_rejects_diagnostic_from_another_checkpoint() {
     drop(writer);
     fs::remove_dir_all(&temp_dir).expect("Remove isolated Snapshot directory");
 }
-

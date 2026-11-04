@@ -17,9 +17,8 @@ use crate::{
     replay::LoadedInput,
     run::{RunState, RunStatus},
     snapshot::{
-        canonical_structure_state, validate_snapshot_records, verify_complete_snapshot,
-        SnapshotCheckpointRecord, SnapshotManifest, STATUS_COMPLETE, STATUS_FAILED,
-        STATUS_RECORDING,
+        canonical_structure_state, verify_complete_snapshot, SnapshotCheckpointRecord,
+        SnapshotManifest, STATUS_COMPLETE, STATUS_FAILED, STATUS_RECORDING,
     },
     worker::CheckpointSink,
 };
@@ -129,7 +128,7 @@ impl SnapshotWriter {
         let result = (|| {
             writer.initialize(&initial_state, effective_config)?;
             writer.commit_owned_checkpoints(checkpoints)?;
-            writer.finalize(completed_state)?;
+            writer.finalize_snapshot(completed_state)?;
             writer.manifest.as_ref()
                 .map(|manifest| manifest.snapshot_id.clone())
                 .ok_or_else(|| "Snapshot finalization did not produce a Manifest".to_owned())
@@ -143,7 +142,10 @@ impl SnapshotWriter {
 
     /// Persists an explicit completed trajectory atomically. The Recording
     /// Manifest is advanced once, after every row has been inserted successfully.
-    fn commit_owned_checkpoints(&mut self, checkpoints: &[OwnedCheckpoint]) -> Result<(), String> {
+    fn commit_owned_checkpoints(
+        &mut self,
+        checkpoints: &[OwnedCheckpoint],
+    ) -> Result<(), String> {
         let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
         if manifest.status != STATUS_RECORDING {
             return Err(format!("Cannot append checkpoints to Snapshot in {}", manifest.status));
@@ -190,16 +192,17 @@ impl SnapshotWriter {
                     ));
                 }
             }
+            let state_data = canonical_structure_state(checkpoint.structure.as_ref())?;
+            let diagnostics = canonical_diagnostics_json(&checkpoint.diagnostics)?;
             records.push(SnapshotCheckpointRecord {
                 checkpoint_index: expected_index,
                 sbar_id: checkpoint.sbar_id.clone(),
                 ts_event: checkpoint.ts_event.clone(),
                 record_kind: "Full".into(),
-                state_data: canonical_structure_state(checkpoint.structure.as_ref())?,
-                diagnostics: canonical_diagnostics_json(&checkpoint.diagnostics)?,
+                state_data,
+                diagnostics,
             });
         }
-
         let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
         let tx = connection.transaction().map_err(|e| format!("Begin checkpoint batch transaction: {e}"))?;
         {
@@ -227,7 +230,6 @@ impl SnapshotWriter {
             params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?]
         ).map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
         tx.commit().map_err(|e| format!("Commit checkpoint batch transaction: {e}"))?;
-
         self.checkpoints = records;
         self.manifest = Some(manifest);
         Ok(())
@@ -305,7 +307,10 @@ impl SnapshotWriter {
         &self.published_path
     }
 
-    fn finalize_snapshot(&mut self, state: &RunState) -> Result<(), String> {
+    fn finalize_snapshot(
+        &mut self,
+        state: &RunState,
+    ) -> Result<(), String> {
         if state.status != RunStatus::Completed {
             return Err(format!("Snapshot finalization requires Completed Run, got {:?}", state.status));
         }
@@ -319,11 +324,11 @@ impl SnapshotWriter {
         }
         manifest.status = STATUS_COMPLETE.to_owned();
         manifest.checkpoint_count = self.checkpoints.len();
-        // Validate record relationships in memory, then calculate the checksum
-        // once. The independent read-only reopen below verifies the persisted
-        // bytes and recomputes the checksum against the database contents.
-        validate_snapshot_records(&manifest, &self.checkpoints, true)?;
-        manifest.content_checksum = manifest.calculate_content_checksum(&self.checkpoints)?;
+        // Calculate the checksum for the final payload. The independent
+        // read-only reopen below validates the persisted bytes and recomputes
+        // the checksum against the database contents before publication.
+        manifest.content_checksum =
+            manifest.calculate_content_checksum_from_canonical_records(&self.checkpoints)?;
 
         let connection = self.connection.as_mut()
             .ok_or_else(|| "Snapshot database connection is not open".to_owned())?;
@@ -653,7 +658,7 @@ mod tests {
         assert!(writer.published_path().is_file());
         assert!(!writer.temporary_path.exists(), "successful publication removes the temporary link");
         let (manifest, records) = read_database(writer.published_path()).unwrap();
-        verify_complete_snapshot(&manifest, &records).unwrap();
+        crate::snapshot::verify_complete_snapshot(&manifest, &records).unwrap();
         assert_eq!(manifest.status, STATUS_COMPLETE);
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].diagnostics, "[]");
@@ -710,7 +715,7 @@ mod tests {
         let (manifest, records) = read_database(writer.published_path()).unwrap();
         assert_eq!(manifest.status, STATUS_COMPLETE);
         assert_eq!(records.len(), input.bars.len());
-        verify_complete_snapshot(&manifest, &records).unwrap();
+        crate::snapshot::verify_complete_snapshot(&manifest, &records).unwrap();
 
         let artifacts = crate::snapshot_store::discover_snapshot_artifacts(&root).unwrap();
         assert_eq!(artifacts.len(), 1);
@@ -808,7 +813,7 @@ mod tests {
         writer.fail("temporary link cleanup failed").unwrap();
         let (manifest, records) = read_database(writer.published_path()).unwrap();
         assert_eq!(manifest.status, STATUS_COMPLETE);
-        verify_complete_snapshot(&manifest, &records).unwrap();
+        crate::snapshot::verify_complete_snapshot(&manifest, &records).unwrap();
 
         drop(writer);
         let _ = fs::remove_dir_all(root);

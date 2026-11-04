@@ -68,26 +68,12 @@ pub(crate) fn canonical_diagnostics_json(diagnostics: &[Diagnostic]) -> Result<S
         .map_err(|error| format!("Cannot encode canonical diagnostics: {error}"))
 }
 
-/// Validates the persisted diagnostics JSON against the actual diagnostic DTO.
-///
-/// Canonicalization orders records and JSON object fields; it does not rewrite
-/// semantic values such as checkpoint indexes from numbers into strings.
-pub(crate) fn validate_canonical_diagnostics_json(encoded: &str) -> Result<(), String> {
-    let diagnostics: Vec<Diagnostic> = serde_json::from_str(encoded)
-        .map_err(|error| format!("Invalid diagnostics DTO: {error}"))?;
-    let canonical = canonical_diagnostics_json(&diagnostics)?;
-    if canonical != encoded {
-        return Err("Diagnostics are not canonical JSON".to_owned());
-    }
-    Ok(())
-}
-
 /// Validates diagnostics stored in one checkpoint, including their optional
 /// explicit checkpoint association.
 pub(crate) fn validate_checkpoint_diagnostics_json(
     encoded: &str,
     enclosing_checkpoint_index: usize,
-) -> Result<(), String> {
+) -> Result<serde_json::Value, String> {
     let diagnostics: Vec<Diagnostic> = serde_json::from_str(encoded)
         .map_err(|error| format!("Invalid diagnostics DTO: {error}"))?;
     for diagnostic in &diagnostics {
@@ -99,7 +85,12 @@ pub(crate) fn validate_checkpoint_diagnostics_json(
             }
         }
     }
-    validate_canonical_diagnostics_json(encoded)
+    let canonical = canonical_diagnostics_json(&diagnostics)?;
+    if canonical != encoded {
+        return Err("Diagnostics are not canonical JSON".to_owned());
+    }
+    serde_json::to_value(&diagnostics)
+        .map_err(|error| format!("Cannot convert diagnostics for checksum: {error}"))
 }
 
 #[cfg(test)]
@@ -142,10 +133,10 @@ mod tests {
         let encoded = canonical_diagnostics_json(&[value]).unwrap();
         assert!(encoded.contains(r#""checkpointIndex":0"#));
         assert!(!encoded.contains(r#""checkpointIndex":"0""#));
-        assert!(super::validate_canonical_diagnostics_json(&encoded).is_ok());
+        assert!(super::validate_checkpoint_diagnostics_json(&encoded, 0).is_ok());
 
         let string_index = encoded.replace(r#""checkpointIndex":0"#, r#""checkpointIndex":"0""#);
-        assert!(super::validate_canonical_diagnostics_json(&string_index).is_err());
+        assert!(super::validate_checkpoint_diagnostics_json(&string_index, 0).is_err());
     }
 
     #[test]

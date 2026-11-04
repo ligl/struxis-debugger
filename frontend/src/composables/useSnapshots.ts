@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { describeIpcError, listSnapshots, saveRunSnapshot } from "../origin-bridge";
+import { notifySuccess } from "./useAppToast";
 import type { SnapshotArtifactDto } from "../origin-types";
 
 export function useSnapshots() {
@@ -43,7 +44,8 @@ export function useSnapshots() {
     snapshotSaveBusy.value = true;
     snapshotsError.value = "";
     try {
-      await saveRunSnapshot();
+      const snapshotId = await saveRunSnapshot();
+      notifySuccess(`Snapshot ${snapshotId} saved`);
       await refreshSnapshots();
     } catch (error) {
       snapshotsError.value = describeIpcError(error);
