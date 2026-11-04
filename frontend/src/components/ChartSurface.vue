@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { DrawingManager, type DrawingKind, type Drawing } from "lightweight-charts-drawing";
+import { configureDrawingStyleDefaults } from "../drawing-style";
 import DrawingToolbar from "./DrawingToolbar.vue";
 import { CrosshairMode, type CandlestickData, type HistogramData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from "lightweight-charts";
 import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
@@ -13,6 +14,8 @@ import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
 import type { ChartSurfaceLayerVisibility, ChartSurfacePrimitiveOptions, ChartSurfaceStructurePlaybackState } from "../chart-surface-contract";
+
+configureDrawingStyleDefaults();
 
 const props = withDefaults(defineProps<{
   bars: SBarDto[];
@@ -648,21 +651,6 @@ function ensureDrawingManager(): DrawingManager | null {
     }),
   });
   stopDrawingListeners.push(
-    drawingManager.on("add", (drawing) => {
-      const onePixelTools: readonly DrawingKind[] = [
-        "trend-line", "ray", "info-line", "extended-line", "trend-angle",
-        "horizontal-line", "horizontal-ray", "vertical-line", "cross-line",
-        "rectangle", "rotated-rectangle", "brush", "highlighter", "arrow-marker",
-        "arrow", "arrow-mark-up", "arrow-mark-down", "path", "circle", "ellipse",
-        "polyline", "triangle", "arc", "curve", "double-curve",
-      ];
-      if (onePixelTools.includes(drawing.kind) && drawing.style.width !== 1) {
-        drawingManager?.update({
-          ...drawing,
-          style: { ...drawing.style, width: 1 },
-        });
-      }
-    }),
     drawingManager.on("tool", (kind) => { drawingTool.value = kind; }),
     drawingManager.on("change", (items) => {
       drawingCount.value = items.length;
