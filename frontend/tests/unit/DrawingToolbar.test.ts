@@ -44,6 +44,36 @@ describe("DrawingToolbar", () => {
     expect(collapsed.emitted("toggle")).toHaveLength(1);
   });
 
+  it("closes the open tool panel when clicking outside the toolbar", async () => {
+    const wrapper = mount(DrawingToolbar, {
+      props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
+      attachTo: document.body,
+    });
+
+    await wrapper.get('[data-testid="drawing-category-0"]').trigger("click");
+    expect(wrapper.find(".drawing-flyout").exists()).toBe(true);
+    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".drawing-flyout").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("orders the primary line tools and Brushes & Shapes category first", async () => {
+    const wrapper = mount(DrawingToolbar, {
+      props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
+    });
+
+    expect(wrapper.get('[data-testid="drawing-category-0"]').attributes("aria-label")).toBe("Lines");
+    expect(wrapper.get('[data-testid="drawing-category-1"]').attributes("aria-label")).toBe("Brushes & shapes");
+    await wrapper.get('[data-testid="drawing-category-0"]').trigger("click");
+    const lineKinds = wrapper.findAll(".drawing-tool-item").map((item) => item.attributes("data-tool-kind"));
+    expect(lineKinds.slice(0, 3)).toEqual(["horizontal-line", "horizontal-ray", "vertical-line"]);
+
+    await wrapper.get('[data-testid="drawing-category-1"]').trigger("click");
+    const shapeKinds = wrapper.findAll(".drawing-tool-item").map((item) => item.attributes("data-tool-kind"));
+    expect(shapeKinds.slice(0, 2)).toEqual(["rectangle", "rotated-rectangle"]);
+  });
+
   it("emits the selected drawing kind", async () => {
     const wrapper = mount(DrawingToolbar, {
       props: { activeTool: null, expanded: true, drawingCount: 0, selectedCount: 0 },
