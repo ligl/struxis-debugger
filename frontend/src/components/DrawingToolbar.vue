@@ -240,7 +240,7 @@ function toolGlyph(kind: DrawingKind): string {
   z-index: 8;
   top: 38px;
   bottom: 10px;
-  left: 7px;
+  left: 0;
   display: flex;
   align-items: stretch;
   max-height: calc(100% - 48px);
@@ -251,7 +251,7 @@ function toolGlyph(kind: DrawingKind): string {
 .drawing-toolbar.is-collapsed {
   top: auto;
   bottom: 10px;
-  left: 7px;
+  left: 0;
   max-height: none;
 }
 .drawing-restore-button {
@@ -289,7 +289,6 @@ function toolGlyph(kind: DrawingKind): string {
 .drawing-flyout {
   pointer-events: auto;
   background: rgb(20 24 28 / 94%);
-  border: 1px solid rgb(67 76 83 / 72%);
   box-shadow: 0 3px 12px rgb(0 0 0 / 24%);
 }
 .drawing-rail {
