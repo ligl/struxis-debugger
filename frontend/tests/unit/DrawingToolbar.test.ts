@@ -27,7 +27,7 @@ describe("DrawingToolbar", () => {
     expect(wrapper.get('[data-testid="drawing-toolbar"]').classes()).not.toContain("is-collapsed");
     expect(wrapper.find(".drawing-flyout").exists()).toBe(false);
     await wrapper.get('[data-testid="drawing-category-0"]').trigger("click");
-    expect(wrapper.get('[data-tool-kind="trend-line"]').exists()).toBe(true);
+    expect(wrapper.find('[data-tool-kind="trend-line"]').exists()).toBe(true);
     await wrapper.get('[data-testid="drawing-toolbar-toggle"]').trigger("click");
     expect(wrapper.emitted("toggle")).toHaveLength(1);
 
