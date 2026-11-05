@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { KeyZoneCheckpointDto } from "../origin-types";
 import { computed, ref, watch } from "vue";
 import { resolveReplaySyncOffset, type ReplaySyncSequenceDescriptor } from "../replay-sync";
 import DualChartStack from "./DualChartStack.vue";
@@ -13,6 +14,7 @@ const props = withDefaults(defineProps<{
   runState: RunStateDto | null;
   playbackStatus?: "idle" | "playing" | "paused";
   structure: ReplayInspectorStructureDto | null;
+  keyzones?: KeyZoneCheckpointDto | null;
   selectedObject: ReplayChartSelection | null;
   targetSbarId: string | null;
   snapshots: SnapshotArtifactDto[];
@@ -104,7 +106,7 @@ watch(
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-owner="activeChartOwner" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :keyzones="keyzones" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-owner="activeChartOwner" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel

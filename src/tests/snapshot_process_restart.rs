@@ -115,6 +115,7 @@ fn published_snapshot_is_discoverable_and_verifiable_after_os_process_restart() 
 
     let sbar_id = input.bars[0].ts_event.to_string();
     let projection = ReplayCheckpointProjection {
+        keyzones: None,
         state_key: format!("{:?}", input.state_key),
         last_ts_event: Some(sbar_id.clone()),
         sbar_count: 1,

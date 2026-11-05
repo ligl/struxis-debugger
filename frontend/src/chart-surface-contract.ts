@@ -61,6 +61,7 @@ export interface ChartSurfaceLayerVisibility {
   swing: boolean;
   trend: boolean;
   feature?: boolean;
+  keyzone?: boolean;
 }
 
 export interface ChartSurfaceStructureInteraction {

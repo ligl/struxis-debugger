@@ -346,15 +346,18 @@ impl AppState {
         }
 
         let structure_timeline = checkpoints.iter().map(|checkpoint| {
-            let structure = serde_json::from_str::<serde_json::Value>(&checkpoint.state_data).map_err(|error| {
+            let mut structure = serde_json::from_str::<serde_json::Value>(&checkpoint.state_data).map_err(|error| {
                 IpcError::new(IpcErrorCode::InvalidState,
                     format!("Decode Snapshot structure state at checkpoint {} failed: {error}", checkpoint.checkpoint_index))
             })?;
+            let keyzones = structure.as_object_mut().and_then(|state| state.remove("keyzones"));
             Ok(SnapshotStructureCheckpointDto {
                 sbar_id: checkpoint.sbar_id.clone(),
+                keyzones,
                 structure,
             })
         }).collect::<Result<Vec<_>, IpcError>>()?;
+        let keyzones = structure_timeline.last().and_then(|checkpoint| checkpoint.keyzones.clone());
         let structure = structure_timeline.last().map(|checkpoint| checkpoint.structure.clone())
             .ok_or_else(|| IpcError::new(
                 IpcErrorCode::InvalidState, "Complete Snapshot contains no checkpoint records"))?;
@@ -369,6 +372,7 @@ impl AppState {
             bars: bars.iter().map(sbar_to_dto).collect(),
             structure,
             structure_timeline,
+            keyzones,
         })
     }
 
@@ -577,6 +581,7 @@ pub(crate) struct OriginDatasetDto {
     pub(crate) last_ts_event: String,
     pub(crate) bars: Vec<SBarDto>,
     pub(crate) structure: Option<StructureCheckpoint>,
+    pub(crate) keyzones: Option<crate::checkpoint::KeyZoneCheckpoint>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -592,11 +597,13 @@ pub(crate) struct SnapshotReferenceDto {
     pub(crate) bars: Vec<SBarDto>,
     pub(crate) structure: serde_json::Value,
     pub(crate) structure_timeline: Vec<SnapshotStructureCheckpointDto>,
+    pub(crate) keyzones: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SnapshotStructureCheckpointDto {
+    pub(crate) keyzones: Option<serde_json::Value>,
     pub(crate) sbar_id: String,
     pub(crate) structure: serde_json::Value,
 }
@@ -667,6 +674,7 @@ impl OriginRecord {
             last_ts_event: last.map_or_else(String::new, |bar| bar.ts_event.clone()),
             bars,
             structure: dataset.structure.clone(),
+            keyzones: dataset.keyzones.clone(),
         }
     }
 }
@@ -727,6 +735,7 @@ mod tests {
         let fingerprint = sequence_fingerprint(state_key, &bars)
             .expect("fixture fingerprint should compute");
         OriginLoad {
+            keyzones: None,
             origin_dataset_id: Uuid::new_v4(),
             state_key,
             sbar_sequence_fingerprint: fingerprint,

@@ -591,7 +591,20 @@ impl WorkerSession {
                 notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             }
-            ReplayCheckpointProjection::from_state_view(&state_view)
+            let keyzones = self.struxis.keyzones(self.input.state_key.instrument_id)
+                .ok_or_else(|| "KeyZone Registry unavailable at confirmed checkpoint".to_owned())
+                .and_then(|registry| crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry));
+            let keyzones = match keyzones {
+                Ok(keyzones) => keyzones,
+                Err(diagnostic) => {
+                    self.state.fail(diagnostic.clone())?;
+                    notify_sink_failure(&mut sink, &diagnostic);
+                    return Err(diagnostic);
+                }
+            };
+            let mut projection = ReplayCheckpointProjection::from_state_view(&state_view);
+            projection.keyzones = Some(keyzones);
+            projection
         };
 
         let expected_count = self.next_index + 1;
@@ -911,6 +924,7 @@ mod tests {
         let state_key = StruxisStateKey::from_bar_type(&bar_type);
         let fingerprint = sequence_fingerprint(state_key, &bars).expect("fingerprint");
         let origin = OriginLoad {
+            keyzones: None,
             origin_dataset_id: uuid::Uuid::new_v4(),
             state_key,
             sbar_sequence_fingerprint: fingerprint,

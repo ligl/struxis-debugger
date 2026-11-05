@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { KeyZoneCheckpointDto } from "../origin-types";
+import { KeyZonePrimitive } from "../keyzone-primitives";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { DrawingManager, type DrawingKind, type Drawing } from "lightweight-charts-drawing";
 import { configureDrawingStyleDefaults } from "../drawing-style";
@@ -20,6 +22,10 @@ configureDrawingStyleDefaults();
 const props = withDefaults(defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
+  keyzones?: KeyZoneCheckpointDto | null;
+  keyzoneUntil?: string | null;
+  selectedKeyzoneId?: string | null;
+  keyzoneSelectable?: boolean;
   sequenceId: string;
   headerTitle?: string;
   headerTag?: string;
@@ -49,6 +55,7 @@ const props = withDefaults(defineProps<{
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   chartActivate: [];
+  keyzoneSelect: [id: string];
   chartClick: [point: { x: number; y: number | null } | null];
   pointerPosition: [point: { x: number; y: number } | null];
   logicalRangeChange: [range: { from: number; to: number }];
@@ -60,7 +67,7 @@ const emit = defineEmits<{
 }>();
 const chartHost = ref<HTMLDivElement | null>(null);
 const chartError = ref("");
-const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true, feature: false });
+const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true, feature: false, keyzone: true });
 const drawingTool = ref<DrawingKind | null>(null);
 const drawingToolbarExpanded = ref(false);
 const drawingCount = ref(0);
@@ -74,6 +81,10 @@ let primitiveHost: ChartPrimitiveHost | null = null;
 let cbarPrimitive: StructurePrimitiveController | null = null;
 let swingPrimitive: StructurePrimitiveController | null = null;
 let trendPrimitive: StructurePrimitiveController | null = null;
+const keyzonePrimitive = new KeyZonePrimitive();
+function syncKeyzones(): void {
+  keyzonePrimitive.setData(props.keyzones ?? null, props.bars, props.keyzoneUntil === undefined ? (props.bars.at(-1)?.tsEvent ?? null) : props.keyzoneUntil);
+}
 let featurePrimitive: StructurePrimitiveController | null = null;
 let structurePlaybackState: ChartSurfaceStructurePlaybackState = {
   enabled: false, offset: null, processedCount: 0, liveCount: 0,
@@ -217,6 +228,7 @@ function updateSbarCoordinates(): void {
 }
 
 function syncStructurePrimitives(): void {
+  keyzonePrimitive.setVisible(layerVisibility.value.keyzone);
   syncStructurePrimitiveControllers({
     cbar: cbarPrimitive,
     swing: swingPrimitive,
@@ -304,6 +316,8 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   // Drawing placement and selected-object interaction own the click gesture.
   if (drawingManager?.tool() || drawingManager?.selection().length) return;
   const point = param.point;
+  const keyzone = point && props.keyzoneSelectable !== false ? keyzonePrimitive.hitTestZone(point.x, point.y) : null;
+  if (keyzone !== null) { emit("keyzoneSelect", keyzone); return; }
   emit("chartClick", point && Number.isFinite(point.x)
     ? { x: point.x, y: Number.isFinite(point.y) ? point.y : null }
     : null);
@@ -500,7 +514,8 @@ function handleChartKeyboard(event: KeyboardEvent): void {
 }
 
 function setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void {
-  layerVisibility.value = { ...visibility, feature: visibility.feature ?? false };
+  layerVisibility.value = { ...visibility, feature: visibility.feature ?? false, keyzone: visibility.keyzone ?? true };
+  keyzonePrimitive.setVisible(layerVisibility.value.keyzone);
   applySbarChartSeriesVisibility(candleSeries, volumeSeries, visibility);
   syncStructurePrimitives();
   scheduleOverlayUpdate.flush();
@@ -508,6 +523,7 @@ function setLayerVisibility(visibility: ChartSurfaceLayerVisibility): void {
 
 function toggleLayer(layer: keyof typeof layerVisibility.value): void {
   layerVisibility.value[layer] = !layerVisibility.value[layer];
+  if (layer === "keyzone") keyzonePrimitive.setVisible(layerVisibility.value.keyzone);
 
   if (layer === "cbar" || layer === "swing" || layer === "trend" || layer === "feature") {
     syncStructurePrimitives();
@@ -865,6 +881,9 @@ onMounted(() => {
   swingPrimitive = runtime.swingPrimitive;
   trendPrimitive = runtime.trendPrimitive;
   if (primitiveHost && candleSeries) featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
+  registerPrimitive("keyzone", keyzonePrimitive);
+  syncKeyzones();
+  keyzonePrimitive.setSelected(props.selectedKeyzoneId ?? null);
   chart.subscribeClick(handleChartClick);
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
@@ -890,6 +909,8 @@ watch(() => [props.bars, props.sequenceId, props.dataMode] as const, () => {
   // geometry before the next interaction can hit-test the previous projection.
   scheduleOverlayUpdate.flush();
 });
+watch(() => [props.keyzones, props.bars, props.keyzoneUntil] as const, syncKeyzones);
+watch(() => props.selectedKeyzoneId, (id) => keyzonePrimitive.setSelected(id ?? null));
 watch(() => props.structure, () => {
   // A Snapshot checkpoint replaces the authoritative structure snapshot without
   // rebuilding immutable candle/volume series. Structure hit-testing must see
@@ -995,6 +1016,7 @@ onBeforeUnmount(() => {
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.swing }" :aria-pressed="layerVisibility.swing" :disabled="!structure || structure.swings.length === 0" data-testid="layer-toggle-swing" @click="toggleLayer('swing')"><i class="legend-dot swing-dot"></i>Swing</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.trend }" :aria-pressed="layerVisibility.trend" :disabled="!structure || structure.trends.length === 0" data-testid="layer-toggle-trend" @click="toggleLayer('trend')"><i class="legend-dot trend-dot" style="background-color: #8F343D"></i>Trend</button>
+        <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.keyzone }" :aria-pressed="layerVisibility.keyzone" :disabled="!keyzones?.zones.length" data-testid="layer-toggle-keyzone" @click="toggleLayer('keyzone')"><i class="legend-dot" style="background-color: #b49a75"></i>KeyZone</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.feature }" :aria-pressed="layerVisibility.feature" :disabled="!structure || !structure.featureSequence?.length" data-testid="layer-toggle-feature" @click="toggleLayer('feature')"><i class="legend-dot feature-dot" style="background-color: #6F5735"></i>FeatSeq</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.volume }" :aria-pressed="layerVisibility.volume" data-testid="layer-toggle-volume" @click="toggleLayer('volume')"><i class="legend-dot volume-dot"></i>Volume</button>
       </div>

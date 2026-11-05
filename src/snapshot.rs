@@ -387,7 +387,12 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         "trends",
     ];
     let has_feature_sequence = object.contains_key("featureSequence");
-    if object.len() != expected_fields.len() + if has_feature_sequence { 1 } else { 0 }
+    let has_keyzones = object.contains_key("keyzones");
+    if let Some(keyzones) = object.get("keyzones") {
+        validate_keyzone_checkpoint(keyzones)?;
+    }
+    if object.len()
+        != expected_fields.len() + usize::from(has_feature_sequence) + usize::from(has_keyzones)
         || expected_fields.iter().any(|key| !object.contains_key(*key))
     {
         return Err(
@@ -819,6 +824,158 @@ pub(crate) fn validate_snapshot_records(
     }
     if require_complete && manifest.status != STATUS_COMPLETE {
         return Err(format!("Snapshot is not Complete (status={})", manifest.status));
+    }
+    Ok(())
+}
+
+pub(crate) fn canonical_checkpoint_state(
+    structure: Option<&crate::checkpoint::StructureCheckpoint>,
+    keyzones: Option<&crate::checkpoint::KeyZoneCheckpoint>,
+) -> Result<String, String> {
+    let encoded = canonical_structure_state(structure)?;
+    let Some(keyzones) = keyzones else {
+        return Ok(encoded);
+    };
+    let mut state: serde_json::Value = serde_json::from_str(&encoded)
+        .map_err(|error| format!("Decode canonical structure: {error}"))?;
+    let mut registry = serde_json::to_value(keyzones)
+        .map_err(|error| format!("Encode KeyZone checkpoint: {error}"))?;
+    validate_keyzone_checkpoint(&registry)?;
+    for (collection, identity) in [("zones", "keyzoneId"), ("interactions", "interactionId")] {
+        let objects = registry
+            .get_mut(collection)
+            .and_then(serde_json::Value::as_array_mut)
+            .ok_or_else(|| format!("KeyZone {collection} must be an array"))?;
+        let mut indexed = objects
+            .drain(..)
+            .map(|value| {
+                let id = value
+                    .get(identity)
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(|| format!("KeyZone {collection} entry is missing {identity}"))?;
+                let id = validate_keyzone_integer(id, identity)?;
+                Ok((id, value))
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+        indexed.sort_by_key(|(id, _)| *id);
+        *objects = indexed.into_iter().map(|(_, value)| value).collect();
+    }
+    state
+        .as_object_mut()
+        .ok_or("Checkpoint state must be an object")?
+        .insert("keyzones".into(), registry);
+    canonical_json_string(&state)
+}
+
+fn validate_keyzone_integer(value: &str, field: &str) -> Result<u64, String> {
+    let integer = parse_canonical_u128(value, field)?;
+    u64::try_from(integer).map_err(|error| format!("{field} exceeds domain integer range: {error}"))
+}
+
+fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> {
+    use std::collections::BTreeSet;
+    let checkpoint: crate::checkpoint::KeyZoneCheckpoint = serde_json::from_value(value.clone())
+        .map_err(|error| format!("Invalid KeyZone checkpoint: {error}"))?;
+    if checkpoint.instrument_id.is_empty()
+        || checkpoint.config_x < 0.0
+        || !checkpoint.config_x.is_finite()
+        || validate_keyzone_integer(&checkpoint.config_n, "KeyZone configN")? == 0
+    {
+        return Err("Invalid KeyZone Registry configuration".into());
+    }
+    let mut zone_ids = BTreeSet::new();
+    for zone in &checkpoint.zones {
+        let id = validate_keyzone_integer(&zone.keyzone_id, "keyzoneId")?;
+        if !zone_ids.insert(id) {
+            return Err("Duplicate KeyZone ID".into());
+        }
+        if !["Provisional", "Finalized", "Invalidated"].contains(&zone.state.as_str())
+            || !["Swing", "Trend", "FixedPriceRange"].contains(&zone.origin_kind.as_str())
+            || zone.timeframe.is_empty()
+        {
+            return Err("Invalid KeyZone state or origin".into());
+        }
+        match (&zone.origin_id, zone.origin_kind.as_str()) {
+            (None, "FixedPriceRange") => {}
+            (Some(id), "Swing" | "Trend") => {
+                validate_keyzone_integer(id, "originId")?;
+            }
+            _ => return Err("KeyZone origin ID does not match origin kind".into()),
+        }
+        let lower = zone
+            .lower
+            .parse::<nautilus_model::types::Price>()
+            .map_err(|error| format!("Invalid KeyZone lower: {error}"))?;
+        let upper = zone
+            .upper
+            .parse::<nautilus_model::types::Price>()
+            .map_err(|error| format!("Invalid KeyZone upper: {error}"))?;
+        capitus_struxis::keyzone::PriceRange::new(lower, upper)
+            .map_err(|error| format!("Invalid KeyZone range: {error}"))?;
+        if zone.finalized_at.is_some() != zone.finalized_detected_at.is_some()
+            || zone.invalidated_at.is_some() != zone.invalidated_detected_at.is_some()
+            || (zone.state == "Provisional" && zone.finalized_at.is_some())
+            || (zone.state == "Finalized" && zone.finalized_at.is_none())
+            || (zone.state == "Invalidated") != zone.invalidated_at.is_some()
+        {
+            return Err("KeyZone lifecycle state does not match its timestamps".into());
+        }
+        for (field, time) in [
+            ("formedAt", Some(&zone.formed_at)),
+            ("createdAt", Some(&zone.created_at)),
+            ("finalizedAt", zone.finalized_at.as_ref()),
+            ("finalizedDetectedAt", zone.finalized_detected_at.as_ref()),
+            ("invalidatedAt", zone.invalidated_at.as_ref()),
+            (
+                "invalidatedDetectedAt",
+                zone.invalidated_detected_at.as_ref(),
+            ),
+        ] {
+            if let Some(time) = time {
+                validate_keyzone_integer(time, field)?;
+            }
+        }
+    }
+    let mut ids = BTreeSet::new();
+    for interaction in &checkpoint.interactions {
+        let id = validate_keyzone_integer(&interaction.interaction_id, "interactionId")?;
+        let zone_id = validate_keyzone_integer(&interaction.keyzone_id, "interaction keyzoneId")?;
+        if !ids.insert(id) || !zone_ids.contains(&zone_id) {
+            return Err("Invalid Interaction identity or KeyZone reference".into());
+        }
+        if !["Active", "Ended", "Invalidated"].contains(&interaction.state.as_str())
+            || interaction.observer_timeframe.is_empty()
+            || interaction.observer_bar_type.is_empty()
+            || !interaction.config_x.is_finite()
+            || interaction.config_x < 0.0
+            || validate_keyzone_integer(&interaction.config_n, "Interaction configN")? == 0
+        {
+            return Err("Invalid Interaction configuration or state".into());
+        }
+        if interaction.ended_at.is_some() != interaction.ended_detected_at.is_some()
+            || interaction.invalidated_at.is_some() != interaction.invalidated_detected_at.is_some()
+            || (interaction.state == "Ended") != interaction.ended_at.is_some()
+            || (interaction.state == "Invalidated") != interaction.invalidated_at.is_some()
+        {
+            return Err("Interaction lifecycle state does not match its timestamps".into());
+        }
+        validate_keyzone_integer(&interaction.outside_count, "outsideCount")?;
+        for (field, time) in [
+            ("startedAt", Some(&interaction.started_at)),
+            ("startedDetectedAt", Some(&interaction.started_detected_at)),
+            ("lastProcessedAt", interaction.last_processed_at.as_ref()),
+            ("endedAt", interaction.ended_at.as_ref()),
+            ("endedDetectedAt", interaction.ended_detected_at.as_ref()),
+            ("invalidatedAt", interaction.invalidated_at.as_ref()),
+            (
+                "invalidatedDetectedAt",
+                interaction.invalidated_detected_at.as_ref(),
+            ),
+        ] {
+            if let Some(time) = time {
+                validate_keyzone_integer(time, field)?;
+            }
+        }
     }
     Ok(())
 }
@@ -1292,5 +1449,60 @@ mod tests {
         assert!(validate_canonical_structure_state(&state)
             .unwrap_err()
             .contains("non-overlapping"));
+    }
+}
+
+
+#[cfg(test)]
+mod keyzone_snapshot_tests {
+    use super::*;
+    use crate::checkpoint::keyzone_projection_tests::fixed_projection;
+
+    #[test]
+    fn keyzone_snapshot_distinguishes_legacy_missing_and_recorded_empty() {
+        let legacy = canonical_checkpoint_state(None, None).unwrap();
+        assert!(!legacy.contains("keyzones"));
+        let mut registry = fixed_projection();
+        registry.zones.clear();
+        let current = canonical_checkpoint_state(None, Some(&registry)).unwrap();
+        let state: serde_json::Value = serde_json::from_str(&current).unwrap();
+        validate_canonical_structure_state(&state).unwrap();
+        assert_eq!(state["keyzones"]["zones"], serde_json::json!([]));
+        assert_eq!(state["keyzones"]["interactions"], serde_json::json!([]));
+    }
+
+    #[test]
+    fn keyzone_snapshot_validates_lossless_prices_ids_and_references() {
+        let encoded = canonical_checkpoint_state(None, Some(&fixed_projection())).unwrap();
+        let state: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+        validate_canonical_structure_state(&state).unwrap();
+        assert_eq!(state["keyzones"]["zones"][0]["lower"], "9.00001");
+        assert_eq!(
+            state["keyzones"]["zones"][0]["formedAt"],
+            "9007199254740993"
+        );
+        let mut duplicate = state.clone();
+        let zone = duplicate["keyzones"]["zones"][0].clone();
+        duplicate["keyzones"]["zones"]
+            .as_array_mut()
+            .unwrap()
+            .push(zone);
+        assert!(
+            validate_canonical_structure_state(&duplicate)
+                .unwrap_err()
+                .contains("Duplicate KeyZone")
+        );
+        let mut invalid = state.clone();
+        invalid["keyzones"]["zones"][0]["upper"] = serde_json::json!("8.0");
+        assert!(validate_canonical_structure_state(&invalid).is_err());
+        invalid = state.clone();
+        invalid["keyzones"]["zones"][0]["formedAt"] = serde_json::json!(9007199254740993_u64);
+        assert!(validate_canonical_structure_state(&invalid).is_err());
+        invalid = state.clone();
+        invalid["keyzones"]["zones"][0]["state"] = serde_json::json!("Unknown");
+        assert!(validate_canonical_structure_state(&invalid).is_err());
+        invalid = state;
+        invalid["keyzones"] = serde_json::Value::Null;
+        assert!(validate_canonical_structure_state(&invalid).is_err());
     }
 }

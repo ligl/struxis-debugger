@@ -53,6 +53,7 @@ export interface OriginDatasetDto {
   lastTsEvent: string;
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
+  keyzones?: KeyZoneCheckpointDto | null;
 }
 
 export interface TestDatasetDto {
@@ -166,7 +167,8 @@ export type OriginObjectSelection =
   | { kind: "sbar"; id: string; originDatasetId: string }
   | { kind: "cbar"; id: string; originDatasetId: string }
   | { kind: "swing"; id: string; originDatasetId: string }
-  | { kind: "trend"; id: string; originDatasetId: string };
+  | { kind: "trend"; id: string; originDatasetId: string }
+  | { kind: "keyzone"; id: string; originDatasetId: string };
 
 /**
  * Inspector input is workspace-scoped: a selected domain object, a confirmed
@@ -183,6 +185,7 @@ export type InspectorWorkspaceContext =
         | { kind: "sbar"; object: SBarDto }
         | { kind: "cbar"; object: ReplayInspectorCBarDto }
         | { kind: "swing"; object: ReplayInspectorSwingDto }
+        | { kind: "keyzone"; object: KeyZoneDto; registry: KeyZoneCheckpointDto }
         | { kind: "trend"; object: ReplayInspectorTrendDto }
         | null;
     }
@@ -194,6 +197,7 @@ export type InspectorWorkspaceContext =
         | { kind: "sbar"; object: SBarDto | ReplayInspectorSBarDto; source: "input" | "checkpoint" | "snapshot" }
         | { kind: "cbar"; object: ReplayInspectorCBarDto; source?: "checkpoint" | "snapshot" }
         | { kind: "swing"; object: ReplayInspectorSwingDto; source?: "checkpoint" | "snapshot" }
+        | { kind: "keyzone"; object: KeyZoneDto; registry: KeyZoneCheckpointDto; source?: "checkpoint" | "snapshot" }
         | { kind: "trend"; object: ReplayInspectorTrendDto; source?: "checkpoint" | "snapshot" }
         | null;
       snapshotId: string | null;
@@ -231,7 +235,7 @@ export interface ReplayInspectorStructureDto {
 }
 
 export type ReplayChartSelection = {
-  kind: "sbar" | "cbar" | "swing" | "trend";
+  kind: "sbar" | "cbar" | "swing" | "trend" | "keyzone";
   id: string;
   checkpointSbarId: string | null;
 };
@@ -250,7 +254,8 @@ export type ReplaySnapshotInspectorSelection =
   | (ReplaySnapshotSelectionContext & { kind: "sbar"; object: SBarDto })
   | (ReplaySnapshotSelectionContext & { kind: "cbar"; object: ReplayInspectorCBarDto })
   | (ReplaySnapshotSelectionContext & { kind: "swing"; object: ReplayInspectorSwingDto })
-  | (ReplaySnapshotSelectionContext & { kind: "trend"; object: ReplayInspectorTrendDto });
+  | (ReplaySnapshotSelectionContext & { kind: "trend"; object: ReplayInspectorTrendDto })
+  | (ReplaySnapshotSelectionContext & { kind: "keyzone"; object: KeyZoneDto; registry: KeyZoneCheckpointDto });
 
 export interface ReplayInspectorDto {
   stateKey: string;
@@ -258,6 +263,7 @@ export interface ReplayInspectorDto {
   sbarId: string;
   sbar: ReplayInspectorSBarDto;
   structure: ReplayInspectorStructureDto | null;
+  keyzones?: KeyZoneCheckpointDto | null;
 }
 
 export type SnapshotArtifactKind =
@@ -288,6 +294,7 @@ export interface SnapshotArtifactDto {
 export interface SnapshotStructureCheckpointDto {
   sbarId: string;
   structure: ReplayInspectorStructureDto | null;
+  keyzones?: KeyZoneCheckpointDto | null;
 }
 
 export interface SnapshotReferenceDto {
@@ -301,6 +308,7 @@ export interface SnapshotReferenceDto {
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto;
   structureTimeline: SnapshotStructureCheckpointDto[];
+  keyzones?: KeyZoneCheckpointDto | null;
 }
 
 export type CompareRejectCategory =
@@ -387,4 +395,46 @@ export interface SnapshotCompareResultDto {
   firstStructuralDivergence: CheckpointCompareSummaryDto | null;
   diagnosticsDifferences: DiagnosticsDifferenceDto[];
   firstDiagnosticsDivergence: number | null;
+}
+
+
+/** Instrument-owned domain facts; prices, IDs and timestamps remain lossless. */
+export interface KeyZoneCheckpointDto {
+  instrumentId: string;
+  configN: string;
+  configX: number;
+  zones: KeyZoneDto[];
+  interactions: KeyZoneInteractionDto[];
+}
+export interface KeyZoneDto {
+  keyzoneId: string;
+  originKind: "Swing" | "Trend" | "FixedPriceRange";
+  originId: string | null;
+  timeframe: string;
+  lower: string;
+  upper: string;
+  state: "Provisional" | "Finalized" | "Invalidated";
+  formedAt: string;
+  createdAt: string;
+  finalizedAt: string | null;
+  finalizedDetectedAt: string | null;
+  invalidatedAt: string | null;
+  invalidatedDetectedAt: string | null;
+}
+export interface KeyZoneInteractionDto {
+  interactionId: string;
+  keyzoneId: string;
+  observerTimeframe: string;
+  observerBarType: string;
+  state: "Active" | "Ended" | "Invalidated";
+  configN: string;
+  configX: number;
+  outsideCount: string;
+  lastProcessedAt: string | null;
+  startedAt: string;
+  startedDetectedAt: string;
+  endedAt: string | null;
+  endedDetectedAt: string | null;
+  invalidatedAt: string | null;
+  invalidatedDetectedAt: string | null;
 }

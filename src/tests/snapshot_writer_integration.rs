@@ -92,6 +92,7 @@ fn create_effective_config() -> EffectiveStruxisConfig {
 
 fn create_minimal_checkpoint(index: usize, sbar_id: &str) -> ReplayCheckpointProjection {
     ReplayCheckpointProjection {
+        keyzones: None,
         state_key: format!("{:?}", test_state_key()),
         last_ts_event: Some(sbar_id.to_string()),
         sbar_count: index + 1,

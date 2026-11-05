@@ -4,7 +4,7 @@
 //! later checkpoint persistence or UI transport. No borrowed domain view or
 //! Cache-backed series escapes this module.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{diagnostics::Diagnostic, run::RunState};
 
@@ -24,6 +24,7 @@ pub(crate) struct ReplayCheckpointProjection {
     pub(crate) structure: Option<StructureCheckpoint>,
     /// Structured diagnostics observed at this exact confirmed Bar boundary.
     pub(crate) diagnostics: Vec<Diagnostic>,
+    pub(crate) keyzones: Option<KeyZoneCheckpoint>,
 }
 
 /// Small live Inspector payload derived from one backend-confirmed checkpoint.
@@ -40,6 +41,7 @@ pub(crate) struct OwnedCheckpoint {
     pub(crate) state_key: String,
     pub(crate) structure: Option<StructureCheckpoint>,
     pub(crate) diagnostics: Vec<Diagnostic>,
+    pub(crate) keyzones: Option<KeyZoneCheckpoint>,
 }
 
 impl OwnedCheckpoint {
@@ -60,6 +62,7 @@ impl OwnedCheckpoint {
             ts_event: current_sbar.ts_event.clone(),
             state_key: projection.state_key.clone(),
             structure: projection.structure.clone(),
+            keyzones: projection.keyzones.clone(),
             diagnostics: projection.diagnostics.clone(),
         })
     }
@@ -80,6 +83,7 @@ pub(crate) struct ReplayInspectorProjection {
     pub(crate) sbar_id: String,
     pub(crate) sbar: SBarCheckpoint,
     pub(crate) structure: Option<StructureCheckpoint>,
+    pub(crate) keyzones: Option<KeyZoneCheckpoint>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -250,6 +254,7 @@ impl ReplayCheckpointProjection {
             sbar_id: sbar_id.to_owned(),
             sbar,
             structure: self.structure.clone(),
+            keyzones: self.keyzones.clone(),
         })
     }
 
@@ -267,6 +272,7 @@ impl ReplayCheckpointProjection {
             sbar_count: sbars.len(),
             sbars,
             structure,
+            keyzones: None,
             diagnostics: Vec::new(),
         }
     }
@@ -350,6 +356,121 @@ pub(crate) fn structure_from_state_view(
 }
 
 
+/// Owned Instrument Registry projection. Absence means this recording predates
+/// KeyZone support; Some with empty collections is an observed empty Registry.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct KeyZoneCheckpoint {
+    pub(crate) instrument_id: String,
+    pub(crate) config_n: String,
+    pub(crate) config_x: f64,
+    pub(crate) zones: Vec<KeyZoneObject>,
+    pub(crate) interactions: Vec<KeyZoneInteraction>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct KeyZoneObject {
+    pub(crate) keyzone_id: String,
+    pub(crate) origin_kind: String,
+    pub(crate) origin_id: Option<String>,
+    pub(crate) timeframe: String,
+    pub(crate) lower: String,
+    pub(crate) upper: String,
+    pub(crate) state: String,
+    pub(crate) formed_at: String,
+    pub(crate) created_at: String,
+    pub(crate) finalized_at: Option<String>,
+    pub(crate) finalized_detected_at: Option<String>,
+    pub(crate) invalidated_at: Option<String>,
+    pub(crate) invalidated_detected_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct KeyZoneInteraction {
+    pub(crate) interaction_id: String,
+    pub(crate) keyzone_id: String,
+    pub(crate) observer_timeframe: String,
+    pub(crate) observer_bar_type: String,
+    pub(crate) state: String,
+    pub(crate) config_n: String,
+    pub(crate) config_x: f64,
+    pub(crate) outside_count: String,
+    pub(crate) last_processed_at: Option<String>,
+    pub(crate) started_at: String,
+    pub(crate) started_detected_at: String,
+    pub(crate) ended_at: Option<String>,
+    pub(crate) ended_detected_at: Option<String>,
+    pub(crate) invalidated_at: Option<String>,
+    pub(crate) invalidated_detected_at: Option<String>,
+}
+
+impl KeyZoneCheckpoint {
+    pub(crate) fn from_registry(
+        registry: &capitus_struxis::keyzone::KeyZoneRegistry,
+    ) -> Result<Self, String> {
+        use capitus_struxis::keyzone::KeyZoneOrigin;
+        let mut zones = Vec::new();
+        let mut interactions = Vec::new();
+        for zone in registry.keyzones() {
+            let temporal = zone.temporal();
+            let (origin_kind, origin_id) = match zone.origin() {
+                KeyZoneOrigin::Swing(id) => ("Swing", Some(id.to_string())),
+                KeyZoneOrigin::Trend(id) => ("Trend", Some(id.to_string())),
+                KeyZoneOrigin::FixedPriceRange => ("FixedPriceRange", None),
+            };
+            zones.push(KeyZoneObject {
+                keyzone_id: zone.id().value().to_string(),
+                origin_kind: origin_kind.into(),
+                origin_id,
+                timeframe: zone.timeframe().to_string(),
+                lower: zone.price_range().lower().to_string(),
+                upper: zone.price_range().upper().to_string(),
+                state: format!("{:?}", zone.state()),
+                formed_at: temporal.formed_at.to_string(),
+                created_at: temporal.created_at.to_string(),
+                finalized_at: temporal.finalized_at.map(|at| at.to_string()),
+                finalized_detected_at: temporal.finalized_detected_at.map(|at| at.to_string()),
+                invalidated_at: temporal.invalidated_at.map(|at| at.to_string()),
+                invalidated_detected_at: temporal.invalidated_detected_at.map(|at| at.to_string()),
+            });
+            for interaction in registry
+                .interactions_for(zone.id())
+                .map_err(|error| error.to_string())?
+            {
+                let temporal = interaction.temporal();
+                interactions.push(KeyZoneInteraction {
+                    interaction_id: interaction.id().value().to_string(),
+                    keyzone_id: zone.id().value().to_string(),
+                    observer_timeframe: interaction.observer_timeframe().to_string(),
+                    observer_bar_type: interaction.observer_bar_type().to_string(),
+                    state: format!("{:?}", interaction.state()),
+                    config_n: interaction.config().n().to_string(),
+                    config_x: interaction.config().x(),
+                    outside_count: interaction.outside_count().to_string(),
+                    last_processed_at: interaction.last_processed_at().map(|at| at.to_string()),
+                    started_at: temporal.started_at.to_string(),
+                    started_detected_at: temporal.started_detected_at.to_string(),
+                    ended_at: temporal.ended_at.map(|at| at.to_string()),
+                    ended_detected_at: temporal.ended_detected_at.map(|at| at.to_string()),
+                    invalidated_at: temporal.invalidated_at.map(|at| at.to_string()),
+                    invalidated_detected_at: temporal
+                        .invalidated_detected_at
+                        .map(|at| at.to_string()),
+                });
+            }
+        }
+        Ok(Self {
+            instrument_id: registry.instrument_id().to_string(),
+            config_n: registry.config().n().to_string(),
+            config_x: registry.config().x(),
+            zones,
+            interactions,
+        })
+    }
+}
+
 #[cfg(test)]
 mod trend_checkpoint_tests {
     use super::{FeatureElementCheckpoint, TrendCheckpoint};
@@ -403,5 +524,148 @@ mod trend_checkpoint_tests {
         assert_eq!(value["spanSbars"], 9);
         assert_eq!(value["state"], "Tentative");
         assert!(value.get("trend_id").is_none());
+    }
+}
+
+
+#[cfg(test)]
+pub(crate) mod keyzone_projection_tests {
+    use super::*;
+    use capitus_struxis::{
+        Timeframe,
+        keyzone::{InteractionConfig, KeyZoneRegistry, PriceRange},
+    };
+    use nautilus_model::{identifiers::InstrumentId, types::Price};
+    use std::num::NonZeroU32;
+
+    pub(crate) fn fixed_projection() -> KeyZoneCheckpoint {
+        let mut registry = KeyZoneRegistry::new(
+            InstrumentId::from("AUD/USD.SIM"),
+            InteractionConfig::default(),
+        );
+        registry
+            .create_fixed(
+                Timeframe::minutes(NonZeroU32::new(5).unwrap()),
+                PriceRange::new(Price::from("9.00001"), Price::from("12.00002")).unwrap(),
+                9007199254740993_u64.into(),
+                &[],
+            )
+            .unwrap();
+        KeyZoneCheckpoint::from_registry(&registry).unwrap()
+    }
+
+    #[test]
+    fn keyzone_projection_keeps_domain_precision_origin_and_market_times() {
+        let projection = fixed_projection();
+        assert_eq!(projection.instrument_id, "AUD/USD.SIM");
+        assert_eq!(projection.config_n, "3");
+        assert_eq!(projection.config_x, 0.5);
+        assert_eq!(projection.zones.len(), 1);
+        let zone = &projection.zones[0];
+        assert_eq!(zone.origin_kind, "FixedPriceRange");
+        assert_eq!(zone.origin_id, None);
+        assert_eq!(zone.lower, "9.00001");
+        assert_eq!(zone.upper, "12.00002");
+        assert_eq!(zone.state, "Finalized");
+        assert_eq!(zone.formed_at, "9007199254740993");
+        assert_eq!(zone.finalized_at.as_deref(), Some("9007199254740993"));
+        assert!(projection.interactions.is_empty());
+    }
+
+    #[test]
+    fn keyzone_projection_matches_real_structure_dataflow() {
+        use capitus_struxis::{
+            NautilusRuntime, ProcessOutcome, Struxis, StruxisConfig, StruxisRegistrant,
+            StruxisStateKey,
+        };
+        use nautilus_common::cache::Cache;
+        use nautilus_model::{
+            data::{Bar, BarType},
+            identifiers::StrategyId,
+            types::Quantity,
+        };
+        use std::{cell::RefCell, rc::Rc, str::FromStr};
+        let cache = Rc::new(RefCell::new(Cache::default()));
+        let struxis = Struxis::new(
+            StruxisConfig::builder().build(),
+            NautilusRuntime::new(Rc::clone(&cache)),
+        );
+        let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL").unwrap();
+        let key = StruxisStateKey::from_bar_type(&bar_type);
+        struxis.register(
+            key,
+            StruxisRegistrant::Strategy(StrategyId::from("DEBUGGER-KEYZONE")),
+        );
+        for (index, (low, high)) in [
+            ("17", "22"),
+            ("5", "10"),
+            ("15", "20"),
+            ("23", "27"),
+            ("30", "35"),
+            ("24", "29"),
+            ("15", "20"),
+            ("22", "27"),
+            ("10", "15"),
+            ("14", "20"),
+            ("20", "25"),
+            ("24", "29"),
+            ("28", "33"),
+            ("34", "39"),
+            ("26", "31"),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let time = ((index as u64 + 1) * 10).into();
+            let bar = Bar::new(
+                bar_type,
+                Price::from(low),
+                Price::from(high),
+                Price::from(low),
+                Price::from(low),
+                Quantity::from("1"),
+                time,
+                time,
+            );
+            cache.borrow_mut().add_bar(bar).unwrap();
+            assert!(matches!(
+                struxis.process(&bar),
+                ProcessOutcome::Processed { .. }
+            ));
+        }
+        let registry = struxis.keyzones(key.instrument_id).unwrap();
+        let projected = KeyZoneCheckpoint::from_registry(&registry).unwrap();
+        assert_eq!(projected.zones.len(), 4);
+        assert_eq!(
+            projected
+                .zones
+                .iter()
+                .filter(|zone| zone.origin_kind == "Swing")
+                .count(),
+            3
+        );
+        assert_eq!(
+            projected
+                .zones
+                .iter()
+                .filter(|zone| zone.origin_kind == "Trend")
+                .count(),
+            1
+        );
+        let first = projected
+            .zones
+            .iter()
+            .find(|zone| zone.origin_kind == "Swing" && zone.origin_id.as_deref() == Some("20"))
+            .unwrap();
+        assert_eq!(first.lower, "5");
+        assert_eq!(first.upper, "10");
+        assert_eq!(first.finalized_at.as_deref(), Some("100"));
+        assert!(!projected.interactions.is_empty());
+        assert!(
+            projected
+                .interactions
+                .iter()
+                .all(|item| item.config_n == "3")
+        );
     }
 }

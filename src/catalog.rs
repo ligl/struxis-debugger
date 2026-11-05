@@ -81,6 +81,7 @@ pub(crate) struct OriginLoad {
     pub(crate) bar_type: String,
     pub(crate) bars: Vec<Bar>,
     pub(crate) structure: Option<StructureCheckpoint>,
+    pub(crate) keyzones: Option<crate::checkpoint::KeyZoneCheckpoint>,
 }
 
 /// Loads a complete Catalog BarType through Nautilus → Strategy → Struxis,
@@ -143,7 +144,11 @@ pub(crate) fn load_origin(
         ..BacktestEngineConfig::default()
     };
     let mut engine = BacktestEngine::new(engine_config)?;
-    let setup_result = (|| -> Result<(Vec<Bar>, Option<StructureCheckpoint>)> {
+    let setup_result = (|| -> Result<(
+        Vec<Bar>,
+        Option<StructureCheckpoint>,
+        Option<crate::checkpoint::KeyZoneCheckpoint>,
+    )> {
         engine.add_venue(
             SimulatedVenueConfig::builder()
                 .venue(venue)
@@ -198,7 +203,11 @@ pub(crate) fn load_origin(
                 state.last_ts_event(),
                 origin_bars.last().map(|bar| bar.ts_event)
             );
-            (extracted, structure)
+            let registry = struxis.keyzones(state_key.instrument_id)
+                .ok_or_else(|| anyhow::anyhow!("KeyZone Registry unavailable after Origin processing: {:?}", struxis.processing_error(state_key.instrument_id)))?;
+            let keyzones = crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry)
+                .map_err(anyhow::Error::msg)?;
+            (extracted, structure, Some(keyzones))
         };
 
         Ok(owned_projection)
@@ -206,7 +215,7 @@ pub(crate) fn load_origin(
 
     // Dispose the temporary engine even when strategy processing or validation fails.
     engine.dispose();
-    let (bars, structure) = setup_result?;
+    let (bars, structure, keyzones) = setup_result?;
     let sbar_sequence_fingerprint = crate::dataset::sequence_fingerprint(state_key, &bars)?;
 
     Ok(OriginLoad {
@@ -216,6 +225,7 @@ pub(crate) fn load_origin(
         bar_type: parsed_bar_type.to_string(),
         bars,
         structure,
+        keyzones,
     })
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { KeyZoneCheckpointDto } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import ChartSurface from "./ChartSurface.vue";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -9,6 +10,7 @@ import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
 const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
+  keyzones?: KeyZoneCheckpointDto | null;
   originDatasetId: string;
   selectedObject?: OriginObjectSelection | null;
   selectionStartSbarId?: string | null;
@@ -19,7 +21,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
-  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>];
+  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" | "keyzone" }>];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
@@ -171,7 +173,7 @@ function handlePointerPosition(point: { x: number; y: number } | null): void {
   updateHoveredObject(point);
 }
 
-function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }> | null {
+function hitTestStructureObject(x: number, y: number): Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" | "keyzone" }> | null {
   const geometry = surface.value?.getStructureGeometry();
   if (!geometry) return null;
 
@@ -327,7 +329,11 @@ watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: 
     <ChartSurface
       ref="surface"
       :bars="bars"
-      :structure="structure"
+        :structure="structure"
+      :keyzones="keyzones"
+      :selected-keyzone-id="selectedObject?.kind === 'keyzone' ? selectedObject.id : null"
+      :keyzone-selectable="!selectionPending"
+      @keyzone-select="emit('objectClick', { kind: 'keyzone', id: $event, originDatasetId })"
       :sequence-id="originDatasetId"
       :show-header="true"
       :show-footer="true"

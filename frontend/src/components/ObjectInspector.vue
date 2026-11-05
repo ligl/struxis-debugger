@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import KeyZoneDetails from "./KeyZoneDetails.vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
@@ -37,6 +38,7 @@ const selectedTrend = computed(() =>
     ? props.context.selectedObject.object
     : null,
 );
+const selectedKeyzone = computed(() => props.context.workspace !== "compare" && props.context.selectedObject?.kind === "keyzone" ? props.context.selectedObject : null);
 const originDatasetId = computed(() =>
   props.context.workspace === "dataset" ? props.context.originDatasetId : null,
 );
@@ -110,7 +112,7 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
 <template>
   <section class="inspector-object" data-testid="inspector-object" @contextmenu.stop.prevent="handleInspectorContextMenu">
     <div
-      v-if="workspaceMode === 'dataset' && (selectedSbar || selectedCbar || selectedSwing || selectedTrend)"
+      v-if="workspaceMode === 'dataset' && (selectedSbar || selectedCbar || selectedSwing || selectedTrend || selectedKeyzone)"
       class="inspector-runtime-context"
       data-testid="inspector-runtime-context"
     >
@@ -120,7 +122,7 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
     </div>
     <template v-if="workspaceMode === 'dataset'">
       <section
-        v-if="origin && !selectedSbar && !selectedCbar && !selectedSwing && !selectedTrend"
+        v-if="origin && !selectedSbar && !selectedCbar && !selectedSwing && !selectedTrend && !selectedKeyzone"
         class="inspector-dataset-summary"
         data-testid="inspector-dataset-summary"
       >
@@ -141,6 +143,7 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
             <dd data-testid="inspector-dataset-timeframe">{{ origin.timeframe }}</dd>
           </div>
         </dl>
+        <p data-testid="inspector-keyzone-summary">KeyZone · {{ origin.keyzones ? origin.keyzones.zones.length : "NOT RECORDED" }}</p>
         <div class="inspector-dataset-counts" aria-label="Dataset object counts">
           <div><span>SBAR</span><strong data-testid="inspector-dataset-sbar-count">{{ origin.sbarCount.toLocaleString() }}</strong></div>
           <div><span>CBAR</span><strong data-testid="inspector-dataset-cbar-count">{{ formatStructureCount(origin.structure?.cbarCount) }}</strong></div>
@@ -159,8 +162,8 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
           </div>
         </div>
       </section>
-      <DatasetObjectDetails
-        v-else
+      <KeyZoneDetails v-else-if="selectedKeyzone" :zone="selectedKeyzone.object" :registry="selectedKeyzone.registry" />
+      <DatasetObjectDetails v-else
         :selected-sbar="selectedSbar"
         :selected-cbar="selectedCbar"
         :selected-swing="selectedSwing"
@@ -180,7 +183,8 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
     </template>
 
     <template v-else-if="workspaceMode === 'replay' && selectedReplayObject">
-      <ReplayObjectDetails
+      <KeyZoneDetails v-if="selectedReplayObject.kind === 'keyzone'" :zone="selectedReplayObject.object" :registry="selectedReplayObject.registry" />
+      <ReplayObjectDetails v-else
         :selected-object="selectedReplayObject"
         :timeframe="timeframe"
         :checkpoint="replayInspector"

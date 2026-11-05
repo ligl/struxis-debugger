@@ -17,7 +17,7 @@ use crate::{
     replay::LoadedInput,
     run::{RunState, RunStatus},
     snapshot::{
-        canonical_structure_state, verify_complete_snapshot, SnapshotCheckpointRecord,
+        canonical_checkpoint_state, verify_complete_snapshot, SnapshotCheckpointRecord,
         SnapshotManifest, STATUS_COMPLETE, STATUS_FAILED, STATUS_RECORDING,
     },
     worker::CheckpointSink,
@@ -192,7 +192,7 @@ impl SnapshotWriter {
                     ));
                 }
             }
-            let state_data = canonical_structure_state(checkpoint.structure.as_ref())?;
+            let state_data = canonical_checkpoint_state(checkpoint.structure.as_ref(), checkpoint.keyzones.as_ref())?;
             let diagnostics = canonical_diagnostics_json(&checkpoint.diagnostics)?;
             records.push(SnapshotCheckpointRecord {
                 checkpoint_index: expected_index,
@@ -242,6 +242,7 @@ impl SnapshotWriter {
         state_key: &str,
         last_ts_event: Option<&str>,
         structure: Option<&crate::checkpoint::StructureCheckpoint>,
+        keyzones: Option<&crate::checkpoint::KeyZoneCheckpoint>,
         diagnostics: &[crate::diagnostics::Diagnostic],
     ) -> Result<(), String> {
         let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
@@ -280,7 +281,7 @@ impl SnapshotWriter {
             sbar_id: sbar_id.to_owned(),
             ts_event: sbar_id.to_owned(),
             record_kind: "Full".into(),
-            state_data: canonical_structure_state(structure)?,
+            state_data: canonical_checkpoint_state(structure, keyzones)?,
             diagnostics: canonical_diagnostics_json(diagnostics)?,
         };
         let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
@@ -472,6 +473,7 @@ impl CheckpointSink for SnapshotWriter {
             &projection.state_key,
             projection.last_ts_event.as_deref(),
             projection.structure.as_ref(),
+            projection.keyzones.as_ref(),
             &projection.diagnostics,
         )
     }
@@ -596,6 +598,7 @@ mod tests {
         let state_key = StruxisStateKey::from_bar_type(&bar_type);
         let fingerprint = sequence_fingerprint(state_key, &bars).unwrap();
         let origin = OriginLoad {
+            keyzones: None,
             origin_dataset_id: uuid::Uuid::new_v4(),
             state_key,
             sbar_sequence_fingerprint: fingerprint,
@@ -629,6 +632,7 @@ mod tests {
 
         for (index, sbar_id) in ["100", "200"].iter().enumerate() {
             let projection = ReplayCheckpointProjection {
+                keyzones: None,
                 state_key: format!("{:?}", input.state_key),
                 last_ts_event: Some((*sbar_id).into()),
                 sbar_count: index + 1,
@@ -689,6 +693,7 @@ mod tests {
         for (index, bar) in input.bars.iter().enumerate() {
             let sbar_id = bar.ts_event.to_string();
             let projection = ReplayCheckpointProjection {
+                keyzones: None,
                 state_key: format!("{:?}", input.state_key),
                 last_ts_event: Some(sbar_id.clone()),
                 sbar_count: index + 1,
@@ -745,6 +750,7 @@ mod tests {
         for (index, bar) in input.bars.iter().enumerate() {
             let sbar_id = bar.ts_event.to_string();
             let projection = ReplayCheckpointProjection {
+                keyzones: None,
                 state_key: format!("{:?}", input.state_key),
                 last_ts_event: Some(sbar_id.clone()),
                 sbar_count: index + 1,
@@ -792,6 +798,7 @@ mod tests {
         for (index, bar) in input.bars.iter().enumerate() {
             let sbar_id = bar.ts_event.to_string();
             let projection = ReplayCheckpointProjection {
+                keyzones: None,
                 state_key: format!("{:?}", input.state_key),
                 last_ts_event: Some(sbar_id.clone()),
                 sbar_count: index + 1,
@@ -832,6 +839,7 @@ mod tests {
         writer.initialize(&state, &config()).unwrap();
 
         let mut projection = ReplayCheckpointProjection {
+            keyzones: None,
             state_key: format!("{:?}", input.state_key),
             last_ts_event: Some("999".into()),
             sbar_count: 1,
@@ -865,6 +873,7 @@ mod tests {
             input.sbar_sequence_fingerprint.clone(), input.bars.len()).unwrap();
         writer.initialize(&state, &config()).unwrap();
         let projection = ReplayCheckpointProjection {
+            keyzones: None,
             state_key: format!("{:?}", input.state_key),
             last_ts_event: Some("100".into()),
             sbar_count: 1,
@@ -877,5 +886,48 @@ mod tests {
         assert!(writer.checkpoints.is_empty());
         drop(writer);
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn keyzone_snapshot_roundtrips_through_verified_sqlite_publication() {
+        let root =
+            std::env::temp_dir().join(format!("capitus-keyzone-snapshot-{}", uuid::Uuid::new_v4()));
+        let input = input();
+        let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
+        let mut state = RunState::ready(
+            "keyzone-writer".into(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            2,
+        )
+        .unwrap();
+        writer.initialize(&state, &config()).unwrap();
+        for (index, sbar_id) in ["100", "200"].into_iter().enumerate() {
+            let projection = ReplayCheckpointProjection {
+                state_key: format!("{:?}", input.state_key),
+                last_ts_event: Some(sbar_id.into()),
+                sbar_count: index + 1,
+                sbars: vec![],
+                structure: None,
+                diagnostics: vec![],
+                keyzones: Some(crate::checkpoint::keyzone_projection_tests::fixed_projection()),
+            };
+            writer
+                .commit_checkpoint(index, sbar_id, &projection)
+                .unwrap();
+            state.confirm_checkpoint(sbar_id.into()).unwrap();
+        }
+        writer.finalize(&state).unwrap();
+        let (_, records) = read_database(writer.published_path()).unwrap();
+        assert_eq!(records.len(), 2);
+        for record in records {
+            let state: serde_json::Value = serde_json::from_str(&record.state_data).unwrap();
+            assert_eq!(state["keyzones"]["zones"][0]["upper"], "12.00002");
+            assert_eq!(
+                state["keyzones"]["zones"][0]["formedAt"],
+                "9007199254740993"
+            );
+        }
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

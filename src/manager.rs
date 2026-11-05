@@ -526,6 +526,7 @@ mod tests {
         let state_key = StruxisStateKey::from_bar_type(&bar_type);
         let fingerprint = sequence_fingerprint(state_key, &bars).expect("fingerprint");
         let origin = OriginLoad {
+            keyzones: None,
             origin_dataset_id: uuid::Uuid::new_v4(),
             state_key,
             sbar_sequence_fingerprint: fingerprint,

@@ -49,5 +49,6 @@ defineProps<{
         </dl>
         <p class="inspector-provenance">Structure counts are from the backend-confirmed checkpoint. Select a structure object on a chart when that chart exposes its authoritative geometry.</p>
       </div>
+      <p data-testid="inspector-replay-keyzone-count">KeyZone · {{ replayInspector.keyzones ? replayInspector.keyzones.zones.length : "NOT RECORDED" }}</p>
       <p class="inspector-provenance">SBar and structure values are read from the latest backend-confirmed Struxis checkpoint. The UI does not infer or mutate structure state.</p>
 </template>

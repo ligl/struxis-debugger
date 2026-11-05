@@ -31,6 +31,7 @@ const sourceLabel = computed(() => {
 
 const relatedObjects = computed(() => {
   const selected = props.selectedObject;
+  if (selected.kind === "keyzone") return [];
   const structure = selected.source === "snapshot"
     ? props.snapshotStructure
     : props.checkpoint?.structure;
@@ -74,6 +75,7 @@ const relatedObjects = computed(() => {
 
 const rows = computed<InspectorRow[]>(() => {
   const selected = props.selectedObject;
+  if (selected.kind === "keyzone") return [];
   if (selected.kind === "sbar") {
     const bar = selected.object;
     const result = [

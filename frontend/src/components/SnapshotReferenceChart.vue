@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { KeyZoneCheckpointDto } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SnapshotRangeMarkerPrimitive, type SnapshotRangeMarkerState } from "../snapshot-reference-primitives";
 import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
@@ -23,6 +24,8 @@ type LogicalRange = { from: number; to: number };
 const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
+  keyzones?: KeyZoneCheckpointDto | null;
+  keyzoneUntil?: string | null;
   snapshotId: string;
   syncEnabled: boolean;
   keyboardActive?: boolean;
@@ -500,6 +503,10 @@ onBeforeUnmount(() => {
     ref="surface"
     :bars="bars"
     :structure="structure"
+    :keyzones="keyzones"
+    :keyzone-until="keyzoneUntil"
+    :selected-keyzone-id="selectedObject?.kind === 'keyzone' ? selectedObject.id : null"
+    @keyzone-select="selectedObject = { kind: 'keyzone', id: $event, checkpointSbarId: keyzoneUntil ?? null }; emit('objectSelect', selectedObject)"
     :sequence-id="snapshotId"
     :show-header="false"
     :show-footer="false"

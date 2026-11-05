@@ -50,7 +50,7 @@ const emit = defineEmits<{
   createTestDataset: [];
   selectAllSbars: [];
   sbarClick: [sbarId: string];
-  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>];
+  objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" | "keyzone" }>];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
@@ -106,6 +106,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
     v-show="active"
     :bars="origin.bars"
     :structure="origin.structure"
+    :keyzones="origin.keyzones"
     :origin-dataset-id="origin.originDatasetId"
     :selected-object="selectedObject"
     :selection-start-sbar-id="selectionStartSbarId"

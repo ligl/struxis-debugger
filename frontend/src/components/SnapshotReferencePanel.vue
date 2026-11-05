@@ -79,6 +79,23 @@ const playbackStructure = computed(() => {
   return current.structureTimeline.find((checkpoint) => checkpoint.sbarId === checkpointSbarId)?.structure ?? null;
 });
 
+const playbackKeyzones = computed(() => {
+  const current = reference.value;
+  if (!current) return null;
+  if (!snapshotPlaybackEnabled.value) return current.keyzones ?? null;
+  if (processedCount.value === 0) return null;
+  const index = (syncOffset.value ?? 0) + processedCount.value - 1;
+  const id = current.bars[index]?.sbarId;
+  return current.structureTimeline.find((checkpoint) => checkpoint.sbarId === id)?.keyzones ?? null;
+});
+const keyzoneUntil = computed(() => {
+  const current = reference.value;
+  if (!current) return null;
+  return snapshotPlaybackEnabled.value
+    ? current.bars[(syncOffset.value ?? 0) + processedCount.value - 1]?.sbarId ?? null
+    : current.bars.at(-1)?.sbarId ?? null;
+});
+
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
   if (left === right) return 0;
   if (!left) return 1;
@@ -207,6 +224,17 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
 
   // Resolve structure details only from a Snapshot timeline checkpoint that
   // contains the selected stable ID; never borrow a Live checkpoint object.
+  if (selection.kind === "keyzone") {
+    const checkpoint = current.structureTimeline.find((item) => item.sbarId === keyzoneUntil.value);
+    const registry = checkpoint?.keyzones;
+    const object = registry?.zones.find((zone) => zone.keyzoneId === selection.id);
+    emit("objectSelect", object && registry && checkpoint ? {
+      kind: "keyzone", object, registry, snapshotId: current.snapshotId, snapshotLabel,
+      checkpointSbarId: checkpoint.sbarId, timeframe: current.timeframe,
+      bars: current.bars, structure: checkpoint.structure,
+    } : null);
+    return;
+  }
   for (const checkpoint of [...current.structureTimeline].reverse()) {
     const structure = checkpoint.structure;
     if (selection.kind === "cbar") {
@@ -312,10 +340,13 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
         <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
       </div>
       <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
+        <span v-if="!playbackKeyzones && !snapshotPlaybackEnabled" data-testid="snapshot-keyzone-unrecorded">KEYZONE NOT RECORDED</span>
         <SnapshotReferenceChart
           v-if="active !== false"
           :bars="reference.bars"
           :structure="playbackStructure"
+          :keyzones="playbackKeyzones"
+          :keyzone-until="keyzoneUntil"
           :snapshot-id="reference.snapshotId"
           :sync-enabled="syncEligible"
           :keyboard-active="keyboardActive"

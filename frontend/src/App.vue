@@ -217,7 +217,9 @@ function handleReplayObjectSelection(selection: ReplayChartSelection): void {
       currentCheckpoint?.sbarId !== currentRun.cursorSbarId
     ) return;
     const structure = currentCheckpoint.structure;
-    const exists = selection.kind === "cbar"
+    const exists = selection.kind === "keyzone"
+      ? currentCheckpoint.keyzones?.zones.some((zone) => zone.keyzoneId === selection.id)
+      : selection.kind === "cbar"
       ? structure?.cbars.some((item) => item.cbarId === selection.id)
       : structure?.swings.some((item) => item.swingId === selection.id);
     if (!exists) return;
@@ -244,6 +246,7 @@ const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
     if (snapshotSelection.kind === "swing") {
       return { kind: "swing", object: snapshotSelection.object, source: "snapshot" };
     }
+    if (snapshotSelection.kind === "keyzone") return { kind: "keyzone", object: snapshotSelection.object, registry: snapshotSelection.registry, source: "snapshot" };
     return { kind: "trend", object: snapshotSelection.object, source: "snapshot" };
   }
   const selection = selectedReplayChartObject.value;
@@ -299,6 +302,11 @@ const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
     const object = checkpoint.structure?.swings.find((item) => item.swingId === selection.id);
     return object ? { kind: "swing", object } : null;
   }
+  if (selection.kind === "keyzone") {
+    const registry = checkpoint.keyzones;
+    const object = registry?.zones.find((zone) => zone.keyzoneId === selection.id);
+    return object && registry ? { kind: "keyzone", object, registry } : null;
+  }
   const object = checkpoint.structure?.trends.find((item) => item.trendId === selection.id);
   return object ? { kind: "trend", object } : null;
 });
@@ -325,7 +333,7 @@ function handleCompareDifferenceSelection(difference: ObjectDifferenceDto | null
 }
 
 
-function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>): void {
+function handleOriginObjectClick(selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" | "keyzone" }>): void {
   selectInspectorStructureObject(selection);
 }
 
@@ -425,6 +433,7 @@ const {
   selectedInspectorCbar,
   selectedInspectorSwing,
   selectedInspectorTrend,
+  selectedInspectorKeyzone,
   selectSbar: selectInspectorSbar,
   selectStructureObject: selectInspectorStructureObject,
   clearSelection: clearInspectorSelection,
@@ -439,7 +448,9 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
           ? { kind: "swing" as const, object: selectedInspectorSwing.value }
           : selectedInspectorTrend.value
             ? { kind: "trend" as const, object: selectedInspectorTrend.value }
-            : null;
+            : selectedInspectorKeyzone.value && origin.value?.keyzones
+              ? { kind: "keyzone" as const, object: selectedInspectorKeyzone.value, registry: origin.value.keyzones }
+              : null;
     return {
       workspace: "dataset",
       originDatasetId: origin.value?.originDatasetId ?? null,
@@ -800,6 +811,7 @@ onMounted(async () => {
               :run-state="runState"
               :playback-status="playbackStatus"
               :structure="replayInspector?.sbarId === runState?.cursorSbarId ? (replayInspector?.structure ?? null) : null"
+              :keyzones="replayInspector?.sbarId === runState?.cursorSbarId ? replayInspector?.keyzones : null"
               :selected-object="selectedReplayChartObject"
               :target-sbar-id="targetSbarId"
               :fast-forwarding="fastForwarding"

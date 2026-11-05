@@ -272,8 +272,66 @@ fn compare_structure_record(
         baseline_state.get("trends"), candidate_state.get("trends"), "trendId", output,
     )?;
 
-    // A valid Snapshot schema has exactly these six fields. Reject legacy
-    // four-field state and schema drift rather than producing partial results.
+    // Missing featureSequence represents no active sequence in the existing
+    // optional Snapshot schema; a present malformed value is still an error.
+    let empty_features = Value::Array(Vec::new());
+    compare_object_collection(
+        baseline.checkpoint_index,
+        &baseline.sbar_id,
+        "FeatureElement",
+        Some(baseline_state.get("featureSequence").unwrap_or(&empty_features)),
+        Some(candidate_state.get("featureSequence").unwrap_or(&empty_features)),
+        "featureId",
+        output,
+    )?;
+
+    match (
+        baseline_state.get("keyzones"),
+        candidate_state.get("keyzones"),
+    ) {
+        (Some(before), Some(after)) => {
+            for (collection, identity, label) in [
+                ("zones", "keyzoneId", "KeyZone"),
+                ("interactions", "interactionId", "Interaction"),
+            ] {
+                compare_object_collection(
+                    baseline.checkpoint_index,
+                    &baseline.sbar_id,
+                    label,
+                    before.get(collection),
+                    after.get(collection),
+                    identity,
+                    output,
+                )?;
+            }
+            for field in ["instrumentId", "configN", "configX"] {
+                if before.get(field) != after.get(field) {
+                    output.push(ObjectDifference {
+                        checkpoint_index: baseline.checkpoint_index,
+                        sbar_id: baseline.sbar_id.clone(),
+                        object_type: "KeyZoneRegistry".into(),
+                        object_id: "registry".into(),
+                        kind: DifferenceKind::Modified,
+                        properties: vec![PropertyDifference {
+                            field: field.into(),
+                            baseline_value: before.get(field).cloned(),
+                            candidate_value: after.get(field).cloned(),
+                        }],
+                    });
+                }
+            }
+        }
+        (None, None) => {}
+        _ => {
+            return Err(reject(
+                CompareRejectCategory::StateReconstructionFailure,
+                "Snapshots have different KeyZone recording capabilities",
+            ));
+        }
+    }
+
+    // Six structure fields are required; FeatureSequence and KeyZone are
+    // optional projections. Reject legacy four-field state and unknown fields.
     for (label, state) in [("baseline", &baseline_state), ("candidate", &candidate_state)] {
         let fields = state.as_object().ok_or_else(|| reject(
             CompareRejectCategory::SnapshotIntegrityFailure,
@@ -288,7 +346,10 @@ fn compare_structure_record(
             }
         }
         if let Some(key) = fields.keys().find(|key| {
-            !["cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends"].contains(&key.as_str())
+            ![
+                "cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends",
+                "keyzones", "featureSequence",
+            ].contains(&key.as_str())
         }) {
             return Err(reject(
                 CompareRejectCategory::SnapshotIntegrityFailure,
@@ -404,6 +465,7 @@ fn compare_properties(
             field.as_str() != id_field
                 && field.as_str() != "createdAt"
                 && field.as_str() != "updatedAt"
+                && !field.ends_with("DetectedAt")
         }).cloned().collect();
     fields.into_iter().filter_map(|field| {
         let before = baseline.get(&field);
@@ -604,6 +666,146 @@ mod tests {
         assert_eq!(
             compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err().category,
             CompareRejectCategory::StateReconstructionFailure
+        );
+    }
+}
+
+
+#[cfg(test)]
+mod keyzone_compare_tests {
+    use super::*;
+    use crate::{
+        checkpoint::keyzone_projection_tests::fixed_projection,
+        snapshot::canonical_checkpoint_state,
+    };
+    fn record(with_keyzones: bool) -> SnapshotCheckpointRecord {
+        SnapshotCheckpointRecord {
+            checkpoint_index: 0,
+            sbar_id: "9007199254740993".into(),
+            ts_event: "9007199254740993".into(),
+            record_kind: "Full".into(),
+            diagnostics: "[]".into(),
+            state_data: canonical_checkpoint_state(
+                None,
+                with_keyzones.then(fixed_projection).as_ref(),
+            )
+            .unwrap(),
+        }
+    }
+    #[test]
+    fn keyzone_compare_ignores_detection_times_but_reports_domain_changes() {
+        let baseline = record(true);
+        let mut candidate = baseline.clone();
+        let mut state: Value = serde_json::from_str(&candidate.state_data).unwrap();
+        state["keyzones"]["zones"][0]["createdAt"] = Value::from("9007199254740994");
+        state["keyzones"]["zones"][0]["finalizedDetectedAt"] = Value::from("9007199254740994");
+        candidate.state_data = state.to_string();
+        let mut differences = Vec::new();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert!(differences.is_empty());
+        state["keyzones"]["zones"][0]["upper"] = Value::from("13.00002");
+        candidate.state_data = state.to_string();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].object_type, "KeyZone");
+        assert_eq!(differences[0].properties[0].field, "upper");
+        assert_eq!(
+            differences[0].properties[0].baseline_value,
+            Some(Value::from("12.00002"))
+        );
+        assert_eq!(
+            differences[0].properties[0].candidate_value,
+            Some(Value::from("13.00002"))
+        );
+    }
+    #[test]
+    fn keyzone_compare_rejects_unrecorded_against_recorded() {
+        let error =
+            compare_structure_record(&record(false), &record(true), &mut Vec::new()).unwrap_err();
+        assert_eq!(
+            error.category,
+            CompareRejectCategory::StateReconstructionFailure
+        );
+    }
+    #[test]
+    fn interactions_are_compared_by_identity_and_market_state() {
+        let baseline = record(true);
+        let mut state: Value = serde_json::from_str(&baseline.state_data).unwrap();
+        state["keyzones"]["interactions"] = serde_json::json!([{
+            "interactionId": "9007199254740993", "keyzoneId": state["keyzones"]["zones"][0]["keyzoneId"],
+            "observerTimeframe": "5m", "observerBarType": "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", "state": "Active",
+            "configN": "3", "configX": 0.5, "outsideCount": "1", "lastProcessedAt": "100",
+            "startedAt": "100", "startedDetectedAt": "200", "endedAt": null, "endedDetectedAt": null,
+            "invalidatedAt": null, "invalidatedDetectedAt": null
+        }]);
+        let mut baseline = baseline;
+        baseline.state_data = state.to_string();
+        state["keyzones"]["interactions"][0]["startedDetectedAt"] = Value::from("999");
+        let mut candidate = baseline.clone();
+        candidate.state_data = state.to_string();
+        let mut differences = Vec::new();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert!(differences.is_empty());
+        state["keyzones"]["interactions"][0]["outsideCount"] = Value::from("2");
+        candidate.state_data = state.to_string();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].object_type, "Interaction");
+        assert_eq!(differences[0].object_id, "9007199254740993");
+        assert_eq!(differences[0].properties[0].field, "outsideCount");
+    }
+    fn feature_state() -> Value {
+        serde_json::json!([{
+            "featureId": "20:30", "high": "12.00002", "low": "9.00001",
+            "sourceStartSwingId": "20", "sourceEndSwingId": "30",
+            "sbarStartId": "100", "sbarEndId": "200"
+        }])
+    }
+    #[test]
+    fn feature_sequence_is_compared_alongside_keyzone_recordings() {
+        let mut baseline = record(true);
+        let mut state: Value = serde_json::from_str(&baseline.state_data).unwrap();
+        state["featureSequence"] = feature_state();
+        baseline.state_data = state.to_string();
+        let mut differences = Vec::new();
+        compare_structure_record(&baseline, &baseline, &mut differences).unwrap();
+        assert!(differences.is_empty());
+        state["featureSequence"][0]["high"] = Value::from("13.00002");
+        let mut candidate = baseline.clone();
+        candidate.state_data = state.to_string();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].object_type, "FeatureElement");
+        assert_eq!(differences[0].object_id, "20:30");
+        assert_eq!(differences[0].properties[0].field, "high");
+    }
+    #[test]
+    fn feature_sequence_absence_reports_added_and_removed_elements() {
+        let baseline = record(true);
+        let mut candidate = baseline.clone();
+        let mut state: Value = serde_json::from_str(&candidate.state_data).unwrap();
+        state["featureSequence"] = feature_state();
+        candidate.state_data = state.to_string();
+        let mut differences = Vec::new();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].kind, DifferenceKind::Added);
+        differences.clear();
+        compare_structure_record(&candidate, &baseline, &mut differences).unwrap();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].kind, DifferenceKind::Removed);
+    }
+    #[test]
+    fn feature_sequence_presence_does_not_accept_malformed_arrays() {
+        let baseline = record(true);
+        let mut candidate = baseline.clone();
+        let mut state: Value = serde_json::from_str(&candidate.state_data).unwrap();
+        state["featureSequence"] = Value::Null;
+        candidate.state_data = state.to_string();
+        let error = compare_structure_record(&baseline, &candidate, &mut Vec::new()).unwrap_err();
+        assert_eq!(
+            error.category,
+            CompareRejectCategory::SnapshotIntegrityFailure
         );
     }
 }

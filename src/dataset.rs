@@ -259,6 +259,7 @@ mod tests {
         let fingerprint =
             sequence_fingerprint(state_key, &bars).expect("fingerprint should compute");
         OriginLoad {
+            keyzones: None,
             origin_dataset_id: Uuid::new_v4(),
             state_key,
             sbar_sequence_fingerprint: fingerprint,

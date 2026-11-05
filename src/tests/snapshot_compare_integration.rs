@@ -70,6 +70,7 @@ fn checkpoint(
     let first_id = input.bars[0].ts_event.to_string();
     let current_id = input.bars[index].ts_event.to_string();
     ReplayCheckpointProjection {
+        keyzones: None,
         state_key: format!("{:?}", test_state_key()),
         last_ts_event: Some(current_id.clone()),
         sbar_count: index + 1,

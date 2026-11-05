@@ -40,6 +40,13 @@ export function useInspectorSelection(
     return origin.value?.structure?.trends.find((trend) => trend.trendId === selection.id) ?? null;
   });
 
+  const selectedInspectorKeyzone = computed(() => {
+    const selection = selectedInspectorObject.value;
+    return selection?.kind === "keyzone"
+      ? origin.value?.keyzones?.zones.find((zone) => zone.keyzoneId === selection.id) ?? null
+      : null;
+  });
+
   function clearSelection(): void {
     selectedInspectorObject.value = null;
   }
@@ -55,12 +62,14 @@ export function useInspectorSelection(
   }
 
   function selectStructureObject(
-    selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" }>,
+    selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" | "keyzone" }>,
   ): void {
     const currentOrigin = origin.value;
     if (!currentOrigin || selection.originDatasetId !== currentOrigin.originDatasetId) return;
 
-    const exists = selection.kind === "cbar"
+    const exists = selection.kind === "keyzone"
+      ? currentOrigin.keyzones?.zones.some((zone) => zone.keyzoneId === selection.id)
+      : selection.kind === "cbar"
       ? currentOrigin.structure?.cbars.some((cbar) => cbar.cbarId === selection.id)
       : selection.kind === "swing"
         ? currentOrigin.structure?.swings.some((swing) => swing.swingId === selection.id)
@@ -80,6 +89,7 @@ export function useInspectorSelection(
     selectedInspectorCbar,
     selectedInspectorSwing,
     selectedInspectorTrend,
+    selectedInspectorKeyzone,
     selectSbar,
     selectStructureObject,
     clearSelection,
