@@ -16,6 +16,8 @@ test("Origin receives the KeyZone recording and renders its controllable chart l
     startedAt: bars[12]!.sbarId, startedDetectedAt: bars[14]!.sbarId,
     lastProcessedAt: bars[39]!.sbarId, outsideCount: "0",
   });
+  Object.assign(registry.observations[0]!, { startAt: bars[12]!.tsEvent,
+    deadline: (BigInt(bars[39]!.tsEvent) + 60000000000n).toString(), lastProcessedAt: bars[39]!.tsEvent });
   const origin = { originDatasetId: "origin-keyzone", sourceCatalog: "fixture", enableStructure: true,
     instrumentId: "AUD/USD.SIM", barType: bars[0]!.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: bars.length, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[39]!.sbarId,
@@ -60,7 +62,7 @@ test("Origin receives the KeyZone recording and renders its controllable chart l
   await expect(details).toContainText("9007199254740993");
   await expect(details).toContainText("9.00001");
   await expect(details).toContainText("12.00002");
-  await expect(details.getByTestId("keyzone-interaction")).toContainText("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL");
+  await expect(details.getByTestId("keyzone-interaction")).toContainText("AUD/USD.SIM · 1m");
 
 });
 
@@ -74,6 +76,8 @@ for (const chartKind of ["Origin", "Live Replay", "Snapshot Reference"] as const
     const registry = keyzoneFixture();
     Object.assign(registry.zones[0]!, { formedAt: bars[12]!.sbarId, createdAt: bars[14]!.sbarId,
       finalizedAt: bars[14]!.sbarId, finalizedDetectedAt: bars[14]!.sbarId });
+    registry.observations = [];
+    registry.interactions = [];
     const liveRegistry = structuredClone(registry), snapshotRegistry = structuredClone(registry);
     liveRegistry.zones[0]!.lower = "9.25001";
     snapshotRegistry.zones[0]!.lower = "8.50001";
@@ -172,8 +176,17 @@ for (const chartKind of ["Origin", "Live Replay", "Snapshot Reference"] as const
         lastProcessedAt: bars[26]!.tsEvent, endedAt: bars[26]!.tsEvent, endedDetectedAt: bars[26]!.tsEvent },
       { ...base, interactionId: "1003", state: "Active", startedAt: bars[32]!.tsEvent,
         lastProcessedAt: bars[39]!.tsEvent },
-      { ...base, interactionId: "1004", observerBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", observerTimeframe: "5m" },
+      { ...base, interactionId: "1004", observationId: "2", observer: { instrumentId: registry.instrumentId, timeframe: "5m" }, observerTimeframe: "5m" },
     ];
+    {
+      const task = registry.observations[0]!;
+      Object.assign(task, { startAt: bars[12]!.tsEvent, deadline: (BigInt(bars[39]!.tsEvent) + 60000000000n).toString(), lastProcessedAt: bars[39]!.tsEvent });
+      registry.observations.push({ ...task, observationId: "2", consumerId: "other-period", requestId: "other-period", observer: { instrumentId: registry.instrumentId, timeframe: "5m" } });
+      registry.interactions.forEach((episode, index) => {
+        episode.outsideCount = index < 2 ? "3" : "0";
+        if (index === 3) { episode.observationId = "2"; episode.observer = registry.observations[1]!.observer; episode.startedAt = bars[12]!.tsEvent; episode.lastProcessedAt = bars[39]!.tsEvent; }
+      });
+    }
     const liveRegistry = structuredClone(registry), snapshotRegistry = structuredClone(registry);
     liveRegistry.zones[0]!.lower = "9.25001";
     snapshotRegistry.zones[0]!.lower = "8.50001";
@@ -205,7 +218,7 @@ for (const chartKind of ["Origin", "Live Replay", "Snapshot Reference"] as const
       const pending = new WeakMap<HTMLCanvasElement, string[]>();
       const originalText = CanvasRenderingContext2D.prototype.fillText;
       CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
-        if (/^I\d+ (Active|Ended|Invalidated)$/.test(text)) {
+        if (/^O\d+ · I\d+ (Active|Ended|Invalidated|Interrupted)$/.test(text)) {
           const labels = pending.get(this.canvas) ?? [];
           labels.push(text); pending.set(this.canvas, labels);
         }
@@ -259,7 +272,11 @@ for (const chartKind of ["Origin", "Live Replay", "Snapshot Reference"] as const
     await expect(details).toContainText("9007199254740993");
     await expect(details).toContainText(chartKind === "Origin" ? "9.00001" : chartKind === "Live Replay" ? "9.25001" : "8.50001");
     await expect(details).toContainText("12.00002");
-    await expect.poll(async () => (await frame())?.labels).toEqual(["I1 Ended", "I2 Ended", "I3 Active"]);
+    {
+      await expect.poll(async () => (await frame())?.labels).toEqual(["O1 · I1 Ended", "O1 · I2 Ended", "O1 · I3 Active"]);
+      await expect(details.getByTestId("keyzone-observation")).toHaveCount(2);
+      await expect(details).toContainText("strategy-a");
+    }
     const selected = (await frame())!;
     const host = page.locator(`[data-sequence-id="${sequence}"]`);
     const first = Number(await host.getAttribute("data-first-sbar-x"));

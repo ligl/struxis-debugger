@@ -107,6 +107,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
     :bars="origin.bars"
     :structure="origin.structure"
     :keyzones="origin.keyzones"
+    :keyzone-observer="{ instrumentId: origin.instrumentId, timeframe: origin.timeframe }"
     :origin-dataset-id="origin.originDatasetId"
     :selected-object="selectedObject"
     :selection-start-sbar-id="selectionStartSbarId"

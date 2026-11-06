@@ -1,5 +1,5 @@
 import type { ISeriesPrimitive, IPrimitivePaneView, IPrimitivePaneRenderer, Time, Logical } from "lightweight-charts";
-import type { KeyZoneCheckpointDto, KeyZoneDto, KeyZoneInteractionDto, SBarDto } from "./origin-types";
+import type { KeyZoneCheckpointDto, KeyZoneDto, KeyZoneInteractionDto, SBarDto, ObservationStateKeyDto } from "./origin-types";
 
 import { candlestickBodyWidth } from "./sbar-chart-structure-geometry";
 
@@ -8,17 +8,18 @@ type Attached = Parameters<NonNullable<ISeriesPrimitive<Time>["attached"]>>[0];
 const KEYZONE_HALF_WIDTH = 3;
 
 type Interval = { zone: KeyZoneDto; start: number; end: number };
-type Node = { item: Interval; maxEnd: number; left: Node | null; right: Node | null };
+type Span = { start: number; end: number };
+type Node<T extends Span = Interval> = { item: T; maxEnd: number; left: Node<T> | null; right: Node<T> | null };
 export type KeyZoneRectangle = { id: string; state: KeyZoneDto["state"]; x: number; y: number; width: number; height: number };
 
-function tree(items: Interval[], start = 0, end = items.length): Node | null {
+function tree<T extends Span>(items: T[], start = 0, end = items.length): Node<T> | null {
   if (start >= end) return null;
   const mid = (start + end) >>> 1;
   const item = items[mid]!;
   const left = tree(items, start, mid), right = tree(items, mid + 1, end);
   return { item, left, right, maxEnd: Math.max(item.end, left?.maxEnd ?? -Infinity, right?.maxEnd ?? -Infinity) };
 }
-function query(node: Node | null, from: number, to: number, result: Interval[]): void {
+function query<T extends Span>(node: Node<T> | null, from: number, to: number, result: T[]): void {
   if (!node || node.maxEnd < from) return;
   query(node.left, from, to, result);
   if (node.item.start > to) return;
@@ -72,6 +73,7 @@ export class KeyZoneIndex {
 
 export interface KeyZoneInteractionRange {
   interactionId: string;
+  observationId: string;
   sequence: number;
   state: KeyZoneInteractionDto["state"];
   start: number;
@@ -80,16 +82,25 @@ export interface KeyZoneInteractionRange {
   high: number;
 }
 
-/** Selected observer's non-overlapping episodes; price extents are cached once per data/selection change. */
+/** Selected StateKey episodes may overlap across observations; cached per data/selection change. */
 export class KeyZoneInteractionIndex {
   private ranges: KeyZoneInteractionRange[] = [];
-  constructor(checkpoint: KeyZoneCheckpointDto | null, bars: readonly SBarDto[], until: string | null, selected: string | null) {
+  private root: Node<KeyZoneInteractionRange> | null = null;
+  constructor(checkpoint: KeyZoneCheckpointDto | null, bars: readonly SBarDto[], until: string | null, selected: string | null, observer: ObservationStateKeyDto | null = null) {
     if (!checkpoint || !selected || !bars.length || until === null
       || !checkpoint.zones.some((zone) => zone.keyzoneId === selected)) return;
     const cursor = BigInt(until);
     const first = BigInt(bars[0]!.tsEvent), last = BigInt(bars[bars.length - 1]!.tsEvent);
-    const episodes = checkpoint.interactions.filter((item) => item.keyzoneId === selected && item.observerBarType === bars[0]!.barType)
-      .sort((a, b) => BigInt(a.startedAt) < BigInt(b.startedAt) ? -1 : BigInt(a.startedAt) > BigInt(b.startedAt) ? 1 : 0);
+    const tasks = checkpoint.observations.filter((o) => o.keyzoneId === selected);
+    const taskIndex = new Map(tasks.map((o) => [o.observationId, o]));
+    const taskSequences = new Map<string, number>();
+    const episodes = checkpoint.interactions.filter((item) => {
+      if (item.keyzoneId !== selected) return false;
+      const task = taskIndex.get(item.observationId);
+      return !!observer && checkpoint.instrumentId === observer.instrumentId && !!task
+        && task.observer.instrumentId === observer.instrumentId && task.observer.timeframe === observer.timeframe
+        && item.observer.instrumentId === observer.instrumentId && item.observer.timeframe === observer.timeframe;
+    }).sort((a, b) => BigInt(a.startedAt) < BigInt(b.startedAt) ? -1 : BigInt(a.startedAt) > BigInt(b.startedAt) ? 1 : BigInt(a.interactionId) < BigInt(b.interactionId) ? -1 : 1);
     for (let sequence = 0; sequence < episodes.length; sequence++) {
       const episode = episodes[sequence]!;
       if (episode.lastProcessedAt === null) continue;
@@ -110,29 +121,21 @@ export class KeyZoneInteractionIndex {
         high = Math.max(high, Number(bars[index]!.high));
       }
       if (!Number.isFinite(low) || !Number.isFinite(high)) continue;
-      this.ranges.push({ interactionId: episode.interactionId, sequence: sequence + 1, state: episode.state, start, end, low, high });
+      const taskSequence = (taskSequences.get(episode.observationId) ?? 0) + 1;
+      taskSequences.set(episode.observationId, taskSequence);
+      this.ranges.push({ interactionId: episode.interactionId, observationId: episode.observationId, sequence: taskSequence, state: episode.state, start, end, low, high });
     }
+    this.root = tree(this.ranges);
   }
   visible(from: number, to: number): readonly KeyZoneInteractionRange[] {
-    // One KeyZone x exact observer stream has non-overlapping episodes.
-    let lo = 0, hi = this.ranges.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >>> 1;
-      if (this.ranges[mid]!.end < from - 0.5) lo = mid + 1;
-      else hi = mid;
-    }
     const result: KeyZoneInteractionRange[] = [];
-    for (let index = lo; index < this.ranges.length; index++) {
-      const item = this.ranges[index]!;
-      if (item.start > to + 0.5) break;
-      result.push(item);
-    }
+    query(this.root, from - 0.5, to + 0.5, result);
     return result;
   }
 }
 
 type InteractionRectangle = Omit<KeyZoneRectangle, "state"> & { label: string; interactionState: KeyZoneInteractionDto["state"] };
-const INTERACTION_COLORS = { Active: "#79b58b", Ended: "#82a8c9", Invalidated: "#8d949b" } as const;
+const INTERACTION_COLORS = { Active: "#79b58b", Ended: "#82a8c9", Invalidated: "#8d949b", Interrupted: "#b29573" } as const;
 
 /** Chart-local rendering and cached hit geometry; never reads a domain Registry. */
 export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneView {
@@ -144,17 +147,18 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   private checkpoint: KeyZoneCheckpointDto | null = null;
   private bars: readonly SBarDto[] = [];
   private until: string | null = null;
+  private observer: ObservationStateKeyDto | null = null;
   private views: readonly IPrimitivePaneView[] = [this];
   private visible = true;
   private selected: string | null = null;
   private hovered: string | null = null;
   attached(param: Attached): void { this.attachedTo = param; this.updateAllViews(); }
   detached(): void { this.attachedTo = null; this.rectangles = []; this.interactionRectangles = []; this.hovered = null; }
-  setData(checkpoint: KeyZoneCheckpointDto | null, bars: readonly SBarDto[], until: string | null): void {
+  setData(checkpoint: KeyZoneCheckpointDto | null, bars: readonly SBarDto[], until: string | null, observer: ObservationStateKeyDto | null = null): void {
     this.hovered = null;
-    this.checkpoint = checkpoint; this.bars = bars; this.until = until;
+    this.checkpoint = checkpoint; this.bars = bars; this.until = until; this.observer = observer;
     this.index = new KeyZoneIndex(checkpoint, bars, until);
-    this.interactions = new KeyZoneInteractionIndex(checkpoint, bars, until, this.selected);
+    this.interactions = new KeyZoneInteractionIndex(checkpoint, bars, until, this.selected, this.observer);
     this.updateAllViews(); this.attachedTo?.requestUpdate();
   }
   setVisible(visible: boolean): void {
@@ -171,7 +175,7 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   setSelected(id: string | null): void {
     if (this.selected === id) return;
     this.selected = id;
-    this.interactions = new KeyZoneInteractionIndex(this.checkpoint, this.bars, this.until, id);
+    this.interactions = new KeyZoneInteractionIndex(this.checkpoint, this.bars, this.until, id, this.observer);
     this.updateAllViews();
     this.attachedTo?.requestUpdate();
   }
@@ -203,7 +207,7 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
       const x2 = owner.chart.timeScale().logicalToCoordinate(episode.end as Logical);
       const y1 = owner.series.priceToCoordinate(episode.high), y2 = owner.series.priceToCoordinate(episode.low);
       if (x1 === null || x2 === null || y1 === null || y2 === null || ![x1, x2, y1, y2].every(Number.isFinite)) continue;
-      this.interactionRectangles.push({ id: episode.interactionId, label: `I${episode.sequence} ${episode.state}`,
+      this.interactionRectangles.push({ id: episode.interactionId, label: `O${episode.observationId} · I${episode.sequence} ${episode.state}`,
         interactionState: episode.state, x: Math.min(x1, x2) - halfBody, y: Math.min(y1, y2),
         width: Math.abs(x2 - x1) + halfBody * 2, height: Math.abs(y2 - y1) });
     }

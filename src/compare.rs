@@ -10,7 +10,7 @@ use serde_json::Value;
 
 use crate::{
     snapshot::{SnapshotCheckpointRecord, SnapshotManifest},
-    snapshot_store::{read_complete_snapshot_typed, SnapshotReadError},
+    snapshot_store::{SnapshotReadError, read_complete_snapshot_typed},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -211,9 +211,7 @@ fn validate_trajectory(
     manifest: &SnapshotManifest,
     records: &[SnapshotCheckpointRecord],
 ) -> Result<(), CompareRejection> {
-    if records.len() != manifest.input_bar_count
-        || records.len() != manifest.checkpoint_count
-    {
+    if records.len() != manifest.input_bar_count || records.len() != manifest.checkpoint_count {
         return Err(reject(
             CompareRejectCategory::SnapshotIncomplete,
             "Snapshot checkpoint count does not cover its complete input",
@@ -260,16 +258,31 @@ fn compare_structure_record(
     let candidate_state = parse_json(&candidate.state_data, "candidate state_data")?;
     let before = output.len();
     compare_object_collection(
-        baseline.checkpoint_index, &baseline.sbar_id, "CBar",
-        baseline_state.get("cbars"), candidate_state.get("cbars"), "cbarId", output,
+        baseline.checkpoint_index,
+        &baseline.sbar_id,
+        "CBar",
+        baseline_state.get("cbars"),
+        candidate_state.get("cbars"),
+        "cbarId",
+        output,
     )?;
     compare_object_collection(
-        baseline.checkpoint_index, &baseline.sbar_id, "Swing",
-        baseline_state.get("swings"), candidate_state.get("swings"), "swingId", output,
+        baseline.checkpoint_index,
+        &baseline.sbar_id,
+        "Swing",
+        baseline_state.get("swings"),
+        candidate_state.get("swings"),
+        "swingId",
+        output,
     )?;
     compare_object_collection(
-        baseline.checkpoint_index, &baseline.sbar_id, "Trend",
-        baseline_state.get("trends"), candidate_state.get("trends"), "trendId", output,
+        baseline.checkpoint_index,
+        &baseline.sbar_id,
+        "Trend",
+        baseline_state.get("trends"),
+        candidate_state.get("trends"),
+        "trendId",
+        output,
     )?;
 
     // Missing featureSequence represents no active sequence in the existing
@@ -279,8 +292,16 @@ fn compare_structure_record(
         baseline.checkpoint_index,
         &baseline.sbar_id,
         "FeatureElement",
-        Some(baseline_state.get("featureSequence").unwrap_or(&empty_features)),
-        Some(candidate_state.get("featureSequence").unwrap_or(&empty_features)),
+        Some(
+            baseline_state
+                .get("featureSequence")
+                .unwrap_or(&empty_features),
+        ),
+        Some(
+            candidate_state
+                .get("featureSequence")
+                .unwrap_or(&empty_features),
+        ),
         "featureId",
         output,
     )?;
@@ -290,6 +311,15 @@ fn compare_structure_record(
         candidate_state.get("keyzones"),
     ) {
         (Some(before), Some(after)) => {
+            compare_object_collection(
+                baseline.checkpoint_index,
+                &baseline.sbar_id,
+                "Observation",
+                before.get("observations"),
+                after.get("observations"),
+                "observationId",
+                output,
+            )?;
             for (collection, identity, label) in [
                 ("zones", "keyzoneId", "KeyZone"),
                 ("interactions", "interactionId", "Interaction"),
@@ -304,21 +334,20 @@ fn compare_structure_record(
                     output,
                 )?;
             }
-            for field in ["instrumentId", "configN", "configX"] {
-                if before.get(field) != after.get(field) {
-                    output.push(ObjectDifference {
-                        checkpoint_index: baseline.checkpoint_index,
-                        sbar_id: baseline.sbar_id.clone(),
-                        object_type: "KeyZoneRegistry".into(),
-                        object_id: "registry".into(),
-                        kind: DifferenceKind::Modified,
-                        properties: vec![PropertyDifference {
-                            field: field.into(),
-                            baseline_value: before.get(field).cloned(),
-                            candidate_value: after.get(field).cloned(),
-                        }],
-                    });
-                }
+            let field = "instrumentId";
+            if before.get(field) != after.get(field) {
+                output.push(ObjectDifference {
+                    checkpoint_index: baseline.checkpoint_index,
+                    sbar_id: baseline.sbar_id.clone(),
+                    object_type: "KeyZoneRegistry".into(),
+                    object_id: "registry".into(),
+                    kind: DifferenceKind::Modified,
+                    properties: vec![PropertyDifference {
+                        field: field.into(),
+                        baseline_value: before.get(field).cloned(),
+                        candidate_value: after.get(field).cloned(),
+                    }],
+                });
             }
         }
         (None, None) => {}
@@ -332,12 +361,24 @@ fn compare_structure_record(
 
     // Six structure fields are required; FeatureSequence and KeyZone are
     // optional projections. Reject legacy four-field state and unknown fields.
-    for (label, state) in [("baseline", &baseline_state), ("candidate", &candidate_state)] {
-        let fields = state.as_object().ok_or_else(|| reject(
-            CompareRejectCategory::SnapshotIntegrityFailure,
-            format!("{label} state_data must be an object"),
-        ))?;
-        for key in ["cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends"] {
+    for (label, state) in [
+        ("baseline", &baseline_state),
+        ("candidate", &candidate_state),
+    ] {
+        let fields = state.as_object().ok_or_else(|| {
+            reject(
+                CompareRejectCategory::SnapshotIntegrityFailure,
+                format!("{label} state_data must be an object"),
+            )
+        })?;
+        for key in [
+            "cbarCount",
+            "cbars",
+            "swingCount",
+            "swings",
+            "trendCount",
+            "trends",
+        ] {
             if !fields.contains_key(key) {
                 return Err(reject(
                     CompareRejectCategory::SnapshotIntegrityFailure,
@@ -347,9 +388,16 @@ fn compare_structure_record(
         }
         if let Some(key) = fields.keys().find(|key| {
             ![
-                "cbarCount", "cbars", "swingCount", "swings", "trendCount", "trends",
-                "keyzones", "featureSequence",
-            ].contains(&key.as_str())
+                "cbarCount",
+                "cbars",
+                "swingCount",
+                "swings",
+                "trendCount",
+                "trends",
+                "keyzones",
+                "featureSequence",
+            ]
+            .contains(&key.as_str())
         }) {
             return Err(reject(
                 CompareRejectCategory::SnapshotIntegrityFailure,
@@ -361,14 +409,21 @@ fn compare_structure_record(
             ("swingCount", "swings", "Swing"),
             ("trendCount", "trends", "Trend"),
         ] {
-            let declared_count = fields[count_key].as_u64().ok_or_else(|| reject(
-                CompareRejectCategory::SnapshotIntegrityFailure,
-                format!("{label} {count_key} must be a non-negative integer"),
-            ))?;
-            let actual_count = fields[collection_key].as_array().ok_or_else(|| reject(
-                CompareRejectCategory::SnapshotIntegrityFailure,
-                format!("{label} {collection_key} must be an array"),
-            ))?.len() as u64;
+            let declared_count = fields[count_key].as_u64().ok_or_else(|| {
+                reject(
+                    CompareRejectCategory::SnapshotIntegrityFailure,
+                    format!("{label} {count_key} must be a non-negative integer"),
+                )
+            })?;
+            let actual_count = fields[collection_key]
+                .as_array()
+                .ok_or_else(|| {
+                    reject(
+                        CompareRejectCategory::SnapshotIntegrityFailure,
+                        format!("{label} {collection_key} must be an array"),
+                    )
+                })?
+                .len() as u64;
             if declared_count != actual_count {
                 return Err(reject(
                     CompareRejectCategory::SnapshotIntegrityFailure,
@@ -398,25 +453,45 @@ fn compare_object_collection(
     for id in ids {
         match (baseline.get(&id), candidate.get(&id)) {
             (None, Some(value)) => output.push(ObjectDifference {
-                checkpoint_index, sbar_id: sbar_id.to_owned(), object_type: object_type.to_owned(),
-                kind: DifferenceKind::Added, object_id: id,
-                properties: value.iter().map(|(field, value)| PropertyDifference {
-                    field: field.clone(), baseline_value: None, candidate_value: Some(value.clone()),
-                }).collect(),
+                checkpoint_index,
+                sbar_id: sbar_id.to_owned(),
+                object_type: object_type.to_owned(),
+                kind: DifferenceKind::Added,
+                object_id: id,
+                properties: value
+                    .iter()
+                    .map(|(field, value)| PropertyDifference {
+                        field: field.clone(),
+                        baseline_value: None,
+                        candidate_value: Some(value.clone()),
+                    })
+                    .collect(),
             }),
             (Some(value), None) => output.push(ObjectDifference {
-                checkpoint_index, sbar_id: sbar_id.to_owned(), object_type: object_type.to_owned(),
-                kind: DifferenceKind::Removed, object_id: id,
-                properties: value.iter().map(|(field, value)| PropertyDifference {
-                    field: field.clone(), baseline_value: Some(value.clone()), candidate_value: None,
-                }).collect(),
+                checkpoint_index,
+                sbar_id: sbar_id.to_owned(),
+                object_type: object_type.to_owned(),
+                kind: DifferenceKind::Removed,
+                object_id: id,
+                properties: value
+                    .iter()
+                    .map(|(field, value)| PropertyDifference {
+                        field: field.clone(),
+                        baseline_value: Some(value.clone()),
+                        candidate_value: None,
+                    })
+                    .collect(),
             }),
             (Some(before), Some(after)) => {
                 let properties = compare_properties(before, after, id_field);
                 if !properties.is_empty() {
                     output.push(ObjectDifference {
-                        checkpoint_index, sbar_id: sbar_id.to_owned(), object_type: object_type.to_owned(),
-                        kind: DifferenceKind::Modified, object_id: id, properties,
+                        checkpoint_index,
+                        sbar_id: sbar_id.to_owned(),
+                        object_type: object_type.to_owned(),
+                        kind: DifferenceKind::Modified,
+                        object_id: id,
+                        properties,
                     });
                 }
             }
@@ -431,21 +506,37 @@ fn indexed_objects(
     object_type: &str,
     id_field: &str,
 ) -> Result<BTreeMap<String, BTreeMap<String, Value>>, CompareRejection> {
-    let values = value.and_then(Value::as_array).ok_or_else(|| reject(
-        CompareRejectCategory::SnapshotIntegrityFailure,
-        format!("{object_type} state must be an array"),
-    ))?;
+    let values = value.and_then(Value::as_array).ok_or_else(|| {
+        reject(
+            CompareRejectCategory::SnapshotIntegrityFailure,
+            format!("{object_type} state must be an array"),
+        )
+    })?;
     let mut indexed = BTreeMap::new();
     for object in values {
-        let fields = object.as_object().ok_or_else(|| reject(
-            CompareRejectCategory::SnapshotIntegrityFailure,
-            format!("{object_type} entry must be an object"),
-        ))?;
-        let id = fields.get(id_field).and_then(Value::as_str).ok_or_else(|| reject(
-            CompareRejectCategory::SnapshotIntegrityFailure,
-            format!("{object_type} entry is missing canonical identity {id_field}"),
-        ))?.to_owned();
-        if indexed.insert(id, fields.iter().map(|(k,v)| (k.clone(), v.clone())).collect()).is_some() {
+        let fields = object.as_object().ok_or_else(|| {
+            reject(
+                CompareRejectCategory::SnapshotIntegrityFailure,
+                format!("{object_type} entry must be an object"),
+            )
+        })?;
+        let id = fields
+            .get(id_field)
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                reject(
+                    CompareRejectCategory::SnapshotIntegrityFailure,
+                    format!("{object_type} entry is missing canonical identity {id_field}"),
+                )
+            })?
+            .to_owned();
+        if indexed
+            .insert(
+                id,
+                fields.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+            )
+            .is_some()
+        {
             return Err(reject(
                 CompareRejectCategory::SnapshotIntegrityFailure,
                 format!("{object_type} contains duplicate domain IDs"),
@@ -460,29 +551,38 @@ fn compare_properties(
     candidate: &BTreeMap<String, Value>,
     id_field: &str,
 ) -> Vec<PropertyDifference> {
-    let fields: std::collections::BTreeSet<_> =
-        baseline.keys().chain(candidate.keys()).filter(|field| {
+    let fields: std::collections::BTreeSet<_> = baseline
+        .keys()
+        .chain(candidate.keys())
+        .filter(|field| {
             field.as_str() != id_field
                 && field.as_str() != "createdAt"
                 && field.as_str() != "updatedAt"
                 && !field.ends_with("DetectedAt")
-        }).cloned().collect();
-    fields.into_iter().filter_map(|field| {
-        let before = baseline.get(&field);
-        let after = candidate.get(&field);
-        (before != after).then(|| PropertyDifference {
-            field,
-            baseline_value: before.cloned(),
-            candidate_value: after.cloned(),
         })
-    }).collect()
+        .cloned()
+        .collect();
+    fields
+        .into_iter()
+        .filter_map(|field| {
+            let before = baseline.get(&field);
+            let after = candidate.get(&field);
+            (before != after).then(|| PropertyDifference {
+                field,
+                baseline_value: before.cloned(),
+                candidate_value: after.cloned(),
+            })
+        })
+        .collect()
 }
 
 fn parse_json(value: &str, label: &str) -> Result<Value, CompareRejection> {
-    serde_json::from_str(value).map_err(|error| reject(
-        CompareRejectCategory::SnapshotIntegrityFailure,
-        format!("Cannot decode {label}: {error}"),
-    ))
+    serde_json::from_str(value).map_err(|error| {
+        reject(
+            CompareRejectCategory::SnapshotIntegrityFailure,
+            format!("Cannot decode {label}: {error}"),
+        )
+    })
 }
 
 fn classify_snapshot_read_error(error: SnapshotReadError) -> CompareRejection {
@@ -501,7 +601,10 @@ fn classify_snapshot_read_error(error: SnapshotReadError) -> CompareRejection {
 }
 
 fn reject(category: CompareRejectCategory, message: impl Into<String>) -> CompareRejection {
-    CompareRejection { category, message: message.into() }
+    CompareRejection {
+        category,
+        message: message.into(),
+    }
 }
 
 #[cfg(test)]
@@ -516,9 +619,17 @@ mod tests {
             record_kind: "Full".into(),
             state_data: format!(
                 r#"{{"cbarCount":{},"cbars":{},"swingCount":{},"swings":{},"trendCount":0,"trends":[]}}"#,
-                serde_json::from_str::<Value>(cbars).unwrap().as_array().unwrap().len(),
+                serde_json::from_str::<Value>(cbars)
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .len(),
                 cbars,
-                serde_json::from_str::<Value>(swings).unwrap().as_array().unwrap().len(),
+                serde_json::from_str::<Value>(swings)
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .len(),
                 swings
             ),
             diagnostics: "[]".into(),
@@ -527,8 +638,18 @@ mod tests {
 
     #[test]
     fn compares_cbar_by_domain_id_and_reports_first_divergence() {
-        let before = record(0, "100", r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"1"}]"#, "[]");
-        let after = record(0, "100", r#"[{"cbarId":"10","high":"13","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"1"}]"#, "[]");
+        let before = record(
+            0,
+            "100",
+            r#"[{"cbarId":"10","high":"12","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"1"}]"#,
+            "[]",
+        );
+        let after = record(
+            0,
+            "100",
+            r#"[{"cbarId":"10","high":"13","low":"9","sbarStartId":"100","sbarEndId":"100","spanSbars":1,"fractalType":null,"createdAt":"1"}]"#,
+            "[]",
+        );
         let mut differences = Vec::new();
         compare_structure_record(&before, &after, &mut differences).unwrap();
         assert_eq!(differences.len(), 1);
@@ -561,8 +682,18 @@ mod tests {
 
     #[test]
     fn collection_order_does_not_create_differences() {
-        let before = record(0, "100", r#"[{"cbarId":"10","high":"12"},{"cbarId":"11","high":"13"}]"#, "[]");
-        let after = record(0, "100", r#"[{"cbarId":"11","high":"13"},{"cbarId":"10","high":"12"}]"#, "[]");
+        let before = record(
+            0,
+            "100",
+            r#"[{"cbarId":"10","high":"12"},{"cbarId":"11","high":"13"}]"#,
+            "[]",
+        );
+        let after = record(
+            0,
+            "100",
+            r#"[{"cbarId":"11","high":"13"},{"cbarId":"10","high":"12"}]"#,
+            "[]",
+        );
         let mut differences = Vec::new();
         compare_structure_record(&before, &after, &mut differences).unwrap();
         assert!(differences.is_empty());
@@ -581,12 +712,8 @@ mod tests {
 
     #[test]
     fn compares_trends_by_domain_id_and_ignores_lifecycle_timestamps() {
-        let before = record(
-            0, "100", "[]", "[]",
-        );
-        let after = record(
-            0, "100", "[]", "[]",
-        );
+        let before = record(0, "100", "[]", "[]");
+        let after = record(0, "100", "[]", "[]");
         let trend = r#"[{"trendId":"30","direction":"Up","high":"12","low":"9","swingStartId":"20","swingEndId":"25","sbarStartId":"100","sbarEndId":"200","startOi":null,"endOi":null,"volume":"10","spanSbars":2,"state":"Extending","createdAt":"1","updatedAt":"2"}]"#;
         let changed = trend.replace(r#""high":"12""#, r#""high":"13""#);
         let before_state: Value = serde_json::from_str(&before.state_data).unwrap();
@@ -597,8 +724,14 @@ mod tests {
         before_state["trends"] = serde_json::from_str(trend).unwrap();
         after_state["trendCount"] = Value::from(1);
         after_state["trends"] = serde_json::from_str(&changed).unwrap();
-        let before = SnapshotCheckpointRecord { state_data: serde_json::to_string(&before_state).unwrap(), ..before };
-        let after = SnapshotCheckpointRecord { state_data: serde_json::to_string(&after_state).unwrap(), ..after };
+        let before = SnapshotCheckpointRecord {
+            state_data: serde_json::to_string(&before_state).unwrap(),
+            ..before
+        };
+        let after = SnapshotCheckpointRecord {
+            state_data: serde_json::to_string(&after_state).unwrap(),
+            ..after
+        };
         let mut differences = Vec::new();
         compare_structure_record(&before, &after, &mut differences).unwrap();
         assert_eq!(differences.len(), 1);
@@ -640,10 +773,15 @@ mod tests {
     fn rejects_state_data_when_declared_count_disagrees_with_collection() {
         let mut before = record(0, "100", r#"[{"cbarId":"10"}]"#, "[]");
         let after = record(0, "100", r#"[{"cbarId":"10"}]"#, "[]");
-        before.state_data = before.state_data.replace(r#""cbarCount":1"#, r#""cbarCount":0"#);
+        before.state_data = before
+            .state_data
+            .replace(r#""cbarCount":1"#, r#""cbarCount":0"#);
 
         let rejection = compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err();
-        assert_eq!(rejection.category, CompareRejectCategory::SnapshotIntegrityFailure);
+        assert_eq!(
+            rejection.category,
+            CompareRejectCategory::SnapshotIntegrityFailure
+        );
         assert!(rejection.message.contains("CBar count"));
     }
 
@@ -651,10 +789,15 @@ mod tests {
     fn rejects_unrecognized_top_level_state_data_fields() {
         let mut before = record(0, "100", "[]", "[]");
         let after = record(0, "100", "[]", "[]");
-        before.state_data = before.state_data.replace(r#""trends":[]}"#, r#""trends":[],"futureField":true}"#);
+        before.state_data = before
+            .state_data
+            .replace(r#""trends":[]}"#, r#""trends":[],"futureField":true}"#);
 
         let rejection = compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err();
-        assert_eq!(rejection.category, CompareRejectCategory::SnapshotIntegrityFailure);
+        assert_eq!(
+            rejection.category,
+            CompareRejectCategory::SnapshotIntegrityFailure
+        );
         assert!(rejection.message.contains("unsupported field"));
     }
 
@@ -664,12 +807,13 @@ mod tests {
         let after = record(0, "100", "[]", "[]");
         before.record_kind = "Delta".into();
         assert_eq!(
-            compare_structure_record(&before, &after, &mut Vec::new()).unwrap_err().category,
+            compare_structure_record(&before, &after, &mut Vec::new())
+                .unwrap_err()
+                .category,
             CompareRejectCategory::StateReconstructionFailure
         );
     }
 }
-
 
 #[cfg(test)]
 mod keyzone_compare_tests {
@@ -692,6 +836,40 @@ mod keyzone_compare_tests {
             .unwrap(),
         }
     }
+    #[test]
+    fn keyzone_observation_compare_ignores_detection_and_rejects_old_model() {
+        let mut baseline = record(true);
+        let p = crate::checkpoint::keyzone_projection_tests::observation_projection();
+        baseline.state_data = crate::snapshot::canonical_checkpoint_state(None, Some(&p)).unwrap();
+        let mut state: Value = serde_json::from_str(&baseline.state_data).unwrap();
+        state["keyzones"]["observations"][0]["createdAt"] = Value::from("8000");
+        state["keyzones"]["observations"][0]["terminalDetectedAt"] = Value::from("9000");
+        let mut candidate = baseline.clone();
+        candidate.state_data = state.to_string();
+        let mut differences = Vec::new();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert!(differences.is_empty());
+        state["keyzones"]["observations"][0]["consumerId"] = Value::from("another-consumer");
+        candidate.state_data = state.to_string();
+        compare_structure_record(&baseline, &candidate, &mut differences).unwrap();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].object_type, "Observation");
+        let mut old: Value = serde_json::from_str(&baseline.state_data).unwrap();
+        old["keyzones"]
+            .as_object_mut()
+            .unwrap()
+            .remove("observations");
+        old["keyzones"]["configN"] = Value::from("3");
+        old["keyzones"]["configX"] = Value::from(0.5);
+        candidate.state_data = old.to_string();
+        assert_eq!(
+            compare_structure_record(&baseline, &candidate, &mut Vec::new())
+                .unwrap_err()
+                .category,
+            CompareRejectCategory::SnapshotIntegrityFailure
+        );
+    }
+
     #[test]
     fn keyzone_compare_ignores_detection_times_but_reports_domain_changes() {
         let baseline = record(true);
@@ -729,16 +907,11 @@ mod keyzone_compare_tests {
     }
     #[test]
     fn interactions_are_compared_by_identity_and_market_state() {
-        let baseline = record(true);
+        let mut baseline = record(true);
+        let projection = crate::checkpoint::keyzone_projection_tests::observation_projection();
+        baseline.state_data = canonical_checkpoint_state(None, Some(&projection)).unwrap();
         let mut state: Value = serde_json::from_str(&baseline.state_data).unwrap();
-        state["keyzones"]["interactions"] = serde_json::json!([{
-            "interactionId": "9007199254740993", "keyzoneId": state["keyzones"]["zones"][0]["keyzoneId"],
-            "observerTimeframe": "5m", "observerBarType": "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL", "state": "Active",
-            "configN": "3", "configX": 0.5, "outsideCount": "1", "lastProcessedAt": "100",
-            "startedAt": "100", "startedDetectedAt": "200", "endedAt": null, "endedDetectedAt": null,
-            "invalidatedAt": null, "invalidatedDetectedAt": null
-        }]);
-        let mut baseline = baseline;
+        state["keyzones"]["interactions"][0]["interactionId"] = Value::from("9007199254740993");
         baseline.state_data = state.to_string();
         state["keyzones"]["interactions"][0]["startedDetectedAt"] = Value::from("999");
         let mut candidate = baseline.clone();

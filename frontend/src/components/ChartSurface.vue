@@ -23,6 +23,7 @@ const props = withDefaults(defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
+  keyzoneObserver?: import("../origin-types").ObservationStateKeyDto | null;
   keyzoneUntil?: string | null;
   selectedKeyzoneId?: string | null;
   keyzoneSelectable?: boolean;
@@ -87,7 +88,7 @@ function clearKeyzoneHover(): void {
   keyzonePrimitive.setHovered(null);
 }
 function syncKeyzones(): void {
-  keyzonePrimitive.setData(props.keyzones ?? null, props.bars, props.keyzoneUntil === undefined ? (props.bars.at(-1)?.tsEvent ?? null) : props.keyzoneUntil);
+  keyzonePrimitive.setData(props.keyzones ?? null, props.bars, props.keyzoneUntil === undefined ? (props.bars.at(-1)?.tsEvent ?? null) : props.keyzoneUntil, props.keyzoneObserver ?? null);
 }
 let featurePrimitive: StructurePrimitiveController | null = null;
 let structurePlaybackState: ChartSurfaceStructurePlaybackState = {
@@ -922,6 +923,9 @@ watch(() => [props.bars, props.sequenceId, props.dataMode] as const, () => {
   scheduleOverlayUpdate.flush();
 });
 watch(() => [props.sequenceId, props.keyzones, props.bars, props.keyzoneUntil] as const, syncKeyzones);
+// Equal StateKey values may arrive in a new parent-render object. They must not
+// rebuild selected interaction history or clear hover on pointer-driven renders.
+watch([() => props.keyzoneObserver?.instrumentId, () => props.keyzoneObserver?.timeframe], syncKeyzones);
 watch(() => [props.keyzoneSelectable, chartError.value, drawingTool.value, selectedDrawingCount.value] as const, clearKeyzoneHover);
 watch(() => props.selectedKeyzoneId, (id) => keyzonePrimitive.setSelected(id ?? null));
 watch(() => props.structure, () => {

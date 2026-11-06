@@ -88,13 +88,13 @@ describe.each(["Origin", "Live Replay", "Snapshot Reference"] as const)("%s KeyZ
   function setup() {
     const data = fixture();
     const wrapper = kind === "Origin"
-      ? mount(OriginChart, { props: { bars: data.bars, structure: null, keyzones: data.keyzones, originDatasetId: "origin-keyzone" } })
+      ? mount(OriginChart, { props: { bars: data.bars, structure: null, keyzones: data.keyzones, originDatasetId: "origin-keyzone", keyzoneObserver: data.keyzones.observations[0]!.observer } })
       : kind === "Live Replay"
         ? mount(RunChart, { props: { origin: data.origin, testDataset: data.test, keyzones: data.keyzones,
           runState: { runId: "run-keyzone", testDatasetId: data.test.testDatasetId, inputFingerprint: "fixture", inputCount: 4,
             processedCount: 4, status: "completed", cursorSbarId: data.bars[3]!.sbarId, failureDiagnostic: null } } })
         : mount(SnapshotReferenceChart, { props: { bars: data.bars, structure: null, keyzones: data.keyzones,
-          keyzoneUntil: data.bars[3]!.sbarId, snapshotId: "snapshot-keyzone", syncEnabled: false,
+          keyzoneObserver: data.keyzones.observations[0]!.observer, keyzoneUntil: data.bars[3]!.sbarId, snapshotId: "snapshot-keyzone", syncEnabled: false,
           liveBarCount: 4, playbackEnabled: false, playbackOffset: null, processedCount: 4 } });
     const runtime = mocks.runtimes.at(-1)!;
     const primitive = runtime.primitives.find((item): item is KeyZonePrimitive => item instanceof KeyZonePrimitive)!;
@@ -158,7 +158,7 @@ describe.each(["Origin", "Live Replay", "Snapshot Reference"] as const)("%s KeyZ
       ? { kind: "keyzone", id: "9007199254740993", originDatasetId: "origin-keyzone" }
       : { kind: "keyzone", id: "9007199254740993", checkpointSbarId: data.bars[3]!.sbarId } } as never);
     await nextTick();
-    expect(episodeLabels(primitive)).toEqual(["I1 Active"]);
+    expect(episodeLabels(primitive)).toEqual(["O1 · I1 Active"]);
     const registry = keyzoneFixture();
     const base = registry.interactions[0]!;
     registry.interactions = [
@@ -166,11 +166,30 @@ describe.each(["Origin", "Live Replay", "Snapshot Reference"] as const)("%s KeyZ
       { ...base, interactionId: "9007199254740996", startedAt: data.bars[2]!.tsEvent },
     ];
     await wrapper.setProps({ keyzones: registry } as never);
-    expect(episodeLabels(primitive)).toEqual(["I1 Ended", "I2 Active"]);
+    expect(episodeLabels(primitive)).toEqual(["O1 · I1 Ended", "O1 · I2 Active"]);
     if (kind === "Snapshot Reference") runtime.click({ point: { x: 110, y: 95 } });
     else await wrapper.setProps({ selectedObject: null } as never);
     await nextTick();
     expect(episodeLabels(primitive)).toEqual([]);
+  });
+
+  it("projects explicit tasks using the chart StateKey and retains independent overlapping tasks", async () => {
+    const { wrapper, runtime, primitive, data } = setup();
+    const registry = keyzoneFixture();
+    const task = registry.observations[0]!, episode = registry.interactions[0]!;
+    registry.observations.push({ ...task, observationId: "2", consumerId: "another-consumer", requestId: "another-request" });
+    registry.interactions.push({ ...episode, interactionId: "9007199254740996", observationId: "2" });
+    await wrapper.setProps({ keyzones: registry, ...(kind === "Live Replay" ? {} : { keyzoneObserver: task.observer }) } as never);
+    runtime.click(hit);
+    if (kind !== "Snapshot Reference") await wrapper.setProps({ selectedObject: kind === "Origin"
+      ? { kind: "keyzone", id: registry.zones[0]!.keyzoneId, originDatasetId: "origin-keyzone" }
+      : { kind: "keyzone", id: registry.zones[0]!.keyzoneId, checkpointSbarId: data.bars[3]!.sbarId } } as never);
+    await nextTick();
+    expect(episodeLabels(primitive)).toEqual(["O1 · I1 Active", "O2 · I1 Active"]);
+    const rebuild = vi.spyOn(primitive, "setData");
+    if (kind !== "Live Replay") await wrapper.setProps({ keyzoneObserver: { ...task.observer } } as never);
+    runtime.move(hit); runtime.move(hit); await nextTick();
+    expect(rebuild).not.toHaveBeenCalled();
   });
 
   if (kind === "Origin") it("honors explicit range-selection mode instead of selecting a KeyZone", async () => {

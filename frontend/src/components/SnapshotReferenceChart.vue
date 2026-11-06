@@ -25,6 +25,7 @@ const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
+  keyzoneObserver?: import("../origin-types").ObservationStateKeyDto | null;
   keyzoneUntil?: string | null;
   snapshotId: string;
   syncEnabled: boolean;
@@ -504,6 +505,7 @@ onBeforeUnmount(() => {
     :bars="bars"
     :structure="structure"
     :keyzones="keyzones"
+        :keyzone-observer="keyzoneObserver"
     :keyzone-until="keyzoneUntil"
     :selected-keyzone-id="selectedObject?.kind === 'keyzone' ? selectedObject.id : null"
     @keyzone-select="selectedObject = { kind: 'keyzone', id: $event, checkpointSbarId: keyzoneUntil ?? null }; emit('objectSelect', selectedObject)"

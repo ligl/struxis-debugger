@@ -772,6 +772,7 @@ onBeforeUnmount(() => {
         :bars="bars"
         :structure="structure ?? null"
         :keyzones="keyzones"
+        :keyzone-observer="origin ? { instrumentId: origin.instrumentId, timeframe: origin.timeframe } : null"
         :keyzone-until="runState?.cursorSbarId ?? null"
         :selected-keyzone-id="selectedObject?.kind === 'keyzone' ? selectedObject.id : null"
         @keyzone-select="emit('objectSelect', { kind: 'keyzone', id: $event, checkpointSbarId: runState?.cursorSbarId ?? null })"

@@ -159,16 +159,17 @@ describe("selected KeyZone observed interaction ranges", () => {
     registry.interactions = [
       { ...base, interactionId: "10", state: "Ended", startedAt: bars[0]!.tsEvent, lastProcessedAt: bars[1]!.tsEvent, endedAt: bars[1]!.tsEvent },
       { ...base, interactionId: "20", state: "Active", startedAt: bars[2]!.tsEvent, lastProcessedAt: bars[3]!.tsEvent },
-      { ...base, interactionId: "30", observerBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL" },
+      { ...base, interactionId: "30", observationId: "2", observer: { instrumentId: registry.instrumentId, timeframe: "5m" }, observerTimeframe: "5m" },
     ];
+    registry.observations.push({ ...registry.observations[0]!, observationId: "2", requestId: "other-period", observer: { instrumentId: registry.instrumentId, timeframe: "5m" } });
     return { bars, registry, zoneId };
   }
-  it("separates each episode using its observed candle extrema and exact observer BarType", () => {
+  it("separates each episode using its observed candle extrema and explicit observer StateKey", () => {
     const { bars, registry, zoneId } = episodes();
-    const index = new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zoneId);
+    const index = new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zoneId, registry.observations[0]!.observer);
     expect(index.visible(0, 4)).toEqual([
-      { interactionId: "10", sequence: 1, state: "Ended", start: 0, end: 1, low: 7, high: 15 },
-      { interactionId: "20", sequence: 2, state: "Active", start: 2, end: 3, low: 5, high: 18 },
+      { interactionId: "10", observationId: "1", sequence: 1, state: "Ended", start: 0, end: 1, low: 7, high: 15 },
+      { interactionId: "20", observationId: "1", sequence: 2, state: "Active", start: 2, end: 3, low: 5, high: 18 },
     ]);
     expect(index.visible(-1, 1).map((item) => item.interactionId)).toEqual(["10"]);
     expect(index.visible(2, 4).map((item) => item.interactionId)).toEqual(["20"]);
@@ -181,25 +182,25 @@ describe("selected KeyZone observed interaction ranges", () => {
   });
   it("caps Active observations at the accepted cursor and uses no fabricated missing anchors", () => {
     const { bars, registry, zoneId } = episodes();
-    const ranges = new KeyZoneInteractionIndex(registry, bars, bars[2]!.tsEvent, zoneId).visible(0, 4);
-    expect(ranges[1]).toEqual({ interactionId: "20", sequence: 2, state: "Active", start: 2, end: 2, low: 6, high: 18 });
-    expect(new KeyZoneInteractionIndex(registry, bars.slice(1), bars[3]!.tsEvent, zoneId).visible(0, 4)
+    const ranges = new KeyZoneInteractionIndex(registry, bars, bars[2]!.tsEvent, zoneId, registry.observations[0]!.observer).visible(0, 4);
+    expect(ranges[1]).toEqual({ interactionId: "20", observationId: "1", sequence: 2, state: "Active", start: 2, end: 2, low: 6, high: 18 });
+    expect(new KeyZoneInteractionIndex(registry, bars.slice(1), bars[3]!.tsEvent, zoneId, registry.observations[0]!.observer).visible(0, 4)
       .map((item) => item.interactionId)).toEqual(["20"]);
     registry.interactions[1]!.lastProcessedAt = null;
-    expect(new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zoneId).visible(0, 4)
+    expect(new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zoneId, registry.observations[0]!.observer).visible(0, 4)
       .map((item) => item.interactionId)).toEqual(["10"]);
   });
   it("keeps terminal ranges fixed and extends only an updated Active episode", () => {
     const { bars, registry, zoneId } = episodes();
     const more = [...bars, { ...bars[3]!, sbarId: "1700000240000000000", tsEvent: "1700000240000000000", tsInit: "1700000240000000000", high: "25", low: "4" }];
     registry.interactions[1]!.lastProcessedAt = more[4]!.tsEvent;
-    expect(new KeyZoneInteractionIndex(registry, more, more[4]!.tsEvent, zoneId).visible(0, 5)).toEqual([
-      { interactionId: "10", sequence: 1, state: "Ended", start: 0, end: 1, low: 7, high: 15 },
-      { interactionId: "20", sequence: 2, state: "Active", start: 2, end: 4, low: 4, high: 25 },
+    expect(new KeyZoneInteractionIndex(registry, more, more[4]!.tsEvent, zoneId, registry.observations[0]!.observer).visible(0, 5)).toEqual([
+      { interactionId: "10", observationId: "1", sequence: 1, state: "Ended", start: 0, end: 1, low: 7, high: 15 },
+      { interactionId: "20", observationId: "1", sequence: 2, state: "Active", start: 2, end: 4, low: 4, high: 25 },
     ]);
     registry.interactions[1]!.state = "Invalidated";
     registry.interactions[1]!.invalidatedAt = "1700000300000000000";
-    expect(new KeyZoneInteractionIndex(registry, more, more[4]!.tsEvent, zoneId).visible(2, 5)[0]?.end).toBe(4);
+    expect(new KeyZoneInteractionIndex(registry, more, more[4]!.tsEvent, zoneId, registry.observations[0]!.observer).visible(2, 5)[0]?.end).toBe(4);
   });
   it("draws unfilled labeled episode boxes before the source marker and clears them with selection", () => {
     const { bars, registry, zoneId } = episodes(), primitive = new KeyZonePrimitive();
@@ -207,7 +208,7 @@ describe("selected KeyZone observed interaction ranges", () => {
     for (const bar of bars) for (const field of ["low", "high"] as const) {
       const value = bar[field]; Object.defineProperty(bar, field, { get: () => { priceReads++; return value; } });
     }
-    primitive.setData(registry, bars, bars[3]!.tsEvent);
+    primitive.setData(registry, bars, bars[3]!.tsEvent, registry.observations[0]!.observer);
     primitive.attached({ chart: { timeScale: () => ({ options: () => ({ barSpacing: 10 }), getVisibleLogicalRange: () => ({ from: -4, to: 5 }), logicalToCoordinate: (index: number) => 100 + index * 10 }) },
       series: { priceToCoordinate: (price: number) => 200 - price * 10 }, requestUpdate: vi.fn(),
     } as unknown as Parameters<KeyZonePrimitive["attached"]>[0]);
@@ -219,12 +220,42 @@ describe("selected KeyZone observed interaction ranges", () => {
     expect(priceReads).toBe(8);
     expect(strokeRect).toHaveBeenCalledWith(96.5, 50, 17, 80);
     expect(strokeRect).toHaveBeenCalledWith(116.5, 20, 17, 130);
-    expect(fillText.mock.calls.map((call) => call[0])).toEqual(["I1 Ended", "I2 Active"]);
+    expect(fillText.mock.calls.map((call) => call[0])).toEqual(["O1 · I1 Ended", "O1 · I2 Active"]);
     expect(fillRect).not.toHaveBeenCalled();
     primitive.setHovered(zoneId); primitive.updateAllViews(); primitive.setSelected(zoneId); draw();
     expect(priceReads).toBe(8);
     fillText.mockClear(); primitive.setSelected(null); draw();
     expect(fillText).not.toHaveBeenCalled();
     expect(priceReads).toBe(8);
+  });
+});
+
+
+describe("explicit observation chart ranges", () => {
+  it("matches the declared StateKey and never borrows another timeframe", () => {
+    const registry = keyzoneFixture(), bars = keyzoneBars(), zone = registry.zones[0]!.keyzoneId;
+    expect(new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zone).visible(0, 4)).toEqual([]);
+    expect(new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zone, { instrumentId: registry.instrumentId, timeframe: "5m" }).visible(0, 4)).toEqual([]);
+    expect(new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zone, { instrumentId: registry.instrumentId, timeframe: "1m" }).visible(0, 4).map((i) => [i.observationId, i.sequence])).toEqual([["1", 1]]);
+  });
+  it("finds nested and overlapping episodes from independent tasks", () => {
+    const registry = keyzoneFixture(), bars = keyzoneBars(), zone = registry.zones[0]!.keyzoneId;
+    const task = registry.observations[0]!, episode = registry.interactions[0]!;
+    registry.observations.push({ ...task, observationId: "2", consumerId: "strategy-b", requestId: "request-b" }, { ...task, observationId: "3", consumerId: "strategy-c", requestId: "request-c" });
+    registry.interactions = [
+      { ...episode, interactionId: "1", observationId: "1", startedAt: bars[0]!.tsEvent, lastProcessedAt: bars[3]!.tsEvent },
+      { ...episode, interactionId: "2", observationId: "2", startedAt: bars[1]!.tsEvent, lastProcessedAt: bars[1]!.tsEvent },
+      { ...episode, interactionId: "3", observationId: "3", startedAt: bars[2]!.tsEvent, lastProcessedAt: bars[2]!.tsEvent },
+    ];
+    const index = new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zone, task.observer);
+    expect(index.visible(2.6, 3).map((i) => i.interactionId)).toEqual(["1"]);
+    expect(index.visible(0.6, 1.4).map((i) => i.interactionId)).toEqual(["1", "2"]);
+    expect(index.visible(1.6, 2.4).map((i) => [i.observationId, i.sequence])).toEqual([["1", 1], ["3", 1]]);
+  });
+  it("keeps an interrupted episode at its last actual observation", () => {
+    const registry = keyzoneFixture(), bars = keyzoneBars(), zone = registry.zones[0]!.keyzoneId;
+    registry.interactions[0] = { ...registry.interactions[0]!, state: "Interrupted", lastProcessedAt: bars[1]!.tsEvent, interruptedAt: bars[3]!.tsEvent, interruptionReason: "Deadline" };
+    const index = new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zone, registry.observations[0]!.observer);
+    expect(index.visible(0, 4).map((i) => [i.state, i.end])).toEqual([["Interrupted", 1]]);
   });
 });

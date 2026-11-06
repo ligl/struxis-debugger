@@ -51,9 +51,13 @@ impl OwnedCheckpoint {
         projection: &ReplayCheckpointProjection,
     ) -> Result<Self, String> {
         if projection.last_ts_event.as_deref() != Some(sbar_id) {
-            return Err(format!("Owned Checkpoint SBar mismatch at index {checkpoint_index}"));
+            return Err(format!(
+                "Owned Checkpoint SBar mismatch at index {checkpoint_index}"
+            ));
         }
-        let current_sbar = projection.sbars.iter()
+        let current_sbar = projection
+            .sbars
+            .iter()
             .find(|bar| bar.sbar_id == sbar_id)
             .ok_or_else(|| format!("Owned Checkpoint SBar {sbar_id} is absent from projection"))?;
         Ok(Self {
@@ -244,10 +248,14 @@ impl ReplayCheckpointProjection {
         checkpoint_index: usize,
         sbar_id: &str,
     ) -> Result<ReplayInspectorProjection, String> {
-        let sbar = self.sbars.iter()
+        let sbar = self
+            .sbars
+            .iter()
             .find(|sbar| sbar.sbar_id == sbar_id)
             .cloned()
-            .ok_or_else(|| format!("Confirmed checkpoint SBar {sbar_id} is absent from projection"))?;
+            .ok_or_else(|| {
+                format!("Confirmed checkpoint SBar {sbar_id} is absent from projection")
+            })?;
         Ok(ReplayInspectorProjection {
             state_key: self.state_key.clone(),
             checkpoint_index,
@@ -279,27 +287,29 @@ impl ReplayCheckpointProjection {
 }
 
 fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
-    series.last_n(series.len()).into_iter().map(|bar| SBarCheckpoint {
-        sbar_id: bar.id().to_string(),
-        bar_type: bar.bar_type.to_string(),
-        ts_event: bar.ts_event.to_string(),
-        ts_init: bar.ts_init.to_string(),
-        open: bar.open.to_string(),
-        high: bar.high.to_string(),
-        low: bar.low.to_string(),
-        close: bar.close.to_string(),
-        volume: bar.volume.to_string(),
-        body: bar.body().to_string(),
-        upper_shadow: bar.upper_shadow().to_string(),
-        lower_shadow: bar.lower_shadow().to_string(),
-        total_range: bar.total_range().to_string(),
-        body_ratio: bar.body_ratio(),
-        shadow_ratio: bar.shadow_ratio(),
-        direction: format!("{:?}", bar.direction()),
-    }).collect()
+    series
+        .last_n(series.len())
+        .into_iter()
+        .map(|bar| SBarCheckpoint {
+            sbar_id: bar.id().to_string(),
+            bar_type: bar.bar_type.to_string(),
+            ts_event: bar.ts_event.to_string(),
+            ts_init: bar.ts_init.to_string(),
+            open: bar.open.to_string(),
+            high: bar.high.to_string(),
+            low: bar.low.to_string(),
+            close: bar.close.to_string(),
+            volume: bar.volume.to_string(),
+            body: bar.body().to_string(),
+            upper_shadow: bar.upper_shadow().to_string(),
+            lower_shadow: bar.lower_shadow().to_string(),
+            total_range: bar.total_range().to_string(),
+            body_ratio: bar.body_ratio(),
+            shadow_ratio: bar.shadow_ratio(),
+            direction: format!("{:?}", bar.direction()),
+        })
+        .collect()
 }
-
-
 
 pub(crate) fn structure_from_state_view(
     state: &StruxisStateView<'_>,
@@ -355,15 +365,13 @@ pub(crate) fn structure_from_state_view(
     })
 }
 
-
 /// Owned Instrument Registry projection. Absence means this recording predates
 /// KeyZone support; Some with empty collections is an observed empty Registry.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct KeyZoneCheckpoint {
     pub(crate) instrument_id: String,
-    pub(crate) config_n: String,
-    pub(crate) config_x: f64,
+    pub(crate) observations: Vec<KeyZoneObservation>,
     pub(crate) zones: Vec<KeyZoneObject>,
     pub(crate) interactions: Vec<KeyZoneInteraction>,
 }
@@ -392,7 +400,14 @@ pub(crate) struct KeyZoneInteraction {
     pub(crate) interaction_id: String,
     pub(crate) keyzone_id: String,
     pub(crate) observer_timeframe: String,
-    pub(crate) observer_bar_type: String,
+    pub(crate) observation_id: String,
+    pub(crate) observer: ObservationStateKey,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) interrupted_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) interrupted_detected_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) interruption_reason: Option<String>,
     pub(crate) state: String,
     pub(crate) config_n: String,
     pub(crate) config_x: f64,
@@ -404,6 +419,35 @@ pub(crate) struct KeyZoneInteraction {
     pub(crate) ended_detected_at: Option<String>,
     pub(crate) invalidated_at: Option<String>,
     pub(crate) invalidated_detected_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct ObservationStateKey {
+    pub(crate) instrument_id: String,
+    pub(crate) timeframe: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct KeyZoneObservation {
+    pub(crate) observation_id: String,
+    pub(crate) consumer_id: String,
+    pub(crate) request_id: String,
+    pub(crate) keyzone_id: String,
+    pub(crate) observer: ObservationStateKey,
+    pub(crate) start_mode: String,
+    pub(crate) start_at: String,
+    pub(crate) start_exclusive: bool,
+    pub(crate) deadline: String,
+    pub(crate) completion: String,
+    pub(crate) config_n: String,
+    pub(crate) config_x: f64,
+    pub(crate) created_at: String,
+    pub(crate) state: String,
+    pub(crate) reason: Option<String>,
+    pub(crate) last_processed_at: Option<String>,
+    pub(crate) terminal_at: Option<String>,
+    pub(crate) terminal_detected_at: Option<String>,
 }
 
 impl KeyZoneCheckpoint {
@@ -444,7 +488,16 @@ impl KeyZoneCheckpoint {
                     interaction_id: interaction.id().value().to_string(),
                     keyzone_id: zone.id().value().to_string(),
                     observer_timeframe: interaction.observer_timeframe().to_string(),
-                    observer_bar_type: interaction.observer_bar_type().to_string(),
+                    observation_id: interaction.observation_id().value().to_string(),
+                    observer: ObservationStateKey {
+                        instrument_id: interaction.observer().instrument_id.to_string(),
+                        timeframe: interaction.observer().timeframe.to_string(),
+                    },
+                    interrupted_at: temporal.interrupted_at.map(|t| t.to_string()),
+                    interrupted_detected_at: temporal
+                        .interrupted_detected_at
+                        .map(|t| t.to_string()),
+                    interruption_reason: temporal.interruption_reason.map(|r| format!("{r:?}")),
                     state: format!("{:?}", interaction.state()),
                     config_n: interaction.config().n().to_string(),
                     config_x: interaction.config().x(),
@@ -463,8 +516,41 @@ impl KeyZoneCheckpoint {
         }
         Ok(Self {
             instrument_id: registry.instrument_id().to_string(),
-            config_n: registry.config().n().to_string(),
-            config_x: registry.config().x(),
+            observations: registry
+                .observations()
+                .map(|o| {
+                    let r = o.request();
+                    KeyZoneObservation {
+                        observation_id: o.id().value().to_string(),
+                        consumer_id: r.consumer_id.clone(),
+                        request_id: r.request_id.clone(),
+                        keyzone_id: r.zone.id.value().to_string(),
+                        observer: ObservationStateKey {
+                            instrument_id: r.observer.instrument_id.to_string(),
+                            timeframe: r.observer.timeframe.to_string(),
+                        },
+                        start_mode: match r.start {
+                            capitus_struxis::keyzone::ObservationStart::AfterCurrentCursor => {
+                                "AfterCurrentCursor"
+                            }
+                            capitus_struxis::keyzone::ObservationStart::FromTime(_) => "FromTime",
+                        }
+                        .into(),
+                        start_at: o.start_at().to_string(),
+                        start_exclusive: o.start_exclusive(),
+                        deadline: r.deadline.to_string(),
+                        completion: format!("{:?}", r.completion),
+                        config_n: r.config.n().to_string(),
+                        config_x: r.config.x(),
+                        created_at: o.created_at().to_string(),
+                        state: format!("{:?}", o.state()),
+                        reason: o.reason().map(|r| format!("{r:?}")),
+                        last_processed_at: o.last_processed_at().map(|t| t.to_string()),
+                        terminal_at: o.terminal_at().map(|t| t.to_string()),
+                        terminal_detected_at: o.terminal_detected_at().map(|t| t.to_string()),
+                    }
+                })
+                .collect(),
             zones,
             interactions,
         })
@@ -527,39 +613,150 @@ mod trend_checkpoint_tests {
     }
 }
 
-
 #[cfg(test)]
 pub(crate) mod keyzone_projection_tests {
     use super::*;
     use capitus_struxis::{
         Timeframe,
-        keyzone::{InteractionConfig, KeyZoneRegistry, PriceRange},
+        keyzone::{KeyZoneRegistry, PriceRange},
     };
     use nautilus_model::{identifiers::InstrumentId, types::Price};
     use std::num::NonZeroU32;
 
     pub(crate) fn fixed_projection() -> KeyZoneCheckpoint {
-        let mut registry = KeyZoneRegistry::new(
-            InstrumentId::from("AUD/USD.SIM"),
-            InteractionConfig::default(),
-        );
+        let mut registry = KeyZoneRegistry::new(InstrumentId::from("AUD/USD.SIM"));
         registry
             .create_fixed(
                 Timeframe::minutes(NonZeroU32::new(5).unwrap()),
                 PriceRange::new(Price::from("9.00001"), Price::from("12.00002")).unwrap(),
                 9007199254740993_u64.into(),
-                &[],
             )
             .unwrap();
         KeyZoneCheckpoint::from_registry(&registry).unwrap()
+    }
+
+    pub(crate) fn observation_projection() -> KeyZoneCheckpoint {
+        use capitus_struxis::{
+            NautilusRuntime, Struxis, StruxisConfig, StruxisRegistrant, StruxisStateKey, keyzone::*,
+        };
+        use nautilus_common::cache::Cache;
+        use nautilus_model::{
+            data::{Bar, BarType},
+            identifiers::StrategyId,
+            types::Quantity,
+        };
+        use std::{cell::RefCell, rc::Rc, str::FromStr};
+        let instrument = InstrumentId::from("AUD/USD.SIM");
+        let bt = BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").unwrap();
+        let key = StruxisStateKey::from_bar_type(&bt);
+        let cache = Rc::new(RefCell::new(Cache::default()));
+        let binding = Struxis::new(
+            StruxisConfig::builder().enable_structure(false).build(),
+            NautilusRuntime::new(Rc::clone(&cache)),
+        );
+        binding.register(
+            key,
+            StruxisRegistrant::Strategy(StrategyId::from("PROJECTION-TEST")),
+        );
+        let mut registry = KeyZoneRegistry::new(instrument);
+        let (id, _) = registry
+            .create_fixed(
+                key.timeframe,
+                PriceRange::new(Price::from("9"), Price::from("12")).unwrap(),
+                100_u64.into(),
+            )
+            .unwrap();
+        for (time, low, high, close) in [
+            (100, "10", "11", "10"),
+            (200, "14", "16", "15"),
+            (300, "10", "11", "10"),
+        ] {
+            let bar = Bar::new(
+                bt,
+                Price::from(close),
+                Price::from(high),
+                Price::from(low),
+                Price::from(close),
+                Quantity::from("1"),
+                time.into(),
+                time.into(),
+            );
+            cache.borrow_mut().add_bar(bar).unwrap();
+            binding.process(&bar);
+            if time == 100 {
+                let state = binding.state(key).unwrap();
+                let history = ObserverHistory::new(state.sbars(), 100_u64.into(), None).unwrap();
+                registry
+                    .create_observation(
+                        ObservationRequest {
+                            consumer_id: "projection".into(),
+                            request_id: "record".into(),
+                            zone: KeyZoneRef {
+                                instrument_id: instrument,
+                                id,
+                            },
+                            observer: key,
+                            start: ObservationStart::FromTime(100_u64.into()),
+                            config: InteractionConfig::new(1, 0.5).unwrap(),
+                            completion: ObservationCompletion::UntilDeadline,
+                            deadline: 400_u64.into(),
+                        },
+                        history,
+                        1000_u64.into(),
+                    )
+                    .unwrap();
+            } else {
+                registry.advance(&bar, 1000_u64.into()).unwrap();
+            }
+        }
+        let task = registry.observations().next().unwrap().id();
+        registry
+            .cancel_observation(
+                ObservationRef {
+                    instrument_id: instrument,
+                    id: task,
+                },
+                2000_u64.into(),
+            )
+            .unwrap();
+        KeyZoneCheckpoint::from_registry(&registry).unwrap()
+    }
+    #[test]
+    fn observation_projection_preserves_task_ownership_and_interruption() {
+        let p = observation_projection();
+        let tasks = &p.observations;
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].observer.instrument_id, p.instrument_id);
+        assert_eq!(tasks[0].state, "Cancelled");
+        assert_eq!(tasks[0].config_n, "1");
+        assert_eq!(tasks[0].config_x, 0.5);
+        assert!(
+            p.interactions
+                .iter()
+                .all(|i| i.config_n == "1" && i.config_x == 0.5)
+        );
+        assert_eq!(tasks[0].reason.as_deref(), Some("Cancelled"));
+        assert_eq!(tasks[0].last_processed_at.as_deref(), Some("300"));
+        assert_eq!(p.interactions.len(), 2);
+        assert_eq!(p.interactions[0].state, "Ended");
+        assert_eq!(p.interactions[0].ended_at.as_deref(), Some("200"));
+        assert_eq!(p.interactions[1].state, "Interrupted");
+        assert_eq!(
+            p.interactions[1].interruption_reason.as_deref(),
+            Some("Cancelled")
+        );
+        assert!(
+            p.interactions
+                .iter()
+                .all(|i| i.observation_id == tasks[0].observation_id)
+        );
     }
 
     #[test]
     fn keyzone_projection_keeps_domain_precision_origin_and_market_times() {
         let projection = fixed_projection();
         assert_eq!(projection.instrument_id, "AUD/USD.SIM");
-        assert_eq!(projection.config_n, "3");
-        assert_eq!(projection.config_x, 0.5);
+        assert!(projection.observations.is_empty());
         assert_eq!(projection.zones.len(), 1);
         let zone = &projection.zones[0];
         assert_eq!(zone.origin_kind, "FixedPriceRange");
@@ -629,7 +826,7 @@ pub(crate) mod keyzone_projection_tests {
             );
             cache.borrow_mut().add_bar(bar).unwrap();
             assert!(matches!(
-                struxis.process(&bar),
+                struxis.process(&bar).outcome,
                 ProcessOutcome::Processed { .. }
             ));
         }
@@ -660,12 +857,7 @@ pub(crate) mod keyzone_projection_tests {
         assert_eq!(first.lower, "5");
         assert_eq!(first.upper, "10");
         assert_eq!(first.finalized_at.as_deref(), Some("100"));
-        assert!(!projected.interactions.is_empty());
-        assert!(
-            projected
-                .interactions
-                .iter()
-                .all(|item| item.config_n == "3")
-        );
+        assert!(projected.interactions.is_empty());
+        assert!(projected.observations.is_empty());
     }
 }

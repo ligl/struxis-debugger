@@ -16,7 +16,7 @@ describe("KeyZone selection and Inspector", () => {
     expect(wrapper.text()).toContain("9.00001");
     expect(wrapper.text()).toContain("12.00002");
     expect(wrapper.text()).toContain("Swing");
-    expect(wrapper.get('[data-testid="keyzone-interaction"]').text()).toContain("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL");
+    expect(wrapper.get('[data-testid="keyzone-interaction"]').text()).toContain("AUD/USD.SIM · 1m");
   });
   it("routes a chart border selection by stable domain ID", async () => {
     const registry = keyzoneFixture();
@@ -43,4 +43,16 @@ describe("KeyZone selection and Inspector", () => {
         snapshotId: null, snapshotBars: [], snapshotStructure: null, error: "" } } });
     expect(wrapper.get('[data-testid="keyzone-details"]').text()).toContain("12.00002");
   });
+});
+
+
+it("groups observations and shows the recorded-empty state", () => {
+  const registry = keyzoneFixture();
+  const wrapper = mount(KeyZoneDetails, { props: { zone: registry.zones[0]!, registry } });
+  expect(wrapper.findAll('[data-testid="keyzone-observation"]')).toHaveLength(1);
+  expect(wrapper.text()).toContain("strategy-a");
+  expect(wrapper.text()).toContain("request-a");
+  const empty = mount(KeyZoneDetails, { props: { zone: registry.zones[0]!, registry: { ...registry, observations: [], interactions: [] } } });
+  expect(empty.find('[data-testid="keyzone-observations-empty"]').exists()).toBe(true);
+
 });

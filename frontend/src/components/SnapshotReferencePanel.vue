@@ -346,6 +346,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
           :bars="reference.bars"
           :structure="playbackStructure"
           :keyzones="playbackKeyzones"
+          :keyzone-observer="{ instrumentId: reference.instrumentId, timeframe: reference.timeframe }"
           :keyzone-until="keyzoneUntil"
           :snapshot-id="reference.snapshotId"
           :sync-enabled="syncEligible"

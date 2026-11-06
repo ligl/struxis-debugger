@@ -349,17 +349,21 @@ pub(crate) fn canonical_structure_state(
         }),
     };
 
-    let object = state.as_object_mut()
+    let object = state
+        .as_object_mut()
         .ok_or_else(|| "Structure state must be a JSON object".to_owned())?;
-    let cbars = object.get_mut("cbars")
+    let cbars = object
+        .get_mut("cbars")
         .and_then(serde_json::Value::as_array_mut)
         .ok_or_else(|| "Structure state cbars must be an array".to_owned())?;
     sort_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
-    let swings = object.get_mut("swings")
+    let swings = object
+        .get_mut("swings")
         .and_then(serde_json::Value::as_array_mut)
         .ok_or_else(|| "Structure state swings must be an array".to_owned())?;
     sort_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
-    let trends = object.get_mut("trends")
+    let trends = object
+        .get_mut("trends")
         .and_then(serde_json::Value::as_array_mut)
         .ok_or_else(|| "Structure state trends must be an array".to_owned())?;
     sort_domain_objects(trends, "sbarStartId", "trendId", "Trend")?;
@@ -367,16 +371,20 @@ pub(crate) fn canonical_structure_state(
 }
 
 fn parse_canonical_u128(value: &str, field: &str) -> Result<u128, String> {
-    let parsed = value.parse::<u128>()
+    let parsed = value
+        .parse::<u128>()
         .map_err(|_| format!("{field} must be an unsigned decimal string"))?;
     if parsed.to_string() != value {
-        return Err(format!("{field} must use canonical unsigned decimal encoding"));
+        return Err(format!(
+            "{field} must use canonical unsigned decimal encoding"
+        ));
     }
     Ok(parsed)
 }
 
 fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), String> {
-    let object = state.as_object()
+    let object = state
+        .as_object()
         .ok_or_else(|| "state_data must be a JSON object".to_owned())?;
     let expected_fields = [
         "cbarCount",
@@ -396,21 +404,27 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         || expected_fields.iter().any(|key| !object.contains_key(*key))
     {
         return Err(
-            "state_data must contain the six required structure fields and optional featureSequence"
+            "state_data must contain cbarCount, cbars, swingCount, swings, trendCount, and trends; optional fields are featureSequence and keyzones"
                 .to_owned(),
         );
     }
-    let cbars = object["cbars"].as_array()
+    let cbars = object["cbars"]
+        .as_array()
         .ok_or_else(|| "state_data cbars must be an array".to_owned())?;
-    let swings = object["swings"].as_array()
+    let swings = object["swings"]
+        .as_array()
         .ok_or_else(|| "state_data swings must be an array".to_owned())?;
-    let cbar_count = object["cbarCount"].as_u64()
+    let cbar_count = object["cbarCount"]
+        .as_u64()
         .ok_or_else(|| "state_data cbarCount must be a non-negative JSON integer".to_owned())?;
-    let swing_count = object["swingCount"].as_u64()
+    let swing_count = object["swingCount"]
+        .as_u64()
         .ok_or_else(|| "state_data swingCount must be a non-negative JSON integer".to_owned())?;
-    let trends = object["trends"].as_array()
+    let trends = object["trends"]
+        .as_array()
         .ok_or_else(|| "state_data trends must be an array".to_owned())?;
-    let trend_count = object["trendCount"].as_u64()
+    let trend_count = object["trendCount"]
+        .as_u64()
         .ok_or_else(|| "state_data trendCount must be a non-negative JSON integer".to_owned())?;
     if cbar_count != cbars.len() as u64 {
         return Err("state_data cbarCount does not match cbars length".to_owned());
@@ -423,14 +437,39 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     }
     validate_object_fields(
         cbars,
-        &["cbarId", "createdAt", "fractalType", "high", "low", "sbarEndId", "sbarStartId", "spanSbars"],
+        &[
+            "cbarId",
+            "createdAt",
+            "fractalType",
+            "high",
+            "low",
+            "sbarEndId",
+            "sbarStartId",
+            "spanSbars",
+        ],
         &["fractalType"],
         &["spanSbars"],
         "CBar",
     )?;
     validate_object_fields(
         swings,
-        &["cbarEndId", "cbarStartId", "createdAt", "direction", "endOi", "high", "low", "sbarEndId", "sbarStartId", "spanSbars", "startOi", "state", "swingId", "updatedAt", "volume"],
+        &[
+            "cbarEndId",
+            "cbarStartId",
+            "createdAt",
+            "direction",
+            "endOi",
+            "high",
+            "low",
+            "sbarEndId",
+            "sbarStartId",
+            "spanSbars",
+            "startOi",
+            "state",
+            "swingId",
+            "updatedAt",
+            "volume",
+        ],
         &["endOi", "startOi"],
         &["spanSbars"],
         "Swing",
@@ -446,13 +485,35 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     )?;
     validate_object_fields(
         trends,
-        &["createdAt", "direction", "endOi", "high", "low", "sbarEndId", "sbarStartId", "spanSbars", "startOi", "state", "swingEndId", "swingStartId", "trendId", "updatedAt", "volume"],
+        &[
+            "createdAt",
+            "direction",
+            "endOi",
+            "high",
+            "low",
+            "sbarEndId",
+            "sbarStartId",
+            "spanSbars",
+            "startOi",
+            "state",
+            "swingEndId",
+            "swingStartId",
+            "trendId",
+            "updatedAt",
+            "volume",
+        ],
         &["endOi", "startOi"],
         &["spanSbars"],
         "Trend",
     )?;
     validate_enum_field(trends, "direction", &["Up", "Down"], false, "Trend")?;
-    validate_enum_field(trends, "state", &["Extending", "Tentative", "Confirmed"], false, "Trend")?;
+    validate_enum_field(
+        trends,
+        "state",
+        &["Extending", "Tentative", "Confirmed"],
+        false,
+        "Trend",
+    )?;
     validate_unsigned_string_fields(
         cbars,
         &["cbarId", "createdAt", "sbarEndId", "sbarStartId"],
@@ -461,13 +522,29 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     validate_unsigned_number_fields(cbars, &["spanSbars"], "CBar")?;
     validate_unsigned_string_fields(
         swings,
-        &["cbarEndId", "cbarStartId", "createdAt", "sbarEndId", "sbarStartId", "swingId", "updatedAt"],
+        &[
+            "cbarEndId",
+            "cbarStartId",
+            "createdAt",
+            "sbarEndId",
+            "sbarStartId",
+            "swingId",
+            "updatedAt",
+        ],
         "Swing",
     )?;
     validate_unsigned_number_fields(swings, &["spanSbars"], "Swing")?;
     validate_unsigned_string_fields(
         trends,
-        &["createdAt", "sbarEndId", "sbarStartId", "swingEndId", "swingStartId", "trendId", "updatedAt"],
+        &[
+            "createdAt",
+            "sbarEndId",
+            "sbarStartId",
+            "swingEndId",
+            "swingStartId",
+            "trendId",
+            "updatedAt",
+        ],
         "Trend",
     )?;
     validate_unsigned_number_fields(trends, &["spanSbars"], "Trend")?;
@@ -499,7 +576,12 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         )?;
         validate_unsigned_string_fields(
             features,
-            &["sbarEndId", "sbarStartId", "sourceEndSwingId", "sourceStartSwingId"],
+            &[
+                "sbarEndId",
+                "sbarStartId",
+                "sourceEndSwingId",
+                "sourceStartSwingId",
+            ],
             "FeatureElement",
         )?;
         let mut previous_end = None;
@@ -508,16 +590,12 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
                 .as_str()
                 .expect("FeatureElement fields were validated")
                 .parse::<u128>()
-                .map_err(|_| {
-                    format!("FeatureElement[{index}].sourceStartSwingId is invalid")
-                })?;
+                .map_err(|_| format!("FeatureElement[{index}].sourceStartSwingId is invalid"))?;
             let end = feature["sourceEndSwingId"]
                 .as_str()
                 .expect("FeatureElement fields were validated")
                 .parse::<u128>()
-                .map_err(|_| {
-                    format!("FeatureElement[{index}].sourceEndSwingId is invalid")
-                })?;
+                .map_err(|_| format!("FeatureElement[{index}].sourceEndSwingId is invalid"))?;
             if start > end || previous_end.is_some_and(|previous| start <= previous) {
                 return Err(
                     "state_data featureSequence must be ordered by non-overlapping source Swing intervals"
@@ -539,9 +617,9 @@ fn validate_enum_field(
     kind: &str,
 ) -> Result<(), String> {
     for (index, object) in objects.iter().enumerate() {
-        let value = object.get(field).ok_or_else(|| {
-            format!("{kind} at index {index} is missing enum field {field}")
-        })?;
+        let value = object
+            .get(field)
+            .ok_or_else(|| format!("{kind} at index {index} is missing enum field {field}"))?;
         if nullable && value.is_null() {
             continue;
         }
@@ -552,7 +630,9 @@ fn validate_enum_field(
             )
         })?;
         if !allowed.contains(&label) {
-            return Err(format!("{kind}[{index}].{field} has unsupported value {label}"));
+            return Err(format!(
+                "{kind}[{index}].{field} has unsupported value {label}"
+            ));
         }
     }
     Ok(())
@@ -565,8 +645,12 @@ fn validate_unsigned_string_fields(
 ) -> Result<(), String> {
     for (index, object) in objects.iter().enumerate() {
         for field in fields {
-            let value = object.get(*field).and_then(serde_json::Value::as_str)
-                .ok_or_else(|| format!("{kind} at index {index} is missing string field {field}"))?;
+            let value = object
+                .get(*field)
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| {
+                    format!("{kind} at index {index} is missing string field {field}")
+                })?;
             parse_canonical_u128(value, &format!("{kind}[{index}].{field}"))?;
         }
     }
@@ -580,8 +664,12 @@ fn validate_unsigned_number_fields(
 ) -> Result<(), String> {
     for (index, object) in objects.iter().enumerate() {
         for field in fields {
-            let value = object.get(*field).and_then(serde_json::Value::as_u64)
-                .ok_or_else(|| format!("{kind} at index {index} is missing non-negative integer field {field}"))?;
+            let value = object
+                .get(*field)
+                .and_then(serde_json::Value::as_u64)
+                .ok_or_else(|| {
+                    format!("{kind} at index {index} is missing non-negative integer field {field}")
+                })?;
             u32::try_from(value)
                 .map_err(|_| format!("{kind}[{index}].{field} exceeds u32 range"))?;
         }
@@ -597,12 +685,17 @@ fn validate_object_fields(
     kind: &str,
 ) -> Result<(), String> {
     for (index, object) in objects.iter().enumerate() {
-        let fields = object.as_object()
+        let fields = object
+            .as_object()
             .ok_or_else(|| format!("{kind} at index {index} must be a JSON object"))?;
         if fields.len() != expected_fields.len()
-            || expected_fields.iter().any(|field| !fields.contains_key(*field))
+            || expected_fields
+                .iter()
+                .any(|field| !fields.contains_key(*field))
         {
-            return Err(format!("{kind} at index {index} has missing or unexpected fields"));
+            return Err(format!(
+                "{kind} at index {index} has missing or unexpected fields"
+            ));
         }
         for field in expected_fields {
             let value = &fields[*field];
@@ -628,7 +721,9 @@ fn validate_unique_domain_ids(
 ) -> Result<(), String> {
     let mut seen = std::collections::BTreeSet::new();
     for (index, object) in objects.iter().enumerate() {
-        let id = object.get(id_field).and_then(serde_json::Value::as_str)
+        let id = object
+            .get(id_field)
+            .and_then(serde_json::Value::as_str)
             .ok_or_else(|| format!("{kind} at index {index} is missing string field {id_field}"))?;
         if !seen.insert(id) {
             return Err(format!("{kind} contains duplicate domain ID {id}"));
@@ -645,17 +740,23 @@ fn validate_sorted_domain_objects(
 ) -> Result<(), String> {
     let mut previous: Option<(u128, u128)> = None;
     for object in objects {
-        let anchor = object.get(anchor_field).and_then(serde_json::Value::as_str)
+        let anchor = object
+            .get(anchor_field)
+            .and_then(serde_json::Value::as_str)
             .ok_or_else(|| format!("{kind} is missing string field {anchor_field}"))?
             .parse::<u128>()
             .map_err(|_| format!("{kind} has invalid numeric {anchor_field}"))?;
-        let id = object.get(id_field).and_then(serde_json::Value::as_str)
+        let id = object
+            .get(id_field)
+            .and_then(serde_json::Value::as_str)
             .ok_or_else(|| format!("{kind} is missing string field {id_field}"))?
             .parse::<u128>()
             .map_err(|_| format!("{kind} has invalid numeric {id_field}"))?;
         let key = (anchor, id);
         if previous.is_some_and(|value| key < value) {
-            return Err(format!("state_data {kind} array is not sorted by {anchor_field} and {id_field}"));
+            return Err(format!(
+                "state_data {kind} array is not sorted by {anchor_field} and {id_field}"
+            ));
         }
         previous = Some(key);
     }
@@ -670,18 +771,16 @@ fn sort_domain_objects(
 ) -> Result<(), String> {
     let mut keys = Vec::with_capacity(objects.len());
     for object in objects.iter() {
-        let anchor = object.get(anchor_field).and_then(serde_json::Value::as_str)
+        let anchor = object
+            .get(anchor_field)
+            .and_then(serde_json::Value::as_str)
             .ok_or_else(|| format!("{kind} is missing string field {anchor_field}"))?;
-        let id = object.get(id_field).and_then(serde_json::Value::as_str)
+        let id = object
+            .get(id_field)
+            .and_then(serde_json::Value::as_str)
             .ok_or_else(|| format!("{kind} is missing string field {id_field}"))?;
-        let anchor = parse_canonical_u128(
-            anchor,
-            &format!("{kind}.{anchor_field}"),
-        )?;
-        let id = parse_canonical_u128(
-            id,
-            &format!("{kind}.{id_field}"),
-        )?;
+        let anchor = parse_canonical_u128(anchor, &format!("{kind}.{anchor_field}"))?;
+        let id = parse_canonical_u128(id, &format!("{kind}.{id_field}"))?;
         keys.push((anchor, id));
     }
     let mut keyed_objects = keys
@@ -708,10 +807,19 @@ pub(crate) fn validate_snapshot_records(
         ("bar_type", manifest.bar_type.as_str()),
         ("input_start_sbar_id", manifest.input_start_sbar_id.as_str()),
         ("input_end_sbar_id", manifest.input_end_sbar_id.as_str()),
-        ("input_start_ts_event", manifest.input_start_ts_event.as_str()),
+        (
+            "input_start_ts_event",
+            manifest.input_start_ts_event.as_str(),
+        ),
         ("input_end_ts_event", manifest.input_end_ts_event.as_str()),
-        ("snapshot_generated_at", manifest.snapshot_generated_at.as_str()),
-        ("sbar_sequence_fingerprint", manifest.sbar_sequence_fingerprint.as_str()),
+        (
+            "snapshot_generated_at",
+            manifest.snapshot_generated_at.as_str(),
+        ),
+        (
+            "sbar_sequence_fingerprint",
+            manifest.sbar_sequence_fingerprint.as_str(),
+        ),
         ("config_fingerprint", manifest.config_fingerprint.as_str()),
         ("effective_config", manifest.effective_config.as_str()),
     ];
@@ -730,14 +838,23 @@ pub(crate) fn validate_snapshot_records(
 
     if manifest.snapshot_generated_at.parse::<u128>().is_err()
         || manifest.snapshot_generated_at.starts_with('+')
-        || (manifest.snapshot_generated_at.len() > 1 && manifest.snapshot_generated_at.starts_with('0'))
+        || (manifest.snapshot_generated_at.len() > 1
+            && manifest.snapshot_generated_at.starts_with('0'))
     {
-        return Err("snapshot_generated_at must be a canonical unsigned nanosecond timestamp".to_owned());
+        return Err(
+            "snapshot_generated_at must be a canonical unsigned nanosecond timestamp".to_owned(),
+        );
     }
     if manifest.sbar_sequence_fingerprint.len() != 64
-        || !manifest.sbar_sequence_fingerprint.bytes().all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        || !manifest
+            .sbar_sequence_fingerprint
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
     {
-        return Err("sbar_sequence_fingerprint must be a 64-character lowercase SHA-256 hex digest".to_owned());
+        return Err(
+            "sbar_sequence_fingerprint must be a 64-character lowercase SHA-256 hex digest"
+                .to_owned(),
+        );
     }
 
     let config: crate::effective_config::EffectiveStruxisConfig =
@@ -748,7 +865,8 @@ pub(crate) fn validate_snapshot_records(
     if canonical_config != manifest.effective_config {
         return Err("effective_config is not canonical JSON".to_owned());
     }
-    let actual_fingerprint = crate::effective_config::fingerprint_canonical_config(&canonical_config)?;
+    let actual_fingerprint =
+        crate::effective_config::fingerprint_canonical_config(&canonical_config)?;
     if actual_fingerprint != manifest.config_fingerprint {
         return Err("config_fingerprint does not match effective_config".to_owned());
     }
@@ -758,7 +876,9 @@ pub(crate) fn validate_snapshot_records(
     {
         return Err(format!(
             "Checkpoint count mismatch: input={}, manifest={}, actual={}",
-            manifest.input_bar_count, manifest.checkpoint_count, checkpoints.len()
+            manifest.input_bar_count,
+            manifest.checkpoint_count,
+            checkpoints.len()
         ));
     }
     if checkpoints.is_empty() {
@@ -789,7 +909,10 @@ pub(crate) fn validate_snapshot_records(
         previous_ts = Some(ts_event);
 
         if checkpoint.record_kind != "Full" && checkpoint.record_kind != "Delta" {
-            return Err(format!("Unsupported record_kind {}", checkpoint.record_kind));
+            return Err(format!(
+                "Unsupported record_kind {}",
+                checkpoint.record_kind
+            ));
         }
         if checkpoint.record_kind != "Full" {
             return Err(format!(
@@ -803,14 +926,22 @@ pub(crate) fn validate_snapshot_records(
         validate_canonical_structure_state(&state)?;
 
         if canonical_json_string(&state)? != checkpoint.state_data {
-            return Err(format!("Checkpoint {} state_data is not canonical JSON", checkpoint.checkpoint_index));
+            return Err(format!(
+                "Checkpoint {} state_data is not canonical JSON",
+                checkpoint.checkpoint_index
+            ));
         }
 
         crate::diagnostics::validate_checkpoint_diagnostics_json(
             &checkpoint.diagnostics,
             checkpoint.checkpoint_index,
         )
-        .map_err(|error| format!("Checkpoint {} diagnostics: {error}", checkpoint.checkpoint_index))?;
+        .map_err(|error| {
+            format!(
+                "Checkpoint {} diagnostics: {error}",
+                checkpoint.checkpoint_index
+            )
+        })?;
     }
 
     let first = checkpoints.first().expect("nonempty checked above");
@@ -823,7 +954,10 @@ pub(crate) fn validate_snapshot_records(
         return Err("Manifest input bounds do not match checkpoint bounds".to_owned());
     }
     if require_complete && manifest.status != STATUS_COMPLETE {
-        return Err(format!("Snapshot is not Complete (status={})", manifest.status));
+        return Err(format!(
+            "Snapshot is not Complete (status={})",
+            manifest.status
+        ));
     }
     Ok(())
 }
@@ -876,12 +1010,8 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
     use std::collections::BTreeSet;
     let checkpoint: crate::checkpoint::KeyZoneCheckpoint = serde_json::from_value(value.clone())
         .map_err(|error| format!("Invalid KeyZone checkpoint: {error}"))?;
-    if checkpoint.instrument_id.is_empty()
-        || checkpoint.config_x < 0.0
-        || !checkpoint.config_x.is_finite()
-        || validate_keyzone_integer(&checkpoint.config_n, "KeyZone configN")? == 0
-    {
-        return Err("Invalid KeyZone Registry configuration".into());
+    if checkpoint.instrument_id.is_empty() {
+        return Err("Invalid KeyZone Instrument".into());
     }
     let mut zone_ids = BTreeSet::new();
     for zone in &checkpoint.zones {
@@ -936,6 +1066,78 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
             }
         }
     }
+    let mut tasks = std::collections::BTreeMap::new();
+    let mut request_ids = BTreeSet::new();
+    for task in &checkpoint.observations {
+        let id = validate_keyzone_integer(&task.observation_id, "observationId")?;
+        let zid = validate_keyzone_integer(&task.keyzone_id, "Observation keyzoneId")?;
+        let start = validate_keyzone_integer(&task.start_at, "Observation startAt")?;
+        let deadline = validate_keyzone_integer(&task.deadline, "Observation deadline")?;
+        validate_keyzone_integer(&task.created_at, "Observation createdAt")?;
+        if tasks.insert(id, task).is_some()
+            || !zone_ids.contains(&zid)
+            || !request_ids.insert((&task.consumer_id, &task.request_id))
+            || task.consumer_id.is_empty()
+            || task.request_id.is_empty()
+            || task.observer.instrument_id != checkpoint.instrument_id
+            || task.observer.timeframe.is_empty()
+            || start >= deadline
+            || !task.config_x.is_finite()
+            || task.config_x < 0.0
+            || validate_keyzone_integer(&task.config_n, "Observation configN")? == 0
+        {
+            return Err("Invalid Observation identity, observer, window or configuration".into());
+        }
+        if !["AfterCurrentCursor", "FromTime"].contains(&task.start_mode.as_str())
+            || task.start_exclusive != (task.start_mode == "AfterCurrentCursor")
+            || !["AfterOneInteraction", "UntilDeadline"].contains(&task.completion.as_str())
+        {
+            return Err("Invalid Observation start or completion policy".into());
+        }
+        if let Some(t) = &task.last_processed_at {
+            let t = validate_keyzone_integer(t, "Observation lastProcessedAt")?;
+            if t < start || (task.start_exclusive && t == start) || t >= deadline {
+                return Err("Observation progress outside window".into());
+            }
+        }
+        let reason = task.reason.as_deref();
+        let valid = match task.state.as_str() {
+            "Observing" => reason.is_none(),
+            "Completed" => matches!(reason, Some("InteractionCompleted" | "Deadline")),
+            "Cancelled" => reason == Some("Cancelled"),
+            "SourceInvalidated" => reason == Some("SourceInvalidated"),
+            _ => false,
+        };
+        let terminal = task.state != "Observing";
+        if !valid
+            || task.terminal_at.is_some() != terminal
+            || task.terminal_detected_at.is_some() != terminal
+        {
+            return Err("Observation state does not match termination facts".into());
+        }
+        if let Some(t) = &task.terminal_at {
+            let time = validate_keyzone_integer(t, "Observation terminalAt")?;
+            if reason == Some("Deadline") && time != deadline {
+                return Err("Observation deadline reason disagrees with terminal position".into());
+            }
+        }
+        if let Some(t) = &task.terminal_detected_at {
+            validate_keyzone_integer(t, "Observation terminalDetectedAt")?;
+        }
+        let zone = checkpoint
+            .zones
+            .iter()
+            .find(|z| z.keyzone_id == task.keyzone_id)
+            .ok_or_else(|| "Missing Observation KeyZone".to_owned())?;
+        if (task.state == "Observing" && zone.state == "Invalidated")
+            || (task.state == "SourceInvalidated" && zone.state != "Invalidated")
+        {
+            return Err("Observation disagrees with source validity".into());
+        }
+    }
+    let mut active_tasks = BTreeSet::new();
+    let mut task_interactions =
+        std::collections::BTreeMap::<u64, Vec<&crate::checkpoint::KeyZoneInteraction>>::new();
     let mut ids = BTreeSet::new();
     for interaction in &checkpoint.interactions {
         let id = validate_keyzone_integer(&interaction.interaction_id, "interactionId")?;
@@ -943,15 +1145,82 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
         if !ids.insert(id) || !zone_ids.contains(&zone_id) {
             return Err("Invalid Interaction identity or KeyZone reference".into());
         }
-        if !["Active", "Ended", "Invalidated"].contains(&interaction.state.as_str())
+        if !["Active", "Ended", "Invalidated", "Interrupted"].contains(&interaction.state.as_str())
             || interaction.observer_timeframe.is_empty()
-            || interaction.observer_bar_type.is_empty()
             || !interaction.config_x.is_finite()
             || interaction.config_x < 0.0
             || validate_keyzone_integer(&interaction.config_n, "Interaction configN")? == 0
         {
             return Err("Invalid Interaction configuration or state".into());
         }
+        let task_id =
+            validate_keyzone_integer(&interaction.observation_id, "Interaction observationId")?;
+        let task = tasks
+            .get(&task_id)
+            .ok_or_else(|| "Unknown Interaction Observation".to_owned())?;
+        if interaction.keyzone_id != task.keyzone_id
+            || interaction.observer != task.observer
+            || interaction.observer_timeframe != task.observer.timeframe
+            || interaction.config_n != task.config_n
+            || interaction.config_x != task.config_x
+        {
+            return Err("Interaction disagrees with Observation".into());
+        }
+        if interaction.state == "Active"
+            && (task.state != "Observing" || !active_tasks.insert(task_id))
+        {
+            return Err("Invalid active Interaction ownership".into());
+        }
+        let interrupted = interaction.state == "Interrupted";
+        if interaction.interrupted_at.is_some() != interrupted
+            || interaction.interrupted_detected_at.is_some() != interrupted
+            || interaction.interruption_reason.is_some() != interrupted
+            || (interrupted
+                && (!matches!(
+                    interaction.interruption_reason.as_deref(),
+                    Some("Cancelled" | "Deadline")
+                ) || interaction.interruption_reason != task.reason))
+        {
+            return Err("Invalid Interaction interruption facts".into());
+        }
+        if interaction.state == "Invalidated"
+            && (task.state != "SourceInvalidated" || interaction.invalidated_at != task.terminal_at)
+        {
+            return Err("Invalidated Interaction disagrees with task termination".into());
+        }
+        if interaction.state == "Interrupted" && interaction.interrupted_at != task.terminal_at {
+            return Err("Interrupted Interaction disagrees with task termination".into());
+        }
+        if interaction.last_processed_at.is_none() {
+            return Err("Observed Interaction missing actual progress".into());
+        }
+        if interaction.state == "Ended" && interaction.ended_at != interaction.last_processed_at {
+            return Err("Ended Interaction disagrees with actual progress".into());
+        }
+        let start = validate_keyzone_integer(&interaction.started_at, "Interaction startedAt")?;
+        let task_start = validate_keyzone_integer(&task.start_at, "Observation startAt")?;
+        let deadline = validate_keyzone_integer(&task.deadline, "Observation deadline")?;
+        if start < task_start || (task.start_exclusive && start == task_start) || start >= deadline
+        {
+            return Err("Interaction starts outside Observation window".into());
+        }
+        if let Some(t) = &interaction.last_processed_at {
+            let end = validate_keyzone_integer(t, "Interaction lastProcessedAt")?;
+            if end < start || end >= deadline {
+                return Err("Interaction progress outside window".into());
+            }
+        }
+        if let Some(t) = &interaction.interrupted_at {
+            validate_keyzone_integer(t, "Interaction interruptedAt")?;
+        }
+        if let Some(t) = &interaction.interrupted_detected_at {
+            validate_keyzone_integer(t, "Interaction interruptedDetectedAt")?;
+        }
+        task_interactions
+            .entry(task_id)
+            .or_default()
+            .push(interaction);
+
         if interaction.ended_at.is_some() != interaction.ended_detected_at.is_some()
             || interaction.invalidated_at.is_some() != interaction.invalidated_detected_at.is_some()
             || (interaction.state == "Ended") != interaction.ended_at.is_some()
@@ -977,6 +1246,55 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
             }
         }
     }
+    for (id, episodes) in &task_interactions {
+        let mut keyed = episodes
+            .iter()
+            .map(|i| {
+                Ok((
+                    validate_keyzone_integer(&i.started_at, "Interaction startedAt")?,
+                    *i,
+                ))
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+        keyed.sort_by_key(|(time, _)| *time);
+        let episodes = keyed
+            .into_iter()
+            .map(|(_, episode)| episode)
+            .collect::<Vec<_>>();
+        for pair in episodes.windows(2) {
+            let previous = pair[0]
+                .last_processed_at
+                .as_deref()
+                .ok_or_else(|| "Interaction missing progress".to_owned())?;
+            if validate_keyzone_integer(previous, "Interaction lastProcessedAt")?
+                >= validate_keyzone_integer(&pair[1].started_at, "Interaction startedAt")?
+            {
+                return Err("Observation episodes overlap".into());
+            }
+        }
+        let task = tasks
+            .get(id)
+            .ok_or_else(|| "Unknown Observation".to_owned())?;
+        if task.completion == "AfterOneInteraction" && episodes.len() > 1 {
+            return Err("One-interaction Observation contains multiple episodes".into());
+        }
+        if task.reason.as_deref() == Some("InteractionCompleted")
+            && (episodes.len() != 1
+                || episodes[0].state != "Ended"
+                || task.terminal_at != episodes[0].ended_at)
+        {
+            return Err("Observation completion disagrees with episode".into());
+        }
+    }
+
+    for (id, task) in &tasks {
+        if task.reason.as_deref() == Some("InteractionCompleted")
+            && !task_interactions.contains_key(id)
+        {
+            return Err("Completed Observation has no Interaction".into());
+        }
+    }
+
     Ok(())
 }
 
@@ -1020,7 +1338,10 @@ mod tests {
             snapshot_generated_at: "1780000000000000000".into(),
             input_bar_count: records.len(),
             sbar_sequence_fingerprint: "a".repeat(64),
-            config_fingerprint: crate::effective_config::fingerprint_canonical_config(&effective_config).unwrap(),
+            config_fingerprint: crate::effective_config::fingerprint_canonical_config(
+                &effective_config,
+            )
+            .unwrap(),
             effective_config,
             status: STATUS_COMPLETE.into(),
             checkpoint_count: records.len(),
@@ -1034,14 +1355,24 @@ mod tests {
             cbar_count: 2,
             cbars: vec![
                 crate::checkpoint::CBarCheckpoint {
-                    cbar_id: "10".into(), high: "2".into(), low: "1".into(),
-                    sbar_start_id: "20".into(), sbar_end_id: "30".into(),
-                    span_sbars: 2, fractal_type: None, created_at: "1".into(),
+                    cbar_id: "10".into(),
+                    high: "2".into(),
+                    low: "1".into(),
+                    sbar_start_id: "20".into(),
+                    sbar_end_id: "30".into(),
+                    span_sbars: 2,
+                    fractal_type: None,
+                    created_at: "1".into(),
                 },
                 crate::checkpoint::CBarCheckpoint {
-                    cbar_id: "2".into(), high: "2".into(), low: "1".into(),
-                    sbar_start_id: "3".into(), sbar_end_id: "4".into(),
-                    span_sbars: 2, fractal_type: None, created_at: "1".into(),
+                    cbar_id: "2".into(),
+                    high: "2".into(),
+                    low: "1".into(),
+                    sbar_start_id: "3".into(),
+                    sbar_end_id: "4".into(),
+                    span_sbars: 2,
+                    fractal_type: None,
+                    created_at: "1".into(),
                 },
             ],
             swing_count: 0,
@@ -1070,24 +1401,31 @@ mod tests {
     fn snapshot_state_requires_numeric_counts_and_span_and_closed_fractal_values() {
         let string_count: serde_json::Value = serde_json::from_str(
             r#"{"cbarCount":"0","cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
-        ).unwrap();
-        assert!(validate_canonical_structure_state(&string_count)
-            .unwrap_err()
-            .contains("cbarCount must be a non-negative JSON integer"));
+        )
+        .unwrap();
+        assert!(
+            validate_canonical_structure_state(&string_count)
+                .unwrap_err()
+                .contains("cbarCount must be a non-negative JSON integer")
+        );
 
         let string_span: serde_json::Value = serde_json::from_str(
             r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":"1"}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
-        assert!(validate_canonical_structure_state(&string_span)
-            .unwrap_err()
-            .contains("invalid JSON type"));
+        assert!(
+            validate_canonical_structure_state(&string_span)
+                .unwrap_err()
+                .contains("invalid JSON type")
+        );
 
         let invalid_fractal: serde_json::Value = serde_json::from_str(
             r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":"Sideways","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
-        assert!(validate_canonical_structure_state(&invalid_fractal)
-            .unwrap_err()
-            .contains("unsupported value Sideways"));
+        assert!(
+            validate_canonical_structure_state(&invalid_fractal)
+                .unwrap_err()
+                .contains("unsupported value Sideways")
+        );
     }
 
     #[test]
@@ -1095,9 +1433,11 @@ mod tests {
         let duplicate_ids: serde_json::Value = serde_json::from_str(
             r#"{"cbarCount":2,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1},{"cbarId":"1","createdAt":"1","fractalType":null,"high":"3","low":"2","sbarEndId":"4","sbarStartId":"3","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         ).unwrap();
-        assert!(validate_canonical_structure_state(&duplicate_ids)
-            .unwrap_err()
-            .contains("duplicate domain ID 1"));
+        assert!(
+            validate_canonical_structure_state(&duplicate_ids)
+                .unwrap_err()
+                .contains("duplicate domain ID 1")
+        );
     }
 
     #[test]
@@ -1120,9 +1460,11 @@ mod tests {
             trends: vec![],
             feature_sequence: None,
         };
-        assert!(canonical_structure_state(Some(&structure))
-            .unwrap_err()
-            .contains("canonical unsigned decimal encoding"));
+        assert!(
+            canonical_structure_state(Some(&structure))
+                .unwrap_err()
+                .contains("canonical unsigned decimal encoding")
+        );
     }
 
     #[test]
@@ -1135,19 +1477,24 @@ mod tests {
 
     #[test]
     fn snapshot_state_requires_trend_fields_and_rejects_legacy_schema() {
-        let legacy: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#,
-        ).unwrap();
-        assert!(validate_canonical_structure_state(&legacy)
-            .unwrap_err()
-            .contains("trendCount, and trends"));
+        let legacy: serde_json::Value =
+            serde_json::from_str(r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[]}"#)
+                .unwrap();
+        assert!(
+            validate_canonical_structure_state(&legacy)
+                .unwrap_err()
+                .contains("trendCount, and trends")
+        );
 
         let inconsistent: serde_json::Value = serde_json::from_str(
             r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[]}"#,
-        ).unwrap();
-        assert!(validate_canonical_structure_state(&inconsistent)
-            .unwrap_err()
-            .contains("trendCount does not match trends length"));
+        )
+        .unwrap();
+        assert!(
+            validate_canonical_structure_state(&inconsistent)
+                .unwrap_err()
+                .contains("trendCount does not match trends length")
+        );
     }
 
     #[test]
@@ -1160,16 +1507,19 @@ mod tests {
         let invalid_direction: serde_json::Value = serde_json::from_str(
             r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[{"createdAt":"1","direction":"Sideways","endOi":null,"high":"12.5","low":"10.5","sbarEndId":"8","sbarStartId":"2","spanSbars":7,"startOi":null,"state":"Tentative","swingEndId":"7","swingStartId":"3","trendId":"4","updatedAt":"9","volume":"123.25"}]}"#,
         ).unwrap();
-        assert!(validate_canonical_structure_state(&invalid_direction)
-            .unwrap_err()
-            .contains("unsupported value Sideways"));
+        assert!(
+            validate_canonical_structure_state(&invalid_direction)
+                .unwrap_err()
+                .contains("unsupported value Sideways")
+        );
     }
 
     #[test]
     fn canonical_json_preserves_integer_types_and_sorts_object_keys() {
         let value: serde_json::Value = serde_json::from_str(
             r#"{"z":1,"a":{"y":2,"b":3},"items":[{"z":1,"a":2},{"b":1,"a":2}]}"#,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             canonical_json_string(&value).unwrap(),
             r#"{"a":{"b":3,"y":2},"items":[{"a":2,"z":1},{"a":2,"b":1}],"z":1}"#
@@ -1244,7 +1594,9 @@ mod tests {
             "c128c174ec3ea38247aed9f874d0f50c9a9fdcf244163ba5e2f78d2b700165e2"
         );
         assert_eq!(
-            manifest.calculate_content_checksum_from_canonical_records(&records).unwrap(),
+            manifest
+                .calculate_content_checksum_from_canonical_records(&records)
+                .unwrap(),
             "c128c174ec3ea38247aed9f874d0f50c9a9fdcf244163ba5e2f78d2b700165e2"
         );
     }
@@ -1256,7 +1608,9 @@ mod tests {
         let manifest = manifest(&records);
 
         assert_eq!(
-            manifest.calculate_content_checksum_from_canonical_records(&records).unwrap(),
+            manifest
+                .calculate_content_checksum_from_canonical_records(&records)
+                .unwrap(),
             manifest.calculate_content_checksum(&records).unwrap(),
         );
     }
@@ -1267,9 +1621,15 @@ mod tests {
         let mut manifest = manifest(&records);
         let checksum = manifest.calculate_content_checksum(&records).unwrap();
         manifest.content_checksum = checksum.clone();
-        assert_eq!(manifest.calculate_content_checksum(&records).unwrap(), checksum);
+        assert_eq!(
+            manifest.calculate_content_checksum(&records).unwrap(),
+            checksum
+        );
         manifest.status = STATUS_FAILED.into();
-        assert_ne!(manifest.calculate_content_checksum(&records).unwrap(), checksum);
+        assert_ne!(
+            manifest.calculate_content_checksum(&records).unwrap(),
+            checksum
+        );
     }
 
     #[test]
@@ -1284,13 +1644,19 @@ mod tests {
         let records = records();
         let mut missing_time = manifest(&records);
         missing_time.snapshot_generated_at.clear();
-        assert!(validate_snapshot_records(&missing_time, &records, false)
-            .unwrap_err().contains("snapshot_generated_at is required"));
+        assert!(
+            validate_snapshot_records(&missing_time, &records, false)
+                .unwrap_err()
+                .contains("snapshot_generated_at is required")
+        );
 
         let mut unknown_status = manifest(&records);
         unknown_status.status = "Recovered".into();
-        assert!(validate_snapshot_records(&unknown_status, &records, false)
-            .unwrap_err().contains("Unsupported Snapshot status"));
+        assert!(
+            validate_snapshot_records(&unknown_status, &records, false)
+                .unwrap_err()
+                .contains("Unsupported Snapshot status")
+        );
     }
 
     #[test]
@@ -1298,13 +1664,19 @@ mod tests {
         let records = records();
         let mut invalid_timestamp = manifest(&records);
         invalid_timestamp.snapshot_generated_at = "01780000000000000000".into();
-        assert!(validate_snapshot_records(&invalid_timestamp, &records, false)
-            .unwrap_err().contains("canonical unsigned nanosecond timestamp"));
+        assert!(
+            validate_snapshot_records(&invalid_timestamp, &records, false)
+                .unwrap_err()
+                .contains("canonical unsigned nanosecond timestamp")
+        );
 
         let mut invalid_fingerprint = manifest(&records);
         invalid_fingerprint.sbar_sequence_fingerprint = "g".repeat(64);
-        assert!(validate_snapshot_records(&invalid_fingerprint, &records, false)
-            .unwrap_err().contains("lowercase SHA-256 hex digest"));
+        assert!(
+            validate_snapshot_records(&invalid_fingerprint, &records, false)
+                .unwrap_err()
+                .contains("lowercase SHA-256 hex digest")
+        );
     }
 
     #[test]
@@ -1313,14 +1685,20 @@ mod tests {
         timestamp_records[1].ts_event = "0200".into();
         timestamp_records[1].sbar_id = "0200".into();
         let timestamp_manifest = manifest(&timestamp_records);
-        assert!(validate_snapshot_records(&timestamp_manifest, &timestamp_records, false)
-            .unwrap_err().contains("canonical unsigned decimal encoding"));
+        assert!(
+            validate_snapshot_records(&timestamp_manifest, &timestamp_records, false)
+                .unwrap_err()
+                .contains("canonical unsigned decimal encoding")
+        );
 
         let mut state_records = records();
         state_records[0].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"01","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into();
         let state_manifest = manifest(&state_records);
-        assert!(validate_snapshot_records(&state_manifest, &state_records, false)
-            .unwrap_err().contains("canonical unsigned decimal encoding"));
+        assert!(
+            validate_snapshot_records(&state_manifest, &state_records, false)
+                .unwrap_err()
+                .contains("canonical unsigned decimal encoding")
+        );
     }
 
     #[test]
@@ -1329,9 +1707,11 @@ mod tests {
         records[1].record_kind = "Delta".into();
         records[1].state_data = r#"{"operations":[]}"#.into();
         let manifest = manifest(&records);
-        assert!(validate_snapshot_records(&manifest, &records, true)
-            .unwrap_err()
-            .contains("Delta reconstruction is not implemented"));
+        assert!(
+            validate_snapshot_records(&manifest, &records, true)
+                .unwrap_err()
+                .contains("Delta reconstruction is not implemented")
+        );
     }
 
     #[test]
@@ -1339,7 +1719,11 @@ mod tests {
         let mut records = records();
         records[1].checkpoint_index = 2;
         let manifest = manifest(&records);
-        assert!(validate_snapshot_records(&manifest, &records, true).unwrap_err().contains("continuous"));
+        assert!(
+            validate_snapshot_records(&manifest, &records, true)
+                .unwrap_err()
+                .contains("continuous")
+        );
     }
 
     #[test]
@@ -1347,9 +1731,11 @@ mod tests {
         let mut records = records();
         records[0].diagnostics = r#"[{"source":"struxis","severity":"warning","category":"example","objectType":null,"objectId":null,"sbarIds":[],"checkpointIndex":1,"message":"example"}]"#.into();
         let manifest = manifest(&records);
-        assert!(validate_snapshot_records(&manifest, &records, false)
-            .unwrap_err()
-            .contains("does not match enclosing checkpointIndex"));
+        assert!(
+            validate_snapshot_records(&manifest, &records, false)
+                .unwrap_err()
+                .contains("does not match enclosing checkpointIndex")
+        );
     }
 
     #[test]
@@ -1357,7 +1743,11 @@ mod tests {
         let mut records = records();
         records[1].sbar_id = "201".into();
         let manifest = manifest(&records);
-        assert!(validate_snapshot_records(&manifest, &records, true).unwrap_err().contains("SBarId == ts_event"));
+        assert!(
+            validate_snapshot_records(&manifest, &records, true)
+                .unwrap_err()
+                .contains("SBarId == ts_event")
+        );
     }
 
     #[test]
@@ -1366,19 +1756,28 @@ mod tests {
         let mut manifest = manifest(&records);
         // Keep the config schema valid; only violate canonical JSON encoding.
         manifest.effective_config.push(' ');
-        assert!(validate_snapshot_records(&manifest, &records, true).unwrap_err().contains("canonical JSON"));
+        assert!(
+            validate_snapshot_records(&manifest, &records, true)
+                .unwrap_err()
+                .contains("canonical JSON")
+        );
     }
 
     #[test]
     fn complete_snapshot_verification_detects_tampering() {
         let mut records = records();
         let mut manifest = manifest(&records);
-        manifest.content_checksum =
-            manifest.calculate_content_checksum_from_canonical_records(&records).unwrap();
+        manifest.content_checksum = manifest
+            .calculate_content_checksum_from_canonical_records(&records)
+            .unwrap();
         assert!(verify_complete_snapshot(&manifest, &records).is_ok());
 
         records[1].state_data = r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalType":null,"high":"1","low":"1","sbarEndId":"100","sbarStartId":"100","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into();
-        assert!(verify_complete_snapshot(&manifest, &records).unwrap_err().contains("checksum mismatch"));
+        assert!(
+            verify_complete_snapshot(&manifest, &records)
+                .unwrap_err()
+                .contains("checksum mismatch")
+        );
     }
 
     #[test]
@@ -1446,17 +1845,70 @@ mod tests {
                 "sbarEndId": "800"
             }]
         });
-        assert!(validate_canonical_structure_state(&state)
-            .unwrap_err()
-            .contains("non-overlapping"));
+        assert!(
+            validate_canonical_structure_state(&state)
+                .unwrap_err()
+                .contains("non-overlapping")
+        );
     }
 }
-
 
 #[cfg(test)]
 mod keyzone_snapshot_tests {
     use super::*;
     use crate::checkpoint::keyzone_projection_tests::fixed_projection;
+
+    #[test]
+    fn keyzone_observation_recording_validates_tasks_interruption_and_rejects_old_model() {
+        let value = serde_json::to_value(
+            crate::checkpoint::keyzone_projection_tests::observation_projection(),
+        )
+        .unwrap();
+        assert!(validate_keyzone_checkpoint(&value).is_ok());
+        let mut unknown = value.clone();
+        unknown["interactions"][0]["observationId"] = serde_json::json!("999");
+        assert!(validate_keyzone_checkpoint(&unknown).is_err());
+        let mut invalid = value.clone();
+        invalid["observations"][0]["observer"]["instrumentId"] = serde_json::json!("EUR/USD.SIM");
+        assert!(validate_keyzone_checkpoint(&invalid).is_err());
+        let mut reason = value.clone();
+        reason["interactions"][1]["interruptionReason"] = serde_json::json!("Deadline");
+        assert!(validate_keyzone_checkpoint(&reason).is_err());
+        let mut legacy = serde_json::to_value(fixed_projection()).unwrap();
+        legacy.as_object_mut().unwrap().remove("observations");
+        legacy["configN"] = serde_json::json!("3");
+        legacy["configX"] = serde_json::json!(0.5);
+        assert!(validate_keyzone_checkpoint(&legacy).is_err());
+        legacy["observations"] = serde_json::Value::Null;
+        assert!(validate_keyzone_checkpoint(&legacy).is_err());
+        let mut global_config = value.clone();
+        global_config["configN"] = serde_json::json!("3");
+        assert!(validate_keyzone_checkpoint(&global_config).is_err());
+        let mut missing_observer = value.clone();
+        missing_observer["interactions"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("observer");
+        assert!(validate_keyzone_checkpoint(&missing_observer).is_err());
+        let mut missing = value.clone();
+        missing.as_object_mut().unwrap().remove("observations");
+        assert!(validate_keyzone_checkpoint(&missing).is_err());
+        let mut unowned = value.clone();
+        unowned["interactions"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("observationId");
+        assert!(validate_keyzone_checkpoint(&unowned).is_err());
+        let mut old_binding = value.clone();
+        old_binding["interactions"][0]["observerBarType"] =
+            serde_json::json!("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL");
+        assert!(validate_keyzone_checkpoint(&old_binding).is_err());
+        let mut overlap = value.clone();
+        let mut extra = overlap["interactions"][0].clone();
+        extra["interactionId"] = serde_json::json!("999");
+        overlap["interactions"].as_array_mut().unwrap().push(extra);
+        assert!(validate_keyzone_checkpoint(&overlap).is_err());
+    }
 
     #[test]
     fn keyzone_snapshot_distinguishes_legacy_missing_and_recorded_empty() {

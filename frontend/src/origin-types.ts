@@ -401,8 +401,7 @@ export interface SnapshotCompareResultDto {
 /** Instrument-owned domain facts; prices, IDs and timestamps remain lossless. */
 export interface KeyZoneCheckpointDto {
   instrumentId: string;
-  configN: string;
-  configX: number;
+  observations: KeyZoneObservationDto[];
   zones: KeyZoneDto[];
   interactions: KeyZoneInteractionDto[];
 }
@@ -425,8 +424,12 @@ export interface KeyZoneInteractionDto {
   interactionId: string;
   keyzoneId: string;
   observerTimeframe: string;
-  observerBarType: string;
-  state: "Active" | "Ended" | "Invalidated";
+  observationId: string;
+  observer: ObservationStateKeyDto;
+  interruptedAt?: string;
+  interruptedDetectedAt?: string;
+  interruptionReason?: "Cancelled" | "Deadline";
+  state: "Active" | "Ended" | "Invalidated" | "Interrupted";
   configN: string;
   configX: number;
   outsideCount: string;
@@ -437,4 +440,26 @@ export interface KeyZoneInteractionDto {
   endedDetectedAt: string | null;
   invalidatedAt: string | null;
   invalidatedDetectedAt: string | null;
+}
+
+export interface ObservationStateKeyDto { instrumentId: string; timeframe: string }
+export interface KeyZoneObservationDto {
+  observationId: string;
+  consumerId: string;
+  requestId: string;
+  keyzoneId: string;
+  observer: ObservationStateKeyDto;
+  startMode: "AfterCurrentCursor" | "FromTime";
+  startAt: string;
+  startExclusive: boolean;
+  deadline: string;
+  completion: "AfterOneInteraction" | "UntilDeadline";
+  configN: string;
+  configX: number;
+  createdAt: string;
+  state: "Observing" | "Completed" | "Cancelled" | "SourceInvalidated";
+  reason: "InteractionCompleted" | "Deadline" | "Cancelled" | "SourceInvalidated" | null;
+  lastProcessedAt: string | null;
+  terminalAt: string | null;
+  terminalDetectedAt: string | null;
 }

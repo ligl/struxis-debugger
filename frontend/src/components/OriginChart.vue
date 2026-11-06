@@ -11,6 +11,7 @@ const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
+  keyzoneObserver?: import("../origin-types").ObservationStateKeyDto | null;
   originDatasetId: string;
   selectedObject?: OriginObjectSelection | null;
   selectionStartSbarId?: string | null;
@@ -331,6 +332,7 @@ watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: 
       :bars="bars"
         :structure="structure"
       :keyzones="keyzones"
+        :keyzone-observer="keyzoneObserver"
       :selected-keyzone-id="selectedObject?.kind === 'keyzone' ? selectedObject.id : null"
       :keyzone-selectable="!selectionPending"
       @keyzone-select="emit('objectClick', { kind: 'keyzone', id: $event, originDatasetId })"

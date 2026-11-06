@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use nautilus_model::data::Bar;
 
 use crate::checkpoint::{StructureCheckpoint, structure_from_state_view};
@@ -67,7 +67,6 @@ fn validate_catalog_bars(bars: &[Bar], bar_type: &str) -> Result<()> {
     Ok(())
 }
 
-
 /// The validated, owned market-data projection returned by Origin Load.
 ///
 /// Bars are copied from Struxis' read-only SBarSeries only after the complete
@@ -127,7 +126,8 @@ pub(crate) fn load_origin(
     let instrument_id = parsed_bar_type.instrument_id();
     let instrument_id_filter = instrument_id.to_string();
     let catalog = ParquetDataCatalog::new(catalog_path, None, None, None, None);
-    let instruments = catalog.query_instruments(Some(std::slice::from_ref(&instrument_id_filter)))?;
+    let instruments =
+        catalog.query_instruments(Some(std::slice::from_ref(&instrument_id_filter)))?;
     let instrument = instruments
         .iter()
         .find(|instrument| instrument.id() == instrument_id)
@@ -229,7 +229,6 @@ pub(crate) fn load_origin(
     })
 }
 
-
 /// Validates the complete Origin input against the SBar sequence exposed by Struxis.
 ///
 /// The caller must pass the read-only series from the matching
@@ -258,8 +257,7 @@ pub(crate) fn validate_sbar_series(
         );
     }
 
-    for (loaded_index, (expected, actual)) in
-        origin_bars.iter().zip(actual_bars.iter()).enumerate()
+    for (loaded_index, (expected, actual)) in origin_bars.iter().zip(actual_bars.iter()).enumerate()
     {
         let mut differences = Vec::new();
 
@@ -273,41 +271,49 @@ pub(crate) fn validate_sbar_series(
         if expected.bar_type != actual.bar_type {
             differences.push(format!(
                 "bar_type expected={} actual={}",
-                expected.bar_type,
-                actual.bar_type
+                expected.bar_type, actual.bar_type
             ));
         }
         if expected.ts_event != actual.ts_event {
             differences.push(format!(
                 "ts_event expected={} actual={}",
-                expected.ts_event,
-                actual.ts_event
+                expected.ts_event, actual.ts_event
             ));
         }
         if expected.ts_init != actual.ts_init {
             differences.push(format!(
                 "ts_init expected={} actual={}",
-                expected.ts_init,
-                actual.ts_init
+                expected.ts_init, actual.ts_init
             ));
         }
         if expected.open != actual.open {
-            differences.push(format!("open expected={} actual={}", expected.open, actual.open));
+            differences.push(format!(
+                "open expected={} actual={}",
+                expected.open, actual.open
+            ));
         }
         if expected.high != actual.high {
-            differences.push(format!("high expected={} actual={}", expected.high, actual.high));
+            differences.push(format!(
+                "high expected={} actual={}",
+                expected.high, actual.high
+            ));
         }
         if expected.low != actual.low {
-            differences.push(format!("low expected={} actual={}", expected.low, actual.low));
+            differences.push(format!(
+                "low expected={} actual={}",
+                expected.low, actual.low
+            ));
         }
         if expected.close != actual.close {
-            differences.push(format!("close expected={} actual={}", expected.close, actual.close));
+            differences.push(format!(
+                "close expected={} actual={}",
+                expected.close, actual.close
+            ));
         }
         if expected.volume != actual.volume {
             differences.push(format!(
                 "volume expected={} actual={}",
-                expected.volume,
-                actual.volume
+                expected.volume, actual.volume
             ));
         }
 
@@ -323,7 +329,6 @@ pub(crate) fn validate_sbar_series(
 
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -352,8 +357,8 @@ mod tests {
     }
 
     fn fixture_bar_with_timestamps(ts_event: u64, ts_init: u64, open: &str) -> Bar {
-        let bar_type = BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL")
-            .expect("valid fixture BarType");
+        let bar_type =
+            BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").expect("valid fixture BarType");
         Bar::new(
             bar_type,
             Price::from(open),
@@ -382,7 +387,7 @@ mod tests {
                 .add_bar(bar.clone())
                 .expect("fixture Bar should be accepted by Cache");
             assert!(matches!(
-                struxis.process(bar),
+                struxis.process(bar).outcome,
                 capitus_struxis::ProcessOutcome::Processed { .. }
             ));
         }
@@ -568,10 +573,7 @@ mod tests {
             let error = validate_sbar_series(&origin, state.sbars())
                 .expect_err(&format!("{attribute} mismatch must fail validation"))
                 .to_string();
-            assert!(
-                error.contains("loaded_index=1"),
-                "{attribute}: {error}"
-            );
+            assert!(error.contains("loaded_index=1"), "{attribute}: {error}");
             assert!(
                 error.contains(expected_diagnostic),
                 "{attribute}: expected diagnostic {expected_diagnostic:?}, got {error}"
@@ -600,8 +602,8 @@ mod tests {
     #[cfg(feature = "catalog-integration-tests")]
     #[test]
     fn loads_origin_through_backtest_strategy_and_struxis() {
-        let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../test_data/catalog");
+        let catalog_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test_data/catalog");
 
         let with_structure = super::load_origin(&catalog_path, BAR_TYPE, true)
             .unwrap_or_else(|error| panic!("Origin Load with structure enabled failed: {error:#}"));
@@ -644,17 +646,17 @@ mod tests {
             "the active Trend projection must cover the latest effective Swing"
         );
 
-        let without_structure = super::load_origin(&catalog_path, BAR_TYPE, false)
-            .unwrap_or_else(|error| panic!("Origin Load with structure disabled failed: {error:#}"));
+        let without_structure =
+            super::load_origin(&catalog_path, BAR_TYPE, false).unwrap_or_else(|error| {
+                panic!("Origin Load with structure disabled failed: {error:#}")
+            });
         assert_eq!(without_structure.bars, with_structure.bars);
         assert_eq!(
-            without_structure.sbar_sequence_fingerprint,
-            with_structure.sbar_sequence_fingerprint,
+            without_structure.sbar_sequence_fingerprint, with_structure.sbar_sequence_fingerprint,
             "Load structure-calculation mode must not affect input-sequence identity"
         );
         assert_ne!(
-            without_structure.origin_dataset_id,
-            with_structure.origin_dataset_id,
+            without_structure.origin_dataset_id, with_structure.origin_dataset_id,
             "each successful Load creates a distinct Origin Dataset instance"
         );
     }
@@ -662,8 +664,8 @@ mod tests {
     #[cfg(feature = "catalog-integration-tests")]
     #[test]
     fn reads_complete_catalog_dataset_in_event_time_order() {
-        let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../test_data/catalog");
+        let catalog_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test_data/catalog");
 
         let bars = load_bars(&catalog_path, BAR_TYPE)
             .unwrap_or_else(|error| panic!("failed to load {BAR_TYPE}: {error:#}"));
