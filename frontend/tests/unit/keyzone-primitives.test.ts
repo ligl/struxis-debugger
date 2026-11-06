@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { KeyZoneIndex, KeyZonePrimitive } from "../../src/keyzone-primitives";
+import { KeyZoneIndex, KeyZonePrimitive, KeyZoneInteractionIndex } from "../../src/keyzone-primitives";
 import { keyzoneFixture, keyzoneBars } from "./keyzone-fixture";
 
 describe("KeyZone short marker index and chart primitive", () => {
@@ -59,11 +59,11 @@ describe("KeyZone short marker index and chart primitive", () => {
   it("preserves price boundaries even when the projected range is narrower than one pixel", () => {
     const primitive = new KeyZonePrimitive();
     primitive.setData(keyzoneFixture(), keyzoneBars(), keyzoneBars()[3]!.sbarId);
-    primitive.attached({ chart: { timeScale: () => ({ getVisibleLogicalRange: () => ({ from: -4, to: 4 }), logicalToCoordinate: (index: number) => index * 10 }) },
+    primitive.attached({ chart: { timeScale: () => ({ options: () => ({ barSpacing: 10 }), getVisibleLogicalRange: () => ({ from: -4, to: 4 }), logicalToCoordinate: (index: number) => index * 10 }) },
       series: { priceToCoordinate: (price: number) => price * 0.1 }, requestUpdate: vi.fn(),
     } as unknown as Parameters<KeyZonePrimitive["attached"]>[0]);
     const strokeRect = vi.fn();
-    const context = { save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect };
+    const context = { save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect, fillText: vi.fn() };
     const target = { useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) };
     primitive.renderer()!.draw(target as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
     expect(strokeRect).toHaveBeenCalledWith(-30, expect.closeTo(0.900001, 8), 60, expect.closeTo(0.300001, 8));
@@ -77,10 +77,10 @@ describe("KeyZone short marker index and chart primitive", () => {
       registry.zones[0]!.state = state;
       const setLineDash = vi.fn(), strokeRect = vi.fn(), fillRect = vi.fn();
       primitive.setData(registry, keyzoneBars(), keyzoneBars()[3]!.sbarId);
-      primitive.attached({ chart: { timeScale: () => ({ getVisibleLogicalRange: () => ({ from: 1, to: 2 }), logicalToCoordinate: (index: number) => index * 10 }) },
+      primitive.attached({ chart: { timeScale: () => ({ options: () => ({ barSpacing: 10 }), getVisibleLogicalRange: () => ({ from: 1, to: 2 }), logicalToCoordinate: (index: number) => index * 10 }) },
         series: { priceToCoordinate: (price: number) => price * 10 }, requestUpdate: vi.fn(),
       } as unknown as Parameters<KeyZonePrimitive["attached"]>[0]);
-      const context = { save: vi.fn(), restore: vi.fn(), setLineDash, fillRect, strokeRect };
+      const context = { save: vi.fn(), restore: vi.fn(), setLineDash, fillRect, strokeRect, fillText: vi.fn() };
       const target = { useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) };
       primitive.renderer()!.draw(target as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
       expect(strokeRect).toHaveBeenCalledWith(-30, expect.closeTo(90.0001, 6), 60, expect.closeTo(30.0001, 6));
@@ -102,11 +102,11 @@ describe("KeyZone hover state", () => {
   function setup() {
     const primitive = new KeyZonePrimitive(), requestUpdate = vi.fn();
     primitive.setData(keyzoneFixture(), keyzoneBars(), keyzoneBars()[3]!.sbarId);
-    const owner = { chart: { timeScale: () => ({ getVisibleLogicalRange: () => ({ from: -4, to: 4 }), logicalToCoordinate: (index: number) => index * 10 }) },
+    const owner = { chart: { timeScale: () => ({ options: () => ({ barSpacing: 10 }), getVisibleLogicalRange: () => ({ from: -4, to: 4 }), logicalToCoordinate: (index: number) => index * 10 }) },
       series: { priceToCoordinate: (price: number) => price * 10 }, requestUpdate } as unknown as Parameters<KeyZonePrimitive["attached"]>[0];
     primitive.attached(owner);
     function style() {
-      const context = { strokeStyle: "", lineWidth: 0, save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn() };
+      const context = { strokeStyle: "", lineWidth: 0, save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn() };
       primitive.renderer()!.draw({ useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) } as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
       return { color: context.strokeStyle, width: context.lineWidth };
     }
@@ -146,5 +146,85 @@ describe("KeyZone hover state", () => {
     primitive.setHovered("9007199254740993");
     primitive.detached(); primitive.attached(owner);
     expect(style()).toEqual({ color: "#b49a75", width: 1 });
+  });
+});
+
+describe("selected KeyZone observed interaction ranges", () => {
+  function episodes() {
+    const bars = keyzoneBars(), registry = keyzoneFixture(), zoneId = registry.zones[0]!.keyzoneId;
+    Object.assign(bars[1]!, { low: "7", high: "15" });
+    Object.assign(bars[2]!, { low: "6", high: "18" });
+    Object.assign(bars[3]!, { low: "5", high: "14" });
+    const base = registry.interactions[0]!;
+    registry.interactions = [
+      { ...base, interactionId: "10", state: "Ended", startedAt: bars[0]!.tsEvent, lastProcessedAt: bars[1]!.tsEvent, endedAt: bars[1]!.tsEvent },
+      { ...base, interactionId: "20", state: "Active", startedAt: bars[2]!.tsEvent, lastProcessedAt: bars[3]!.tsEvent },
+      { ...base, interactionId: "30", observerBarType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL" },
+    ];
+    return { bars, registry, zoneId };
+  }
+  it("separates each episode using its observed candle extrema and exact observer BarType", () => {
+    const { bars, registry, zoneId } = episodes();
+    const index = new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zoneId);
+    expect(index.visible(0, 4)).toEqual([
+      { interactionId: "10", sequence: 1, state: "Ended", start: 0, end: 1, low: 7, high: 15 },
+      { interactionId: "20", sequence: 2, state: "Active", start: 2, end: 3, low: 5, high: 18 },
+    ]);
+    expect(index.visible(-1, 1).map((item) => item.interactionId)).toEqual(["10"]);
+    expect(index.visible(2, 4).map((item) => item.interactionId)).toEqual(["20"]);
+    expect(index.visible(5, 8)).toEqual([]);
+  });
+  it("never reads interaction history without a selected KeyZone", () => {
+    const { bars, registry } = episodes();
+    Object.defineProperty(registry, "interactions", { get: () => { throw new Error("unselected history must not be read"); } });
+    expect(new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, null).visible(0, 4)).toEqual([]);
+  });
+  it("caps Active observations at the accepted cursor and uses no fabricated missing anchors", () => {
+    const { bars, registry, zoneId } = episodes();
+    const ranges = new KeyZoneInteractionIndex(registry, bars, bars[2]!.tsEvent, zoneId).visible(0, 4);
+    expect(ranges[1]).toEqual({ interactionId: "20", sequence: 2, state: "Active", start: 2, end: 2, low: 6, high: 18 });
+    expect(new KeyZoneInteractionIndex(registry, bars.slice(1), bars[3]!.tsEvent, zoneId).visible(0, 4)
+      .map((item) => item.interactionId)).toEqual(["20"]);
+    registry.interactions[1]!.lastProcessedAt = null;
+    expect(new KeyZoneInteractionIndex(registry, bars, bars[3]!.tsEvent, zoneId).visible(0, 4)
+      .map((item) => item.interactionId)).toEqual(["10"]);
+  });
+  it("keeps terminal ranges fixed and extends only an updated Active episode", () => {
+    const { bars, registry, zoneId } = episodes();
+    const more = [...bars, { ...bars[3]!, sbarId: "1700000240000000000", tsEvent: "1700000240000000000", tsInit: "1700000240000000000", high: "25", low: "4" }];
+    registry.interactions[1]!.lastProcessedAt = more[4]!.tsEvent;
+    expect(new KeyZoneInteractionIndex(registry, more, more[4]!.tsEvent, zoneId).visible(0, 5)).toEqual([
+      { interactionId: "10", sequence: 1, state: "Ended", start: 0, end: 1, low: 7, high: 15 },
+      { interactionId: "20", sequence: 2, state: "Active", start: 2, end: 4, low: 4, high: 25 },
+    ]);
+    registry.interactions[1]!.state = "Invalidated";
+    registry.interactions[1]!.invalidatedAt = "1700000300000000000";
+    expect(new KeyZoneInteractionIndex(registry, more, more[4]!.tsEvent, zoneId).visible(2, 5)[0]?.end).toBe(4);
+  });
+  it("draws unfilled labeled episode boxes before the source marker and clears them with selection", () => {
+    const { bars, registry, zoneId } = episodes(), primitive = new KeyZonePrimitive();
+    let priceReads = 0;
+    for (const bar of bars) for (const field of ["low", "high"] as const) {
+      const value = bar[field]; Object.defineProperty(bar, field, { get: () => { priceReads++; return value; } });
+    }
+    primitive.setData(registry, bars, bars[3]!.tsEvent);
+    primitive.attached({ chart: { timeScale: () => ({ options: () => ({ barSpacing: 10 }), getVisibleLogicalRange: () => ({ from: -4, to: 5 }), logicalToCoordinate: (index: number) => 100 + index * 10 }) },
+      series: { priceToCoordinate: (price: number) => 200 - price * 10 }, requestUpdate: vi.fn(),
+    } as unknown as Parameters<KeyZonePrimitive["attached"]>[0]);
+    const strokeRect = vi.fn(), fillRect = vi.fn(), fillText = vi.fn();
+    const context = { strokeStyle: "", save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect, fillRect, fillText };
+    const draw = () => primitive.renderer()!.draw({ useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) } as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
+    draw(); expect(fillText).not.toHaveBeenCalled(); expect(priceReads).toBe(0);
+    primitive.setSelected(zoneId); draw();
+    expect(priceReads).toBe(8);
+    expect(strokeRect).toHaveBeenCalledWith(96.5, 50, 17, 80);
+    expect(strokeRect).toHaveBeenCalledWith(116.5, 20, 17, 130);
+    expect(fillText.mock.calls.map((call) => call[0])).toEqual(["I1 Ended", "I2 Active"]);
+    expect(fillRect).not.toHaveBeenCalled();
+    primitive.setHovered(zoneId); primitive.updateAllViews(); primitive.setSelected(zoneId); draw();
+    expect(priceReads).toBe(8);
+    fillText.mockClear(); primitive.setSelected(null); draw();
+    expect(fillText).not.toHaveBeenCalled();
+    expect(priceReads).toBe(8);
   });
 });

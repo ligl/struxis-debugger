@@ -72,9 +72,15 @@ function fixture() {
   return { bars, keyzones, origin, test };
 }
 function style(primitive: KeyZonePrimitive) {
-  const context = { strokeStyle: "", lineWidth: 0, save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn() };
+  const context = { strokeStyle: "", lineWidth: 0, save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn() };
   primitive.renderer()!.draw({ useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) } as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
   return { color: context.strokeStyle, width: context.lineWidth };
+}
+function episodeLabels(primitive: KeyZonePrimitive) {
+  const fillText = vi.fn();
+  const context = { save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn(), fillText };
+  primitive.renderer()!.draw({ useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) } as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
+  return fillText.mock.calls.map((call) => call[0]);
 }
 const hit = { point: { x: 100, y: 80 } };
 
@@ -140,6 +146,31 @@ describe.each(["Origin", "Live Replay", "Snapshot Reference"] as const)("%s KeyZ
     runtime.move(hit);
     runtime.move({});
     expect(style(primitive)).toEqual({ color: "#b49a75", width: 1 });
+  });
+
+  it("draws each selected observation episode and removes them when another object is selected", async () => {
+    const { wrapper, runtime, primitive, data } = setup();
+    expect(episodeLabels(primitive)).toEqual([]);
+    runtime.move(hit);
+    expect(episodeLabels(primitive)).toEqual([]);
+    runtime.click(hit);
+    if (kind !== "Snapshot Reference") await wrapper.setProps({ selectedObject: kind === "Origin"
+      ? { kind: "keyzone", id: "9007199254740993", originDatasetId: "origin-keyzone" }
+      : { kind: "keyzone", id: "9007199254740993", checkpointSbarId: data.bars[3]!.sbarId } } as never);
+    await nextTick();
+    expect(episodeLabels(primitive)).toEqual(["I1 Active"]);
+    const registry = keyzoneFixture();
+    const base = registry.interactions[0]!;
+    registry.interactions = [
+      { ...base, state: "Ended", lastProcessedAt: data.bars[1]!.tsEvent, endedAt: data.bars[1]!.tsEvent },
+      { ...base, interactionId: "9007199254740996", startedAt: data.bars[2]!.tsEvent },
+    ];
+    await wrapper.setProps({ keyzones: registry } as never);
+    expect(episodeLabels(primitive)).toEqual(["I1 Ended", "I2 Active"]);
+    if (kind === "Snapshot Reference") runtime.click({ point: { x: 110, y: 95 } });
+    else await wrapper.setProps({ selectedObject: null } as never);
+    await nextTick();
+    expect(episodeLabels(primitive)).toEqual([]);
   });
 
   if (kind === "Origin") it("honors explicit range-selection mode instead of selecting a KeyZone", async () => {
