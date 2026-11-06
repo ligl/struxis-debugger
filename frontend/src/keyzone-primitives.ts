@@ -76,13 +76,25 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   private views: readonly IPrimitivePaneView[] = [this];
   private visible = true;
   private selected: string | null = null;
+  private hovered: string | null = null;
   attached(param: Attached): void { this.attachedTo = param; this.updateAllViews(); }
-  detached(): void { this.attachedTo = null; this.rectangles = []; }
+  detached(): void { this.attachedTo = null; this.rectangles = []; this.hovered = null; }
   setData(checkpoint: KeyZoneCheckpointDto | null, bars: readonly SBarDto[], until: string | null): void {
+    this.hovered = null;
     this.index = new KeyZoneIndex(checkpoint, bars, until);
     this.updateAllViews(); this.attachedTo?.requestUpdate();
   }
-  setVisible(visible: boolean): void { this.visible = visible; this.attachedTo?.requestUpdate(); }
+  setVisible(visible: boolean): void {
+    if (this.visible === visible) return;
+    this.visible = visible;
+    if (!visible) this.hovered = null;
+    this.attachedTo?.requestUpdate();
+  }
+  setHovered(id: string | null): void {
+    if (this.hovered === id) return;
+    this.hovered = id;
+    this.attachedTo?.requestUpdate();
+  }
   setSelected(id: string | null): void { this.selected = id; this.attachedTo?.requestUpdate(); }
   paneViews(): readonly IPrimitivePaneView[] { return this.views; }
   zOrder(): "normal" { return "normal"; }
@@ -118,8 +130,9 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
       for (const r of this.rectangles) {
         ctx.save();
         const selected = r.id === this.selected;
-        ctx.strokeStyle = selected ? "#f0cb87" : r.state === "Invalidated" ? "#7d858c" : "#b49a75";
-        ctx.lineWidth = selected ? 2 : 1;
+        const hovered = r.id === this.hovered;
+        ctx.strokeStyle = selected ? "#f0cb87" : hovered ? "#e3bd80" : r.state === "Invalidated" ? "#7d858c" : "#b49a75";
+        ctx.lineWidth = selected ? 2 : hovered ? 1.5 : 1;
         ctx.setLineDash([5,3]);
         ctx.strokeRect(r.x, r.y, r.width, r.height);
         ctx.restore();

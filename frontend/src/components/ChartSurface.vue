@@ -45,6 +45,7 @@ const props = withDefaults(defineProps<{
   dataMode?: "props" | "external";
 }>(), {
   keyboardActive: undefined,
+  keyzoneSelectable: true,
   showHeader: true,
   showFooter: true,
   showLegend: true,
@@ -82,6 +83,9 @@ let cbarPrimitive: StructurePrimitiveController | null = null;
 let swingPrimitive: StructurePrimitiveController | null = null;
 let trendPrimitive: StructurePrimitiveController | null = null;
 const keyzonePrimitive = new KeyZonePrimitive();
+function clearKeyzoneHover(): void {
+  keyzonePrimitive.setHovered(null);
+}
 function syncKeyzones(): void {
   keyzonePrimitive.setData(props.keyzones ?? null, props.bars, props.keyzoneUntil === undefined ? (props.bars.at(-1)?.tsEvent ?? null) : props.keyzoneUntil);
 }
@@ -350,6 +354,12 @@ function handleChartMove(param: { point?: { x: number; y: number } | undefined }
   const point = param.point && Number.isFinite(param.point.x) && Number.isFinite(param.point.y)
     ? { x: param.point.x, y: param.point.y }
     : null;
+  const keyzone = point && !chartError.value && props.keyzoneSelectable !== false
+    && !drawingManager?.tool() && !drawingManager?.selection().length
+    ? keyzonePrimitive.hitTestZone(point.x, point.y)
+    : null;
+  keyzonePrimitive.setHovered(keyzone);
+  // Preserve pointer coordinates for adapter-owned crosshair synchronization.
   emit("pointerPosition", point);
 }
 
@@ -554,6 +564,7 @@ function toggleAllStructureLayers(): void {
 }
 
 function handleVisibleRangeChange(): void {
+  clearKeyzoneHover();
   scheduleOverlayUpdate();
   if (!chart || props.bars.length === 0) return;
   const range = chart.timeScale().getVisibleLogicalRange();
@@ -888,6 +899,7 @@ onMounted(() => {
   chart.subscribeCrosshairMove(handleChartMove);
   chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
   stopObservingResize = observeSbarChartResize(chartHost.value, chart, () => {
+    clearKeyzoneHover();
     updateSbarCoordinates();
     emit("projectionFrame");
   });
@@ -909,7 +921,8 @@ watch(() => [props.bars, props.sequenceId, props.dataMode] as const, () => {
   // geometry before the next interaction can hit-test the previous projection.
   scheduleOverlayUpdate.flush();
 });
-watch(() => [props.keyzones, props.bars, props.keyzoneUntil] as const, syncKeyzones);
+watch(() => [props.sequenceId, props.keyzones, props.bars, props.keyzoneUntil] as const, syncKeyzones);
+watch(() => [props.keyzoneSelectable, chartError.value, drawingTool.value, selectedDrawingCount.value] as const, clearKeyzoneHover);
 watch(() => props.selectedKeyzoneId, (id) => keyzonePrimitive.setSelected(id ?? null));
 watch(() => props.structure, () => {
   // A Snapshot checkpoint replaces the authoritative structure snapshot without
@@ -1000,6 +1013,7 @@ onBeforeUnmount(() => {
         :data-second-sbar-x="secondSbarX ?? ''"
         :aria-label="chartLabel"
         @pointerenter="emit('chartActivate')"
+        @pointerleave="clearKeyzoneHover"
       ></div>
       <DrawingToolbar
         :active-tool="drawingTool"

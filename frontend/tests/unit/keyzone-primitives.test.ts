@@ -97,3 +97,54 @@ describe("KeyZone short marker index and chart primitive", () => {
     },
   );
 });
+
+describe("KeyZone hover state", () => {
+  function setup() {
+    const primitive = new KeyZonePrimitive(), requestUpdate = vi.fn();
+    primitive.setData(keyzoneFixture(), keyzoneBars(), keyzoneBars()[3]!.sbarId);
+    const owner = { chart: { timeScale: () => ({ getVisibleLogicalRange: () => ({ from: -4, to: 4 }), logicalToCoordinate: (index: number) => index * 10 }) },
+      series: { priceToCoordinate: (price: number) => price * 10 }, requestUpdate } as unknown as Parameters<KeyZonePrimitive["attached"]>[0];
+    primitive.attached(owner);
+    function style() {
+      const context = { strokeStyle: "", lineWidth: 0, save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn() };
+      primitive.renderer()!.draw({ useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) } as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
+      return { color: context.strokeStyle, width: context.lineWidth };
+    }
+    return { primitive, requestUpdate, owner, style };
+  }
+  it("redraws only when hover identity changes and never rebuilds geometry for pointer movement", () => {
+    const { primitive, requestUpdate, style } = setup();
+    const project = vi.spyOn(primitive, "updateAllViews");
+    const data = vi.spyOn(primitive, "setData");
+    for (let i = 0; i < 10; i++) primitive.setHovered(primitive.hitTestZone(15, 90));
+    expect(requestUpdate).toHaveBeenCalledTimes(1);
+    expect(style()).toEqual({ color: "#e3bd80", width: 1.5 });
+    expect(project).not.toHaveBeenCalled();
+    expect(data).not.toHaveBeenCalled();
+    primitive.setHovered(null);
+    expect(requestUpdate).toHaveBeenCalledTimes(2);
+    expect(style()).toEqual({ color: "#b49a75", width: 1 });
+  });
+  it("gives selection priority and preserves it after pointer departure", () => {
+    const { primitive, style } = setup();
+    primitive.setHovered("9007199254740993");
+    primitive.setSelected("9007199254740993");
+    expect(style()).toEqual({ color: "#f0cb87", width: 2 });
+    primitive.setHovered(null);
+    expect(style()).toEqual({ color: "#f0cb87", width: 2 });
+    primitive.setSelected(null);
+    expect(style()).toEqual({ color: "#b49a75", width: 1 });
+  });
+  it("does not resurrect hover after hiding, replacing data or reattaching a chart", () => {
+    const { primitive, owner, style } = setup();
+    primitive.setHovered("9007199254740993");
+    primitive.setVisible(false); primitive.setVisible(true);
+    expect(style()).toEqual({ color: "#b49a75", width: 1 });
+    primitive.setHovered("9007199254740993");
+    primitive.setData(keyzoneFixture(), keyzoneBars(), keyzoneBars()[3]!.sbarId);
+    expect(style()).toEqual({ color: "#b49a75", width: 1 });
+    primitive.setHovered("9007199254740993");
+    primitive.detached(); primitive.attached(owner);
+    expect(style()).toEqual({ color: "#b49a75", width: 1 });
+  });
+});
