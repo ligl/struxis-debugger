@@ -20,6 +20,7 @@ pub(crate) enum ReplayCommandKind {
     Start,
     GetState,
     GetInspector,
+    Observation,
     Step,
     Play,
     Pause,

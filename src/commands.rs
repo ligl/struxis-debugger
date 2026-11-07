@@ -1,5 +1,41 @@
 //! Thin Tauri command handlers. Application work stays in AppState services.
 
+#[tauri::command]
+pub(crate) async fn create_keyzone_observation(
+    request: crate::observation::CreateObservation,
+    state: tauri::State<'_, AppState>,
+) -> Result<crate::observation::ObservationCommandResult, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        state.observation(crate::observation::ObservationCommand::Create(request))
+    })
+    .await
+    .map_err(|error| {
+        IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Observation worker failed: {error}"),
+        )
+    })?
+}
+
+#[tauri::command]
+pub(crate) async fn cancel_keyzone_observation(
+    request: crate::observation::CancelObservation,
+    state: tauri::State<'_, AppState>,
+) -> Result<crate::observation::ObservationCommandResult, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        state.observation(crate::observation::ObservationCommand::Cancel(request))
+    })
+    .await
+    .map_err(|error| {
+        IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Observation worker failed: {error}"),
+        )
+    })?
+}
+
 use tauri::State;
 
 use crate::{

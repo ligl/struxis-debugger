@@ -5,7 +5,7 @@ import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
 import ReplayObjectDetails from "./ReplayObjectDetails.vue";
-import type { InspectorWorkspaceContext, OriginDatasetDto, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
+import type { InspectorWorkspaceContext, OriginDatasetDto, ReplayInspectorStructureDto, SBarDto, ObservationControlsContext, CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "../origin-types";
 import { formatDomainTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
@@ -13,6 +13,9 @@ const props = defineProps<{
   origin: OriginDatasetDto | null;
   originBars: SBarDto[];
   originStructure: ReplayInspectorStructureDto | null;
+  observationContext?: ObservationControlsContext;
+  createObservation?: (request: CreateObservationDto) => Promise<ObservationCommandResultDto>;
+  cancelObservation?: (request: CancelObservationDto) => Promise<ObservationCommandResultDto>;
 }>();
 
 // These projections keep the existing view templates readable while ensuring
@@ -183,7 +186,9 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
     </template>
 
     <template v-else-if="workspaceMode === 'replay' && selectedReplayObject">
-      <KeyZoneDetails v-if="selectedReplayObject.kind === 'keyzone'" :zone="selectedReplayObject.object" :registry="selectedReplayObject.registry" />
+      <KeyZoneDetails v-if="selectedReplayObject.kind === 'keyzone'" :zone="selectedReplayObject.object" :registry="selectedReplayObject.registry"
+        :observation-context="selectedReplayObject.source === 'snapshot' ? undefined : observationContext"
+        :create-observation="createObservation" :cancel-observation="cancelObservation" />
       <ReplayObjectDetails v-else
         :selected-object="selectedReplayObject"
         :timeframe="timeframe"

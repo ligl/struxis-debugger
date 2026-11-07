@@ -15,6 +15,7 @@ mod snapshot;
 mod snapshot_writer;
 mod snapshot_store;
 mod effective_config;
+mod observation;
 
 #[tauri::command]
 fn open_devtools(window: tauri::WebviewWindow) {
@@ -40,6 +41,8 @@ fn main() {
             commands::restart_to_sbar,
             commands::get_run_state,
             commands::get_replay_inspector,
+            commands::create_keyzone_observation,
+            commands::cancel_keyzone_observation,
             commands::step_run,
             commands::play_run,
             commands::pause_run,

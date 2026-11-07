@@ -26,6 +26,8 @@ import { useReplayInspector } from "./composables/useReplayInspector";
 import { useReplayKeyboardShortcut } from "./composables/useReplayKeyboardShortcut";
 import { usePlaybackController } from "./composables/usePlaybackController";
 import { useDevtoolsContextMenu } from "./composables/useDevtoolsContextMenu";
+import { useKeyZoneObservations } from "./composables/useKeyZoneObservations";
+import type { ObservationControlsContext } from "./origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "./timestamp-format";
 import { notifyError } from "./composables/useAppToast";
 
@@ -63,7 +65,7 @@ const {
 
 const {
   runState,
-  runBusy,
+  runBusy: runCommandBusy,
   runError,
   lastStepResult,
   refreshRunState,
@@ -71,6 +73,9 @@ const {
   executeRestartToSBar,
   waitForIdle: waitForRunIdle,
 } = useRunControl();
+
+const observationBusy = ref(false);
+const runBusy = computed(() => runCommandBusy.value || observationBusy.value);
 
 const originLoadPreparing = ref(false);
 const originLoading = computed(() => loading.value || originLoadPreparing.value);
@@ -106,6 +111,10 @@ const {
   replayInspectorError,
   refresh: refreshReplayInspectorState,
 } = useReplayInspector();
+
+const { create: createObservation, cancel: cancelObservation } = useKeyZoneObservations(
+  runState, observationBusy, runBusy, replayInspector,
+);
 
 watch(lastStepResult, (result) => {
   if (!result) return;
@@ -143,6 +152,7 @@ function cancelReplayTarget(): void {
 }
 
 async function handleRestartToSBar(): Promise<void> {
+  if (observationBusy.value) return;
   const target = targetSbarId.value;
   if (
     !target ||
@@ -317,7 +327,13 @@ watch(
     () => runState.value?.cursorSbarId,
     () => testDataset.value?.testDatasetId,
   ],
-  () => { selectedReplayChartObject.value = null; },
+  ([runId, cursor, testId], [previousRunId, , previousTestId]) => {
+    const selection = selectedReplayChartObject.value;
+    if (runId === previousRunId && testId === previousTestId && cursor && selection?.kind === "keyzone" &&
+      replayInspector.value?.keyzones?.zones.some((zone) => zone.keyzoneId === selection.id)) {
+      selectedReplayChartObject.value = { ...selection, checkpointSbarId: cursor };
+    } else selectedReplayChartObject.value = null;
+  },
 );
 
 watch(() => testDataset.value?.testDatasetId, () => {
@@ -501,6 +517,7 @@ const {
 let originHandoffDuringStartup = false;
 
 async function handleRunCommand(command: RunCommand): Promise<void> {
+  if (observationBusy.value) return;
   if (command === "play") {
     startPlayback();
     return;
@@ -587,6 +604,23 @@ const {
   runError,
   async (command) => { await executeRunCommand(command); },
 );
+
+const observationContext = computed<ObservationControlsContext | undefined>(() => {
+  const run = runState.value;
+  const test = testDataset.value;
+  const currentOrigin = origin.value;
+  if (!run?.cursorSbarId || !test || !currentOrigin || run.testDatasetId !== test.testDatasetId || currentOrigin.originDatasetId !== test.originDatasetId) return undefined;
+  const first = currentOrigin.bars.findIndex((bar) => bar.sbarId === test.startSbarId);
+  const last = currentOrigin.bars.findIndex((bar) => bar.sbarId === test.endSbarId);
+  if (first < 0 || last < first) return undefined;
+  const enabled = playbackStatus.value !== "playing" && !runBusy.value && run.status === "paused";
+  const disabledReason = playbackStatus.value === "playing" ? "Pause playback to create or cancel an observation."
+    : runBusy.value ? "Wait for the current operation to finish."
+    : run.status !== "paused" ? "This Run is read-only. Start or restart a Run, then pause before its final K-line."
+    : "";
+  return { runId: run.runId, cursorSbarId: run.cursorSbarId, timeframe: test.timeframe,
+    bars: currentOrigin.bars.slice(first, last + 1), enabled, disabledReason };
+});
 
 async function handleSaveSnapshot(): Promise<void> {
   if (playbackStatus.value === "playing" || !hasCompletedRunResult(runState.value)) return;
@@ -866,6 +900,9 @@ onMounted(async () => {
           :origin="origin"
           :origin-bars="origin?.bars ?? []"
           :origin-structure="origin?.structure ?? null"
+          :observation-context="observationContext"
+          :create-observation="createObservation"
+          :cancel-observation="cancelObservation"
         />
       </aside>
       <Diagnostics

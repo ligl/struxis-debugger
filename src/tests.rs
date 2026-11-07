@@ -4,6 +4,9 @@
 //! a public Rust library API. The former integration-test files are compiled as
 //! child modules so they can exercise private application modules directly.
 
+#[path = "tests/keyzone_observation_commands.rs"]
+mod keyzone_observation_commands;
+
 #[path = "tests/app_run_service_integration.rs"]
 mod app_run_service_integration;
 #[path = "tests/snapshot_compare_integration.rs"]

@@ -30,6 +30,29 @@ pub(crate) struct ReplayManager {
 }
 
 impl ReplayManager {
+    pub(crate) fn observation(
+        &mut self,
+        command: crate::observation::ObservationCommand,
+    ) -> Result<crate::observation::ObservationCommandResult, crate::ipc::IpcError> {
+        use crate::ipc::{IpcError, IpcErrorCode};
+        let _permit = self
+            .gate
+            .try_enter(ReplayCommandKind::Observation)
+            .map_err(|error| IpcError::new(IpcErrorCode::Conflict, error))?;
+        let result = self
+            .active
+            .as_mut()
+            .ok_or_else(|| {
+                IpcError::new(
+                    IpcErrorCode::InvalidState,
+                    "No paused Replay runtime is available",
+                )
+            })?
+            .observation(command)?;
+        self.last_inspector = Some(result.inspector.clone());
+        Ok(result)
+    }
+
     #[must_use]
     pub(crate) fn new() -> Self {
         Self::default()

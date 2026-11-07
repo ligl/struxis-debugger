@@ -17,7 +17,7 @@ use std::{
 use std::sync::Mutex;
 
 use capitus_strategy::StruxisDemo;
-use capitus_struxis::{NautilusRuntime, Struxis, StruxisConfig};
+use capitus_struxis::{NautilusRuntime, Struxis, StruxisConfig, StruxisRegistrant};
 use nautilus_backtest::{
     config::{BacktestEngineConfig, SimulatedVenueConfig},
     engine::BacktestEngine,
@@ -26,7 +26,7 @@ use nautilus_execution::models::fee::{FeeModelAny, MakerTakerFeeModel};
 use nautilus_model::{
     data::{BarType, Data},
     enums::{AccountType, BookType, OmsType},
-    identifiers::{StrategyId, Venue},
+    identifiers::{ActorId, StrategyId, Venue},
     instruments::{Instrument, InstrumentAny},
     types::Money,
 };
@@ -80,6 +80,10 @@ pub(crate) struct ReplayWorkerConfig {
 }
 
 enum WorkerCommand {
+    Observation(
+        crate::observation::ObservationCommand,
+        SyncSender<Result<crate::observation::ObservationCommandResult, crate::ipc::IpcError>>,
+    ),
     GetState(SyncSender<RunState>),
     GetInspector(SyncSender<Option<ReplayInspectorProjection>>),
     SnapshotData(SyncSender<Result<Arc<ReplaySnapshotData>, String>>),
@@ -108,6 +112,28 @@ pub(crate) struct ReplayWorker {
 }
 
 impl ReplayWorker {
+    pub(crate) fn observation(
+        &mut self,
+        command: crate::observation::ObservationCommand,
+    ) -> Result<crate::observation::ObservationCommandResult, crate::ipc::IpcError> {
+        use crate::ipc::{IpcError, IpcErrorCode};
+        let _permit = self
+            .command_gate
+            .try_enter(ReplayCommandKind::Observation)
+            .map_err(|error| IpcError::new(IpcErrorCode::Conflict, error))?;
+        let (tx, rx) = mpsc::sync_channel(0);
+        if let Err(error) = self.commands.send(WorkerCommand::Observation(command, tx)) {
+            let message = self
+                .join_after_transport_failure(format!("Observation worker unavailable: {error}"));
+            return Err(IpcError::new(IpcErrorCode::Internal, message));
+        }
+        rx.recv().map_err(|error| {
+            let message = self
+                .join_after_transport_failure(format!("Observation response unavailable: {error}"));
+            IpcError::new(IpcErrorCode::Internal, message)
+        })?
+    }
+
     /// Starts an interactive Run without creating or initializing a SnapshotWriter.
     /// No persistence sink is installed on the production Start / Step path.
     pub(crate) fn spawn_interactive(
@@ -412,6 +438,155 @@ struct WorkerSession {
 }
 
 impl WorkerSession {
+    fn observation(
+        &mut self,
+        command: crate::observation::ObservationCommand,
+    ) -> Result<crate::observation::ObservationCommandResult, crate::ipc::IpcError> {
+        use crate::{
+            ipc::{IpcError, IpcErrorCode},
+            observation::{
+                ObservationCommand, ObservationCommandResult, Operation, domain_error, integer,
+            },
+        };
+        use capitus_struxis::keyzone::{
+            InteractionConfig, KeyZoneRef, ObservationOperation, ObservationRef,
+            ObservationRequest, ObservationStart,
+        };
+        let context = command.context();
+        if context.run_id != self.state.run_id
+            || self.state.cursor_sbar_id.as_deref() != Some(&context.expected_sbar_id)
+        {
+            return Err(IpcError::new(
+                IpcErrorCode::Conflict,
+                "Run or cursor changed. Refresh the current Run before submitting.",
+            ));
+        }
+        if self.state.status != RunStatus::Paused {
+            return Err(IpcError::new(
+                IpcErrorCode::InvalidState,
+                "Observation commands require a paused Run with an accepted SBar.",
+            ));
+        }
+        // Prepare an owned view before mutating; never retain a Registry borrow
+        // across a Struxis command. Historical checkpoints remain immutable.
+        let mut inspector = self.latest_inspector.clone().ok_or_else(|| {
+            IpcError::new(
+                IpcErrorCode::InvalidState,
+                "Run has no accepted Inspector state",
+            )
+        })?;
+        let result = match command {
+            ObservationCommand::Create(request) => {
+                let numeric_id = integer(&request.keyzone_id, "KeyZone ID")?;
+                let zone_id = {
+                    let registry = self
+                        .struxis
+                        .keyzones(self.input.state_key.instrument_id)
+                        .ok_or_else(|| {
+                            IpcError::new(
+                                IpcErrorCode::InvalidState,
+                                "KeyZone Registry unavailable",
+                            )
+                        })?;
+                    registry
+                        .keyzones()
+                        .find(|zone| zone.id().value() == numeric_id)
+                        .map(|zone| zone.id())
+                        .ok_or_else(|| {
+                            IpcError::new(
+                                IpcErrorCode::NotFound,
+                                "KeyZone does not exist in the current Run",
+                            )
+                        })?
+                };
+                let config = InteractionConfig::new(integer(&request.n, "N")?, request.x)
+                    .map_err(domain_error)?;
+                let deadline = integer(&request.deadline, "Deadline")?;
+                let start = match request.start_at {
+                    Some(value) => ObservationStart::FromTime(integer(&value, "Start")?.into()),
+                    None => ObservationStart::AfterCurrentCursor,
+                };
+                if request.request_id.trim().is_empty() {
+                    return Err(IpcError::new(
+                        IpcErrorCode::InvalidArgument,
+                        "Request ID is required",
+                    ));
+                }
+                self.struxis
+                    .observe_keyzone(ObservationRequest {
+                        consumer_id: "struxis-debugger".into(),
+                        request_id: request.request_id,
+                        zone: KeyZoneRef {
+                            instrument_id: self.input.state_key.instrument_id,
+                            id: zone_id,
+                        },
+                        observer: self.input.state_key,
+                        start,
+                        config,
+                        completion: request.completion.into(),
+                        deadline: deadline.into(),
+                    })
+                    .map_err(domain_error)?
+            }
+            ObservationCommand::Cancel(request) => {
+                let numeric_id = integer(&request.observation_id, "Observation ID")?;
+                let id = {
+                    let registry = self
+                        .struxis
+                        .keyzones(self.input.state_key.instrument_id)
+                        .ok_or_else(|| {
+                            IpcError::new(
+                                IpcErrorCode::InvalidState,
+                                "KeyZone Registry unavailable",
+                            )
+                        })?;
+                    registry
+                        .observations()
+                        .find(|task| task.id().value() == numeric_id)
+                        .map(|task| task.id())
+                        .ok_or_else(|| {
+                            IpcError::new(
+                                IpcErrorCode::NotFound,
+                                "Observation does not exist in the current Run",
+                            )
+                        })?
+                };
+                self.struxis
+                    .cancel_observation(ObservationRef {
+                        instrument_id: self.input.state_key.instrument_id,
+                        id,
+                    })
+                    .map_err(domain_error)?
+            }
+        };
+        let projection = self
+            .struxis
+            .keyzones(self.input.state_key.instrument_id)
+            .ok_or_else(|| {
+                IpcError::new(
+                    IpcErrorCode::InvalidState,
+                    "KeyZone Registry unavailable after operation",
+                )
+            })
+            .and_then(|registry| {
+                crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry)
+                    .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))
+            })?;
+        inspector.keyzones = Some(projection);
+        self.latest_inspector = Some(inspector.clone());
+        let operation = match result.operation {
+            ObservationOperation::Created => Operation::Created,
+            ObservationOperation::Existing => Operation::Existing,
+            ObservationOperation::Cancelled => Operation::Cancelled,
+            ObservationOperation::AlreadyTerminated => Operation::AlreadyTerminated,
+        };
+        Ok(ObservationCommandResult {
+            observation_id: result.observation.id.value().to_string(),
+            operation,
+            inspector,
+        })
+    }
+
     fn initialize(
         config: ReplayWorkerConfig,
         mut sink: Option<&mut dyn CheckpointSink>,
@@ -478,6 +653,16 @@ impl WorkerSession {
                 vec![bar_type],
             )?;
             engine.add_strategy(strategy)?;
+            // The debugger owns observation requests independently of the
+            // Strategy which feeds market data. Keep that real consumer
+            // registered until the entire Worker-owned Struxis is dropped:
+            // Strategy teardown must not become the last unregister while
+            // observations are still active. No task is cancelled here.
+            let observer_id = ActorId::new_checked(format!(
+                "STRUXIS-DEBUGGER-OBSERVATIONS-{}",
+                config.run_id
+            ))?;
+            struxis.register(config.input.state_key, StruxisRegistrant::Actor(observer_id));
             Ok(struxis)
         })();
 
@@ -754,6 +939,9 @@ fn worker_loop(
             }
         };
         match command {
+            WorkerCommand::Observation(command, reply) => {
+                let _ = reply.send(session.observation(command));
+            }
             WorkerCommand::GetState(reply) => {
                 let _ = reply.send(session.state.clone());
             }
@@ -934,6 +1122,142 @@ mod tests {
         };
         TestDataset::create(&origin, "1735689600000000000", "1735689720000000000")
             .expect("fixture Test Dataset")
+    }
+
+    #[test]
+    fn debugger_registration_retains_observation_state_after_strategy_unregisters() {
+        use capitus_struxis::{
+            StruxisRegistrant,
+            keyzone::{
+                InteractionConfig, InteractionState, KeyZoneRef, ObservationCompletion,
+                ObservationRequest, ObservationStart, ObservationState,
+            },
+        };
+        use nautilus_model::identifiers::StrategyId;
+
+        let mut input = LoadedInput::from_test(&fixture_test()).unwrap();
+        let bar_type = input.bars[0].bar_type;
+        let base = 1_735_689_600_000_000_000_u64;
+        let minute = 60_000_000_000;
+        input.bars = [
+            (17, 22),
+            (5, 10),
+            (15, 20),
+            (23, 27),
+            (30, 35),
+            (24, 29),
+            (15, 20),
+            (22, 27),
+            (10, 15),
+            (14, 20),
+            (20, 25),
+            (24, 29),
+            (28, 33),
+            (34, 39),
+            (26, 31),
+            (8, 12),
+            (7, 11),
+            (6, 10),
+            (5, 9),
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(index, (low, high))| {
+            let low = Price::from(format!("0.{low:05}"));
+            let high = Price::from(format!("0.{high:05}"));
+            let time = base + index as u64 * minute;
+            Bar::new(
+                bar_type,
+                low,
+                high,
+                low,
+                low,
+                Quantity::from("1000"),
+                time.into(),
+                time.into(),
+            )
+        })
+        .collect();
+        input.sbar_sequence_fingerprint =
+            sequence_fingerprint(input.state_key, &input.bars).unwrap();
+        let key = input.state_key;
+        let mut session = super::WorkerSession::initialize(
+            ReplayWorkerConfig {
+                run_id: "observation-owner".into(),
+                input,
+                instrument: InstrumentAny::CurrencyPair(audusd_sim()),
+            },
+            None,
+        )
+        .unwrap();
+        for _ in 0..15 {
+            session.step(None).unwrap();
+        }
+        let zone = session
+            .struxis
+            .keyzones(key.instrument_id)
+            .unwrap()
+            .keyzones()
+            .find(|zone| {
+                zone.temporal().formed_at.as_u64() == base + minute
+                    && matches!(
+                        zone.origin(),
+                        capitus_struxis::keyzone::KeyZoneOrigin::Swing(_)
+                    )
+            })
+            .unwrap()
+            .id();
+        let observation = session
+            .struxis
+            .observe_keyzone(ObservationRequest {
+                consumer_id: "struxis-debugger".into(),
+                request_id: "owner-registration".into(),
+                zone: KeyZoneRef {
+                    instrument_id: key.instrument_id,
+                    id: zone,
+                },
+                observer: key,
+                start: ObservationStart::AfterCurrentCursor,
+                config: InteractionConfig::new(2, 0.5).unwrap(),
+                completion: ObservationCompletion::UntilDeadline,
+                deadline: (base + 20 * minute).into(),
+            })
+            .unwrap()
+            .observation;
+        session.step(None).unwrap();
+        let before = session.latest_inspector.clone();
+        // Without the debugger's independent ownership this is the last
+        // unregister and must fail with ActiveObservations.
+        assert_eq!(
+            session.struxis.unregister(
+                key,
+                StruxisRegistrant::Strategy(StrategyId::from("STRUXIS-DEBUGGER-observation-owner"))
+            ),
+            Ok(true)
+        );
+        assert!(session.struxis.state(key).is_some());
+        assert_eq!(
+            session
+                .struxis
+                .query_observation(observation)
+                .unwrap()
+                .state(),
+            ObservationState::Observing
+        );
+        assert_eq!(
+            session.struxis.query_interactions(observation).unwrap()[0].state(),
+            InteractionState::Active
+        );
+        session.dispose().unwrap();
+        assert_eq!(session.latest_inspector, before);
+        assert_eq!(
+            session
+                .struxis
+                .query_observation(observation)
+                .unwrap()
+                .state(),
+            ObservationState::Observing
+        );
     }
 
     #[test]

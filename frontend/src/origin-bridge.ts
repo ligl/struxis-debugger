@@ -1,4 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "./origin-types";
+
+export function createKeyZoneObservation(request: CreateObservationDto): Promise<ObservationCommandResultDto> {
+  return invoke("create_keyzone_observation", { request });
+}
+
+export function cancelKeyZoneObservation(request: CancelObservationDto): Promise<ObservationCommandResultDto> {
+  return invoke("cancel_keyzone_observation", { request });
+}
 import type { CatalogDatasetEntry, OriginDatasetDto, ReplayInspectorDto, ReplayStepResultDto, RunStateDto, SnapshotArtifactDto, SnapshotCompareResultDto, SnapshotReferenceDto, TestDatasetDto } from "./origin-types";
 
 export function listCatalogDatasets(): Promise<CatalogDatasetEntry[]> {

@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { KeyZoneCheckpointDto, KeyZoneDto } from "../origin-types";
+import type { KeyZoneCheckpointDto, KeyZoneDto, ObservationControlsContext, CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "../origin-types";
+import KeyZoneObservationControls from "./KeyZoneObservationControls.vue";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
-const props = defineProps<{ zone: KeyZoneDto; registry: KeyZoneCheckpointDto }>();
+const props = defineProps<{
+  zone: KeyZoneDto; registry: KeyZoneCheckpointDto;
+  observationContext?: ObservationControlsContext;
+  createObservation?: (request: CreateObservationDto) => Promise<ObservationCommandResultDto>;
+  cancelObservation?: (request: CancelObservationDto) => Promise<ObservationCommandResultDto>;
+}>();
 const interactions = computed(() => props.registry.interactions.filter((item) => item.keyzoneId === props.zone.keyzoneId));
 const groups = computed(() => props.registry.observations.filter((task) => task.keyzoneId === props.zone.keyzoneId)
     .map((task) => ({ id: task.observationId, task, interactions: interactions.value.filter((item) => item.observationId === task.observationId) })));
@@ -27,6 +33,9 @@ const fields = computed(() => [
 <template>
   <section data-testid="keyzone-details">
     <div class="inspector-object-heading"><h3>KeyZone</h3><span class="inspector-object-kind">{{ zone.state }}</span></div>
+    <KeyZoneObservationControls v-if="observationContext && createObservation && cancelObservation"
+      :key="`${observationContext.runId}:${zone.keyzoneId}`" :zone="zone" :registry="registry" :context="observationContext"
+      :create="createObservation" :cancel="cancelObservation" />
     <dl class="inspector-fields">
       <InspectorPropertyField v-for="field in fields" :key="field.label" :label="field.label" :value="field.value" :copy-value="field.raw ?? field.value" wide />
     </dl>

@@ -476,6 +476,24 @@ impl AppState {
         self.with_replay_manager(ReplayManager::inspector)
     }
 
+    pub(crate) fn observation(
+        &self,
+        command: crate::observation::ObservationCommand,
+    ) -> Result<crate::observation::ObservationCommandResult, IpcError> {
+        let mut manager = self.inner.replay_manager.try_lock().map_err(|error| {
+            let (code, message) = match error {
+                std::sync::TryLockError::WouldBlock => {
+                    (IpcErrorCode::Conflict, "Another Replay command is active")
+                }
+                std::sync::TryLockError::Poisoned(_) => {
+                    (IpcErrorCode::Internal, "ReplayManager lock is poisoned")
+                }
+            };
+            IpcError::new(code, message)
+        })?;
+        manager.observation(command)
+    }
+
     pub(crate) fn replay_step(&self) -> Result<ReplayStepResult, IpcError> {
         self.with_replay_manager(ReplayManager::step_checkpoint)
     }

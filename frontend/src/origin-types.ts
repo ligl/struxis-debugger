@@ -443,6 +443,34 @@ export interface KeyZoneInteractionDto {
 }
 
 export interface ObservationStateKeyDto { instrumentId: string; timeframe: string }
+export interface ObservationContextDto { runId: string; expectedSbarId: string }
+export interface CreateObservationDto {
+  context: ObservationContextDto;
+  keyzoneId: string;
+  requestId: string;
+  startAt: string | null;
+  n: string;
+  x: number;
+  completion: "AfterOneInteraction" | "UntilDeadline";
+  deadline: string;
+}
+export interface CancelObservationDto {
+  context: ObservationContextDto;
+  observationId: string;
+}
+export interface ObservationCommandResultDto {
+  observationId: string;
+  operation: "created" | "existing" | "cancelled" | "alreadyTerminated";
+  inspector: ReplayInspectorDto;
+}
+export interface ObservationControlsContext {
+  runId: string;
+  cursorSbarId: string;
+  timeframe: string;
+  bars: SBarDto[];
+  enabled: boolean;
+  disabledReason: string;
+}
 export interface KeyZoneObservationDto {
   observationId: string;
   consumerId: string;
