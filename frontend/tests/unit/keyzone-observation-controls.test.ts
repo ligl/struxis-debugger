@@ -95,6 +95,100 @@ describe("KeyZone observation controls", () => {
     expect(f.create.mock.calls[0]![0].startAt).toBe("1700000060000000000");
   });
 
+  for (const originKind of ["Swing", "Trend"] as const) {
+    for (const formedAt of ["1700000000000000001", "1700000060000000000"]) {
+      it(`${originKind} history starts at the first accepted K-line at or after ${formedAt}`, async () => {
+        const f = fixture();
+        f.props.zone.originKind = originKind;
+        f.props.zone.formedAt = formedAt;
+        const wrapper = mount(KeyZoneObservationControls, { props: f.props });
+        await wrapper.get('button[aria-expanded]').trigger("click");
+        await wrapper.get('[aria-label="Observation start"]').setValue("history");
+        const select = wrapper.get('[aria-label="Observation historical start"]');
+        expect(select.findAll("option").map((option) => option.attributes("value"))).toEqual([
+          "1700000060000000000", "1700000120000000000",
+        ]);
+        expect(select.element).toHaveProperty("value", "1700000060000000000");
+        await wrapper.get("form").trigger("submit");
+        await flushPromises();
+        expect(f.create).toHaveBeenCalledOnce();
+        expect(f.create.mock.calls[0]![0].startAt).toBe("1700000060000000000");
+      });
+    }
+
+    it(`${originKind} rejects a current cursor before formation and accepts equality`, async () => {
+      const f = fixture();
+      f.props.zone.originKind = originKind;
+      f.props.zone.formedAt = "1700000120000000001";
+      const context = reactive(f.context);
+      const wrapper = mount(KeyZoneObservationControls, { props: { ...f.props, context } });
+      await wrapper.get('button[aria-expanded]').trigger("click");
+      expect(wrapper.get('[role="status"]').text()).toContain("formation time");
+      expect(wrapper.get('button[type="submit"]').attributes("disabled")).toBeDefined();
+      await wrapper.get("form").trigger("submit");
+      expect(f.create).not.toHaveBeenCalled();
+      context.bars = [...context.bars.slice(0, 3), { ...context.bars[2]!, sbarId: "1700000120000000001", tsEvent: "1700000120000000001" }, ...context.bars.slice(3)];
+      context.cursorSbarId = "1700000120000000001";
+      await nextTick();
+      expect(wrapper.get('button[type="submit"]').attributes("disabled")).toBeUndefined();
+      await wrapper.get("form").trigger("submit");
+      await flushPromises();
+      expect(f.create).toHaveBeenCalledOnce();
+      expect(f.create.mock.calls[0]![0]).toMatchObject({
+        context: { expectedSbarId: "1700000120000000001" }, startAt: null,
+      });
+    });
+
+    it(`${originKind} blocks empty historical starts and selects the first newly accepted legal K-line`, async () => {
+      const f = fixture();
+      f.props.zone.originKind = originKind;
+      f.props.zone.formedAt = "1700000180000000000";
+      const context = reactive(f.context);
+      const wrapper = mount(KeyZoneObservationControls, { props: { ...f.props, context } });
+      await wrapper.get('button[aria-expanded]').trigger("click");
+      await wrapper.get('[aria-label="Observation start"]').setValue("history");
+      const select = wrapper.get('[aria-label="Observation historical start"]');
+      expect(select.findAll("option")).toHaveLength(0);
+      expect(wrapper.get('[role="status"]').text()).toContain("No accepted K-line");
+      expect(wrapper.get('button[type="submit"]').attributes("disabled")).toBeDefined();
+      await wrapper.get("form").trigger("submit");
+      expect(f.create).not.toHaveBeenCalled();
+      context.cursorSbarId = "1700000180000000000";
+      await nextTick();
+      expect(select.findAll("option").map((option) => option.attributes("value"))).toEqual(["1700000180000000000"]);
+      expect(select.element).toHaveProperty("value", "1700000180000000000");
+      await wrapper.get("form").trigger("submit");
+      await flushPromises();
+      expect(f.create).toHaveBeenCalledOnce();
+      expect(f.create.mock.calls[0]![0].startAt).toBe("1700000180000000000");
+    });
+  }
+
+  for (const startMode of ["current", "history"]) {
+    it(`FixedPriceRange allows ${startMode} observation before formation`, async () => {
+      const f = fixture();
+      f.props.zone.originKind = "FixedPriceRange";
+      f.props.zone.originId = null;
+      f.props.zone.formedAt = "1700000180000000000";
+      f.props.zone.createdAt = "1700000180000000000";
+      const wrapper = mount(KeyZoneObservationControls, { props: f.props });
+      await wrapper.get('button[aria-expanded]').trigger("click");
+      await wrapper.get('[aria-label="Observation start"]').setValue(startMode);
+      if (startMode === "history") {
+        const select = wrapper.get('[aria-label="Observation historical start"]');
+        expect(select.findAll("option").map((option) => option.attributes("value"))).toEqual([
+          "1700000000000000000", "1700000060000000000", "1700000120000000000",
+        ]);
+        expect(select.element).toHaveProperty("value", "1700000000000000000");
+      }
+      expect(wrapper.get('button[type="submit"]').attributes("disabled")).toBeUndefined();
+      await wrapper.get("form").trigger("submit");
+      await flushPromises();
+      expect(f.create).toHaveBeenCalledOnce();
+      expect(f.create.mock.calls[0]![0].startAt).toBe(startMode === "history" ? "1700000000000000000" : null);
+    });
+  }
+
   it("keeps input and request identity after failure, but gives edited intent a new identity", async () => {
     const f = fixture();
     f.create.mockRejectedValue(new Error("History unavailable"));

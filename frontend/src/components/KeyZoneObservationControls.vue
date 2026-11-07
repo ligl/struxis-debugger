@@ -25,6 +25,8 @@ const status = ref("");
 const requestId = ref(crypto.randomUUID());
 let lastIntent = "";
 const acceptedBars = computed(() => props.context.bars.filter((bar) => BigInt(bar.sbarId) <= BigInt(props.context.cursorSbarId)));
+const requiresFormation = computed(() => props.zone.originKind !== "FixedPriceRange");
+const historicalBars = computed(() => acceptedBars.value.filter((bar) => !requiresFormation.value || BigInt(bar.sbarId) >= BigInt(props.zone.formedAt)));
 const tasks = computed(() => props.registry.observations.filter((task) => task.keyzoneId === props.zone.keyzoneId && task.state === "Observing"));
 const unavailable = computed(() => props.zone.state === "Invalidated" ? "This KeyZone is invalidated. New observations are unavailable." : props.context.disabledReason);
 const enabled = computed(() => props.context.enabled && props.zone.state !== "Invalidated" && !pending.value);
@@ -32,7 +34,9 @@ const boundary = computed(() => startMode.value === "current" ? props.context.cu
 const validation = computed<{ field: "n" | "x" | "window"; message: string } | null>(() => {
   if (!/^\d+$/.test(n.value) || BigInt(n.value) < 1n || BigInt(n.value) > 18446744073709551615n) return { field: "n", message: "N must be a positive whole number." };
   if (String(x.value).trim() === "" || !Number.isFinite(Number(x.value)) || Number(x.value) < 0) return { field: "x", message: "X must be a finite number of zero or greater." };
+  if (startMode.value === "history" && historicalBars.value.length === 0) return { field: "window", message: "No accepted K-line is available as a historical start for this KeyZone." };
   if (!boundary.value || !deadline.value) return { field: "window", message: "Select a start and deadline." };
+  if (requiresFormation.value && BigInt(boundary.value) < BigInt(props.zone.formedAt)) return { field: "window", message: "The observation start cannot be earlier than this KeyZone's formation time." };
   if (BigInt(deadline.value) <= BigInt(boundary.value)) return { field: "window", message: "Deadline must be later than the start. Its K-line is excluded." };
   return null;
 });
@@ -42,12 +46,15 @@ watch([() => props.context.runId, () => props.zone.keyzoneId], () => {
   status.value = "";
   requestId.value = crypto.randomUUID();
   lastIntent = "";
-  startAt.value = acceptedBars.value[0]?.sbarId ?? "";
+  startAt.value = historicalBars.value[0]?.sbarId ?? "";
   const last = props.context.bars.at(-1);
   // One nanosecond after the final input includes that final K-line. It does
   // not promise an expiry event without a subsequent accepted market position.
   deadline.value = last && BigInt(last.sbarId) < 18446744073709551615n ? (BigInt(last.sbarId) + 1n).toString() : last?.sbarId ?? "";
 }, { immediate: true });
+watch(historicalBars, (bars) => {
+  if (!bars.some((bar) => bar.sbarId === startAt.value)) startAt.value = bars[0]?.sbarId ?? "";
+});
 function label(time: string): string { return formatDomainTimestamp(time, props.context.timeframe); }
 async function submit(): Promise<void> {
   if (!enabled.value || validation.value) return;
@@ -93,7 +100,7 @@ async function cancelTask(id: string): Promise<void> {
     <form v-if="expanded" aria-label="Create observation" @submit.prevent="submit">
       <fieldset :disabled="!enabled">
         <label>Start<select v-model="startMode" aria-label="Observation start"><option value="current">After current K-line</option><option value="history">From an accepted K-line</option></select></label>
-        <label v-if="startMode === 'history'">First K-line<select v-model="startAt" aria-label="Observation historical start"><option v-for="bar in acceptedBars" :key="bar.sbarId" :value="bar.sbarId">{{ label(bar.sbarId) }}</option></select></label>
+        <label v-if="startMode === 'history'">First K-line<select v-model="startAt" aria-label="Observation historical start"><option v-for="bar in historicalBars" :key="bar.sbarId" :value="bar.sbarId">{{ label(bar.sbarId) }}</option></select></label>
         <div class="parameters">
           <label>N · consecutive outside closes<input v-model="n" aria-label="Observation N" type="text" inputmode="numeric" /></label>
           <label>X · distance / zone width<input v-model="x" aria-label="Observation X" type="number" min="0" step="any" /></label>
