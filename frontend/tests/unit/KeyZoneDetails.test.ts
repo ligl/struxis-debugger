@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { defineComponent, ref } from "vue";
+import { defineComponent, nextTick, reactive, ref } from "vue";
 import { describe, expect, it } from "vitest";
 import KeyZoneDetails from "../../src/components/KeyZoneDetails.vue";
 import OriginChart from "../../src/components/OriginChart.vue";
@@ -55,4 +55,45 @@ it("groups observations and shows the recorded-empty state", () => {
   const empty = mount(KeyZoneDetails, { props: { zone: registry.zones[0]!, registry: { ...registry, observations: [], interactions: [] } } });
   expect(empty.find('[data-testid="keyzone-observations-empty"]').exists()).toBe(true);
 
+});
+
+describe("Interaction disclosure", () => {
+  it("starts collapsed and identifies each interaction in its summary", () => {
+    const registry = keyzoneFixture();
+    const wrapper = mount(KeyZoneDetails, { props: { zone: registry.zones[0]!, registry } });
+    const interaction = wrapper.get<HTMLDetailsElement>('[data-interaction-id="9007199254740995"]');
+    expect(interaction.element.tagName).toBe("DETAILS");
+    expect(interaction.element.open).toBe(false);
+    const summary = interaction.get("summary");
+    expect(summary.text()).toContain("Interaction 9007199254740995");
+    expect(summary.text()).toContain("1m · Active");
+    expect(summary.text()).toContain("Started · UTC 2023-11-14 22:13");
+  });
+
+  it("preserves independent expansion when replay updates and reorders interactions", async () => {
+    const registry = reactive(keyzoneFixture());
+    const first = registry.interactions[0]!;
+    registry.interactions.push({ ...first, interactionId: "9007199254740996" });
+    const wrapper = mount(KeyZoneDetails, { props: { zone: registry.zones[0]!, registry } });
+    const firstDetails = wrapper.get<HTMLDetailsElement>('[data-interaction-id="9007199254740995"]').element;
+    const secondDetails = wrapper.get<HTMLDetailsElement>('[data-interaction-id="9007199254740996"]').element;
+    firstDetails.open = true;
+    expect(secondDetails.open).toBe(false);
+    secondDetails.open = true;
+
+    registry.interactions = [
+      { ...registry.interactions[1]!, outsideCount: "1" },
+      { ...first, outsideCount: "2" },
+      { ...first, interactionId: "9007199254740997" },
+    ];
+    await nextTick();
+
+    expect(wrapper.get('[data-interaction-id="9007199254740995"]').element).toBe(firstDetails);
+    expect(wrapper.get('[data-interaction-id="9007199254740996"]').element).toBe(secondDetails);
+    expect(firstDetails.open).toBe(true);
+    expect(secondDetails.open).toBe(true);
+    expect(wrapper.get<HTMLDetailsElement>('[data-interaction-id="9007199254740997"]').element.open).toBe(false);
+    firstDetails.open = false;
+    expect(secondDetails.open).toBe(true);
+  });
 });

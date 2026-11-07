@@ -31,7 +31,7 @@ const fields = computed(() => [
 ]);
 </script>
 <template>
-  <section data-testid="keyzone-details">
+  <section class="keyzone-details" data-testid="keyzone-details">
     <div class="inspector-object-heading"><h3>KeyZone</h3><span class="inspector-object-kind">{{ zone.state }}</span></div>
     <KeyZoneObservationControls v-if="observationContext && createObservation && cancelObservation"
       :key="`${observationContext.runId}:${zone.keyzoneId}`" :zone="zone" :registry="registry" :context="observationContext"
@@ -39,8 +39,8 @@ const fields = computed(() => [
     <dl class="inspector-fields">
       <InspectorPropertyField v-for="field in fields" :key="field.label" :label="field.label" :value="field.value" :copy-value="field.raw ?? field.value" wide />
     </dl>
-    <p v-if="!groups.length" data-testid="keyzone-observations-empty">No observations recorded for this zone.</p>
-    <section v-for="group in groups" :key="group.id" data-testid="keyzone-observation" :data-observation-id="group.task.observationId">
+    <p v-if="!groups.length" class="keyzone-empty" data-testid="keyzone-observations-empty">No observations recorded for this zone.</p>
+    <section v-for="group in groups" :key="group.id" class="keyzone-observation" data-testid="keyzone-observation" :data-observation-id="group.task.observationId">
       <h4>Observation {{ group.task.observationId }} · {{ group.task.state }}</h4>
       <dl class="inspector-fields">
         <InspectorPropertyField label="Consumer" :value="group.task.consumerId" wide />
@@ -58,10 +58,14 @@ const fields = computed(() => [
         <InspectorPropertyField label="Terminal · UTC" :value="formatDomainTimestamp(group.task.terminalAt, group.task.observer.timeframe)" wide />
         <InspectorPropertyField label="Terminal detected" :value="formatLifecycleTimestamp(group.task.terminalDetectedAt)" wide />
       </dl>
-      <p class="section-index">INTERACTIONS · {{ group.interactions.length }}</p>
-      <p v-if="!group.interactions.length">No interactions recorded for this zone.</p>
-      <section v-for="item in group.interactions" :key="item.interactionId" data-testid="keyzone-interaction">
-        <h4>{{ item.observerTimeframe }} · {{ item.state }}</h4>
+      <p class="section-index keyzone-interactions-heading">INTERACTIONS · {{ group.interactions.length }}</p>
+      <p v-if="!group.interactions.length" class="keyzone-empty">No interactions recorded for this zone.</p>
+      <details v-for="item in group.interactions" :key="item.interactionId" class="keyzone-interaction" data-testid="keyzone-interaction" :data-interaction-id="item.interactionId">
+        <summary>
+          <span class="interaction-title">Interaction {{ item.interactionId }}</span>
+          <span class="interaction-overview">{{ item.observerTimeframe }} · {{ item.state }}</span>
+          <span class="interaction-start">Started · UTC {{ formatDomainTimestamp(item.startedAt, item.observerTimeframe) }}</span>
+        </summary>
         <dl class="inspector-fields">
           <InspectorPropertyField label="Interaction ID" :value="item.interactionId" wide />
           <InspectorPropertyField label="Observer" :value="`${item.observer.instrumentId} · ${item.observer.timeframe}`" wide />
@@ -79,7 +83,87 @@ const fields = computed(() => [
           <InspectorPropertyField label="Ended detected" :value="formatLifecycleTimestamp(item.endedDetectedAt)" wide />
           <InspectorPropertyField label="Invalidated detected" :value="formatLifecycleTimestamp(item.invalidatedDetectedAt)" wide />
         </dl>
-      </section>
+      </details>
     </section>
   </section>
 </template>
+
+<style scoped>
+.keyzone-details {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.keyzone-details > .inspector-object-heading {
+  padding: 0 8px 12px;
+}
+.keyzone-details .inspector-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+.keyzone-details :deep(.inspector-field) {
+  gap: 6px 10px;
+  padding: 10px 8px;
+}
+.keyzone-details :deep(.inspector-field:last-child) {
+  border-bottom: 0;
+}
+.keyzone-details :deep(.inspector-field dt),
+.keyzone-details :deep(.inspector-field dd) {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.keyzone-observation {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--dbg-border-strong);
+}
+.keyzone-observation > h4 {
+  margin: 0;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.keyzone-interactions-heading {
+  margin: 0;
+  padding: 4px 8px 0;
+  font-size: 9px;
+  line-height: 1.6;
+}
+.keyzone-interaction {
+  min-width: 0;
+  border-radius: 4px;
+  background: var(--dbg-surface-1);
+}
+.keyzone-interaction > summary {
+  padding: 12px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.keyzone-interaction > summary::marker { color: var(--dbg-accent); }
+.keyzone-interaction > summary:hover { background: var(--dbg-surface-2); }
+.keyzone-interaction > summary:focus-visible {
+  outline: 1px solid var(--dbg-accent);
+  outline-offset: 2px;
+}
+.interaction-title { font-weight: 600; }
+.interaction-overview,
+.interaction-start { display: block; margin-top: 6px; }
+.interaction-start { color: var(--dbg-text-secondary); }
+.keyzone-interaction > .inspector-fields { padding: 0 8px 4px; }
+.keyzone-empty {
+  margin: 0;
+  padding: 0 8px;
+  color: var(--dbg-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+</style>

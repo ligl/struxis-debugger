@@ -116,13 +116,87 @@ async function cancelTask(id: string): Promise<void> {
 </template>
 
 <style scoped>
-.observation-controls { padding: 12px 0; border-block: 1px solid var(--dbg-border); margin-bottom: 12px; }
-fieldset { border: 0; padding: 0; margin: 12px 0 0; min-width: 0; display: grid; gap: 10px; }
-label { display: grid; gap: 5px; font-size: 11px; color: var(--dbg-text-secondary); min-width: 0; }
-input, select { width: 100%; min-width: 0; box-sizing: border-box; padding: 7px; background: var(--dbg-surface-2); color: var(--dbg-text-primary); border: 1px solid var(--dbg-border); border-radius: 4px; }
-.parameters { display: grid; gap: 10px; }
-.hint { font-size: 11px; line-height: 1.5; color: var(--dbg-text-secondary); }
-.active-task { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 11px; }
-[role="alert"] { color: var(--dbg-warning); font-size: 12px; }
-[role="status"] { font-size: 12px; }
+.observation-controls {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 8px 14px;
+  border-bottom: 1px solid var(--dbg-border);
+}
+.section-index { margin: 0; line-height: 1.6; }
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+form { min-width: 0; }
+fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: var(--dbg-text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+input, select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid var(--dbg-border);
+  border-radius: 4px;
+  background: var(--dbg-surface-2);
+  color: var(--dbg-text-primary);
+  font: inherit;
+}
+input:focus-visible, select:focus-visible {
+  outline: 1px solid var(--dbg-accent);
+  outline-offset: 2px;
+}
+.primary-button {
+  min-height: 32px;
+  padding: 8px 12px;
+  line-height: 1.5;
+  white-space: normal;
+}
+.parameters { display: grid; gap: 12px; }
+.hint { margin: 0; color: var(--dbg-text-secondary); font-size: 11px; line-height: 1.6; }
+.active-task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  min-width: 0;
+  margin-top: 4px;
+  padding: 10px 8px;
+  border-radius: 4px;
+  background: var(--dbg-surface-2);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.active-task > span { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; }
+.active-task > button { flex: 0 0 auto; padding: 8px 10px; }
+.observation-controls > [role="alert"],
+.observation-controls > [role="status"] {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--dbg-surface-2);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+[role="alert"] { color: var(--dbg-warning); }
 </style>
