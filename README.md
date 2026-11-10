@@ -27,6 +27,10 @@ Some features require local market data and Capitus/Struxis integration. Availab
 | Frontend package manager | Bun 1.4.3 |
 | Frontend tests | Vitest, Playwright |
 
+## Replay preview
+
+![Replay screenshot](snapshot/replay.png)
+
 ## Repository layout
 
 ```text
