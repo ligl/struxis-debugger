@@ -19,13 +19,13 @@ use crate::{
     checkpoint::{ReplayInspectorProjection, ReplayStepResult, StructureCheckpoint},
     catalog::{OriginLoad, load_origin as load_origin_candidate},
     compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
-    dataset::{sequence_fingerprint, TestDataset},
+    dataset::TestDataset,
     discovery::{CatalogDatasetEntry, configured_catalog_root, discover_catalog_datasets},
     ipc::{IpcError, IpcErrorCode},
     replay::LoadedInput,
     run::RunState,
     manager::ReplayManager,
-    snapshot_store::{discover_snapshot_artifacts, read_complete_snapshot_typed, SnapshotArtifact, SnapshotArtifactKind},
+    snapshot_store::{discover_snapshot_artifacts, read_snapshot_reference, read_reference_checkpoint, read_reference_object_checkpoint, ReferenceCheckpoint, ReferenceObjectKind, SnapshotArtifact, SnapshotArtifactKind},
     snapshot_writer::SnapshotWriter,
     worker::ReplayWorkerConfig,
 };
@@ -275,105 +275,103 @@ impl AppState {
         })
     }
 
-    /// Resolves an immutable Snapshot Reference against its original Catalog input,
-    /// independently of whichever Origin Dataset is currently loaded in the UI.
-    pub(crate) fn snapshot_reference(&self, snapshot_id: &str) -> Result<SnapshotReferenceDto, IpcError> {
-        let artifacts = discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|error| {
-            IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery failed: {error}"))
-        })?;
-        let artifact = artifacts.iter().find(|artifact| {
-            artifact.kind == SnapshotArtifactKind::Complete
-                && (artifact.snapshot_id.as_deref() == Some(snapshot_id)
-                    || artifact.file_name.strip_suffix(".snapshot.sqlite") == Some(snapshot_id))
-        }).ok_or_else(|| IpcError::new(
-            IpcErrorCode::NotFound,
-            format!("No complete, published Snapshot exists for {snapshot_id}"),
-        ))?;
-
-        let (manifest, checkpoints) = read_complete_snapshot_typed(&artifact.path).map_err(|error| {
-            IpcError::new(IpcErrorCode::InvalidState, format!("Snapshot Reference rejected: {error}"))
-        })?;
-        if manifest.snapshot_id != snapshot_id
-            && artifact.file_name.strip_suffix(".snapshot.sqlite") != Some(snapshot_id)
-        {
-            return Err(IpcError::new(IpcErrorCode::InvalidState,
-                "Snapshot identity changed while resolving the reference"));
-        }
-
-        // Re-read the full exact BarType from Catalog. The persisted Snapshot
-        // fingerprint is only accepted after recomputing it over the exact
-        // inclusive input slice; a current Origin or matching time range alone
-        // is never treated as proof of market-data identity.
-        let catalog_projection = load_origin_candidate(
-            &self.inner.catalog_path,
-            &manifest.bar_type,
-            false,
-        ).map_err(|error| {
-            IpcError::new(IpcErrorCode::Internal,
-                format!("Resolve and validate Snapshot Catalog input through Struxis failed: {error}"))
-        })?;
-        let catalog_bars = &catalog_projection.bars;
-        let start = catalog_bars.iter().position(|bar| bar.ts_event.to_string() == manifest.input_start_sbar_id)
-            .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
-                format!("Snapshot input start SBar {} is absent from Catalog", manifest.input_start_sbar_id)))?;
-        let end = catalog_bars.iter().position(|bar| bar.ts_event.to_string() == manifest.input_end_sbar_id)
-            .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
-                format!("Snapshot input end SBar {} is absent from Catalog", manifest.input_end_sbar_id)))?;
-        if end < start {
-            return Err(IpcError::new(IpcErrorCode::InvalidState,
-                "Snapshot input boundaries are reversed in the current Catalog sequence"));
-        }
-        let bars = &catalog_bars[start..=end];
-        if bars.len() != manifest.input_bar_count
-            || bars.first().map(|bar| bar.ts_event.to_string()).as_deref() != Some(manifest.input_start_ts_event.as_str())
-            || bars.last().map(|bar| bar.ts_event.to_string()).as_deref() != Some(manifest.input_end_ts_event.as_str())
-        {
-            return Err(IpcError::new(IpcErrorCode::InvalidState,
-                "Catalog Snapshot input count or boundary timestamps do not match the Manifest"));
-        }
-        let state_key = catalog_projection.state_key;
-        if state_key.instrument_id.to_string() != manifest.instrument_id {
-            return Err(IpcError::new(IpcErrorCode::InvalidState,
-                "Catalog instrument identity does not match the Snapshot Manifest"));
-        }
-        let actual_fingerprint = sequence_fingerprint(state_key, bars).map_err(|error| {
-            IpcError::new(IpcErrorCode::Internal,
-                format!("Calculate Snapshot Catalog input fingerprint failed: {error}"))
-        })?;
-        if actual_fingerprint != manifest.sbar_sequence_fingerprint {
-            return Err(IpcError::new(IpcErrorCode::InvalidState,
-                "Catalog SBar sequence fingerprint does not match the Snapshot; historical chart is unavailable"));
-        }
-
-        let structure_timeline = checkpoints.iter().map(|checkpoint| {
-            let mut structure = serde_json::from_str::<serde_json::Value>(&checkpoint.state_data).map_err(|error| {
-                IpcError::new(IpcErrorCode::InvalidState,
-                    format!("Decode Snapshot structure state at checkpoint {} failed: {error}", checkpoint.checkpoint_index))
+    /// Displays trusted Snapshot state without replay or integrity verification.
+    pub(crate) fn snapshot_reference(
+        &self,
+        snapshot_id: &str,
+    ) -> Result<SnapshotReferenceDto, IpcError> {
+        let path = self.reference_path(snapshot_id)?;
+        let (manifest, checkpoint) = read_snapshot_reference(&path).map_err(reference_error)?;
+        let (bar_type, predicate) = reference_bar_query(&manifest)?;
+        let catalog_uri =
+            self.inner.catalog_path.to_str().ok_or_else(|| {
+                reference_error("Reference Catalog path is not valid UTF-8".into())
             })?;
-            let keyzones = structure.as_object_mut().and_then(|state| state.remove("keyzones"));
-            Ok(SnapshotStructureCheckpointDto {
-                sbar_id: checkpoint.sbar_id.clone(),
-                keyzones,
-                structure,
-            })
-        }).collect::<Result<Vec<_>, IpcError>>()?;
-        let keyzones = structure_timeline.last().and_then(|checkpoint| checkpoint.keyzones.clone());
-        let structure = structure_timeline.last().map(|checkpoint| checkpoint.structure.clone())
-            .ok_or_else(|| IpcError::new(
-                IpcErrorCode::InvalidState, "Complete Snapshot contains no checkpoint records"))?;
+        let mut catalog = ParquetDataCatalog::from_uri(catalog_uri, None, None, None, None)
+            .map_err(|error| reference_error(format!("Open Reference Catalog: {error}")))?;
+        // Range arguments filter ts_init. Use ts_event explicitly so delayed-init
+        // historical bars are included in the exact inclusive display interval.
+        let bars = catalog
+            .query::<Bar>(
+                Some(vec![manifest.bar_type.clone()]),
+                None,
+                None,
+                Some(&predicate),
+                None,
+                true,
+            )
+            .map_err(|error| reference_error(format!("Read Reference market data: {error}")))?;
+        let checkpoint = project_reference_checkpoint(checkpoint)?;
         Ok(SnapshotReferenceDto {
             snapshot_id: manifest.snapshot_id,
             run_id: manifest.run_id,
             instrument_id: manifest.instrument_id,
             bar_type: manifest.bar_type,
-            timeframe: state_key.timeframe.to_string(),
+            timeframe: capitus_struxis::StruxisStateKey::from_bar_type(&bar_type)
+                .timeframe
+                .to_string(),
             snapshot_generated_at: manifest.snapshot_generated_at,
             sbar_sequence_fingerprint: manifest.sbar_sequence_fingerprint,
             bars: bars.iter().map(sbar_to_dto).collect(),
-            structure,
-            structure_timeline,
-            keyzones,
+            structure: checkpoint.structure.clone(),
+            keyzones: checkpoint.keyzones.clone(),
+            structure_timeline: vec![checkpoint],
         })
+    }
+
+    pub(crate) fn snapshot_reference_checkpoint(
+        &self,
+        snapshot_id: &str,
+        sbar_id: &str,
+    ) -> Result<SnapshotStructureCheckpointDto, IpcError> {
+        let path = self.reference_path(snapshot_id)?;
+        let checkpoint = read_reference_checkpoint(&path, sbar_id).map_err(reference_error)?;
+        project_reference_checkpoint(checkpoint)
+    }
+
+    pub(crate) fn snapshot_reference_object(
+        &self,
+        snapshot_id: &str,
+        kind: ReferenceObjectKind,
+        object_id: &str,
+    ) -> Result<Option<SnapshotStructureCheckpointDto>, IpcError> {
+        let path = self.reference_path(snapshot_id)?;
+        read_reference_object_checkpoint(&path, kind, object_id)
+            .map_err(reference_error)?
+            .map(project_reference_checkpoint)
+            .transpose()
+    }
+
+    fn reference_path(&self, snapshot_id: &str) -> Result<PathBuf, IpcError> {
+        // A frontend ID is never interpreted as an arbitrary filesystem path.
+        if snapshot_id.is_empty()
+            || snapshot_id.contains(['/', '\\'])
+            || matches!(snapshot_id, "." | "..")
+        {
+            return Err(reference_error("Invalid Snapshot ID".into()));
+        }
+        let path = self
+            .inner
+            .snapshot_root
+            .join(format!("{snapshot_id}.snapshot.sqlite"));
+        if path.is_file() {
+            return Ok(path);
+        }
+        // Preserve lookup by Manifest ID for published files with a different basename.
+        discover_snapshot_artifacts(&self.inner.snapshot_root)
+            .map_err(reference_error)?
+            .into_iter()
+            .find(|artifact| {
+                artifact.kind == SnapshotArtifactKind::Complete
+                    && artifact.snapshot_id.as_deref() == Some(snapshot_id)
+            })
+            .map(|artifact| artifact.path)
+            .ok_or_else(|| {
+                IpcError::new(
+                    IpcErrorCode::NotFound,
+                    format!("No published Snapshot exists for {snapshot_id}"),
+                )
+            })
     }
 
     fn acquire_mutation_permit(&self) -> Result<MutationPermit<'_>, IpcError> {
@@ -561,6 +559,51 @@ impl AppState {
 }
 
 
+fn reference_error(message: String) -> IpcError {
+    IpcError::new(IpcErrorCode::InvalidState, message)
+}
+
+fn project_reference_checkpoint(
+    checkpoint: ReferenceCheckpoint,
+) -> Result<SnapshotStructureCheckpointDto, IpcError> {
+    let mut structure: serde_json::Value = serde_json::from_str(&checkpoint.state_data)
+        .map_err(|error| reference_error(format!("Decode Reference state: {error}")))?;
+    let state = structure
+        .as_object_mut()
+        .ok_or_else(|| reference_error("Reference state must be a JSON object".into()))?;
+    let keyzones = state.remove("keyzones");
+    let diagnostics = serde_json::from_str(&checkpoint.diagnostics)
+        .map_err(|error| reference_error(format!("Decode Reference diagnostics: {error}")))?;
+    Ok(SnapshotStructureCheckpointDto {
+        sbar_id: checkpoint.sbar_id,
+        keyzones,
+        structure,
+        diagnostics,
+    })
+}
+
+/// Parse display coordinates only; do not verify saved fingerprints or market identity.
+fn reference_bar_query(
+    manifest: &crate::snapshot::SnapshotManifest,
+) -> Result<(nautilus_model::data::BarType, String), IpcError> {
+    let bar_type = manifest
+        .bar_type
+        .parse::<nautilus_model::data::BarType>()
+        .map_err(|error| reference_error(format!("Parse Reference BarType: {error}")))?;
+    let start = manifest
+        .input_start_ts_event
+        .parse::<u64>()
+        .map_err(|error| reference_error(format!("Parse Reference start timestamp: {error}")))?;
+    let end = manifest
+        .input_end_ts_event
+        .parse::<u64>()
+        .map_err(|error| reference_error(format!("Parse Reference end timestamp: {error}")))?;
+    Ok((
+        bar_type,
+        format!("CAST(ts_event AS BIGINT) >= {start} AND CAST(ts_event AS BIGINT) <= {end}"),
+    ))
+}
+
 fn configured_snapshot_root() -> PathBuf {
     if let Some(path) = std::env::var_os("CAPITUS_STRUXIS_DEBUGGER_SNAPSHOT_DIR") {
         return PathBuf::from(path);
@@ -614,6 +657,7 @@ pub(crate) struct SnapshotReferenceDto {
     pub(crate) sbar_sequence_fingerprint: String,
     pub(crate) bars: Vec<SBarDto>,
     pub(crate) structure: serde_json::Value,
+    /// Initially contains only the final checkpoint; history is read on demand.
     pub(crate) structure_timeline: Vec<SnapshotStructureCheckpointDto>,
     pub(crate) keyzones: Option<serde_json::Value>,
 }
@@ -621,6 +665,7 @@ pub(crate) struct SnapshotReferenceDto {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SnapshotStructureCheckpointDto {
+    pub(crate) diagnostics: Vec<crate::diagnostics::Diagnostic>,
     pub(crate) keyzones: Option<serde_json::Value>,
     pub(crate) sbar_id: String,
     pub(crate) structure: serde_json::Value,
@@ -760,6 +805,193 @@ mod tests {
             bar_type: bar_type.to_string(),
             bars,
             structure: None,
+        }
+    }
+
+    fn reference_manifest(origin: &OriginLoad) -> crate::snapshot::SnapshotManifest {
+        crate::snapshot::SnapshotManifest {
+            snapshot_id: "reference-test".into(),
+            run_id: "reference-run".into(),
+            state_key: format!("{:?}", origin.state_key),
+            instrument_id: "AUD/USD.SIM".into(),
+            bar_type: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL".into(),
+            input_start_sbar_id: "100".into(),
+            input_end_sbar_id: "300".into(),
+            input_start_ts_event: "100".into(),
+            input_end_ts_event: "300".into(),
+            snapshot_generated_at: "1".into(),
+            input_bar_count: 3,
+            sbar_sequence_fingerprint: origin.sbar_sequence_fingerprint.clone(),
+            config_fingerprint: String::new(),
+            effective_config: String::new(),
+            status: "Complete".into(),
+            checkpoint_count: 3,
+            content_checksum: String::new(),
+        }
+    }
+
+    #[test]
+    fn reference_query_uses_event_time_without_checking_saved_identity() {
+        let origin = fixture_origin();
+        let mut manifest = reference_manifest(&origin);
+        manifest.sbar_sequence_fingerprint = "unverified".into();
+        manifest.instrument_id = "unverified".into();
+        manifest.input_bar_count = 999;
+        let (bar_type, predicate) = super::reference_bar_query(&manifest).unwrap();
+        assert_eq!(bar_type.to_string(), "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL");
+        assert_eq!(
+            predicate,
+            "CAST(ts_event AS BIGINT) >= 100 AND CAST(ts_event AS BIGINT) <= 300"
+        );
+    }
+
+    #[test]
+    fn reference_displays_only_final_state_and_queries_inclusive_event_time_in_real_parquet() {
+        let root = std::env::temp_dir().join(format!("capitus-reference-{}", Uuid::new_v4()));
+        let catalog_path = root.join("catalog");
+        let snapshot_root = root.join("snapshots");
+        std::fs::create_dir_all(&catalog_path).unwrap();
+        std::fs::create_dir_all(&snapshot_root).unwrap();
+        let catalog = super::ParquetDataCatalog::new(&catalog_path, None, None, None, None);
+        let bars = [50_u64, 100, 200, 300, 400]
+            .into_iter()
+            .enumerate()
+            .map(|(index, ts)| {
+                let mut bar = fixture_bar(ts, "10.00");
+                bar.ts_init = (1_000 + index as u64 * 100).into();
+                bar
+            })
+            .collect::<Vec<_>>();
+        catalog.write_to_parquet(&bars, None, None, None).unwrap();
+        drop(catalog);
+        let mut manifest = reference_manifest(&fixture_origin());
+        manifest.input_bar_count = 999;
+        manifest.checkpoint_count = 999;
+        manifest.sbar_sequence_fingerprint = "unverified".into();
+        let connection =
+            rusqlite::Connection::open(snapshot_root.join("reference-test.snapshot.sqlite"))
+                .unwrap();
+        connection.execute_batch(
+            "CREATE TABLE snapshot_manifest(singleton INTEGER PRIMARY KEY,payload TEXT);
+             CREATE TABLE snapshot_checkpoints(checkpoint_index INTEGER PRIMARY KEY,sbar_id TEXT,record_kind TEXT,state_data TEXT,diagnostics TEXT);
+             CREATE INDEX reference_sbar ON snapshot_checkpoints(sbar_id);
+             INSERT INTO snapshot_checkpoints VALUES(0,'100','Full','invalid historical JSON','[]');"
+        ).unwrap();
+        connection
+            .execute(
+                "INSERT INTO snapshot_manifest VALUES(1,?1)",
+                [serde_json::to_string(&manifest).unwrap()],
+            )
+            .unwrap();
+        connection.execute("INSERT INTO snapshot_checkpoints VALUES(1,'300','Full',?1,'[]')",
+            [r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#]).unwrap();
+        drop(connection);
+        let app = AppState::with_snapshot_root(catalog_path, snapshot_root);
+        let reference = app.snapshot_reference("reference-test").unwrap();
+        assert_eq!(
+            reference
+                .bars
+                .iter()
+                .map(|bar| bar.sbar_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["100", "200", "300"]
+        );
+        assert_eq!(reference.structure_timeline.len(), 1);
+        assert_eq!(reference.structure_timeline[0].sbar_id, "300");
+        assert_eq!(reference.sbar_sequence_fingerprint, "unverified");
+        assert!(
+            app.snapshot_reference_checkpoint("reference-test", "100")
+                .is_err()
+        );
+        assert_eq!(
+            app.snapshot_reference_checkpoint("reference-test", "300")
+                .unwrap()
+                .sbar_id,
+            "300"
+        );
+        drop(app);
+        let missing_catalog =
+            AppState::with_snapshot_root(root.join("absent"), root.join("snapshots"));
+        assert!(
+            missing_catalog
+                .snapshot_reference("reference-test")
+                .is_err()
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn reference_query_reports_coordinates_that_cannot_be_parsed() {
+        let origin = fixture_origin();
+        for field in ["bar_type", "start", "end"] {
+            let mut manifest = reference_manifest(&origin);
+            match field {
+                "bar_type" => manifest.bar_type = "invalid".into(),
+                "start" => manifest.input_start_ts_event = "100 OR 1=1".into(),
+                "end" => manifest.input_end_ts_event = "invalid".into(),
+                _ => unreachable!(),
+            }
+            assert!(super::reference_bar_query(&manifest).is_err(), "{field}");
+        }
+    }
+
+    #[test]
+    fn reference_projection_parses_state_without_domain_validation() {
+        let checkpoint =
+            super::project_reference_checkpoint(crate::snapshot_store::ReferenceCheckpoint {
+                sbar_id: "100".into(),
+                state_data: r#"{"cbars":[],"keyzones":{"zones":[]}}"#.into(),
+                diagnostics: "[]".into(),
+            })
+            .unwrap();
+        assert_eq!(checkpoint.sbar_id, "100");
+        assert_eq!(checkpoint.structure, serde_json::json!({"cbars":[]}));
+        assert_eq!(checkpoint.keyzones, Some(serde_json::json!({"zones":[]})));
+        for state in ["invalid", "[]"] {
+            assert!(
+                super::project_reference_checkpoint(crate::snapshot_store::ReferenceCheckpoint {
+                    sbar_id: "100".into(),
+                    state_data: state.into(),
+                    diagnostics: "[]".into(),
+                })
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn reference_projection_preserves_recorded_diagnostics_without_integrity_validation() {
+        let checkpoint = super::project_reference_checkpoint(crate::snapshot_store::ReferenceCheckpoint {
+            sbar_id: "100".into(),
+            state_data: "{}".into(),
+            diagnostics: r#"[{"source":"struxis","severity":"upstream-special","category":"processing","objectType":null,"objectId":null,"sbarIds":["100"],"checkpointIndex":9,"message":"Recorded exception"}]"#.into(),
+        }).unwrap();
+        assert_eq!(checkpoint.diagnostics.len(), 1);
+        assert_eq!(checkpoint.diagnostics[0].severity, "upstream-special");
+        assert_eq!(checkpoint.diagnostics[0].checkpoint_index, Some(9));
+        assert_eq!(checkpoint.diagnostics[0].message, "Recorded exception");
+        let encoded = serde_json::to_value(&checkpoint).unwrap();
+        assert_eq!(encoded["diagnostics"][0]["source"], "struxis");
+        for encoded in ["invalid", "{}"] {
+            let error =
+                super::project_reference_checkpoint(crate::snapshot_store::ReferenceCheckpoint {
+                    sbar_id: "100".into(),
+                    state_data: "{}".into(),
+                    diagnostics: encoded.into(),
+                })
+                .unwrap_err();
+            assert!(error.message.contains("Decode Reference diagnostics"));
+        }
+    }
+
+    #[test]
+    fn reference_ids_cannot_escape_the_snapshot_directory() {
+        let app = AppState::with_snapshot_root(
+            PathBuf::from("/unused/catalog"),
+            PathBuf::from("/unused/snapshots"),
+        );
+        for id in ["", "../other", "nested/other", "nested\\other", ".", ".."] {
+            assert!(app.reference_path(id).is_err());
         }
     }
 

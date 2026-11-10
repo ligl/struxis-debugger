@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import SnapshotReferenceChart from "./SnapshotReferenceChart.vue";
-import { describeIpcError, getSnapshotReference } from "../origin-bridge";
-import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplaySnapshotInspectorSelection, SnapshotArtifactDto, SnapshotReferenceDto } from "../origin-types";
+import { describeIpcError, getSnapshotReference, getSnapshotReferenceCheckpoint, getSnapshotReferenceObject } from "../origin-bridge";
+import type { ReplayChartCrosshairSync, ReplayChartSelection, ReplayChartViewportSync, ReplaySnapshotInspectorSelection, SnapshotArtifactDto, SnapshotReferenceDto, SnapshotStructureCheckpointDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 
 const props = withDefaults(defineProps<{
@@ -34,10 +34,16 @@ const emit = defineEmits<{
 }>();
 
 const selectedSnapshotId = ref<string | null>(null);
-const reference = ref<SnapshotReferenceDto | null>(null);
+const reference = shallowRef<SnapshotReferenceDto | null>(null);
 const referenceLoading = ref(false);
 const referenceError = ref("");
 let requestRevision = 0;
+let inspectorRevision = 0;
+let checkpointCache = new Map<string, SnapshotStructureCheckpointDto>();
+let objectCache = new Map<string, SnapshotStructureCheckpointDto | null>();
+let checkpointRequests = new Map<string, Promise<SnapshotStructureCheckpointDto | null>>();
+const checkpointError = ref("");
+const inspectorError = ref("");
 
 const availableSnapshots = computed(() =>
   props.instrumentId
@@ -68,33 +74,125 @@ const snapshotPlaybackEnabled = computed(() =>
   (props.liveSbarIds?.length ?? 0) > 0 &&
   processedCount.value < (props.liveSbarIds?.length ?? 0),
 );
-const playbackStructure = computed(() => {
+interface SnapshotFrameTarget {
+  snapshotId: string;
+  syncIdentity: string | null;
+  sbarId: string | null;
+  playbackEnabled: boolean;
+  offset: number | null;
+  processedCount: number;
+  liveBarCount: number;
+}
+interface SnapshotDisplayFrame extends SnapshotFrameTarget {
+  checkpoint: SnapshotStructureCheckpointDto | null;
+}
+const requestedFrame = computed<SnapshotFrameTarget | null>(() => {
   const current = reference.value;
   if (!current) return null;
-  if (!snapshotPlaybackEnabled.value) return current.structure;
-  if (processedCount.value === 0) return null;
-  const snapshotIndex = (syncOffset.value ?? 0) + processedCount.value - 1;
-  const checkpointSbarId = current.bars[snapshotIndex]?.sbarId;
-  if (!checkpointSbarId) return null;
-  return current.structureTimeline.find((checkpoint) => checkpoint.sbarId === checkpointSbarId)?.structure ?? null;
+  const playbackEnabled = snapshotPlaybackEnabled.value;
+  const sbarId = !playbackEnabled
+    ? current.structureTimeline.at(-1)?.sbarId ?? null
+    : processedCount.value === 0 ? null
+      : current.bars[(syncOffset.value ?? 0) + processedCount.value - 1]?.sbarId ?? null;
+  return {
+    snapshotId: current.snapshotId, syncIdentity: props.syncIdentity ?? null, sbarId,
+    playbackEnabled, offset: syncOffset.value,
+    processedCount: processedCount.value, liveBarCount: props.liveSbarIds?.length ?? 0,
+  };
+});
+const displayFrame = shallowRef<SnapshotDisplayFrame | null>(null);
+let frameRevision = 0;
+const displayCheckpoint = computed(() => displayFrame.value?.checkpoint ?? null);
+const playbackStructure = computed(() => displayCheckpoint.value?.structure ?? null);
+const playbackKeyzones = computed(() => displayCheckpoint.value?.keyzones ?? null);
+const keyzoneUntil = computed(() => displayCheckpoint.value?.sbarId ?? null);
+const displayPlaybackEnabled = computed(() => displayFrame.value?.playbackEnabled ?? false);
+const checkpointLoading = ref(false);
+
+type FooterMessage = { kind: "reference" | "checkpoint" | "inspector" | "recorded"; message: string };
+const informationalSeverities = new Set(["info", "debug", "trace"]);
+const footerMessages = computed<FooterMessage[]>(() => {
+  const messages: FooterMessage[] = [];
+  if (referenceError.value) messages.push({ kind: "reference", message: referenceError.value });
+  if (checkpointError.value) messages.push({ kind: "checkpoint", message: checkpointError.value });
+  if (inspectorError.value) messages.push({ kind: "inspector", message: inspectorError.value });
+  for (const diagnostic of displayCheckpoint.value?.diagnostics ?? []) {
+    if (!informationalSeverities.has(diagnostic.severity.toLowerCase())) {
+      messages.push({ kind: "recorded", message: `${diagnostic.severity} · ${diagnostic.source}: ${diagnostic.message}` });
+    }
+  }
+  return messages;
+});
+const footerDetails = computed(() => footerMessages.value.map((item) => item.message).join("\n"));
+const footerMessageTestId = computed(() => {
+  switch (footerMessages.value[0]?.kind) {
+    case "reference": return "snapshot-reference-read-error";
+    case "checkpoint": return "snapshot-checkpoint-error";
+    case "inspector": return "snapshot-inspector-error";
+    case "recorded": return "snapshot-recorded-diagnostic";
+    default: return undefined;
+  }
 });
 
-const playbackKeyzones = computed(() => {
+function loadCheckpoint(sbarId: string): Promise<SnapshotStructureCheckpointDto | null> {
   const current = reference.value;
-  if (!current) return null;
-  if (!snapshotPlaybackEnabled.value) return current.keyzones ?? null;
-  if (processedCount.value === 0) return null;
-  const index = (syncOffset.value ?? 0) + processedCount.value - 1;
-  const id = current.bars[index]?.sbarId;
-  return current.structureTimeline.find((checkpoint) => checkpoint.sbarId === id)?.keyzones ?? null;
+  if (!current) return Promise.resolve(null);
+  const cached = checkpointCache.get(sbarId);
+  if (cached) return Promise.resolve(cached);
+  const pending = checkpointRequests.get(sbarId);
+  if (pending) return pending;
+  const revision = requestRevision;
+  const cache = checkpointCache;
+  const requests = checkpointRequests;
+  const request = getSnapshotReferenceCheckpoint(current.snapshotId, sbarId).then((checkpoint) => {
+    if (revision !== requestRevision) return null;
+    cache.set(sbarId, checkpoint);
+    return checkpoint;
+  }).finally(() => requests.delete(sbarId));
+  requests.set(sbarId, request);
+  return request;
+}
+
+watch(requestedFrame, async (target) => {
+  const revision = ++frameRevision;
+  const snapshotRevision = requestRevision;
+  checkpointError.value = "";
+  checkpointLoading.value = false;
+  if (!target) { displayFrame.value = null; return; }
+
+  if (!displayFrame.value || displayFrame.value.snapshotId !== target.snapshotId
+    || displayFrame.value.syncIdentity !== target.syncIdentity) {
+    // A new identity has no accepted historical frame yet. Start at zero
+    // progress rather than pairing the final Snapshot structure with a live cursor.
+    displayFrame.value = { ...target, sbarId: null, processedCount: 0, checkpoint: null };
+  }
+  if (!target.sbarId) {
+    displayFrame.value = { ...target, checkpoint: null };
+    return;
+  }
+  const cached = checkpointCache.get(target.sbarId);
+  if (cached) {
+    displayFrame.value = { ...target, checkpoint: cached };
+    return;
+  }
+  checkpointLoading.value = true;
+  try {
+    const checkpoint = await loadCheckpoint(target.sbarId);
+    if (checkpoint && revision === frameRevision && snapshotRevision === requestRevision) {
+      // Publish structure, KeyZone boundary, progress styling and diagnostics
+      // through one immutable frame. Pending targets never clear the old frame.
+      displayFrame.value = { ...target, checkpoint };
+    }
+  } catch (error) {
+    if (revision === frameRevision && snapshotRevision === requestRevision) {
+      checkpointError.value = describeIpcError(error);
+    }
+  } finally {
+    if (revision === frameRevision && snapshotRevision === requestRevision) checkpointLoading.value = false;
+  }
 });
-const keyzoneUntil = computed(() => {
-  const current = reference.value;
-  if (!current) return null;
-  return snapshotPlaybackEnabled.value
-    ? current.bars[(syncOffset.value ?? 0) + processedCount.value - 1]?.sbarId ?? null
-    : current.bars.at(-1)?.sbarId ?? null;
-});
+
+onBeforeUnmount(() => { requestRevision++; inspectorRevision++; frameRevision++; });
 
 function compareGeneratedAtDescending(left: string | null, right: string | null): number {
   if (left === right) return 0;
@@ -168,6 +266,15 @@ watch(availableSnapshots, (available) => {
 
 watch(selectedSnapshotId, async (snapshotId) => {
   const revision = ++requestRevision;
+  inspectorRevision++;
+  frameRevision++;
+  displayFrame.value = null;
+  checkpointLoading.value = false;
+  checkpointCache = new Map();
+  objectCache = new Map();
+  checkpointRequests = new Map();
+  checkpointError.value = "";
+  inspectorError.value = "";
   reference.value = null;
   referenceError.value = "";
   emit("syncSequence", null);
@@ -181,6 +288,7 @@ watch(selectedSnapshotId, async (snapshotId) => {
   try {
     const result = await getSnapshotReference(snapshotId);
     if (revision !== requestRevision || selectedSnapshotId.value !== snapshotId) return;
+    for (const checkpoint of result.structureTimeline) checkpointCache.set(checkpoint.sbarId, checkpoint);
     reference.value = result;
     emit("syncSequence", {
       snapshotId: result.snapshotId,
@@ -200,91 +308,87 @@ function handleSelection(event: Event): void {
   selectedSnapshotId.value = value || null;
 }
 
+function emitCheckpointSelection(
+  current: SnapshotReferenceDto,
+  selection: ReplayChartSelection,
+  checkpoint: SnapshotStructureCheckpointDto | null,
+): void {
+  const snapshotLabel = selectedSnapshot.value ? describeSnapshot(selectedSnapshot.value) : current.snapshotId;
+  const common = { snapshotId: current.snapshotId, snapshotLabel,
+    checkpointSbarId: checkpoint?.sbarId ?? selection.id, timeframe: current.timeframe,
+    bars: current.bars, structure: checkpoint?.structure ?? null };
+  const structure = checkpoint?.structure;
+  if (selection.kind === "sbar") {
+    const object = current.bars.find((bar) => bar.sbarId === selection.id);
+    emit("objectSelect", object ? { ...common, kind: "sbar", object } : null);
+  } else if (selection.kind === "keyzone") {
+    const registry = checkpoint?.keyzones;
+    const object = registry?.zones.find((zone) => zone.keyzoneId === selection.id);
+    emit("objectSelect", object && registry ? { ...common, kind: "keyzone", object, registry } : null);
+  } else if (selection.kind === "cbar") {
+    const object = structure?.cbars.find((bar) => bar.cbarId === selection.id);
+    emit("objectSelect", object ? { ...common, kind: "cbar", object } : null);
+  } else if (selection.kind === "swing") {
+    const object = structure?.swings.find((swing) => swing.swingId === selection.id);
+    emit("objectSelect", object ? { ...common, kind: "swing", object } : null);
+  } else {
+    const object = structure?.trends.find((trend) => trend.trendId === selection.id);
+    emit("objectSelect", object ? { ...common, kind: "trend", object } : null);
+  }
+}
+
 function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
   const current = reference.value;
   if (!current || current.snapshotId !== selectedSnapshotId.value) return;
-  const snapshotLabel = selectedSnapshot.value ? describeSnapshot(selectedSnapshot.value) : current.snapshotId;
-
-  if (selection.kind === "sbar") {
-    const bar = current.bars.find((item) => item.sbarId === selection.id);
-    if (!bar) return;
-    const checkpoint = current.structureTimeline.find((item) => item.sbarId === bar.sbarId);
-    emit("objectSelect", {
-      snapshotId: current.snapshotId,
-      snapshotLabel,
-      checkpointSbarId: bar.sbarId,
-      timeframe: current.timeframe,
-      kind: "sbar",
-      object: bar,
-      bars: current.bars,
-      structure: checkpoint?.structure ?? null,
+  const revision = requestRevision;
+  const selectionRevision = ++inspectorRevision;
+  inspectorError.value = "";
+  if (selection.kind === "sbar" || selection.kind === "keyzone") {
+    const id = selection.kind === "sbar" ? selection.id : keyzoneUntil.value;
+    if (!id) { emit("objectSelect", null); return; }
+    const cached = checkpointCache.get(id);
+    if (cached) { emitCheckpointSelection(current, selection, cached); return; }
+    emit("objectSelect", null);
+    void loadCheckpoint(id).then((checkpoint) => {
+      if (revision === requestRevision && selectionRevision === inspectorRevision && checkpoint) {
+        emitCheckpointSelection(current, selection, checkpoint);
+      }
+    }).catch((error) => {
+      if (revision === requestRevision && selectionRevision === inspectorRevision) {
+        inspectorError.value = describeIpcError(error);
+      }
     });
     return;
   }
-
-  // Resolve structure details only from a Snapshot timeline checkpoint that
-  // contains the selected stable ID; never borrow a Live checkpoint object.
-  if (selection.kind === "keyzone") {
-    const checkpoint = current.structureTimeline.find((item) => item.sbarId === keyzoneUntil.value);
-    const registry = checkpoint?.keyzones;
-    const object = registry?.zones.find((zone) => zone.keyzoneId === selection.id);
-    emit("objectSelect", object && registry && checkpoint ? {
-      kind: "keyzone", object, registry, snapshotId: current.snapshotId, snapshotLabel,
-      checkpointSbarId: checkpoint.sbarId, timeframe: current.timeframe,
-      bars: current.bars, structure: checkpoint.structure,
-    } : null);
+  // Historical CBar/Swing/Trend inspection uses the latest recorded state that
+  // contains the ID, even if that object disappeared before the final checkpoint.
+  const last = current.structureTimeline.at(-1);
+  const containsObject = last && (selection.kind === "cbar"
+    ? last.structure?.cbars.some((object) => object.cbarId === selection.id)
+    : selection.kind === "swing"
+      ? last.structure?.swings.some((object) => object.swingId === selection.id)
+      : last.structure?.trends.some((object) => object.trendId === selection.id));
+  if (containsObject) { emitCheckpointSelection(current, selection, last); return; }
+  const objectKey = `${selection.kind}:${selection.id}`;
+  if (objectCache.has(objectKey)) {
+    emitCheckpointSelection(current, selection, objectCache.get(objectKey) ?? null);
     return;
   }
-  for (const checkpoint of [...current.structureTimeline].reverse()) {
-    const structure = checkpoint.structure;
-    if (selection.kind === "cbar") {
-      const object = structure?.cbars.find((item) => item.cbarId === selection.id);
-      if (object) {
-        emit("objectSelect", {
-          snapshotId: current.snapshotId,
-          snapshotLabel,
-          checkpointSbarId: checkpoint.sbarId,
-          timeframe: current.timeframe,
-          kind: "cbar",
-          object,
-          bars: current.bars,
-          structure,
-        });
-        return;
-      }
-    } else if (selection.kind === "swing") {
-      const object = structure?.swings.find((item) => item.swingId === selection.id);
-      if (object) {
-        emit("objectSelect", {
-          snapshotId: current.snapshotId,
-          snapshotLabel,
-          checkpointSbarId: checkpoint.sbarId,
-          timeframe: current.timeframe,
-          kind: "swing",
-          object,
-          bars: current.bars,
-          structure,
-        });
-        return;
-      }
-    } else {
-      const object = structure?.trends.find((item) => item.trendId === selection.id);
-      if (object) {
-        emit("objectSelect", {
-          snapshotId: current.snapshotId,
-          snapshotLabel,
-          checkpointSbarId: checkpoint.sbarId,
-          timeframe: current.timeframe,
-          kind: "trend",
-          object,
-          bars: current.bars,
-          structure,
-        });
-        return;
-      }
+  emit("objectSelect", null);
+  void getSnapshotReferenceObject(current.snapshotId, selection.kind, selection.id).then((checkpoint) => {
+    if (revision !== requestRevision) return;
+    objectCache.set(objectKey, checkpoint);
+    if (checkpoint) {
+      checkpointCache.set(checkpoint.sbarId, checkpoint);
     }
-  }
-  emit("objectSelect", null);;
+    if (selectionRevision === inspectorRevision) {
+      emitCheckpointSelection(current, selection, checkpoint);
+    }
+  }).catch((error) => {
+    if (revision === requestRevision && selectionRevision === inspectorRevision) {
+      inspectorError.value = describeIpcError(error);
+    }
+  });
 }
 </script>
 
@@ -328,19 +432,17 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
       <div v-if="referenceLoading" class="snapshot-reference-loading" role="status" aria-live="polite" data-testid="snapshot-reference-loading">
         <span class="snapshot-reference-loading-spinner" aria-hidden="true"></span>
         <strong>LOADING SNAPSHOT</strong>
-        <span>Validating historical SBar data…</span>
+        <span>Reading Snapshot and chart data…</span>
       </div>
-      <div v-else-if="referenceError" class="snapshot-reference-state" role="alert" data-testid="snapshot-reference-error">
+      <div v-else-if="referenceError" class="snapshot-reference-state" role="status" data-testid="snapshot-reference-error">
         <div class="snapshot-reference-identity">
           <span class="reference-status-dot reference-status-dot-error" aria-hidden="true"></span>
           <strong>{{ selectedSnapshotId }}</strong>
           <span class="reference-tag">REFERENCE UNAVAILABLE</span>
         </div>
-        <p class="snapshot-reference-unavailable">{{ referenceError }}</p>
-        <p class="snapshot-reference-unavailable">No candles or structure are shown unless the Catalog sequence matches the Snapshot fingerprint.</p>
+        <p class="snapshot-reference-unavailable">Snapshot or chart data could not be read.</p>
       </div>
-      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': snapshotPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="snapshotPlaybackEnabled" data-testid="snapshot-reference-chart">
-        <span v-if="!playbackKeyzones && !snapshotPlaybackEnabled" data-testid="snapshot-keyzone-unrecorded">KEYZONE NOT RECORDED</span>
+      <div v-else-if="reference" class="snapshot-reference-chart" :class="{ 'is-sync-eligible': syncEligible, 'is-progress-active': displayPlaybackEnabled }" :data-sync-eligible="syncEligible" :data-progress-active="displayPlaybackEnabled" data-testid="snapshot-reference-chart">
         <SnapshotReferenceChart
           v-if="active !== false"
           :bars="reference.bars"
@@ -354,10 +456,10 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
           :sync-owner="syncOwner"
           :sync-request="syncRequest"
           :crosshair-sync="crosshairSync"
-          :live-bar-count="liveSbarIds?.length ?? 0"
-          :playback-enabled="snapshotPlaybackEnabled"
-          :playback-offset="syncOffset"
-          :processed-count="processedCount ?? 0"
+          :live-bar-count="displayFrame?.liveBarCount ?? 0"
+          :playback-enabled="displayPlaybackEnabled"
+          :playback-offset="displayFrame?.offset ?? null"
+          :processed-count="displayFrame?.processedCount ?? 0"
           @activate="emit('chartActivate')"
           @viewport-change="emit('viewportChange', $event)"
           @crosshair-change="emit('crosshairChange', $event)"
@@ -370,11 +472,21 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
       </div>
     </div>
 
-    <footer v-if="reference" class="snapshot-reference-foot" data-testid="snapshot-reference-metadata">
-      <span>RUN <b>{{ reference.runId }}</b></span>
-      <span>SBARS <b>{{ reference.bars.length.toLocaleString() }}</b></span>
-      <span>GENERATED <b>{{ formatLifecycleTimestamp(reference.snapshotGeneratedAt) }}</b></span>
-      <span class="snapshot-reference-state-key">FINGERPRINT <b>{{ reference.sbarSequenceFingerprint.slice(0, 12) }}</b></span>
+    <footer v-if="reference || footerMessages.length" class="snapshot-reference-foot" data-testid="snapshot-reference-metadata">
+      <div v-if="reference" class="snapshot-reference-footer-metadata" data-testid="snapshot-reference-footer-fields">
+        <span>RUN <b>{{ reference.runId }}</b></span>
+        <span>SBARS <b>{{ reference.bars.length.toLocaleString() }}</b></span>
+        <span>GENERATED <b>{{ formatLifecycleTimestamp(reference.snapshotGeneratedAt) }}</b></span>
+        <span class="snapshot-reference-state-key">FINGERPRINT <b>{{ reference.sbarSequenceFingerprint.slice(0, 12) }}</b></span>
+      </div>
+      <div class="snapshot-reference-footer-status" data-testid="snapshot-reference-footer-status">
+        <span v-if="checkpointLoading" role="status" data-testid="snapshot-checkpoint-loading">Loading checkpoint…</span>
+        <span v-if="reference && !playbackKeyzones && !displayPlaybackEnabled" class="snapshot-reference-footer-notice" role="status" data-testid="snapshot-keyzone-unrecorded">KEYZONE NOT RECORDED</span>
+        <span v-if="footerMessages.length" class="snapshot-reference-footer-alert" role="alert" :title="footerDetails" data-testid="snapshot-reference-footer-message">
+          <span v-if="footerMessages.length > 1" class="snapshot-reference-message-count">{{ footerMessages.length }} ·</span>
+          <span :data-testid="footerMessageTestId">{{ footerMessages[0]?.message }}</span>
+        </span>
+      </div>
     </footer>
   </section>
 </template>
@@ -423,6 +535,28 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
   letter-spacing: .04em;
 }
 
+.snapshot-reference-footer-metadata,
+.snapshot-reference-footer-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: inherit;
+  overflow: hidden;
+}
+
+.snapshot-reference-footer-metadata {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
+.snapshot-reference-footer-metadata > span {
+  flex-shrink: 0;
+}
+
+.snapshot-reference-footer-status {
+  flex: 1;
+}
+
 .snapshot-reference-foot span {
   min-width: 0;
   overflow: hidden;
@@ -430,14 +564,27 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
   white-space: nowrap;
 }
 
+.snapshot-reference-foot .snapshot-reference-footer-alert {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  color: #b46868;
+}
+
+.snapshot-reference-foot .snapshot-reference-footer-notice {
+  flex-shrink: 0;
+  color: #b46868;
+}
+
+.snapshot-reference-footer-alert .snapshot-reference-message-count {
+  flex-shrink: 0;
+}
+
 .snapshot-reference-foot b {
   color: var(--dbg-text-secondary);
   font-weight: 500;
   letter-spacing: 0;
-}
-
-.snapshot-reference-foot .snapshot-reference-state-key {
-  margin-left: auto;
 }
 
 @media (max-height: 760px) {

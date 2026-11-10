@@ -63,6 +63,14 @@ export function getSnapshotReference(snapshotId: string): Promise<SnapshotRefere
   return invoke<SnapshotReferenceDto>("get_snapshot_reference", { snapshotId });
 }
 
+export function getSnapshotReferenceCheckpoint(snapshotId: string, sbarId: string): Promise<import("./origin-types").SnapshotStructureCheckpointDto> {
+  return invoke("get_snapshot_reference_checkpoint", { snapshotId, sbarId });
+}
+
+export function getSnapshotReferenceObject(snapshotId: string, kind: "cbar" | "swing" | "trend", objectId: string): Promise<import("./origin-types").SnapshotStructureCheckpointDto | null> {
+  return invoke("get_snapshot_reference_object", { snapshotId, kind, objectId });
+}
+
 export function compareSnapshots(
   baselineSnapshotId: string,
   candidateSnapshotId: string,

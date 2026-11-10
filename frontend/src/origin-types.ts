@@ -292,6 +292,7 @@ export interface SnapshotArtifactDto {
 }
 
 export interface SnapshotStructureCheckpointDto {
+  diagnostics?: DiagnosticDto[];
   sbarId: string;
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
@@ -307,6 +308,7 @@ export interface SnapshotReferenceDto {
   sbarSequenceFingerprint: string;
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto;
+  /** Only the final checkpoint is sent initially; historical state is fetched on demand. */
   structureTimeline: SnapshotStructureCheckpointDto[];
   keyzones?: KeyZoneCheckpointDto | null;
 }

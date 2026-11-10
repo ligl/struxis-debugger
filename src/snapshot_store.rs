@@ -1,8 +1,8 @@
 //! Read-only Snapshot discovery and residual-artifact classification.
 //!
 //! Discovery never promotes or repairs files and reads only the Manifest needed
-//! to classify/list artifacts. Full checksum and checkpoint validation is deferred
-//! until a published candidate is selected through the Snapshot Reference path.
+//! to classify/list artifacts. Reference reads trust published content after
+//! direct reads; Compare retains full checksum and checkpoint validation.
 
 use std::{
     fmt,
@@ -11,7 +11,7 @@ use std::{
 };
 
 use rusqlite::{Connection, OpenFlags};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::snapshot::{
     verify_complete_snapshot, SnapshotCheckpointRecord, SnapshotManifest,
@@ -118,29 +118,160 @@ pub(crate) fn read_complete_snapshot(
 pub(crate) fn read_complete_snapshot_typed(
     path: impl AsRef<Path>,
 ) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), SnapshotReadError> {
-    let path = path.as_ref();
-    let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+    let (manifest, checkpoints) = read_published_database(path.as_ref())?;
+    verify_complete_snapshot(&manifest, &checkpoints)
+        .map_err(SnapshotReadError::IntegrityFailure)?;
+    Ok((manifest, checkpoints))
+}
+
+/// The only persisted fields needed to display one trusted Full checkpoint.
+#[derive(Debug)]
+pub(crate) struct ReferenceCheckpoint {
+    pub(crate) sbar_id: String,
+    pub(crate) state_data: String,
+    pub(crate) diagnostics: String,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum ReferenceObjectKind {
+    Cbar,
+    Swing,
+    Trend,
+}
+
+/// Initial display reads only the Manifest and final checkpoint, without validation.
+pub(crate) fn read_snapshot_reference(
+    path: impl AsRef<Path>,
+) -> Result<(SnapshotManifest, ReferenceCheckpoint), String> {
+    let connection = open_reference(path.as_ref())?;
+    let payload: String = connection
+        .query_row(
+            "SELECT payload FROM snapshot_manifest WHERE singleton=1",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|error| format!("Read Reference Manifest: {error}"))?;
+    let manifest = serde_json::from_str(&payload)
+        .map_err(|error| format!("Decode Reference Manifest: {error}"))?;
+    let checkpoint = connection.query_row(
+        "SELECT sbar_id,record_kind,state_data,diagnostics FROM snapshot_checkpoints ORDER BY checkpoint_index DESC LIMIT 1",
+        [], reference_row,
+    ).map_err(|error| format!("Read final Reference checkpoint: {error}"))?;
+    Ok((manifest, decode_reference_record(checkpoint)?))
+}
+
+/// Historical state is fetched by the persisted SBar index only when requested.
+pub(crate) fn read_reference_checkpoint(
+    path: &Path,
+    sbar_id: &str,
+) -> Result<ReferenceCheckpoint, String> {
+    let connection = open_reference(path)?;
+    let checkpoint = connection.query_row(
+        "SELECT sbar_id,record_kind,state_data,diagnostics FROM snapshot_checkpoints WHERE sbar_id=?1 LIMIT 1",
+        [sbar_id], reference_row,
+    ).map_err(|error| format!("Read Reference checkpoint for SBar {sbar_id}: {error}"))?;
+    decode_reference_record(checkpoint)
+}
+
+/// Preserves Inspector's latest-checkpoint-containing-ID rule without transferring history.
+pub(crate) fn read_reference_object_checkpoint(
+    path: &Path,
+    kind: ReferenceObjectKind,
+    object_id: &str,
+) -> Result<Option<ReferenceCheckpoint>, String> {
+    let (collection, id_field) = match kind {
+        ReferenceObjectKind::Cbar => ("cbars", "cbarId"),
+        ReferenceObjectKind::Swing => ("swings", "swingId"),
+        ReferenceObjectKind::Trend => ("trends", "trendId"),
+    };
+    let sql = format!(
+        "SELECT sbar_id,record_kind,state_data,diagnostics FROM snapshot_checkpoints
+         WHERE EXISTS(SELECT 1 FROM json_each(state_data, '$.{collection}') AS object
+         WHERE json_extract(object.value, '$.{id_field}') = ?1)
+         ORDER BY checkpoint_index DESC LIMIT 1"
+    );
+    let connection = open_reference(path)?;
+    let mut statement = connection
+        .prepare(&sql)
+        .map_err(|error| format!("Prepare Reference object lookup: {error}"))?;
+    let mut rows = statement
+        .query([object_id])
+        .map_err(|error| format!("Query Reference object {object_id}: {error}"))?;
+    let row = rows
+        .next()
+        .map_err(|error| format!("Read Reference object: {error}"))?;
+    match row {
+        Some(row) => {
+            let checkpoint = reference_row(row)
+                .map_err(|error| format!("Decode Reference object row: {error}"))?;
+            decode_reference_record(checkpoint).map(Some)
+        }
+        None => Ok(None),
+    }
+}
+
+fn open_reference(path: &Path) -> Result<Connection, String> {
+    if !path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| value.ends_with(".snapshot.sqlite"))
+    {
+        return Err("Only published .snapshot.sqlite files can be displayed".into());
+    }
+    Connection::open_with_flags(
+        path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|error| format!("Open Reference read-only: {error}"))
+}
+
+fn reference_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(String, String, String, String)> {
+    Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+}
+
+fn decode_reference_record(
+    (sbar_id, kind, state_data, diagnostics): (String, String, String, String),
+) -> Result<ReferenceCheckpoint, String> {
+    // Delta reconstruction is unsupported; it cannot be displayed as Full state.
+    if kind != "Full" {
+        return Err(format!(
+            "Cannot display Reference record kind {kind}; Full is required"
+        ));
+    }
+    Ok(ReferenceCheckpoint {
+        sbar_id,
+        state_data,
+        diagnostics,
+    })
+}
+
+fn read_published_database(
+    path: &Path,
+) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), SnapshotReadError> {
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
     if !file_name.ends_with(".snapshot.sqlite") {
         return Err(SnapshotReadError::Unpublished(
             "Only published .snapshot.sqlite files can be read as complete Snapshots".into(),
         ));
     }
-    let (manifest, checkpoints) = read_database(path)
-        .map_err(SnapshotReadError::Unreadable)?;
+    let (manifest, checkpoints) = read_database(path).map_err(SnapshotReadError::Unreadable)?;
     if manifest.status != STATUS_COMPLETE {
         return Err(SnapshotReadError::Incomplete(format!(
             "Snapshot is not Complete (status={})",
             manifest.status
         )));
     }
-    verify_complete_snapshot(&manifest, &checkpoints)
-        .map_err(SnapshotReadError::IntegrityFailure)?;
     Ok((manifest, checkpoints))
 }
 
 fn classify_published(file_name: String, path: PathBuf) -> SnapshotArtifact {
     // Discovery is intentionally metadata-only: do not scan checkpoints or
-    // verify the content checksum until the user selects this Snapshot.
+    // verify the content checksum here. Reference trusts published content;
+    // Compare performs full verification independently.
     match read_manifest(&path) {
         Ok(manifest) if manifest.status == STATUS_COMPLETE => {
             artifact(file_name, path, SnapshotArtifactKind::Complete, Some(&manifest), None, None)
@@ -293,6 +424,199 @@ mod tests {
             "INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
             [serde_json::to_string(&manifest(status)).unwrap()],
         ).unwrap();
+    }
+
+    fn reference_fixture() -> (SnapshotManifest, Vec<SnapshotCheckpointRecord>) {
+        let mut manifest = manifest(STATUS_COMPLETE);
+        manifest.checkpoint_count = 2;
+        manifest.input_bar_count = 2;
+        manifest.input_end_sbar_id = "200".into();
+        manifest.input_end_ts_event = "200".into();
+        let records = ["100", "200"].into_iter().enumerate().map(|(index, id)| {
+            SnapshotCheckpointRecord {
+                checkpoint_index: index,
+                sbar_id: id.into(),
+                ts_event: id.into(),
+                record_kind: "Full".into(),
+                state_data: r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#.into(),
+                diagnostics: "[]".into(),
+            }
+        }).collect();
+        (manifest, records)
+    }
+
+    fn create_reference_database(path: &Path) {
+        create_manifest_database(path, STATUS_COMPLETE);
+        let (manifest, records) = reference_fixture();
+        let connection = Connection::open(path).unwrap();
+        connection
+            .execute(
+                "UPDATE snapshot_manifest SET payload=?1",
+                [serde_json::to_string(&manifest).unwrap()],
+            )
+            .unwrap();
+        connection.execute_batch(
+            "CREATE TABLE snapshot_checkpoints(checkpoint_index INTEGER PRIMARY KEY, sbar_id TEXT,
+             ts_event TEXT, record_kind TEXT, state_data TEXT, diagnostics TEXT);
+             CREATE INDEX snapshot_sbar ON snapshot_checkpoints(sbar_id);"
+        ).unwrap();
+        for record in &records {
+            connection
+                .execute(
+                    "INSERT INTO snapshot_checkpoints VALUES(?1,?2,?3,?4,?5,?6)",
+                    rusqlite::params![
+                        record.checkpoint_index as i64,
+                        record.sbar_id,
+                        record.ts_event,
+                        record.record_kind,
+                        record.state_data,
+                        record.diagnostics
+                    ],
+                )
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn reference_reader_trusts_published_content_and_reads_only_the_final_state() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("snapshot-test.snapshot.sqlite");
+        create_reference_database(&path);
+        let original = fs::read(&path).unwrap();
+        let (manifest, checkpoint) = read_snapshot_reference(&path).unwrap();
+        assert_eq!(manifest.snapshot_id, "snapshot-test");
+        assert_eq!(checkpoint.sbar_id, "200");
+        assert_eq!(
+            read_reference_checkpoint(&path, "100").unwrap().sbar_id,
+            "100"
+        );
+        // The fixture deliberately lacks a valid effective config and checksum.
+        assert!(matches!(
+            read_complete_snapshot_typed(&path),
+            Err(SnapshotReadError::IntegrityFailure(_))
+        ));
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert!(read_reference_checkpoint(&path, "missing").is_err());
+        let temporary = root.join(".snapshot-test.snapshot.tmp");
+        fs::copy(&path, &temporary).unwrap();
+        assert!(
+            read_snapshot_reference(&temporary)
+                .unwrap_err()
+                .contains("Only published")
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn reference_display_does_not_validate_manifest_or_scan_historical_states() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("snapshot-test.snapshot.sqlite");
+        create_reference_database(&path);
+        let connection = Connection::open(&path).unwrap();
+        let mut changed = reference_fixture().0;
+        changed.status = STATUS_RECORDING.into();
+        changed.checkpoint_count = 999;
+        changed.input_bar_count = 888;
+        changed.sbar_sequence_fingerprint = "unverified".into();
+        connection
+            .execute(
+                "UPDATE snapshot_manifest SET payload=?1",
+                [serde_json::to_string(&changed).unwrap()],
+            )
+            .unwrap();
+        // A broken historical row must not block an otherwise readable final display.
+        connection
+            .execute_batch(
+                "UPDATE snapshot_checkpoints SET state_data='invalid JSON',
+            ts_event='not a timestamp',record_kind='Delta' WHERE checkpoint_index=0;",
+            )
+            .unwrap();
+        drop(connection);
+        let (manifest, checkpoint) = read_snapshot_reference(&path).unwrap();
+        assert_eq!(manifest.checkpoint_count, 999);
+        assert_eq!(checkpoint.sbar_id, "200");
+        assert!(
+            read_reference_checkpoint(&path, "100")
+                .unwrap_err()
+                .contains("Full")
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn reference_object_lookup_returns_the_latest_checkpoint_containing_the_domain_id() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("snapshot-test.snapshot.sqlite");
+        create_reference_database(&path);
+        let connection = Connection::open(&path).unwrap();
+        connection.execute("UPDATE snapshot_checkpoints SET state_data=?1 WHERE checkpoint_index=0",
+            [r#"{"cbars":[{"cbarId":"older"},{"cbarId":"shared"}],"swings":[{"swingId":"s1"}],"trends":[{"trendId":"t1"}]}"#]).unwrap();
+        connection
+            .execute(
+                "UPDATE snapshot_checkpoints SET state_data=?1 WHERE checkpoint_index=1",
+                [r#"{"cbars":[{"cbarId":"shared"}],"swings":[],"trends":[]}"#],
+            )
+            .unwrap();
+        drop(connection);
+        for (kind, id, expected) in [
+            (ReferenceObjectKind::Cbar, "older", "100"),
+            (ReferenceObjectKind::Cbar, "shared", "200"),
+            (ReferenceObjectKind::Swing, "s1", "100"),
+            (ReferenceObjectKind::Trend, "t1", "100"),
+        ] {
+            assert_eq!(
+                read_reference_object_checkpoint(&path, kind, id)
+                    .unwrap()
+                    .unwrap()
+                    .sbar_id,
+                expected
+            );
+        }
+        assert!(
+            read_reference_object_checkpoint(&path, ReferenceObjectKind::Cbar, "absent")
+                .unwrap()
+                .is_none()
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn reference_reads_diagnostics_with_only_the_requested_checkpoint() {
+        let root = temp_root();
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("snapshot-test.snapshot.sqlite");
+        create_reference_database(&path);
+        let connection = Connection::open(&path).unwrap();
+        let earlier = r#"[{"source":"struxis","severity":"error","category":"processing","objectType":null,"objectId":null,"sbarIds":["100"],"checkpointIndex":0,"message":"Earlier exception"}]"#;
+        let final_diagnostics = r#"[{"source":"struxis","severity":"warning","category":"processing","objectType":null,"objectId":null,"sbarIds":["200"],"checkpointIndex":1,"message":"Final warning"}]"#;
+        connection.execute("UPDATE snapshot_checkpoints SET diagnostics=?1,state_data=?2 WHERE checkpoint_index=0",
+            rusqlite::params![earlier, r#"{"cbars":[{"cbarId":"earlier"}]}"#]).unwrap();
+        connection
+            .execute(
+                "UPDATE snapshot_checkpoints SET diagnostics=?1 WHERE checkpoint_index=1",
+                [final_diagnostics],
+            )
+            .unwrap();
+        drop(connection);
+        assert_eq!(
+            read_snapshot_reference(&path).unwrap().1.diagnostics,
+            final_diagnostics
+        );
+        assert_eq!(
+            read_reference_checkpoint(&path, "100").unwrap().diagnostics,
+            earlier
+        );
+        assert_eq!(
+            read_reference_object_checkpoint(&path, ReferenceObjectKind::Cbar, "earlier")
+                .unwrap()
+                .unwrap()
+                .diagnostics,
+            earlier
+        );
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

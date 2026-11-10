@@ -154,6 +154,45 @@ pub(crate) async fn get_snapshot_reference(
 }
 
 #[tauri::command]
+pub(crate) async fn get_snapshot_reference_checkpoint(
+    snapshot_id: String,
+    sbar_id: String,
+    state: State<'_, AppState>,
+) -> Result<crate::app::SnapshotStructureCheckpointDto, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        state.snapshot_reference_checkpoint(&snapshot_id, &sbar_id)
+    })
+    .await
+    .map_err(|error| {
+        IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Reference checkpoint worker failed: {error}"),
+        )
+    })?
+}
+
+#[tauri::command]
+pub(crate) async fn get_snapshot_reference_object(
+    snapshot_id: String,
+    kind: crate::snapshot_store::ReferenceObjectKind,
+    object_id: String,
+    state: State<'_, AppState>,
+) -> Result<Option<crate::app::SnapshotStructureCheckpointDto>, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        state.snapshot_reference_object(&snapshot_id, kind, &object_id)
+    })
+    .await
+    .map_err(|error| {
+        IpcError::new(
+            IpcErrorCode::Internal,
+            format!("Reference object worker failed: {error}"),
+        )
+    })?
+}
+
+#[tauri::command]
 pub(crate) async fn save_run_snapshot(
     state: State<'_, AppState>,
 ) -> Result<String, IpcError> {
