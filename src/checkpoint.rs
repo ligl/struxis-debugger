@@ -706,7 +706,7 @@ pub(crate) mod keyzone_projection_tests {
                     )
                     .unwrap();
             } else {
-                registry.advance(&bar, 1000_u64.into()).unwrap();
+                registry.advance(key, &bar, 1000_u64.into()).unwrap();
             }
         }
         let task = registry.observations().next().unwrap().id();
