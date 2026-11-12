@@ -1199,7 +1199,7 @@ mod tests {
             .unwrap()
             .keyzones()
             .find(|zone| {
-                zone.temporal().formed_at.as_u64() == base + minute
+                zone.formed_at().as_u64() == base + minute
                     && matches!(
                         zone.origin(),
                         capitus_struxis::keyzone::KeyZoneOrigin::Swing(_)

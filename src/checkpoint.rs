@@ -458,7 +458,6 @@ impl KeyZoneCheckpoint {
         let mut zones = Vec::new();
         let mut interactions = Vec::new();
         for zone in registry.keyzones() {
-            let temporal = zone.temporal();
             let (origin_kind, origin_id) = match zone.origin() {
                 KeyZoneOrigin::Swing(id) => ("Swing", Some(id.to_string())),
                 KeyZoneOrigin::Trend(id) => ("Trend", Some(id.to_string())),
@@ -472,18 +471,17 @@ impl KeyZoneCheckpoint {
                 lower: zone.price_range().lower().to_string(),
                 upper: zone.price_range().upper().to_string(),
                 state: format!("{:?}", zone.state()),
-                formed_at: temporal.formed_at.to_string(),
-                created_at: temporal.created_at.to_string(),
-                finalized_at: temporal.finalized_at.map(|at| at.to_string()),
-                finalized_detected_at: temporal.finalized_detected_at.map(|at| at.to_string()),
-                invalidated_at: temporal.invalidated_at.map(|at| at.to_string()),
-                invalidated_detected_at: temporal.invalidated_detected_at.map(|at| at.to_string()),
+                formed_at: zone.formed_at().to_string(),
+                created_at: zone.created_at().to_string(),
+                finalized_at: zone.finalized_at().map(|at| at.to_string()),
+                finalized_detected_at: zone.finalized_detected_at().map(|at| at.to_string()),
+                invalidated_at: zone.invalidated_at().map(|at| at.to_string()),
+                invalidated_detected_at: zone.invalidated_detected_at().map(|at| at.to_string()),
             });
             for interaction in registry
                 .interactions_for(zone.id())
                 .map_err(|error| error.to_string())?
             {
-                let temporal = interaction.temporal();
                 interactions.push(KeyZoneInteraction {
                     interaction_id: interaction.id().value().to_string(),
                     keyzone_id: zone.id().value().to_string(),
@@ -493,23 +491,25 @@ impl KeyZoneCheckpoint {
                         instrument_id: interaction.observer().instrument_id.to_string(),
                         timeframe: interaction.observer().timeframe.to_string(),
                     },
-                    interrupted_at: temporal.interrupted_at.map(|t| t.to_string()),
-                    interrupted_detected_at: temporal
-                        .interrupted_detected_at
+                    interrupted_at: interaction.interrupted_at().map(|t| t.to_string()),
+                    interrupted_detected_at: interaction
+                        .interrupted_detected_at()
                         .map(|t| t.to_string()),
-                    interruption_reason: temporal.interruption_reason.map(|r| format!("{r:?}")),
+                    interruption_reason: interaction
+                        .interruption_reason()
+                        .map(|r| format!("{r:?}")),
                     state: format!("{:?}", interaction.state()),
                     config_n: interaction.config().n().to_string(),
                     config_x: interaction.config().x(),
                     outside_count: interaction.outside_count().to_string(),
                     last_processed_at: interaction.last_processed_at().map(|at| at.to_string()),
-                    started_at: temporal.started_at.to_string(),
-                    started_detected_at: temporal.started_detected_at.to_string(),
-                    ended_at: temporal.ended_at.map(|at| at.to_string()),
-                    ended_detected_at: temporal.ended_detected_at.map(|at| at.to_string()),
-                    invalidated_at: temporal.invalidated_at.map(|at| at.to_string()),
-                    invalidated_detected_at: temporal
-                        .invalidated_detected_at
+                    started_at: interaction.started_at().to_string(),
+                    started_detected_at: interaction.started_detected_at().to_string(),
+                    ended_at: interaction.ended_at().map(|at| at.to_string()),
+                    ended_detected_at: interaction.ended_detected_at().map(|at| at.to_string()),
+                    invalidated_at: interaction.invalidated_at().map(|at| at.to_string()),
+                    invalidated_detected_at: interaction
+                        .invalidated_detected_at()
                         .map(|at| at.to_string()),
                 });
             }
