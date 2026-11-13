@@ -474,6 +474,24 @@ impl AppState {
         self.with_replay_manager(ReplayManager::inspector)
     }
 
+    pub(crate) fn create_fixed_price_range(
+        &self,
+        request: crate::observation::CreateFixedPriceRange,
+    ) -> Result<crate::observation::FixedPriceRangeResult, IpcError> {
+        let mut manager = self.inner.replay_manager.try_lock().map_err(|error| {
+            let (code, message) = match error {
+                std::sync::TryLockError::WouldBlock => {
+                    (IpcErrorCode::Conflict, "Another Replay command is active")
+                }
+                std::sync::TryLockError::Poisoned(_) => {
+                    (IpcErrorCode::Internal, "ReplayManager lock is poisoned")
+                }
+            };
+            IpcError::new(code, message)
+        })?;
+        manager.create_fixed_price_range(request)
+    }
+
     pub(crate) fn observation(
         &self,
         command: crate::observation::ObservationCommand,

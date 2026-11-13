@@ -1,6 +1,6 @@
 import type { Ref } from "vue";
-import { createKeyZoneObservation, cancelKeyZoneObservation, describeIpcError } from "../origin-bridge";
-import type { CreateObservationDto, CancelObservationDto, ObservationCommandResultDto, ReplayInspectorDto, RunStateDto } from "../origin-types";
+import { createFixedPriceRange, createKeyZoneObservation, cancelKeyZoneObservation, describeIpcError } from "../origin-bridge";
+import type { CreateFixedPriceRangeDto, FixedPriceRangeResultDto, CreateObservationDto, CancelObservationDto, ObservationCommandResultDto, ReplayInspectorDto, RunStateDto } from "../origin-types";
 
 export function useKeyZoneObservations(
   run: Ref<RunStateDto | null>,
@@ -8,10 +8,10 @@ export function useKeyZoneObservations(
   runBusy: Readonly<Ref<boolean>>,
   inspector: Ref<ReplayInspectorDto | null>,
 ) {
-  async function submit<T extends CreateObservationDto | CancelObservationDto>(
+  async function submit<T extends CreateObservationDto | CancelObservationDto | CreateFixedPriceRangeDto, R extends { inspector: ReplayInspectorDto }>(
     request: T,
-    invoke: (request: T) => Promise<ObservationCommandResultDto>,
-  ): Promise<ObservationCommandResultDto> {
+    invoke: (request: T) => Promise<R>,
+  ): Promise<R> {
     if (runBusy.value || run.value?.status !== "paused") throw new Error("Pause the Run and wait for the current operation to finish.");
     const { runId, expectedSbarId } = request.context;
     if (run.value.runId !== runId || run.value.cursorSbarId !== expectedSbarId) throw new Error("Run changed. Select the current KeyZone again.");
@@ -28,6 +28,7 @@ export function useKeyZoneObservations(
     }
   }
   return {
+    createFixed: (request: CreateFixedPriceRangeDto): Promise<FixedPriceRangeResultDto> => submit(request, createFixedPriceRange),
     create: (request: CreateObservationDto) => submit(request, createKeyZoneObservation),
     cancel: (request: CancelObservationDto) => submit(request, cancelKeyZoneObservation),
   };

@@ -855,3 +855,71 @@ for (const inspectorDirection of ["top", "bottom"] as const) {
   }
 }
 
+
+
+test("each navigation click restores the module Inspector after selecting an object", async ({ page }) => {
+  const { keyzoneBars, keyzoneFixture } = await import("../tests/unit/keyzone-fixture");
+  const template = keyzoneBars()[0]!;
+  const bars = Array.from({ length: 40 }, (_, index) => {
+    const time = (1700000000000000000n + BigInt(index) * 60000000000n).toString();
+    return { ...template, sbarId: time, tsEvent: time, tsInit: time };
+  });
+  const registry = keyzoneFixture();
+  Object.assign(registry.zones[0]!, { formedAt: bars[12]!.sbarId, createdAt: bars[14]!.sbarId,
+    finalizedAt: bars[14]!.sbarId, finalizedDetectedAt: bars[14]!.sbarId });
+  registry.observations = [];
+  registry.interactions = [];
+  const structure = { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] };
+  const origin = { originDatasetId: "origin-nav", sourceCatalog: "fixture", enableStructure: true,
+    instrumentId: registry.instrumentId, barType: template.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
+    sbarCount: 40, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[39]!.sbarId,
+    firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[39]!.tsEvent, bars, structure, keyzones: registry };
+  const dataset = { testDatasetId: "test-nav", originDatasetId: origin.originDatasetId, instrumentId: registry.instrumentId,
+    barType: template.barType, timeframe: "1m", startSbarId: bars[0]!.sbarId, endSbarId: bars[39]!.sbarId,
+    sbarCount: 40, sbarSequenceFingerprint: "fixture" };
+  const run = { runId: "run-nav", testDatasetId: dataset.testDatasetId, inputFingerprint: "fixture", inputCount: 40,
+    status: "paused", processedCount: 21, cursorSbarId: bars[20]!.sbarId, failureDiagnostic: null };
+  const inspector = { stateKey: "state-nav", checkpointIndex: 20, sbarId: bars[20]!.sbarId,
+    sbar: { ...bars[20]!, body: "1", upperShadow: "2", lowerShadow: "2", totalRange: "5", bodyRatio: 0.2, shadowRatio: 0.8, direction: "Up" },
+    structure, keyzones: registry };
+  await page.addInitScript((data) => {
+    const runtime = window as unknown as { navBorder?: { x: number; y: number } };
+    const stroke = CanvasRenderingContext2D.prototype.strokeRect;
+    CanvasRenderingContext2D.prototype.strokeRect = function (x, y, width, height) {
+      if (this.strokeStyle === "#b49a75" && width > 0 && height > 0) {
+        const bounds = this.canvas.getBoundingClientRect();
+        if (bounds.width > 0) runtime.navBorder = { x: bounds.x + x + width / 2, y: bounds.y + y };
+      }
+      stroke.call(this, x, y, width, height);
+    };
+    const responses: Record<string, unknown> = { list_catalog_datasets: [], get_current_origin: data.origin,
+      get_current_test_dataset: data.dataset, list_snapshots: [], get_run_state: data.run, get_replay_inspector: data.inspector };
+    Object.defineProperty(window, "__TAURI_INTERNALS__", { value: { invoke: async (command: string) => {
+      if (command in responses) return structuredClone(responses[command]);
+      throw new Error(`Unexpected command ${command}`);
+    } } });
+  }, { origin, dataset, run, inspector });
+  await page.goto("/");
+  for (const module of ["dataset", "replay", "dataset", "replay"] as const) {
+    await page.getByTestId(`workspace-${module}`).click();
+    const summary = page.getByTestId(module === "dataset" ? "inspector-dataset-summary" : "inspector-replay-checkpoint");
+    await expect(summary).toBeVisible();
+    await page.evaluate(() => { delete (window as unknown as { navBorder?: unknown }).navBorder; });
+    // Pointer movement forces the active chart to redraw its unselected border.
+    const chart = page.getByTestId(module === "dataset" ? "origin-chart-canvas" : "run-chart-canvas");
+    await chart.hover();
+    await expect.poll(() => page.evaluate(() => Boolean((window as unknown as { navBorder?: unknown }).navBorder))).toBe(true);
+    const border = await page.evaluate(() => (window as unknown as { navBorder: { x: number; y: number } }).navBorder);
+    await page.mouse.click(border.x, border.y);
+    await expect(page.getByTestId("keyzone-details")).toBeVisible();
+    await page.getByTestId(`workspace-${module}`).click();
+    await expect(summary).toBeVisible();
+    await expect(page.getByTestId("keyzone-details")).toHaveCount(0);
+    await page.getByTestId(`workspace-${module}`).click();
+    await expect(summary).toBeVisible();
+  }
+  await page.getByTestId("workspace-compare").click();
+  await expect(page.getByRole("heading", { name: "Compare Inspector" })).toBeVisible();
+  await page.getByTestId("workspace-compare").click();
+  await expect(page.getByRole("heading", { name: "Compare Inspector" })).toBeVisible();
+});

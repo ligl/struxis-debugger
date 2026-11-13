@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "./origin-types";
+import type { CreateFixedPriceRangeDto, FixedPriceRangeResultDto, CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "./origin-types";
+
+export function createFixedPriceRange(request: CreateFixedPriceRangeDto): Promise<FixedPriceRangeResultDto> {
+  return invoke("create_fixed_price_range", { request });
+}
 
 export function createKeyZoneObservation(request: CreateObservationDto): Promise<ObservationCommandResultDto> {
   return invoke("create_keyzone_observation", { request });

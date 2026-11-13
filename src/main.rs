@@ -43,6 +43,7 @@ fn main() {
             commands::restart_to_sbar,
             commands::get_run_state,
             commands::get_replay_inspector,
+            commands::create_fixed_price_range,
             commands::create_keyzone_observation,
             commands::cancel_keyzone_observation,
             commands::step_run,

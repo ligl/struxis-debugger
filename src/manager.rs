@@ -30,6 +30,29 @@ pub(crate) struct ReplayManager {
 }
 
 impl ReplayManager {
+    pub(crate) fn create_fixed_price_range(
+        &mut self,
+        request: crate::observation::CreateFixedPriceRange,
+    ) -> Result<crate::observation::FixedPriceRangeResult, crate::ipc::IpcError> {
+        use crate::ipc::{IpcError, IpcErrorCode};
+        let _permit = self
+            .gate
+            .try_enter(ReplayCommandKind::Observation)
+            .map_err(|error| IpcError::new(IpcErrorCode::Conflict, error))?;
+        let result = self
+            .active
+            .as_mut()
+            .ok_or_else(|| {
+                IpcError::new(
+                    IpcErrorCode::InvalidState,
+                    "No paused Replay runtime is available",
+                )
+            })?
+            .create_fixed_price_range(request)?;
+        self.last_inspector = Some(result.inspector.clone());
+        Ok(result)
+    }
+
     pub(crate) fn observation(
         &mut self,
         command: crate::observation::ObservationCommand,

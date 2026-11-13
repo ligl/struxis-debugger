@@ -5,7 +5,7 @@ import KeyZoneDetails from "../../src/components/KeyZoneDetails.vue";
 import OriginChart from "../../src/components/OriginChart.vue";
 import ObjectInspector from "../../src/components/ObjectInspector.vue";
 import { useInspectorSelection } from "../../src/composables/useInspectorSelection";
-import type { OriginDatasetDto } from "../../src/origin-types";
+import type { InspectorWorkspaceContext, ReplayInspectorDto, OriginDatasetDto } from "../../src/origin-types";
 import { keyzoneFixture, keyzoneBars } from "./keyzone-fixture";
 
 describe("KeyZone selection and Inspector", () => {
@@ -95,5 +95,38 @@ describe("Interaction disclosure", () => {
     expect(wrapper.get<HTMLDetailsElement>('[data-interaction-id="9007199254740997"]').element.open).toBe(false);
     firstDetails.open = false;
     expect(secondDetails.open).toBe(true);
+  });
+});
+
+
+describe("FixedPriceRange creation entry in the Inspector", () => {
+  const bars = keyzoneBars();
+  const registry = keyzoneFixture();
+  const checkpoint = { stateKey: "fixed-test", checkpointIndex: 2, sbarId: bars[2]!.sbarId,
+    sbar: bars[2], structure: null, keyzones: registry } as ReplayInspectorDto;
+  type ReplayContext = Extract<InspectorWorkspaceContext, { workspace: "replay" }>;
+  const replay: ReplayContext = { workspace: "replay", timeframe: "1m", checkpoint, selectedObject: null,
+    snapshotId: null, snapshotBars: [], snapshotStructure: null, error: "" };
+  function render(context: InspectorWorkspaceContext) {
+    return mount(ObjectInspector, { props: { context, origin: null, originBars: [], originStructure: null,
+      createFixedPriceRange: async () => { throw new Error("No submission expected"); } },
+      global: { stubs: { ReplayCheckpointSummary: true, ReplayObjectDetails: true, KeyZoneDetails: true,
+        DatasetObjectDetails: true, CompareDifferenceDetails: true } } });
+  }
+  it("shows the creation button only beside the Replay state summary", () => {
+    expect(render(replay).find('button[aria-expanded]').exists()).toBe(true);
+    expect(render({ ...replay, checkpoint: null }).find('button[aria-expanded]').exists()).toBe(false);
+    expect(render({ workspace: "dataset", originDatasetId: null, timeframe: null, structureEnabled: false,
+      selectedObject: null }).find('button[aria-expanded]').exists()).toBe(false);
+    expect(render({ workspace: "compare", difference: null, baselineSnapshotId: null,
+      candidateSnapshotId: null }).find('button[aria-expanded]').exists()).toBe(false);
+  });
+  it.each(["sbar", "cbar", "swing", "trend", "keyzone"] as const)("hides the button in %s details from Live and Snapshot", (kind) => {
+    for (const source of ["checkpoint", "snapshot"] as const) {
+      const selectedObject = (kind === "keyzone"
+        ? { kind, source, object: registry.zones[0]!, registry }
+        : { kind, source, object: bars[0]! }) as ReplayContext["selectedObject"];
+      expect(render({ ...replay, selectedObject }).find('button[aria-expanded]').exists()).toBe(false);
+    }
   });
 });

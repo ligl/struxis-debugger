@@ -112,7 +112,7 @@ const {
   refresh: refreshReplayInspectorState,
 } = useReplayInspector();
 
-const { create: createObservation, cancel: cancelObservation } = useKeyZoneObservations(
+const { create: createObservation, cancel: cancelObservation, createFixed: createFixedPriceRange } = useKeyZoneObservations(
   runState, observationBusy, runBusy, replayInspector,
 );
 
@@ -454,6 +454,16 @@ const {
   selectStructureObject: selectInspectorStructureObject,
   clearSelection: clearInspectorSelection,
 } = useInspectorSelection(origin, workspaceMode);
+function handleWorkspaceNavigation(mode: WorkspaceMode): void {
+  clearInspectorSelection();
+  selectedReplayChartObject.value = null;
+  selectedReplaySnapshotObject.value = null;
+  selectedCompareDifference.value = null;
+  const sameWorkspace = workspaceMode.value === mode;
+  workspaceMode.value = mode;
+  if (sameWorkspace && mode === "replay") void refreshReplayInspector();
+}
+
 const inspectorContext = computed<InspectorWorkspaceContext>(() => {
   if (workspaceMode.value === "dataset") {
     const selectedObject = selectedInspectorSbar.value
@@ -614,7 +624,7 @@ const observationContext = computed<ObservationControlsContext | undefined>(() =
   const last = currentOrigin.bars.findIndex((bar) => bar.sbarId === test.endSbarId);
   if (first < 0 || last < first) return undefined;
   const enabled = playbackStatus.value !== "playing" && !runBusy.value && run.status === "paused";
-  const disabledReason = playbackStatus.value === "playing" ? "Pause playback to create or cancel an observation."
+  const disabledReason = playbackStatus.value === "playing" ? "Pause playback to create a KeyZone or manage observations."
     : runBusy.value ? "Wait for the current operation to finish."
     : run.status !== "paused" ? "This Run is read-only. Start or restart a Run, then pause before its final K-line."
     : "";
@@ -751,7 +761,7 @@ onMounted(async () => {
     @dragover="allowDockDrop"
     @drop="dropDockPanel"
   >
-    <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="workspaceMode = $event" />
+    <WorkbenchTopbar :workspace-mode="workspaceMode" :origin-available="Boolean(origin)" @update:workspace-mode="handleWorkspaceNavigation" />
 
 
       <section data-testid="chart-workspace" class="workbench-main">
@@ -901,6 +911,7 @@ onMounted(async () => {
           :origin-bars="origin?.bars ?? []"
           :origin-structure="origin?.structure ?? null"
           :observation-context="observationContext"
+          :create-fixed-price-range="createFixedPriceRange"
           :create-observation="createObservation"
           :cancel-observation="cancelObservation"
         />

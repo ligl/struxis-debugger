@@ -15,6 +15,21 @@ pub(crate) struct ObservationContext {
     pub(crate) expected_sbar_id: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CreateFixedPriceRange {
+    pub(crate) context: ObservationContext,
+    pub(crate) lower: String,
+    pub(crate) upper: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FixedPriceRangeResult {
+    pub(crate) keyzone_id: String,
+    pub(crate) inspector: ReplayInspectorProjection,
+}
+
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub(crate) enum Completion {
     AfterOneInteraction,

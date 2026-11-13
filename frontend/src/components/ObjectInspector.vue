@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import KeyZoneFixedPriceRangeControls from "./KeyZoneFixedPriceRangeControls.vue";
 import KeyZoneDetails from "./KeyZoneDetails.vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
 import CompareDifferenceDetails from "./CompareDifferenceDetails.vue";
 import ReplayCheckpointSummary from "./ReplayCheckpointSummary.vue";
 import ReplayObjectDetails from "./ReplayObjectDetails.vue";
-import type { InspectorWorkspaceContext, OriginDatasetDto, ReplayInspectorStructureDto, SBarDto, ObservationControlsContext, CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "../origin-types";
+import type { CreateFixedPriceRangeDto, FixedPriceRangeResultDto, InspectorWorkspaceContext, OriginDatasetDto, ReplayInspectorStructureDto, SBarDto, ObservationControlsContext, CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "../origin-types";
 import { formatDomainTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
@@ -14,6 +15,7 @@ const props = defineProps<{
   originBars: SBarDto[];
   originStructure: ReplayInspectorStructureDto | null;
   observationContext?: ObservationControlsContext;
+  createFixedPriceRange?: (request: CreateFixedPriceRangeDto) => Promise<FixedPriceRangeResultDto>;
   createObservation?: (request: CreateObservationDto) => Promise<ObservationCommandResultDto>;
   cancelObservation?: (request: CancelObservationDto) => Promise<ObservationCommandResultDto>;
 }>();
@@ -123,6 +125,8 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
       <span>TIMEFRAME <code>{{ timeframe ?? "—" }}</code></span>
       <span>STRUCTURE <code>{{ structureEnabled ? "ENABLED" : "DISABLED" }}</code></span>
     </div>
+    <KeyZoneFixedPriceRangeControls v-if="workspaceMode === 'replay' && !selectedReplayObject && replayInspector && createFixedPriceRange"
+      :context="observationContext" :create="createFixedPriceRange" />
     <template v-if="workspaceMode === 'dataset'">
       <section
         v-if="origin && !selectedSbar && !selectedCbar && !selectedSwing && !selectedTrend && !selectedKeyzone"

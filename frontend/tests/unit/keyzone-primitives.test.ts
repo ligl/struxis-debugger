@@ -259,3 +259,133 @@ describe("explicit observation chart ranges", () => {
     expect(index.visible(0, 4).map((i) => [i.state, i.end])).toEqual([["Interrupted", 1]]);
   });
 });
+
+describe("FixedPriceRange price-only markers", () => {
+  function setup() {
+    const registry = keyzoneFixture();
+    registry.observations = [];
+    registry.interactions = [];
+    Object.assign(registry.zones[0]!, { originKind: "FixedPriceRange", originId: null,
+      formedAt: "1800000000000000000", lower: "9", upper: "12" });
+    let paneWidth = 700;
+    let range: { from: number; to: number } | null = { from: -4, to: 4 };
+    const primitive = new KeyZonePrimitive();
+    const requestUpdate = vi.fn();
+    primitive.setData(registry, keyzoneBars(), keyzoneBars()[2]!.sbarId);
+    primitive.attached({ chart: { timeScale: () => ({ width: () => paneWidth, options: () => ({ barSpacing: 10 }),
+      getVisibleLogicalRange: () => range, logicalToCoordinate: (index: number) => index * 10 }) },
+      series: { priceToCoordinate: (price: number) => 200 - price * 10 }, requestUpdate,
+    } as unknown as Parameters<KeyZonePrimitive["attached"]>[0]);
+    function draw() {
+      const fills: Array<{ color: string; alpha: number }> = [];
+      const context = { strokeStyle: "", fillStyle: "", lineWidth: 0, globalAlpha: 1,
+        save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn(),
+        beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(),
+        fillRect: vi.fn((_x: number, _y: number, _width: number, _height: number) => {
+          fills.push({ color: context.fillStyle, alpha: context.globalAlpha });
+        }) };
+      primitive.renderer()?.draw({ useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) } as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
+      return { context, fills };
+    }
+    return { primitive, registry, draw, requestUpdate, resize: (width: number) => { paneWidth = width; primitive.updateAllViews(); },
+      pan: (next: typeof range) => { range = next; primitive.updateAllViews(); } };
+  }
+
+  it("draws two 24px price lines at the right edge despite a future formedAt", () => {
+    const { primitive, draw, registry } = setup();
+    const { context } = draw();
+    expect(context.moveTo.mock.calls).toEqual([[676, 80], [676, 110]]);
+    expect(context.lineTo.mock.calls).toEqual([[700, 80], [700, 110]]);
+    expect(context.setLineDash).toHaveBeenCalledWith([5, 3]);
+    expect(context.strokeRect).not.toHaveBeenCalled();
+    expect(context.fillRect).not.toHaveBeenCalled();
+    expect(context.strokeStyle).toBe("#756650");
+    expect(context.lineWidth).toBe(0.75);
+    expect(new KeyZoneIndex(registry, keyzoneBars(), "1800000000000000000").visible(-4, 4)).toEqual([]);
+    primitive.setData(registry, keyzoneBars(), null);
+    expect(draw().context.moveTo.mock.calls).toEqual([[676, 80], [676, 110]]);
+  });
+
+  it("expands both hovered lines across the pane and fills only their price band at 10% opacity", () => {
+    const { primitive, draw, registry, requestUpdate } = setup();
+    const id = registry.zones[0]!.keyzoneId;
+    expect(primitive.hitTestZone(688, 80)).toBe(id);
+    primitive.setHovered(id);
+    const { context, fills } = draw();
+    expect(context.moveTo.mock.calls).toEqual([[0, 80], [0, 110]]);
+    expect(context.lineTo.mock.calls).toEqual([[700, 80], [700, 110]]);
+    expect(context.fillRect).toHaveBeenCalledExactlyOnceWith(0, 80, 700, 30);
+    expect(fills).toEqual([{ color: "#8c785b", alpha: 0.1 }]);
+    expect(context.lineWidth).toBe(1);
+    expect(primitive.hitTestZone(20, 110)).toBe(id);
+    expect(primitive.hitTestZone(20, 95)).toBeNull();
+    const requests = requestUpdate.mock.calls.length;
+    primitive.setHovered(id);
+    expect(requestUpdate).toHaveBeenCalledTimes(requests);
+    primitive.setHovered(null);
+    expect(draw().context.fillRect).not.toHaveBeenCalled();
+    expect(draw().context.moveTo.mock.calls).toEqual([[676, 80], [676, 110]]);
+    expect(primitive.hitTestZone(20, 80)).toBeNull();
+  });
+
+  it("keeps selected lines and the translucent band expanded until selection is cleared", () => {
+    const { primitive, registry, draw } = setup();
+    const id = registry.zones[0]!.keyzoneId;
+    primitive.setSelected(id);
+    primitive.setHovered(id);
+    expect(draw().fills).toEqual([{ color: "#9e8661", alpha: 0.1 }]);
+    primitive.setHovered(null);
+    const { context } = draw();
+    expect(context.strokeStyle).toBe("#9e8661");
+    expect(context.lineWidth).toBe(1);
+    expect(context.fillRect).toHaveBeenCalledExactlyOnceWith(0, 80, 700, 30);
+    expect(context.moveTo.mock.calls).toEqual([[0, 80], [0, 110]]);
+    expect(context.lineTo.mock.calls).toEqual([[700, 80], [700, 110]]);
+    expect(primitive.hitTestZone(20, 80)).toBe(id);
+    expect(primitive.hitTestZone(20, 95)).toBeNull();
+    primitive.setData(registry, keyzoneBars(), keyzoneBars()[3]!.sbarId);
+    expect(draw().fills).toEqual([{ color: "#9e8661", alpha: 0.1 }]);
+    primitive.setVisible(false);
+    primitive.setVisible(true);
+    expect(draw().context.moveTo.mock.calls).toEqual([[0, 80], [0, 110]]);
+    primitive.setSelected(null);
+    expect(draw().context.moveTo.mock.calls).toEqual([[676, 80], [676, 110]]);
+    expect(draw().context.fillRect).not.toHaveBeenCalled();
+    expect(primitive.hitTestZone(20, 80)).toBeNull();
+  });
+
+  it("keeps screen-sized lines at the right edge on pan and resize, including narrow panes", () => {
+    const { primitive, draw, resize, pan } = setup();
+    pan({ from: 100, to: 150 });
+    expect(draw().context.moveTo.mock.calls).toEqual([[676, 80], [676, 110]]);
+    resize(1000);
+    expect(draw().context.moveTo.mock.calls).toEqual([[976, 80], [976, 110]]);
+    expect(draw().context.lineTo.mock.calls).toEqual([[1000, 80], [1000, 110]]);
+    expect(primitive.hitTestZone(688, 80)).toBeNull();
+    resize(20);
+    expect(draw().context.moveTo.mock.calls).toEqual([[0, 80], [0, 110]]);
+    expect(draw().context.lineTo.mock.calls).toEqual([[20, 80], [20, 110]]);
+    pan(null);
+    expect(draw().context.lineTo.mock.calls).toEqual([[20, 80], [20, 110]]);
+  });
+
+  it("uses line-only hit targets and removes stale geometry on detach, hiding and checkpoint replacement", () => {
+    const { primitive, registry, draw } = setup();
+    const id = registry.zones[0]!.keyzoneId;
+    expect(primitive.hitTestZone(644, 95)).toBeNull();
+    expect(primitive.hitTestZone(688, 110)).toBe(id);
+    primitive.setHovered(id);
+    primitive.setVisible(false);
+    expect(primitive.renderer()).toBeNull();
+    expect(primitive.hitTestZone(688, 80)).toBeNull();
+    primitive.setVisible(true);
+    expect(draw().context.fillRect).not.toHaveBeenCalled();
+    primitive.setHovered(id);
+    primitive.setData(null, [], null);
+    expect(primitive.hitTestZone(688, 80)).toBeNull();
+    expect(draw().context.stroke).not.toHaveBeenCalled();
+    primitive.setData(registry, keyzoneBars(), keyzoneBars()[3]!.sbarId);
+    primitive.detached();
+    expect(primitive.hitTestZone(688, 80)).toBeNull();
+  });
+});

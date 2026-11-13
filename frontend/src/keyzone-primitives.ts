@@ -6,6 +6,8 @@ import { candlestickBodyWidth } from "./sbar-chart-structure-geometry";
 type Attached = Parameters<NonNullable<ISeriesPrimitive<Time>["attached"]>>[0];
 // Local marker width in chart logical units: three SBars on either side.
 const KEYZONE_HALF_WIDTH = 3;
+const FIXED_PRICE_RANGE_WIDTH = 24;
+const FIXED_PRICE_RANGE_RIGHT_MARGIN = 0;
 
 type Interval = { zone: KeyZoneDto; start: number; end: number };
 type Span = { start: number; end: number };
@@ -54,6 +56,7 @@ export class KeyZoneIndex {
     const first = BigInt(bars[0]!.tsEvent), last = BigInt(bars[bars.length - 1]!.tsEvent);
     const intervals: Interval[] = [];
     for (const zone of checkpoint.zones) {
+      if (zone.originKind === "FixedPriceRange") continue;
       const formed = BigInt(zone.formedAt);
       // The cursor controls visibility only. Lifecycle end times never size the marker.
       // An unavailable anchor must not be relocated to the first or last loaded SBar.
@@ -134,6 +137,8 @@ export class KeyZoneInteractionIndex {
   }
 }
 
+type FixedPriceRangeMarker = KeyZoneRectangle & { paneWidth: number };
+
 type InteractionRectangle = Omit<KeyZoneRectangle, "state"> & { label: string; interactionState: KeyZoneInteractionDto["state"] };
 const INTERACTION_COLORS = { Active: "#79b58b", Ended: "#82a8c9", Invalidated: "#8d949b", Interrupted: "#b29573" } as const;
 
@@ -142,6 +147,8 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   private attachedTo: Attached | null = null;
   private index = new KeyZoneIndex(null, [], null);
   private rectangles: KeyZoneRectangle[] = [];
+  private fixedZones: KeyZoneDto[] = [];
+  private fixedMarkers: FixedPriceRangeMarker[] = [];
   private interactionRectangles: InteractionRectangle[] = [];
   private interactions = new KeyZoneInteractionIndex(null, [], null, null);
   private checkpoint: KeyZoneCheckpointDto | null = null;
@@ -153,10 +160,11 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   private selected: string | null = null;
   private hovered: string | null = null;
   attached(param: Attached): void { this.attachedTo = param; this.updateAllViews(); }
-  detached(): void { this.attachedTo = null; this.rectangles = []; this.interactionRectangles = []; this.hovered = null; }
+  detached(): void { this.attachedTo = null; this.rectangles = []; this.fixedMarkers = []; this.interactionRectangles = []; this.hovered = null; }
   setData(checkpoint: KeyZoneCheckpointDto | null, bars: readonly SBarDto[], until: string | null, observer: ObservationStateKeyDto | null = null): void {
     this.hovered = null;
     this.checkpoint = checkpoint; this.bars = bars; this.until = until; this.observer = observer;
+    this.fixedZones = checkpoint?.zones.filter((zone) => zone.originKind === "FixedPriceRange") ?? [];
     this.index = new KeyZoneIndex(checkpoint, bars, until);
     this.interactions = new KeyZoneInteractionIndex(checkpoint, bars, until, this.selected, this.observer);
     this.updateAllViews(); this.attachedTo?.requestUpdate();
@@ -183,10 +191,28 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   zOrder(): "normal" { return "normal"; }
   updateAllViews(): void {
     this.rectangles = [];
+    this.fixedMarkers = [];
     this.interactionRectangles = [];
     const owner = this.attachedTo;
-    const range = owner?.chart.timeScale().getVisibleLogicalRange();
-    if (!owner || !range) return;
+    if (!owner) return;
+    // FixedPriceRange is price-only. Cache screen geometry independently of
+    // market-time anchors, cursor filtering and horizontal viewport position.
+    if (this.fixedZones.length) {
+      const paneWidth = owner.chart.timeScale().width();
+      if (Number.isFinite(paneWidth) && paneWidth > 0) {
+        const right = Math.max(0, paneWidth - FIXED_PRICE_RANGE_RIGHT_MARGIN);
+        const left = Math.max(0, right - FIXED_PRICE_RANGE_WIDTH);
+        for (const zone of this.fixedZones) {
+          const upper = owner.series.priceToCoordinate(Number(zone.upper));
+          const lower = owner.series.priceToCoordinate(Number(zone.lower));
+          if (upper === null || lower === null || !Number.isFinite(upper) || !Number.isFinite(lower)) continue;
+          this.fixedMarkers.push({ id: zone.keyzoneId, state: zone.state, x: left, y: Math.min(upper, lower),
+            width: right - left, height: Math.abs(lower - upper), paneWidth });
+        }
+      }
+    }
+    const range = owner.chart.timeScale().getVisibleLogicalRange();
+    if (!range) return;
     for (const { zone, start, end } of this.index.visible(range.from, range.to)) {
       const x1 = owner.chart.timeScale().logicalToCoordinate(start as Logical);
       const x2 = owner.chart.timeScale().logicalToCoordinate(end as Logical);
@@ -214,6 +240,18 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   }
   hitTestZone(x: number, y: number): string | null {
     if (!this.visible) return null;
+    // Only the horizontal lines accept hits; the filled band leaves candles selectable.
+    // Hovered and selected pairs keep their expanded lines interactive across the pane.
+    for (const id of [this.hovered, this.selected]) {
+      const expanded = this.fixedMarkers.find((marker) => marker.id === id);
+      if (expanded && x >= 0 && x <= expanded.paneWidth
+        && Math.min(Math.abs(y - expanded.y), Math.abs(y - expanded.y - expanded.height)) <= 4) return expanded.id;
+    }
+    for (let i = this.fixedMarkers.length - 1; i >= 0; i--) {
+      const marker = this.fixedMarkers[i]!;
+      if (x >= Math.max(0, marker.x - 4) && x <= Math.min(marker.paneWidth, marker.x + marker.width + 4)
+        && Math.min(Math.abs(y - marker.y), Math.abs(y - marker.y - marker.height)) <= 4) return marker.id;
+    }
     // Hit-test cached marker borders; candles inside the rectangle remain selectable.
     for (let i = this.rectangles.length - 1; i >= 0; i--) {
       const r = this.rectangles[i]!;
@@ -225,6 +263,14 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   renderer(): IPrimitivePaneRenderer | null {
     if (!this.visible) return null;
     return { draw: (target) => target.useMediaCoordinateSpace(({ context: ctx }) => {
+      for (const marker of this.fixedMarkers) {
+        if (marker.id !== this.hovered && marker.id !== this.selected) continue;
+        ctx.save();
+        ctx.fillStyle = marker.id === this.selected ? "#9e8661" : "#8c785b";
+        ctx.globalAlpha = 0.1;
+        ctx.fillRect(0, marker.y, marker.paneWidth, marker.height);
+        ctx.restore();
+      }
       for (const episode of this.interactionRectangles) {
         ctx.save();
         ctx.strokeStyle = INTERACTION_COLORS[episode.interactionState];
@@ -246,6 +292,23 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
         ctx.lineWidth = selected ? 2 : hovered ? 1.5 : 1;
         ctx.setLineDash([5,3]);
         ctx.strokeRect(r.x, r.y, r.width, r.height);
+        ctx.restore();
+      }
+      for (const marker of this.fixedMarkers) {
+        ctx.save();
+        const selected = marker.id === this.selected;
+        const hovered = marker.id === this.hovered;
+        ctx.strokeStyle = selected ? "#9e8661" : hovered ? "#8c785b" : marker.state === "Invalidated" ? "#596169" : "#756650";
+        ctx.lineWidth = selected || hovered ? 1 : 0.75;
+        ctx.setLineDash([5, 3]);
+        const left = selected || hovered ? 0 : marker.x;
+        const right = selected || hovered ? marker.paneWidth : marker.x + marker.width;
+        ctx.beginPath();
+        ctx.moveTo(left, marker.y);
+        ctx.lineTo(right, marker.y);
+        ctx.moveTo(left, marker.y + marker.height);
+        ctx.lineTo(right, marker.y + marker.height);
+        ctx.stroke();
         ctx.restore();
       }
     }) };

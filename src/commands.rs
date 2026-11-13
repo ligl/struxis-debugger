@@ -1,6 +1,22 @@
 //! Thin Tauri command handlers. Application work stays in AppState services.
 
 #[tauri::command]
+pub(crate) async fn create_fixed_price_range(
+    request: crate::observation::CreateFixedPriceRange,
+    state: tauri::State<'_, AppState>,
+) -> Result<crate::observation::FixedPriceRangeResult, IpcError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.create_fixed_price_range(request))
+        .await
+        .map_err(|error| {
+            IpcError::new(
+                IpcErrorCode::Internal,
+                format!("FixedPriceRange worker failed: {error}"),
+            )
+        })?
+}
+
+#[tauri::command]
 pub(crate) async fn create_keyzone_observation(
     request: crate::observation::CreateObservation,
     state: tauri::State<'_, AppState>,

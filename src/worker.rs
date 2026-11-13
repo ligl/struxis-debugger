@@ -80,6 +80,10 @@ pub(crate) struct ReplayWorkerConfig {
 }
 
 enum WorkerCommand {
+    CreateFixedPriceRange(
+        crate::observation::CreateFixedPriceRange,
+        SyncSender<Result<crate::observation::FixedPriceRangeResult, crate::ipc::IpcError>>,
+    ),
     Observation(
         crate::observation::ObservationCommand,
         SyncSender<Result<crate::observation::ObservationCommandResult, crate::ipc::IpcError>>,
@@ -112,6 +116,31 @@ pub(crate) struct ReplayWorker {
 }
 
 impl ReplayWorker {
+    pub(crate) fn create_fixed_price_range(
+        &mut self,
+        request: crate::observation::CreateFixedPriceRange,
+    ) -> Result<crate::observation::FixedPriceRangeResult, crate::ipc::IpcError> {
+        use crate::ipc::{IpcError, IpcErrorCode};
+        let _permit = self
+            .command_gate
+            .try_enter(ReplayCommandKind::Observation)
+            .map_err(|error| IpcError::new(IpcErrorCode::Conflict, error))?;
+        let (tx, rx) = mpsc::sync_channel(0);
+        if let Err(error) = self
+            .commands
+            .send(WorkerCommand::CreateFixedPriceRange(request, tx))
+        {
+            let message = self
+                .join_after_transport_failure(format!("Observation worker unavailable: {error}"));
+            return Err(IpcError::new(IpcErrorCode::Internal, message));
+        }
+        rx.recv().map_err(|error| {
+            let message = self
+                .join_after_transport_failure(format!("Observation response unavailable: {error}"));
+            IpcError::new(IpcErrorCode::Internal, message)
+        })?
+    }
+
     pub(crate) fn observation(
         &mut self,
         command: crate::observation::ObservationCommand,
@@ -438,6 +467,73 @@ struct WorkerSession {
 }
 
 impl WorkerSession {
+    fn create_fixed_price_range(
+        &mut self,
+        request: crate::observation::CreateFixedPriceRange,
+    ) -> Result<crate::observation::FixedPriceRangeResult, crate::ipc::IpcError> {
+        use crate::ipc::{IpcError, IpcErrorCode};
+        use capitus_struxis::keyzone::PriceRange;
+        use nautilus_model::types::Price;
+        use std::str::FromStr;
+        let context = &request.context;
+        if context.run_id != self.state.run_id
+            || self.state.cursor_sbar_id.as_deref() != Some(&context.expected_sbar_id)
+        {
+            return Err(IpcError::new(
+                IpcErrorCode::Conflict,
+                "Run or cursor changed. Refresh the current Run before submitting.",
+            ));
+        }
+        if self.state.status != RunStatus::Paused {
+            return Err(IpcError::new(
+                IpcErrorCode::InvalidState,
+                "Creating a FixedPriceRange requires a paused Run with an accepted SBar.",
+            ));
+        }
+        let mut inspector = self.latest_inspector.clone().ok_or_else(|| {
+            IpcError::new(
+                IpcErrorCode::InvalidState,
+                "Run has no accepted Inspector state",
+            )
+        })?;
+        let lower = Price::from_str(request.lower.trim()).map_err(|error| {
+            IpcError::new(
+                IpcErrorCode::InvalidArgument,
+                format!("Invalid lower price: {error}"),
+            )
+        })?;
+        let upper = Price::from_str(request.upper.trim()).map_err(|error| {
+            IpcError::new(
+                IpcErrorCode::InvalidArgument,
+                format!("Invalid upper price: {error}"),
+            )
+        })?;
+        let range = PriceRange::new(lower, upper)
+            .map_err(|error| IpcError::new(IpcErrorCode::InvalidArgument, error.to_string()))?;
+        let (zone, _) = self
+            .struxis
+            .create_fixed_keyzone(self.input.state_key, range)
+            .map_err(crate::observation::domain_error)?;
+        let registry = self
+            .struxis
+            .keyzones(self.input.state_key.instrument_id)
+            .ok_or_else(|| {
+                IpcError::new(
+                    IpcErrorCode::InvalidState,
+                    "KeyZone Registry unavailable after creation",
+                )
+            })?;
+        inspector.keyzones = Some(
+            crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry)
+                .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))?,
+        );
+        self.latest_inspector = Some(inspector.clone());
+        Ok(crate::observation::FixedPriceRangeResult {
+            keyzone_id: zone.id.value().to_string(),
+            inspector,
+        })
+    }
+
     fn observation(
         &mut self,
         command: crate::observation::ObservationCommand,
@@ -939,6 +1035,9 @@ fn worker_loop(
             }
         };
         match command {
+            WorkerCommand::CreateFixedPriceRange(request, reply) => {
+                let _ = reply.send(session.create_fixed_price_range(request));
+            }
             WorkerCommand::Observation(command, reply) => {
                 let _ = reply.send(session.observation(command));
             }

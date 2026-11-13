@@ -202,3 +202,96 @@ describe.each(["Origin", "Live Replay", "Snapshot Reference"] as const)("%s KeyZ
     expect(wrapper.emitted("objectClick")).toBeUndefined();
   });
 });
+
+function fixedDrawing(primitive: KeyZonePrimitive) {
+  const fills: Array<{ color: string; alpha: number }> = [];
+  const context = { strokeStyle: "", fillStyle: "", lineWidth: 0, globalAlpha: 1,
+    save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn(),
+    beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(),
+    fillRect: vi.fn((_x: number, _y: number, _width: number, _height: number) => {
+      fills.push({ color: context.fillStyle, alpha: context.globalAlpha });
+    }) };
+  primitive.renderer()?.draw({ useMediaCoordinateSpace: (callback: (scope: { context: typeof context }) => void) => callback({ context }) } as unknown as Parameters<NonNullable<ReturnType<KeyZonePrimitive["renderer"]>>["draw"]>[0]);
+  return { context, fills };
+}
+
+describe.each(["Origin", "Live Replay", "Snapshot Reference"] as const)("%s FixedPriceRange interaction", (kind) => {
+  function setupFixed() {
+    const data = fixture();
+    const keyzones = data.keyzones;
+    keyzones.observations = [];
+    keyzones.interactions = [];
+    Object.assign(keyzones.zones[0]!, { originKind: "FixedPriceRange", originId: null,
+      formedAt: "1800000000000000000", lower: "9", upper: "12" });
+    const wrapper = kind === "Origin"
+      ? mount(OriginChart, { props: { bars: data.bars, structure: null, keyzones, originDatasetId: "origin-keyzone" } })
+      : kind === "Live Replay"
+        ? mount(RunChart, { props: { origin: data.origin, testDataset: data.test, keyzones,
+          runState: { runId: "run-keyzone", testDatasetId: data.test.testDatasetId, inputFingerprint: "fixture", inputCount: 4,
+            processedCount: 3, status: "paused", cursorSbarId: data.bars[2]!.sbarId, failureDiagnostic: null } } })
+        : mount(SnapshotReferenceChart, { props: { bars: data.bars, structure: null, keyzones,
+          keyzoneUntil: data.bars[2]!.sbarId, snapshotId: "snapshot-keyzone", syncEnabled: false,
+          liveBarCount: 4, playbackEnabled: false, playbackOffset: null, processedCount: 3 } });
+    const runtime = mocks.runtimes.at(-1)!;
+    const primitive = runtime.primitives.find((item): item is KeyZonePrimitive => item instanceof KeyZonePrimitive)!;
+    return { wrapper, runtime, primitive, data, surface: wrapper.getComponent(ChartSurface) };
+  }
+
+  it("expands the price lines and translucent band on hover, retains expanded selection on exit and collapses after deselection", async () => {
+    const { wrapper, runtime, primitive, data } = setupFixed();
+    const { context } = fixedDrawing(primitive);
+    expect(context.moveTo.mock.calls).toEqual([[676, 80], [676, 110]]);
+    expect(context.fillRect).not.toHaveBeenCalled();
+    const rebuild = vi.spyOn(primitive, "setData");
+    runtime.move({ point: { x: 688, y: 80 } });
+    const hover = fixedDrawing(primitive);
+    expect(hover.context.moveTo.mock.calls).toEqual([[0, 80], [0, 110]]);
+    expect(hover.context.lineTo.mock.calls).toEqual([[700, 80], [700, 110]]);
+    expect(hover.context.fillRect).toHaveBeenCalledExactlyOnceWith(0, 80, 700, 30);
+    expect(hover.fills).toEqual([{ color: "#8c785b", alpha: 0.1 }]);
+    runtime.move({ point: { x: 50, y: 80 } });
+    runtime.click({ point: { x: 50, y: 80 } });
+    const selected = kind === "Origin"
+      ? { kind: "keyzone", id: "9007199254740993", originDatasetId: "origin-keyzone" }
+      : { kind: "keyzone", id: "9007199254740993", checkpointSbarId: data.bars[2]!.sbarId };
+    expect(wrapper.emitted(kind === "Origin" ? "objectClick" : "objectSelect")?.at(-1)).toEqual([selected]);
+    if (kind !== "Snapshot Reference") await wrapper.setProps({ selectedObject: selected } as never);
+    await nextTick();
+    expect(fixedDrawing(primitive).fills).toEqual([{ color: "#9e8661", alpha: 0.1 }]);
+    runtime.move({});
+    const selectedDrawing = fixedDrawing(primitive);
+    expect(selectedDrawing.context.moveTo.mock.calls).toEqual([[0, 80], [0, 110]]);
+    expect(selectedDrawing.context.fillRect).toHaveBeenCalledExactlyOnceWith(0, 80, 700, 30);
+    expect(selectedDrawing.context.strokeStyle).toBe("#9e8661");
+    expect(rebuild).not.toHaveBeenCalled();
+    if (kind === "Snapshot Reference") runtime.click({ point: { x: 110, y: 95 } });
+    else await wrapper.setProps({ selectedObject: null } as never);
+    await nextTick();
+    const collapsed = fixedDrawing(primitive);
+    expect(collapsed.context.moveTo.mock.calls).toEqual([[676, 80], [676, 110]]);
+    expect(collapsed.context.fillRect).not.toHaveBeenCalled();
+    expect(collapsed.context.strokeStyle).toBe("#756650");
+  });
+
+  it("clears the hover band on viewport changes, hiding the layer and replacing the checkpoint", async () => {
+    const { wrapper, runtime, primitive, surface, data } = setupFixed();
+    const point = { point: { x: 688, y: 80 } };
+    runtime.move(point);
+    expect(fixedDrawing(primitive).context.fillRect).toHaveBeenCalled();
+    runtime.rangeChanged();
+    expect(fixedDrawing(primitive).context.fillRect).not.toHaveBeenCalled();
+    runtime.move(point);
+    const port = surface.vm as unknown as { setLayerVisibility: (value: Record<string, boolean>) => void };
+    port.setLayerVisibility({ sbar: true, volume: true, cbar: true, swing: true, trend: true, keyzone: false });
+    expect(primitive.renderer()).toBeNull();
+    port.setLayerVisibility({ sbar: true, volume: true, cbar: true, swing: true, trend: true, keyzone: true });
+    expect(fixedDrawing(primitive).context.fillRect).not.toHaveBeenCalled();
+    runtime.move(point);
+    await wrapper.setProps({ keyzones: { ...data.keyzones, zones: [...data.keyzones.zones] } } as never);
+    expect(fixedDrawing(primitive).context.fillRect).not.toHaveBeenCalled();
+    runtime.move(point);
+    expect(primitive.hitTestZone(50, 95)).toBeNull();
+    runtime.move({ point: { x: 50, y: 95 } });
+    expect(fixedDrawing(primitive).context.fillRect).not.toHaveBeenCalled();
+  });
+});

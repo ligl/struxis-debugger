@@ -398,3 +398,125 @@ fn restart_with_active_interaction_releases_old_worker_and_keeps_owned_results_u
     assert!(new.keyzones.as_ref().unwrap().interactions.is_empty());
     manager.dispose().unwrap();
 }
+
+#[test]
+fn fixed_price_range_creation_is_separate_from_observation_and_survives_step() {
+    use crate::observation::CreateFixedPriceRange;
+    let (mut manager, mut observation) = paused();
+    let before = manager.inspector().unwrap().unwrap();
+    let created = manager
+        .create_fixed_price_range(CreateFixedPriceRange {
+            context: observation.context.clone(),
+            lower: "0.00005".into(),
+            upper: "0.00010".into(),
+        })
+        .unwrap();
+    assert_eq!(created.inspector.sbar_id, time(14));
+    assert_eq!(created.inspector.structure, before.structure);
+    let registry = created.inspector.keyzones.as_ref().unwrap();
+    assert_eq!(
+        registry.zones.len(),
+        before.keyzones.as_ref().unwrap().zones.len() + 1
+    );
+    assert!(registry.observations.is_empty());
+    assert!(registry.interactions.is_empty());
+    let fixed = registry
+        .zones
+        .iter()
+        .find(|zone| zone.keyzone_id == created.keyzone_id)
+        .unwrap();
+    assert_eq!(fixed.origin_kind, "FixedPriceRange");
+    assert_eq!(fixed.origin_id, None);
+    assert_eq!(fixed.state, "Finalized");
+    assert_eq!(fixed.lower, "0.00005");
+    assert_eq!(fixed.upper, "0.00010");
+    assert_eq!(fixed.formed_at, fixed.created_at);
+    assert_eq!(fixed.finalized_at.as_ref(), Some(&fixed.created_at));
+    // Fixed ranges may observe history preceding their system creation time.
+    observation.keyzone_id = created.keyzone_id.clone();
+    let observed = manager
+        .observation(ObservationCommand::Create(observation))
+        .unwrap();
+    assert_eq!(
+        observed
+            .inspector
+            .keyzones
+            .as_ref()
+            .unwrap()
+            .observations
+            .len(),
+        1
+    );
+    let next = manager.step_checkpoint().unwrap();
+    let next_inspector = next.inspector.unwrap();
+    assert_eq!(next_inspector.sbar_id, time(15));
+    assert!(
+        next_inspector
+            .keyzones
+            .as_ref()
+            .unwrap()
+            .zones
+            .iter()
+            .any(|zone| zone.keyzone_id == created.keyzone_id)
+    );
+}
+
+#[test]
+fn fixed_price_range_rejects_invalid_prices_and_stale_context_without_creating_zones() {
+    use crate::observation::CreateFixedPriceRange;
+    let (mut manager, observation) = paused();
+    let before = manager.inspector().unwrap().unwrap();
+    for (lower, upper) in [
+        ("", "1"),
+        ("NaN", "1"),
+        ("1", "1"),
+        ("2", "1"),
+        ("1", "infinity"),
+    ] {
+        let error = manager
+            .create_fixed_price_range(CreateFixedPriceRange {
+                context: observation.context.clone(),
+                lower: lower.into(),
+                upper: upper.into(),
+            })
+            .unwrap_err();
+        assert_eq!(error.code, IpcErrorCode::InvalidArgument);
+        assert_eq!(
+            manager.inspector().unwrap().unwrap().keyzones,
+            before.keyzones
+        );
+    }
+    for context in [
+        ObservationContext {
+            run_id: "stale-run".into(),
+            ..observation.context.clone()
+        },
+        ObservationContext {
+            expected_sbar_id: time(13),
+            ..observation.context.clone()
+        },
+    ] {
+        let error = manager
+            .create_fixed_price_range(CreateFixedPriceRange {
+                context,
+                lower: "1".into(),
+                upper: "2".into(),
+            })
+            .unwrap_err();
+        assert_eq!(error.code, IpcErrorCode::Conflict);
+        assert_eq!(
+            manager.inspector().unwrap().unwrap().keyzones,
+            before.keyzones
+        );
+    }
+    manager.stop().unwrap();
+    assert!(
+        manager
+            .create_fixed_price_range(CreateFixedPriceRange {
+                context: observation.context,
+                lower: "1".into(),
+                upper: "2".into(),
+            })
+            .is_err()
+    );
+}

@@ -446,6 +446,15 @@ export interface KeyZoneInteractionDto {
 
 export interface ObservationStateKeyDto { instrumentId: string; timeframe: string }
 export interface ObservationContextDto { runId: string; expectedSbarId: string }
+export interface CreateFixedPriceRangeDto {
+  context: ObservationContextDto;
+  lower: string;
+  upper: string;
+}
+export interface FixedPriceRangeResultDto {
+  keyzoneId: string;
+  inspector: ReplayInspectorDto;
+}
 export interface CreateObservationDto {
   context: ObservationContextDto;
   keyzoneId: string;
