@@ -691,7 +691,7 @@ pub(crate) mod keyzone_projection_tests {
             binding.process(&bar);
             if time == 100 {
                 let state = binding.state(key).unwrap();
-                let history = ObserverHistory::new(state.sbars(), 100_u64.into(), None).unwrap();
+                let history = BarHistoryView::new(state.sbars(), 100_u64.into(), None).unwrap();
                 registry
                     .create_observation(
                         ObservationTaskRequest {
@@ -764,7 +764,7 @@ pub(crate) mod keyzone_projection_tests {
             NautilusRuntime, Struxis, StruxisConfig, StruxisRegistrant, StruxisStateKey,
             keyzone::{
                 InteractionConfig, InteractionState, KeyZoneRef, ObservationTaskCompletion,
-                ObservationTaskRequest, ObservationTaskStart, ObserverHistory,
+                ObservationTaskRequest, ObservationTaskStart, BarHistoryView,
             },
         };
         use nautilus_common::cache::Cache;
@@ -808,7 +808,7 @@ pub(crate) mod keyzone_projection_tests {
             )
             .unwrap();
         let state = struxis.state(key).unwrap();
-        let history = ObserverHistory::new(state.sbars(), 100_u64.into(), None).unwrap();
+        let history = BarHistoryView::new(state.sbars(), 100_u64.into(), None).unwrap();
         registry
             .create_observation(
                 ObservationTaskRequest {
