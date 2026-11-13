@@ -22,6 +22,7 @@ use nautilus_backtest::{
     config::{BacktestEngineConfig, SimulatedVenueConfig},
     engine::BacktestEngine,
 };
+use nautilus_common::cache::CacheConfig;
 use nautilus_execution::models::fee::{FeeModelAny, MakerTakerFeeModel};
 use nautilus_model::{
     data::{BarType, Data},
@@ -720,12 +721,28 @@ impl WorkerSession {
         let engine_config = BacktestEngineConfig {
             logging: nautilus_common::logging::logger::LoggerConfig::from_spec("stdout=Error")
                 .map_err(|error| format!("Replay logger configuration failed: {error}"))?,
+            cache: Some(
+                CacheConfig::builder()
+                    .bar_capacity(
+                        config
+                            .input
+                            .bars
+                            .len()
+                            .max(CacheConfig::default().bar_capacity),
+                    )
+                    .build()
+                    .map_err(|error| format!("Replay Cache configuration failed: {error}"))?,
+            ),
             ..BacktestEngineConfig::default()
         };
         let mut engine = BacktestEngine::new(engine_config)
             .map_err(|error| format!("Replay BacktestEngine creation failed: {error}"))?;
 
-        let struxis_config = StruxisConfig::builder().enable_structure(true).build();
+        let mut struxis_config = StruxisConfig::builder().enable_structure(true).build();
+        let (cbars, swings, trends) = struxis_config.resolved_structure_capacities();
+        struxis_config.structure_cbars_capacity = Some(cbars.max(config.input.bars.len()));
+        struxis_config.structure_swings_capacity = Some(swings.max(config.input.bars.len()));
+        struxis_config.structure_trends_capacity = Some(trends.max(config.input.bars.len()));
         let effective_config = EffectiveStruxisConfig::from_struxis_config(&struxis_config);
         let setup = (|| -> anyhow::Result<Struxis> {
             let instrument_id = config.instrument.id();
@@ -1221,6 +1238,49 @@ mod tests {
         };
         TestDataset::create(&origin, "1735689600000000000", "1735689720000000000")
             .expect("fixture Test Dataset")
+    }
+
+    #[test]
+    fn replay_runtime_retains_input_beyond_default_cache_capacity() {
+        let mut input = LoadedInput::from_test(&fixture_test()).expect("fixture input");
+        let first = input.bars[0].clone();
+        input.bars = (0..10_001_u64)
+            .map(|index| {
+                let mut bar = first.clone();
+                let timestamp = first.ts_event.as_u64() + index * 60_000_000_000;
+                bar.ts_event = timestamp.into();
+                bar.ts_init = timestamp.into();
+                bar
+            })
+            .collect();
+        input.sbar_sequence_fingerprint =
+            sequence_fingerprint(input.state_key, &input.bars).expect("complete input fingerprint");
+        let mut session = super::WorkerSession::initialize(
+            ReplayWorkerConfig {
+                run_id: "retention-boundary".into(),
+                input,
+                instrument: InstrumentAny::CurrencyPair(audusd_sim()),
+            },
+            None,
+        )
+        .expect("initialize long replay");
+        assert_eq!(session.effective_config.structure_cbars_capacity, 10_001);
+        assert_eq!(session.effective_config.structure_swings_capacity, 10_001);
+        assert_eq!(session.effective_config.structure_trends_capacity, 10_001);
+        let cache = session.engine.kernel().cache.clone();
+        for bar in &session.input.bars {
+            cache
+                .borrow_mut()
+                .add_bar(bar.clone())
+                .expect("retain input Bar");
+        }
+        let bar_type = session.input.bars[0].bar_type;
+        assert_eq!(cache.borrow().bar_count(&bar_type), 10_001);
+        assert_eq!(
+            cache.borrow().bar_at_index(&bar_type, 10_000),
+            Some(&session.input.bars[0])
+        );
+        session.dispose().expect("release replay runtime");
     }
 
     #[test]

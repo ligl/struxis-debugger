@@ -18,6 +18,53 @@ fn test_catalog_path() -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from("/nonexistent/catalog"))
 }
 
+struct LifecycleCatalog(PathBuf);
+
+impl LifecycleCatalog {
+    fn new() -> Self {
+        use nautilus_model::{
+            data::{Bar, BarType},
+            instruments::{InstrumentAny, stubs::currency_pair_btcusdt},
+            types::{Price, Quantity},
+        };
+        use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
+        use std::str::FromStr;
+
+        let path = std::env::temp_dir()
+            .join(format!("struxis-app-lifecycle-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&path).expect("create lifecycle Catalog");
+        let catalog = ParquetDataCatalog::new(&path, None, None, None, None);
+        catalog
+            .write_instruments(vec![InstrumentAny::CurrencyPair(currency_pair_btcusdt())])
+            .expect("write lifecycle instrument");
+        let bar_type = BarType::from_str("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
+            .expect("lifecycle BarType");
+        let bars: Vec<_> = (0..3_u64)
+            .map(|index| {
+                let timestamp = 1_735_689_600_000_000_000 + index * 300_000_000_000;
+                Bar::new(
+                    bar_type,
+                    Price::from("65000.00"),
+                    Price::from("65100.00"),
+                    Price::from("64900.00"),
+                    Price::from("65050.00"),
+                    Quantity::from("1.000000"),
+                    timestamp.into(),
+                    timestamp.into(),
+                )
+            })
+            .collect();
+        catalog.write_to_parquet(&bars, None, None, None).expect("write lifecycle bars");
+        Self(path)
+    }
+}
+
+impl Drop for LifecycleCatalog {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
 #[test]
 fn app_state_rejects_start_run_without_test_dataset() {
     let state = AppState::new(test_catalog_path());
@@ -135,7 +182,8 @@ mod concurrent_access {
 
 #[test]
 fn active_run_rejects_origin_and_test_dataset_replacement() {
-    let state = AppState::new(test_catalog_path());
+    let catalog = LifecycleCatalog::new();
+    let state = AppState::new(catalog.0.clone());
     let entry = state
         .discover_datasets()
         .expect("Catalog discovery should succeed")
@@ -143,7 +191,7 @@ fn active_run_rejects_origin_and_test_dataset_replacement() {
         .find(|entry| {
             entry.available
                 && entry.bar_type.as_deref()
-                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+                    == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
         })
         .expect("fixture BTCUSDT stream should be available");
 
@@ -183,7 +231,8 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
             .as_nanos()
     ));
     std::fs::create_dir_all(&snapshot_root).expect("Snapshot root should be created");
-    let state = AppState::with_snapshot_root(test_catalog_path(), snapshot_root.clone());
+    let catalog = LifecycleCatalog::new();
+    let state = AppState::with_snapshot_root(catalog.0.clone(), snapshot_root.clone());
 
     let entry = state
         .discover_datasets()
@@ -192,7 +241,7 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
         .find(|entry| {
             entry.available
                 && entry.bar_type.as_deref()
-                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+                    == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
         })
         .expect("fixture BTCUSDT stream should be available");
 
@@ -256,7 +305,7 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     // Reconstruct the application service with the same persistent root to
     // verify discovery does not depend on the original AppState or Run owner.
     let reopened_state =
-        AppState::with_snapshot_root(test_catalog_path(), snapshot_root.clone());
+        AppState::with_snapshot_root(catalog.0.clone(), snapshot_root.clone());
     let reopened_artifacts = reopened_state
         .discover_snapshots()
         .expect("Completed Snapshot should remain discoverable after AppState reconstruction");
@@ -286,7 +335,8 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
     ));
     std::fs::write(&snapshot_root, b"not a directory")
         .expect("blocking Snapshot root file should be created");
-    let state = AppState::with_snapshot_root(test_catalog_path(), snapshot_root.clone());
+    let catalog = LifecycleCatalog::new();
+    let state = AppState::with_snapshot_root(catalog.0.clone(), snapshot_root.clone());
 
     let entry = state
         .discover_datasets()
@@ -295,7 +345,7 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
         .find(|entry| {
             entry.available
                 && entry.bar_type.as_deref()
-                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+                    == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
         })
         .expect("fixture BTCUSDT stream should be available");
 

@@ -103,6 +103,7 @@ pub(crate) fn load_origin(
         config::{BacktestEngineConfig, SimulatedVenueConfig},
         engine::BacktestEngine,
     };
+    use nautilus_common::cache::CacheConfig;
     use nautilus_execution::models::fee::{FeeModelAny, MakerTakerFeeModel};
     use nautilus_model::{
         enums::{AccountType, BookType, OmsType},
@@ -141,6 +142,11 @@ pub(crate) fn load_origin(
     let venue = Venue::new(instrument_id.venue.as_str());
     let engine_config = BacktestEngineConfig {
         logging: nautilus_common::logging::logger::LoggerConfig::from_spec("stdout=Error")?,
+        cache: Some(
+            CacheConfig::builder()
+                .bar_capacity(origin_bars.len().max(CacheConfig::default().bar_capacity))
+                .build()?,
+        ),
         ..BacktestEngineConfig::default()
     };
     let mut engine = BacktestEngine::new(engine_config)?;
@@ -162,12 +168,14 @@ pub(crate) fn load_origin(
         engine.add_instrument(instrument)?;
 
         let runtime = NautilusRuntime::new(engine.kernel().cache.clone());
-        let struxis = Struxis::new(
-            StruxisConfig::builder()
-                .enable_structure(enable_structure)
-                .build(),
-            runtime,
-        );
+        let mut struxis_config = StruxisConfig::builder()
+            .enable_structure(enable_structure)
+            .build();
+        let (cbars, swings, trends) = struxis_config.resolved_structure_capacities();
+        struxis_config.structure_cbars_capacity = Some(cbars.max(origin_bars.len()));
+        struxis_config.structure_swings_capacity = Some(swings.max(origin_bars.len()));
+        struxis_config.structure_trends_capacity = Some(trends.max(origin_bars.len()));
+        let struxis = Struxis::new(struxis_config, runtime);
         let strategy = StruxisDemo::new(
             struxis.clone(),
             StrategyId::from("STRUXIS-DEBUGGER-ORIGIN-LOAD"),
@@ -393,6 +401,40 @@ mod tests {
         }
 
         (struxis, key)
+    }
+
+    #[test]
+    fn origin_load_preserves_input_beyond_default_cache_capacity() {
+        use nautilus_model::instruments::{InstrumentAny, stubs::audusd_sim};
+        use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
+
+        let catalog_path =
+            std::env::temp_dir().join(format!("struxis-origin-retention-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&catalog_path).expect("temporary Catalog directory");
+        let catalog = ParquetDataCatalog::new(&catalog_path, None, None, None, None);
+        catalog
+            .write_instruments(vec![InstrumentAny::CurrencyPair(audusd_sim())])
+            .expect("write fixture instrument");
+        let bars: Vec<_> = (1..=10_001_u64)
+            .map(|index| {
+                let mut bar = fixture_bar(index * 300_000_000_000, "10.00");
+                bar.open = Price::from("10.00000");
+                bar.high = Price::from("12.00000");
+                bar.low = Price::from("9.00000");
+                bar.close = Price::from("11.00000");
+                bar
+            })
+            .collect();
+        catalog
+            .write_to_parquet(&bars, None, None, None)
+            .expect("write complete fixture input");
+
+        let result = super::load_origin(&catalog_path, &bars[0].bar_type.to_string(), false);
+        std::fs::remove_dir_all(&catalog_path).expect("remove temporary Catalog");
+        let origin = result.expect("Origin must retain the complete input beyond 10,000 bars");
+        assert_eq!(origin.bars.len(), 10_001);
+        assert_eq!(origin.bars, bars);
+        assert!(origin.structure.is_none());
     }
 
     #[test]
