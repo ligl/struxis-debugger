@@ -449,8 +449,8 @@ impl WorkerSession {
             },
         };
         use capitus_struxis::keyzone::{
-            InteractionConfig, KeyZoneRef, ObservationOperation, ObservationRef,
-            ObservationRequest, ObservationStart,
+            InteractionConfig, KeyZoneRef, ObservationTaskOperation, ObservationTaskRef,
+            ObservationTaskRequest, ObservationTaskStart,
         };
         let context = command.context();
         if context.run_id != self.state.run_id
@@ -503,8 +503,8 @@ impl WorkerSession {
                     .map_err(domain_error)?;
                 let deadline = integer(&request.deadline, "Deadline")?;
                 let start = match request.start_at {
-                    Some(value) => ObservationStart::FromTime(integer(&value, "Start")?.into()),
-                    None => ObservationStart::AfterCurrentCursor,
+                    Some(value) => ObservationTaskStart::FromTime(integer(&value, "Start")?.into()),
+                    None => ObservationTaskStart::AfterCurrentCursor,
                 };
                 if request.request_id.trim().is_empty() {
                     return Err(IpcError::new(
@@ -513,14 +513,14 @@ impl WorkerSession {
                     ));
                 }
                 self.struxis
-                    .observe_keyzone(ObservationRequest {
-                        consumer_id: "struxis-debugger".into(),
+                    .observe_keyzone(ObservationTaskRequest {
+                        observer_id: "struxis-debugger".into(),
                         request_id: request.request_id,
                         zone: KeyZoneRef {
                             instrument_id: self.input.state_key.instrument_id,
                             id: zone_id,
                         },
-                        observer: self.input.state_key,
+                        stream_key: self.input.state_key,
                         start,
                         config,
                         completion: request.completion.into(),
@@ -552,7 +552,7 @@ impl WorkerSession {
                         })?
                 };
                 self.struxis
-                    .cancel_observation(ObservationRef {
+                    .cancel_observation(ObservationTaskRef {
                         instrument_id: self.input.state_key.instrument_id,
                         id,
                     })
@@ -575,10 +575,10 @@ impl WorkerSession {
         inspector.keyzones = Some(projection);
         self.latest_inspector = Some(inspector.clone());
         let operation = match result.operation {
-            ObservationOperation::Created => Operation::Created,
-            ObservationOperation::Existing => Operation::Existing,
-            ObservationOperation::Cancelled => Operation::Cancelled,
-            ObservationOperation::AlreadyTerminated => Operation::AlreadyTerminated,
+            ObservationTaskOperation::Created => Operation::Created,
+            ObservationTaskOperation::Existing => Operation::Existing,
+            ObservationTaskOperation::Cancelled => Operation::Cancelled,
+            ObservationTaskOperation::AlreadyTerminated => Operation::AlreadyTerminated,
         };
         Ok(ObservationCommandResult {
             observation_id: result.observation.id.value().to_string(),
@@ -1129,8 +1129,8 @@ mod tests {
         use capitus_struxis::{
             StruxisRegistrant,
             keyzone::{
-                InteractionConfig, InteractionState, KeyZoneRef, ObservationCompletion,
-                ObservationRequest, ObservationStart, ObservationState,
+                InteractionConfig, InteractionState, KeyZoneRef, ObservationTaskCompletion,
+                ObservationTaskRequest, ObservationTaskStart, ObservationTaskState,
             },
         };
         use nautilus_model::identifiers::StrategyId;
@@ -1209,17 +1209,17 @@ mod tests {
             .id();
         let observation = session
             .struxis
-            .observe_keyzone(ObservationRequest {
-                consumer_id: "struxis-debugger".into(),
+            .observe_keyzone(ObservationTaskRequest {
+                observer_id: "struxis-debugger".into(),
                 request_id: "owner-registration".into(),
                 zone: KeyZoneRef {
                     instrument_id: key.instrument_id,
                     id: zone,
                 },
-                observer: key,
-                start: ObservationStart::AfterCurrentCursor,
+                stream_key: key,
+                start: ObservationTaskStart::AfterCurrentCursor,
                 config: InteractionConfig::new(2, 0.5).unwrap(),
-                completion: ObservationCompletion::UntilDeadline,
+                completion: ObservationTaskCompletion::UntilDeadline,
                 deadline: (base + 20 * minute).into(),
             })
             .unwrap()
@@ -1242,7 +1242,7 @@ mod tests {
                 .query_observation(observation)
                 .unwrap()
                 .state(),
-            ObservationState::Observing
+            ObservationTaskState::Observing
         );
         assert_eq!(
             session.struxis.query_interactions(observation).unwrap()[0].state(),
@@ -1256,7 +1256,7 @@ mod tests {
                 .query_observation(observation)
                 .unwrap()
                 .state(),
-            ObservationState::Observing
+            ObservationTaskState::Observing
         );
     }
 

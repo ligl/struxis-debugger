@@ -1,6 +1,6 @@
 //! Owned commands for user-driven observation of the current Replay stream.
 
-use capitus_struxis::keyzone::{KeyZoneError, ObservationCompletion};
+use capitus_struxis::keyzone::{KeyZoneError, ObservationTaskCompletion};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -21,7 +21,7 @@ pub(crate) enum Completion {
     UntilDeadline,
 }
 
-impl From<Completion> for ObservationCompletion {
+impl From<Completion> for ObservationTaskCompletion {
     fn from(value: Completion) -> Self {
         match value {
             Completion::AfterOneInteraction => Self::AfterOneInteraction,

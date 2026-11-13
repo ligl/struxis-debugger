@@ -488,8 +488,8 @@ impl KeyZoneCheckpoint {
                     observer_timeframe: interaction.observer_timeframe().to_string(),
                     observation_id: interaction.observation_id().value().to_string(),
                     observer: ObservationStateKey {
-                        instrument_id: interaction.observer().instrument_id.to_string(),
-                        timeframe: interaction.observer().timeframe.to_string(),
+                        instrument_id: interaction.stream_key().instrument_id.to_string(),
+                        timeframe: interaction.stream_key().timeframe.to_string(),
                     },
                     interrupted_at: interaction.interrupted_at().map(|t| t.to_string()),
                     interrupted_detected_at: interaction
@@ -498,7 +498,13 @@ impl KeyZoneCheckpoint {
                     interruption_reason: interaction
                         .interruption_reason()
                         .map(|r| format!("{r:?}")),
-                    state: format!("{:?}", interaction.state()),
+                    // Preserve the persisted state spelling across domain renames.
+                    state: match interaction.state() {
+                        capitus_struxis::keyzone::InteractionState::SourceInvalidated => {
+                            "Invalidated".to_owned()
+                        }
+                        state => format!("{state:?}"),
+                    },
                     config_n: interaction.config().n().to_string(),
                     config_x: interaction.config().x(),
                     outside_count: interaction.outside_count().to_string(),
@@ -522,18 +528,18 @@ impl KeyZoneCheckpoint {
                     let r = o.request();
                     KeyZoneObservation {
                         observation_id: o.id().value().to_string(),
-                        consumer_id: r.consumer_id.clone(),
+                        consumer_id: r.observer_id.clone(),
                         request_id: r.request_id.clone(),
                         keyzone_id: r.zone.id.value().to_string(),
                         observer: ObservationStateKey {
-                            instrument_id: r.observer.instrument_id.to_string(),
-                            timeframe: r.observer.timeframe.to_string(),
+                            instrument_id: r.stream_key.instrument_id.to_string(),
+                            timeframe: r.stream_key.timeframe.to_string(),
                         },
                         start_mode: match r.start {
-                            capitus_struxis::keyzone::ObservationStart::AfterCurrentCursor => {
+                            capitus_struxis::keyzone::ObservationTaskStart::AfterCurrentCursor => {
                                 "AfterCurrentCursor"
                             }
-                            capitus_struxis::keyzone::ObservationStart::FromTime(_) => "FromTime",
+                            capitus_struxis::keyzone::ObservationTaskStart::FromTime(_) => "FromTime",
                         }
                         .into(),
                         start_at: o.start_at().to_string(),
@@ -688,17 +694,17 @@ pub(crate) mod keyzone_projection_tests {
                 let history = ObserverHistory::new(state.sbars(), 100_u64.into(), None).unwrap();
                 registry
                     .create_observation(
-                        ObservationRequest {
-                            consumer_id: "projection".into(),
+                        ObservationTaskRequest {
+                            observer_id: "projection".into(),
                             request_id: "record".into(),
                             zone: KeyZoneRef {
                                 instrument_id: instrument,
                                 id,
                             },
-                            observer: key,
-                            start: ObservationStart::FromTime(100_u64.into()),
+                            stream_key: key,
+                            start: ObservationTaskStart::FromTime(100_u64.into()),
                             config: InteractionConfig::new(1, 0.5).unwrap(),
-                            completion: ObservationCompletion::UntilDeadline,
+                            completion: ObservationTaskCompletion::UntilDeadline,
                             deadline: 400_u64.into(),
                         },
                         history,
@@ -712,7 +718,7 @@ pub(crate) mod keyzone_projection_tests {
         let task = registry.observations().next().unwrap().id();
         registry
             .cancel_observation(
-                ObservationRef {
+                ObservationTaskRef {
                     instrument_id: instrument,
                     id: task,
                 },
@@ -750,6 +756,97 @@ pub(crate) mod keyzone_projection_tests {
                 .iter()
                 .all(|i| i.observation_id == tasks[0].observation_id)
         );
+    }
+
+    #[test]
+    fn source_invalidated_projection_preserves_wire_names_and_state() {
+        use capitus_struxis::{
+            NautilusRuntime, Struxis, StruxisConfig, StruxisRegistrant, StruxisStateKey,
+            keyzone::{
+                InteractionConfig, InteractionState, KeyZoneRef, ObservationTaskCompletion,
+                ObservationTaskRequest, ObservationTaskStart, ObserverHistory,
+            },
+        };
+        use nautilus_common::cache::Cache;
+        use nautilus_model::{
+            data::{Bar, BarType},
+            identifiers::StrategyId,
+            types::Quantity,
+        };
+        use std::{cell::RefCell, rc::Rc, str::FromStr};
+
+        let instrument = InstrumentId::from("AUD/USD.SIM");
+        let bar_type = BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").unwrap();
+        let key = StruxisStateKey::from_bar_type(&bar_type);
+        let cache = Rc::new(RefCell::new(Cache::default()));
+        let struxis = Struxis::new(
+            StruxisConfig::builder().enable_structure(false).build(),
+            NautilusRuntime::new(Rc::clone(&cache)),
+        );
+        struxis.register(
+            key,
+            StruxisRegistrant::Strategy(StrategyId::from("WIRE-TEST")),
+        );
+        let bar = Bar::new(
+            bar_type,
+            Price::from("10"),
+            Price::from("11"),
+            Price::from("10"),
+            Price::from("10"),
+            Quantity::from("1"),
+            100_u64.into(),
+            100_u64.into(),
+        );
+        cache.borrow_mut().add_bar(bar).unwrap();
+        struxis.process(&bar);
+        let mut registry = KeyZoneRegistry::new(instrument);
+        let (id, _) = registry
+            .create_fixed(
+                key.timeframe,
+                PriceRange::new(Price::from("9"), Price::from("12")).unwrap(),
+                100_u64.into(),
+            )
+            .unwrap();
+        let state = struxis.state(key).unwrap();
+        let history = ObserverHistory::new(state.sbars(), 100_u64.into(), None).unwrap();
+        registry
+            .create_observation(
+                ObservationTaskRequest {
+                    observer_id: "wire-observer".into(),
+                    request_id: "wire-request".into(),
+                    zone: KeyZoneRef {
+                        instrument_id: instrument,
+                        id,
+                    },
+                    stream_key: key,
+                    start: ObservationTaskStart::FromTime(100_u64.into()),
+                    config: InteractionConfig::default(),
+                    completion: ObservationTaskCompletion::UntilDeadline,
+                    deadline: 400_u64.into(),
+                },
+                history,
+                1000_u64.into(),
+            )
+            .unwrap();
+        registry.invalidate_fixed(id, 200_u64.into()).unwrap();
+        assert_eq!(
+            registry.interactions_for(id).unwrap()[0].state(),
+            InteractionState::SourceInvalidated
+        );
+
+        let projection = KeyZoneCheckpoint::from_registry(&registry).unwrap();
+        let wire = serde_json::to_value(&projection).unwrap();
+        assert_eq!(wire["interactions"][0]["state"], "Invalidated");
+        assert_eq!(wire["zones"][0]["state"], "Invalidated");
+        assert_eq!(wire["observations"][0]["state"], "SourceInvalidated");
+        assert_eq!(wire["observations"][0]["consumerId"], "wire-observer");
+        assert_eq!(
+            wire["observations"][0]["observer"]["instrumentId"],
+            "AUD/USD.SIM"
+        );
+        assert_eq!(wire["observations"][0]["observer"]["timeframe"], "5m");
+        assert!(wire["observations"][0].get("observerId").is_none());
+        assert!(wire["observations"][0].get("streamKey").is_none());
     }
 
     #[test]
