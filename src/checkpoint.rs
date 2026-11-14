@@ -438,7 +438,8 @@ pub(crate) struct KeyZoneObservation {
     pub(crate) start_mode: String,
     pub(crate) start_at: String,
     pub(crate) start_exclusive: bool,
-    pub(crate) deadline: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) deadline: Option<String>,
     pub(crate) completion: String,
     pub(crate) config_n: String,
     pub(crate) config_x: f64,
@@ -544,7 +545,7 @@ impl KeyZoneCheckpoint {
                         .into(),
                         start_at: o.start_at().to_string(),
                         start_exclusive: o.start_exclusive(),
-                        deadline: r.deadline.to_string(),
+                        deadline: r.deadline.map(|deadline| deadline.to_string()),
                         completion: format!("{:?}", r.completion),
                         config_n: r.config.n().to_string(),
                         config_x: r.config.x(),

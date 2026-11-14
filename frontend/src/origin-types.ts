@@ -491,7 +491,7 @@ export interface KeyZoneObservationDto {
   startMode: "AfterCurrentCursor" | "FromTime";
   startAt: string;
   startExclusive: boolean;
-  deadline: string;
+  deadline?: string;
   completion: "AfterOneInteraction" | "UntilDeadline";
   configN: string;
   configX: number;

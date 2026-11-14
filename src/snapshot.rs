@@ -1072,7 +1072,11 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
         let id = validate_keyzone_integer(&task.observation_id, "observationId")?;
         let zid = validate_keyzone_integer(&task.keyzone_id, "Observation keyzoneId")?;
         let start = validate_keyzone_integer(&task.start_at, "Observation startAt")?;
-        let deadline = validate_keyzone_integer(&task.deadline, "Observation deadline")?;
+        let deadline = task
+            .deadline
+            .as_deref()
+            .map(|value| validate_keyzone_integer(value, "Observation deadline"))
+            .transpose()?;
         validate_keyzone_integer(&task.created_at, "Observation createdAt")?;
         if tasks.insert(id, task).is_some()
             || !zone_ids.contains(&zid)
@@ -1081,7 +1085,7 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
             || task.request_id.is_empty()
             || task.observer.instrument_id != checkpoint.instrument_id
             || task.observer.timeframe.is_empty()
-            || start >= deadline
+            || deadline.is_some_and(|deadline| start >= deadline)
             || !task.config_x.is_finite()
             || task.config_x < 0.0
             || validate_keyzone_integer(&task.config_n, "Observation configN")? == 0
@@ -1096,7 +1100,10 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
         }
         if let Some(t) = &task.last_processed_at {
             let t = validate_keyzone_integer(t, "Observation lastProcessedAt")?;
-            if t < start || (task.start_exclusive && t == start) || t >= deadline {
+            if t < start
+                || (task.start_exclusive && t == start)
+                || deadline.is_some_and(|deadline| t >= deadline)
+            {
                 return Err("Observation progress outside window".into());
             }
         }
@@ -1117,7 +1124,7 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
         }
         if let Some(t) = &task.terminal_at {
             let time = validate_keyzone_integer(t, "Observation terminalAt")?;
-            if reason == Some("Deadline") && time != deadline {
+            if reason == Some("Deadline") && Some(time) != deadline {
                 return Err("Observation deadline reason disagrees with terminal position".into());
             }
         }
@@ -1199,14 +1206,20 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
         }
         let start = validate_keyzone_integer(&interaction.started_at, "Interaction startedAt")?;
         let task_start = validate_keyzone_integer(&task.start_at, "Observation startAt")?;
-        let deadline = validate_keyzone_integer(&task.deadline, "Observation deadline")?;
-        if start < task_start || (task.start_exclusive && start == task_start) || start >= deadline
+        let deadline = task
+            .deadline
+            .as_deref()
+            .map(|value| validate_keyzone_integer(value, "Observation deadline"))
+            .transpose()?;
+        if start < task_start
+            || (task.start_exclusive && start == task_start)
+            || deadline.is_some_and(|deadline| start >= deadline)
         {
             return Err("Interaction starts outside Observation window".into());
         }
         if let Some(t) = &interaction.last_processed_at {
             let end = validate_keyzone_integer(t, "Interaction lastProcessedAt")?;
-            if end < start || end >= deadline {
+            if end < start || deadline.is_some_and(|deadline| end >= deadline) {
                 return Err("Interaction progress outside window".into());
             }
         }
@@ -1857,6 +1870,31 @@ mod tests {
 mod keyzone_snapshot_tests {
     use super::*;
     use crate::checkpoint::keyzone_projection_tests::fixed_projection;
+
+    #[test]
+    fn optional_deadline_keeps_window_checks_and_rejects_unbounded_deadline_termination() {
+        let mut value = serde_json::to_value(
+            crate::checkpoint::keyzone_projection_tests::observation_projection(),
+        )
+        .unwrap();
+        value["observations"][0]["deadline"] = serde_json::Value::Null;
+        assert!(validate_keyzone_checkpoint(&value).is_ok());
+        value["observations"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("deadline");
+        assert!(validate_keyzone_checkpoint(&value).is_ok());
+        let mut invalid = value.clone();
+        invalid["observations"][0]["state"] = serde_json::json!("Completed");
+        invalid["observations"][0]["reason"] = serde_json::json!("Deadline");
+        assert!(
+            validate_keyzone_checkpoint(&invalid)
+                .unwrap_err()
+                .contains("deadline reason")
+        );
+        value["observations"][0]["deadline"] = serde_json::json!("200");
+        assert!(validate_keyzone_checkpoint(&value).is_err());
+    }
 
     #[test]
     fn keyzone_observation_recording_validates_tasks_interruption_and_rejects_old_model() {
