@@ -792,10 +792,20 @@ impl WorkerSession {
             .map_err(|error| format!("Replay BacktestEngine creation failed: {error}"))?;
 
         let mut struxis_config = StruxisConfig::builder().enable_structure(true).build();
-        let (cbars, swings, trends) = struxis_config.resolved_structure_capacities();
-        struxis_config.structure_cbars_capacity = Some(cbars.max(config.input.bars.len()));
-        struxis_config.structure_swings_capacity = Some(swings.max(config.input.bars.len()));
-        struxis_config.structure_trends_capacity = Some(trends.max(config.input.bars.len()));
+        let (cbars, swings, trends) =
+            capitus_struxis::structure::structure::Structure::resolve_capacities(
+                struxis_config.structure_cbars_capacity,
+                struxis_config.structure_swings_capacity,
+                struxis_config.structure_trends_capacity,
+            );
+        // The input length adds a minimum only when it is nonzero.
+        let input_capacity = std::num::NonZeroUsize::new(config.input.bars.len());
+        struxis_config.structure_cbars_capacity =
+            Some(input_capacity.map_or(cbars, |minimum| cbars.max(minimum)));
+        struxis_config.structure_swings_capacity =
+            Some(input_capacity.map_or(swings, |minimum| swings.max(minimum)));
+        struxis_config.structure_trends_capacity =
+            Some(input_capacity.map_or(trends, |minimum| trends.max(minimum)));
         let effective_config = EffectiveStruxisConfig::from_struxis_config(&struxis_config);
         let setup = (|| -> anyhow::Result<Struxis> {
             let instrument_id = config.instrument.id();
@@ -1332,9 +1342,18 @@ mod tests {
             None,
         )
         .expect("initialize long replay");
-        assert_eq!(session.effective_config.structure_cbars_capacity, 10_001);
-        assert_eq!(session.effective_config.structure_swings_capacity, 10_001);
-        assert_eq!(session.effective_config.structure_trends_capacity, 10_001);
+        assert_eq!(
+            session.effective_config.structure_cbars_capacity.get(),
+            10_001
+        );
+        assert_eq!(
+            session.effective_config.structure_swings_capacity.get(),
+            10_001
+        );
+        assert_eq!(
+            session.effective_config.structure_trends_capacity.get(),
+            10_001
+        );
         let cache = session.engine.kernel().cache.clone();
         for bar in &session.input.bars {
             cache
@@ -1689,9 +1708,9 @@ mod tests {
                 .as_ref()
                 .expect("sink receives effective Struxis config");
             assert!(effective.enable_structure);
-            assert_eq!(effective.structure_cbars_capacity, 10000);
-            assert_eq!(effective.structure_swings_capacity, 2000);
-            assert_eq!(effective.structure_trends_capacity, 666);
+            assert_eq!(effective.structure_cbars_capacity.get(), 10000);
+            assert_eq!(effective.structure_swings_capacity.get(), 2000);
+            assert_eq!(effective.structure_trends_capacity.get(), 666);
             assert_eq!(
                 effective
                     .fingerprint()

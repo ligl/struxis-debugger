@@ -1390,7 +1390,7 @@ mod tests {
     }
 
     fn manifest(records: &[SnapshotCheckpointRecord]) -> SnapshotManifest {
-        let effective_config = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"structureTrendsCapacity":666}"#.to_owned();
+        let effective_config = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"structureTrendsCapacity":666,"keyzoneCapacity":100}"#.to_owned();
         SnapshotManifest {
             snapshot_id: "snapshot-1".into(),
             run_id: "run-1".into(),
@@ -1653,17 +1653,17 @@ mod tests {
         let manifest = manifest(&records);
         assert_eq!(
             manifest.config_fingerprint,
-            "693f71cd1ec54d0c4fafa1afc24505fcf6e73a4d58f8ad6025d9f70b74b2391e"
+            "14cad159e2c83cc68f9b54fc0004863e02bc3be7c73d36705f4362136375a396"
         );
         assert_eq!(
             manifest.calculate_content_checksum(&records).unwrap(),
-            "c128c174ec3ea38247aed9f874d0f50c9a9fdcf244163ba5e2f78d2b700165e2"
+            "cf9faf1c4d5b4d222d4676fd8f20497b426a4cc891bfef11bd4d3057904ddee9"
         );
         assert_eq!(
             manifest
                 .calculate_content_checksum_from_canonical_records(&records)
                 .unwrap(),
-            "c128c174ec3ea38247aed9f874d0f50c9a9fdcf244163ba5e2f78d2b700165e2"
+            "cf9faf1c4d5b4d222d4676fd8f20497b426a4cc891bfef11bd4d3057904ddee9"
         );
     }
 

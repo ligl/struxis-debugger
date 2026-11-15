@@ -171,10 +171,12 @@ pub(crate) fn load_origin(
         let mut struxis_config = StruxisConfig::builder()
             .enable_structure(enable_structure)
             .build();
-        let (cbars, swings, trends) = struxis_config.resolved_structure_capacities();
-        struxis_config.structure_cbars_capacity = Some(cbars.max(origin_bars.len()));
-        struxis_config.structure_swings_capacity = Some(swings.max(origin_bars.len()));
-        struxis_config.structure_trends_capacity = Some(trends.max(origin_bars.len()));
+        let (cbars, swings, trends) = capitus_struxis::structure::structure::Structure::resolve_capacities(struxis_config.structure_cbars_capacity, struxis_config.structure_swings_capacity, struxis_config.structure_trends_capacity);
+        // The input length adds a minimum only when it is nonzero.
+        let input_capacity = std::num::NonZeroUsize::new(origin_bars.len());
+        struxis_config.structure_cbars_capacity = Some(input_capacity.map_or(cbars, |minimum| cbars.max(minimum)));
+        struxis_config.structure_swings_capacity = Some(input_capacity.map_or(swings, |minimum| swings.max(minimum)));
+        struxis_config.structure_trends_capacity = Some(input_capacity.map_or(trends, |minimum| trends.max(minimum)));
         let struxis = Struxis::new(struxis_config, runtime);
         let strategy = StruxisDemo::new(
             struxis.clone(),

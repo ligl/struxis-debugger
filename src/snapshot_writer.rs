@@ -730,9 +730,10 @@ mod tests {
     fn config() -> EffectiveStruxisConfig {
         EffectiveStruxisConfig {
             enable_structure: true,
-            structure_cbars_capacity: 10000,
-            structure_swings_capacity: 2000,
-            structure_trends_capacity: 666,
+            structure_cbars_capacity: std::num::NonZeroUsize::new(10000).unwrap(),
+            structure_swings_capacity: std::num::NonZeroUsize::new(2000).unwrap(),
+            structure_trends_capacity: std::num::NonZeroUsize::new(666).unwrap(),
+            keyzone_capacity: capitus_struxis::keyzone::KeyZoneEngine::resolve_capacity(None),
         }
     }
 

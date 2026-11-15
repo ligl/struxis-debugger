@@ -1,8 +1,9 @@
 //! Canonical, Struxis-only configuration identity for Snapshot metadata.
 
-use capitus_struxis::StruxisConfig;
+use capitus_struxis::{StruxisConfig, keyzone::KeyZoneEngine};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::num::NonZeroUsize;
 
 const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 
@@ -14,20 +15,27 @@ const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct EffectiveStruxisConfig {
     pub(crate) enable_structure: bool,
-    pub(crate) structure_cbars_capacity: usize,
-    pub(crate) structure_swings_capacity: usize,
-    pub(crate) structure_trends_capacity: usize,
+    pub(crate) structure_cbars_capacity: NonZeroUsize,
+    pub(crate) structure_swings_capacity: NonZeroUsize,
+    pub(crate) structure_trends_capacity: NonZeroUsize,
+    pub(crate) keyzone_capacity: NonZeroUsize,
 }
 
 impl EffectiveStruxisConfig {
     /// Resolves optional overrides through Struxis' own implementation defaults.
     pub(crate) fn from_struxis_config(config: &StruxisConfig) -> Self {
-        let (cbars, swings, trends) = config.resolved_structure_capacities();
+        let (cbars, swings, trends) =
+            capitus_struxis::structure::structure::Structure::resolve_capacities(
+                config.structure_cbars_capacity,
+                config.structure_swings_capacity,
+                config.structure_trends_capacity,
+            );
         Self {
             enable_structure: config.enable_structure,
             structure_cbars_capacity: cbars,
             structure_swings_capacity: swings,
             structure_trends_capacity: trends,
+            keyzone_capacity: KeyZoneEngine::resolve_capacity(config.keyzone_capacity),
         }
     }
 
@@ -77,7 +85,12 @@ mod tests {
     fn defaults_are_resolved_from_struxis_implementation() {
         let config = StruxisConfig::builder().build();
         let effective = EffectiveStruxisConfig::from_struxis_config(&config);
-        let (cbars, swings, trends) = config.resolved_structure_capacities();
+        let (cbars, swings, trends) =
+            capitus_struxis::structure::structure::Structure::resolve_capacities(
+                config.structure_cbars_capacity,
+                config.structure_swings_capacity,
+                config.structure_trends_capacity,
+            );
 
         assert!(effective.enable_structure);
         assert_eq!(effective.structure_cbars_capacity, cbars);
@@ -89,28 +102,28 @@ mod tests {
     fn explicit_capacity_override_and_structure_flag_are_recorded() {
         let config = StruxisConfig::builder()
             .enable_structure(false)
-            .structure_cbars_capacity(321)
-            .structure_swings_capacity(123)
-            .structure_trends_capacity(45)
+            .structure_cbars_capacity(NonZeroUsize::new(321).unwrap())
+            .structure_swings_capacity(NonZeroUsize::new(123).unwrap())
+            .structure_trends_capacity(NonZeroUsize::new(45).unwrap())
             .build();
         let effective = EffectiveStruxisConfig::from_struxis_config(&config);
 
         assert!(!effective.enable_structure);
-        assert_eq!(effective.structure_cbars_capacity, 321);
-        assert_eq!(effective.structure_swings_capacity, 123);
-        assert_eq!(effective.structure_trends_capacity, 45);
+        assert_eq!(effective.structure_cbars_capacity.get(), 321);
+        assert_eq!(effective.structure_swings_capacity.get(), 123);
+        assert_eq!(effective.structure_trends_capacity.get(), 45);
     }
 
     #[test]
     fn fingerprint_rejects_missing_and_unknown_schema_fields() {
-        let missing = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000}"#;
+        let missing = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"keyzoneCapacity":100}"#;
         assert!(
             fingerprint_canonical_config(missing)
                 .unwrap_err()
                 .contains("schema")
         );
 
-        let unknown = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"structureTrendsCapacity":666,"tradingFeeModel":"ignored"}"#;
+        let unknown = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"structureTrendsCapacity":666,"keyzoneCapacity":100,"tradingFeeModel":"ignored"}"#;
         assert!(
             fingerprint_canonical_config(unknown)
                 .unwrap_err()
@@ -120,7 +133,7 @@ mod tests {
 
     #[test]
     fn fingerprint_rejects_string_encoded_capacities() {
-        let encoded = r#"{"enableStructure":true,"structureCbarsCapacity":"10000","structureSwingsCapacity":2000,"structureTrendsCapacity":666}"#;
+        let encoded = r#"{"enableStructure":true,"structureCbarsCapacity":"10000","structureSwingsCapacity":2000,"structureTrendsCapacity":666,"keyzoneCapacity":100}"#;
         assert!(
             fingerprint_canonical_config(encoded)
                 .unwrap_err()
@@ -134,7 +147,7 @@ mod tests {
             EffectiveStruxisConfig::from_struxis_config(&StruxisConfig::builder().build());
         let altered = EffectiveStruxisConfig::from_struxis_config(
             &StruxisConfig::builder()
-                .structure_cbars_capacity(321)
+                .structure_cbars_capacity(NonZeroUsize::new(321).unwrap())
                 .build(),
         );
 
@@ -149,6 +162,47 @@ mod tests {
         assert_eq!(
             defaults.fingerprint().unwrap(),
             fingerprint_canonical_config(&defaults.canonical_json().unwrap()).unwrap()
+        );
+    }
+    #[test]
+    fn keyzone_capacity_is_numeric_nonzero_and_part_of_the_fingerprint() {
+        let defaults =
+            EffectiveStruxisConfig::from_struxis_config(&StruxisConfig::builder().build());
+        assert_eq!(defaults.keyzone_capacity.get(), 100);
+        let altered = EffectiveStruxisConfig::from_struxis_config(
+            &StruxisConfig::builder()
+                .keyzone_capacity(NonZeroUsize::new(2).unwrap())
+                .build(),
+        );
+        assert_eq!(altered.keyzone_capacity.get(), 2);
+        assert_ne!(
+            defaults.fingerprint().unwrap(),
+            altered.fingerprint().unwrap()
+        );
+        let value = serde_json::to_value(&defaults).unwrap();
+        assert_eq!(value["keyzoneCapacity"], serde_json::json!(100));
+        for field in [
+            "structureCbarsCapacity",
+            "structureSwingsCapacity",
+            "structureTrendsCapacity",
+            "keyzoneCapacity",
+        ] {
+            for invalid in [serde_json::json!(0), serde_json::json!("100")] {
+                let mut value = value.clone();
+                value[field] = invalid;
+                assert!(
+                    fingerprint_canonical_config(&serde_json::to_string(&value).unwrap())
+                        .unwrap_err()
+                        .contains("schema")
+                );
+            }
+        }
+        let mut missing = value;
+        missing.as_object_mut().unwrap().remove("keyzoneCapacity");
+        assert!(
+            fingerprint_canonical_config(&serde_json::to_string(&missing).unwrap())
+                .unwrap_err()
+                .contains("schema")
         );
     }
 }
