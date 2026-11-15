@@ -513,11 +513,12 @@ impl WorkerSession {
             .map_err(|error| IpcError::new(IpcErrorCode::InvalidArgument, error.to_string()))?;
         let (zone, _) = self
             .struxis
+            .keyzone_mut()
             .create_fixed_keyzone(self.input.state_key, range)
             .map_err(crate::observation::domain_error)?;
-        let registry = self
-            .struxis
-            .keyzones(self.input.state_key.instrument_id)
+        let keyzone = self.struxis.keyzone();
+        let registry = keyzone
+            .registry(self.input.state_key.instrument_id)
             .ok_or_else(|| {
                 IpcError::new(
                     IpcErrorCode::InvalidState,
@@ -525,7 +526,7 @@ impl WorkerSession {
                 )
             })?;
         inspector.keyzones = Some(
-            crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry)
+            crate::checkpoint::KeyZoneCheckpoint::from_registry(registry)
                 .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))?,
         );
         self.latest_inspector = Some(inspector.clone());
@@ -576,9 +577,9 @@ impl WorkerSession {
             ObservationCommand::Create(request) => {
                 let numeric_id = integer(&request.keyzone_id, "KeyZone ID")?;
                 let zone_id = {
-                    let registry = self
-                        .struxis
-                        .keyzones(self.input.state_key.instrument_id)
+                    let keyzone = self.struxis.keyzone();
+                    let registry = keyzone
+                        .registry(self.input.state_key.instrument_id)
                         .ok_or_else(|| {
                             IpcError::new(
                                 IpcErrorCode::InvalidState,
@@ -610,6 +611,7 @@ impl WorkerSession {
                     ));
                 }
                 self.struxis
+                    .keyzone_mut()
                     .observe_keyzone(ObservationTaskRequest {
                         observer_id: "struxis-debugger".into(),
                         request_id: request.request_id,
@@ -628,9 +630,9 @@ impl WorkerSession {
             ObservationCommand::Cancel(request) => {
                 let numeric_id = integer(&request.observation_id, "Observation ID")?;
                 let id = {
-                    let registry = self
-                        .struxis
-                        .keyzones(self.input.state_key.instrument_id)
+                    let keyzone = self.struxis.keyzone();
+                    let registry = keyzone
+                        .registry(self.input.state_key.instrument_id)
                         .ok_or_else(|| {
                             IpcError::new(
                                 IpcErrorCode::InvalidState,
@@ -649,7 +651,8 @@ impl WorkerSession {
                         })?
                 };
                 self.struxis
-                    .cancel_observation(ObservationTaskRef {
+                    .keyzone_mut()
+                    .cancel_observation_request(ObservationTaskRef {
                         instrument_id: self.input.state_key.instrument_id,
                         id,
                     })
@@ -658,7 +661,8 @@ impl WorkerSession {
         };
         let projection = self
             .struxis
-            .keyzones(self.input.state_key.instrument_id)
+            .keyzone()
+            .registry(self.input.state_key.instrument_id)
             .ok_or_else(|| {
                 IpcError::new(
                     IpcErrorCode::InvalidState,
@@ -666,7 +670,7 @@ impl WorkerSession {
                 )
             })
             .and_then(|registry| {
-                crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry)
+                crate::checkpoint::KeyZoneCheckpoint::from_registry(registry)
                     .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))
             })?;
         inspector.keyzones = Some(projection);
@@ -889,9 +893,11 @@ impl WorkerSession {
                 notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             }
-            let keyzones = self.struxis.keyzones(self.input.state_key.instrument_id)
+            let keyzones = self.struxis
+                .keyzone()
+                .registry(self.input.state_key.instrument_id)
                 .ok_or_else(|| "KeyZone Registry unavailable at confirmed checkpoint".to_owned())
-                .and_then(|registry| crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry));
+                .and_then(|registry| crate::checkpoint::KeyZoneCheckpoint::from_registry(registry));
             let keyzones = match keyzones {
                 Ok(keyzones) => keyzones,
                 Err(diagnostic) => {
@@ -1354,7 +1360,8 @@ mod tests {
         }
         let zone = session
             .struxis
-            .keyzones(key.instrument_id)
+            .keyzone()
+            .registry(key.instrument_id)
             .unwrap()
             .keyzones()
             .find(|zone| {
@@ -1368,6 +1375,7 @@ mod tests {
             .id();
         let observation = session
             .struxis
+            .keyzone_mut()
             .observe_keyzone(ObservationTaskRequest {
                 observer_id: "struxis-debugger".into(),
                 request_id: "owner-registration".into(),
@@ -1398,13 +1406,19 @@ mod tests {
         assert_eq!(
             session
                 .struxis
+                .keyzone()
                 .query_observation(observation)
                 .unwrap()
                 .state(),
             ObservationTaskState::Observing
         );
         assert_eq!(
-            session.struxis.query_interactions(observation).unwrap()[0].state(),
+            session
+                .struxis
+                .keyzone()
+                .query_interactions(observation)
+                .unwrap()[0]
+                .state(),
             InteractionState::Active
         );
         session.dispose().unwrap();
@@ -1412,6 +1426,7 @@ mod tests {
         assert_eq!(
             session
                 .struxis
+                .keyzone()
                 .query_observation(observation)
                 .unwrap()
                 .state(),

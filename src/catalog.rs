@@ -211,9 +211,11 @@ pub(crate) fn load_origin(
                 state.last_ts_event(),
                 origin_bars.last().map(|bar| bar.ts_event)
             );
-            let registry = struxis.keyzones(state_key.instrument_id)
+            let keyzone = struxis.keyzone();
+            let registry = keyzone
+                .registry(state_key.instrument_id)
                 .ok_or_else(|| anyhow::anyhow!("KeyZone Registry unavailable after Origin processing: {:?}", struxis.processing_error(state_key.instrument_id)))?;
-            let keyzones = crate::checkpoint::KeyZoneCheckpoint::from_registry(&registry)
+            let keyzones = crate::checkpoint::KeyZoneCheckpoint::from_registry(registry)
                 .map_err(anyhow::Error::msg)?;
             (extracted, structure, Some(keyzones))
         };

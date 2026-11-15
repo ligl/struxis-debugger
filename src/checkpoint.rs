@@ -928,8 +928,9 @@ pub(crate) mod keyzone_projection_tests {
                 ProcessOutcome::Processed { .. }
             ));
         }
-        let registry = struxis.keyzones(key.instrument_id).unwrap();
-        let projected = KeyZoneCheckpoint::from_registry(&registry).unwrap();
+        let keyzone = struxis.keyzone();
+        let registry = keyzone.registry(key.instrument_id).unwrap();
+        let projected = KeyZoneCheckpoint::from_registry(registry).unwrap();
         assert_eq!(projected.zones.len(), 4);
         assert_eq!(
             projected
