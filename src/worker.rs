@@ -8,6 +8,9 @@
 //! owned checkpoints in memory. SnapshotWriter is invoked only by an explicit
 //! save operation after completion; it never participates in Start or Step.
 
+use capitus_struxis::keyzone::{ObservationRequestId, ObserverId};
+use std::collections::BTreeMap;
+
 use std::{
     sync::{
         Arc,
@@ -458,6 +461,8 @@ impl Drop for ReplayWorker {
 }
 
 struct WorkerSession {
+    observation_owner: ObserverId,
+    observation_requests: BTreeMap<String, ObservationRequestId>,
     engine: BacktestEngine,
     struxis: Struxis,
     input: Arc<LoadedInput>,
@@ -514,10 +519,25 @@ impl WorkerSession {
         })?;
         let range = PriceRange::new(lower, upper)
             .map_err(|error| IpcError::new(IpcErrorCode::InvalidArgument, error.to_string()))?;
+        let market_time = self
+            .struxis
+            .state(self.input.state_key)
+            .and_then(|state| state.last_ts_event())
+            .ok_or_else(|| {
+                IpcError::new(
+                    IpcErrorCode::InvalidState,
+                    "State has no accepted market position",
+                )
+            })?;
         let (zone, _) = self
             .struxis
             .keyzone_mut()
-            .create_fixed_keyzone(self.input.state_key, range)
+            .create_fixed(
+                self.input.state_key.instrument_id,
+                self.input.state_key.timeframe,
+                market_time,
+                range,
+            )
             .map_err(crate::observation::domain_error)?;
         let keyzone = self.struxis.keyzone();
         let registry = keyzone
@@ -550,8 +570,7 @@ impl WorkerSession {
             },
         };
         use capitus_struxis::keyzone::{
-            InteractionConfig, ObservationTaskOperation, ObservationTaskRequest,
-            ObservationTaskStart,
+            InteractionConfig, ObservationTaskOperation, ObservationTaskStart,
         };
         let context = command.context();
         if context.run_id != self.state.run_id
@@ -613,20 +632,31 @@ impl WorkerSession {
                         "Request ID is required",
                     ));
                 }
-                self.struxis
-                    .keyzone_mut()
-                    .observe_keyzone(ObservationTaskRequest {
-                        observer_id: "struxis-debugger".into(),
-                        request_id: request.request_id,
-                        instrument_id: self.input.state_key.instrument_id,
-                        keyzone_id: zone_id,
-                        stream_key: self.input.state_key,
-                        start,
-                        config,
-                        completion: request.completion.into(),
-                        deadline: deadline.into(),
-                    })
-                    .map_err(domain_error)?
+                let mut commands = self.struxis.keyzone_mut();
+                let request_id = match self.observation_requests.get(&request.request_id) {
+                    Some(id) => *id,
+                    None => {
+                        let id = commands.new_request_id().map_err(domain_error)?;
+                        self.observation_requests.insert(request.request_id, id);
+                        id
+                    }
+                };
+                let mut builder = commands
+                    .observe(self.input.state_key.instrument_id, zone_id)
+                    .observer(self.observation_owner)
+                    .request_id(request_id)
+                    .timeframe(self.input.state_key.timeframe)
+                    .interaction_config(config)
+                    .until(Some(deadline.into()));
+                if let ObservationTaskStart::FromTime(time) = start {
+                    builder = builder.from_time(time);
+                }
+                if capitus_struxis::keyzone::ObservationTaskCompletion::from(request.completion)
+                    == capitus_struxis::keyzone::ObservationTaskCompletion::AfterOneInteraction
+                {
+                    builder = builder.once();
+                }
+                builder.start().map_err(domain_error)?
             }
             ObservationCommand::Cancel(request) => {
                 let numeric_id = integer(&request.observation_id, "Observation ID")?;
@@ -653,7 +683,7 @@ impl WorkerSession {
                 };
                 self.struxis
                     .keyzone_mut()
-                    .cancel_observation_request(self.input.state_key.instrument_id, id)
+                    .cancel_observation(self.input.state_key.instrument_id, id)
                     .map_err(domain_error)?
             }
         };
@@ -788,6 +818,13 @@ impl WorkerSession {
             }
         };
 
+        let observation_owner = match struxis.keyzone_mut().new_observer_id() {
+            Ok(id) => id,
+            Err(error) => {
+                engine.dispose();
+                return Err(format!("Replay observation identity setup failed: {error}"));
+            }
+        };
         let instrument_id = config.instrument.id().to_string();
         let state = RunState::ready(
             config.run_id,
@@ -804,6 +841,8 @@ impl WorkerSession {
 
         let checkpoint_capacity = config.input.bars.len();
         Ok(Self {
+            observation_owner,
+            observation_requests: BTreeMap::new(),
             engine,
             struxis,
             input: Arc::new(config.input),
@@ -1292,10 +1331,7 @@ mod tests {
     fn debugger_registration_retains_observation_state_after_strategy_unregisters() {
         use capitus_struxis::{
             StruxisRegistrant,
-            keyzone::{
-                InteractionConfig, InteractionState, ObservationTaskCompletion,
-                ObservationTaskRequest, ObservationTaskStart, ObservationTaskState,
-            },
+            keyzone::{InteractionConfig, InteractionState, ObservationTaskState},
         };
         use nautilus_model::identifiers::StrategyId;
 
@@ -1375,17 +1411,12 @@ mod tests {
         let observation = session
             .struxis
             .keyzone_mut()
-            .observe_keyzone(ObservationTaskRequest {
-                observer_id: "struxis-debugger".into(),
-                request_id: "owner-registration".into(),
-                instrument_id: key.instrument_id,
-                keyzone_id: zone,
-                stream_key: key,
-                start: ObservationTaskStart::AfterCurrentCursor,
-                config: InteractionConfig::new(2, 0.5).unwrap(),
-                completion: ObservationTaskCompletion::UntilDeadline,
-                deadline: (base + 20 * minute).into(),
-            })
+            .observe(key.instrument_id, zone)
+            .observer(session.observation_owner)
+            .timeframe(key.timeframe)
+            .interaction_config(InteractionConfig::new(2, 0.5).unwrap())
+            .until(Some((base + 20 * minute).into()))
+            .start()
             .unwrap()
             .observation_id;
         session.step(None).unwrap();
@@ -1404,7 +1435,11 @@ mod tests {
             session
                 .struxis
                 .keyzone()
-                .query_observation(key.instrument_id, observation)
+                .observations()
+                .instrument(key.instrument_id)
+                .id(observation)
+                .one()
+                .map(|item| item.cloned().unwrap())
                 .unwrap()
                 .state(),
             ObservationTaskState::Observing
@@ -1413,7 +1448,10 @@ mod tests {
             session
                 .struxis
                 .keyzone()
-                .query_interactions(key.instrument_id, observation)
+                .interactions()
+                .instrument(key.instrument_id)
+                .observation(observation)
+                .collect()
                 .unwrap()[0]
                 .state(),
             InteractionState::Active
@@ -1424,7 +1462,11 @@ mod tests {
             session
                 .struxis
                 .keyzone()
-                .query_observation(key.instrument_id, observation)
+                .observations()
+                .instrument(key.instrument_id)
+                .id(observation)
+                .one()
+                .map(|item| item.cloned().unwrap())
                 .unwrap()
                 .state(),
             ObservationTaskState::Observing
@@ -1788,5 +1830,110 @@ mod tests {
         assert_eq!(unchanged.processed_count, 0);
         assert_eq!(unchanged.cursor_sbar_id, None);
         worker.dispose().expect("worker Dispose");
+    }
+
+    #[test]
+    fn manual_commands_use_typed_idempotency_and_the_accepted_market_position() {
+        use crate::observation::{
+            CancelObservation, Completion, CreateFixedPriceRange, CreateObservation,
+            ObservationCommand, ObservationContext, Operation,
+        };
+        let input = LoadedInput::from_test(&fixture_test()).unwrap();
+        let mut session = super::WorkerSession::initialize(
+            ReplayWorkerConfig {
+                run_id: "typed-manual".into(),
+                input,
+                instrument: InstrumentAny::CurrencyPair(audusd_sim()),
+            },
+            None,
+        )
+        .unwrap();
+        session.step(None).unwrap();
+        let context = ObservationContext {
+            run_id: "typed-manual".into(),
+            expected_sbar_id: "1735689600000000000".into(),
+        };
+        let fixed = session
+            .create_fixed_price_range(CreateFixedPriceRange {
+                context: context.clone(),
+                lower: "0.64000".into(),
+                upper: "0.66000".into(),
+            })
+            .unwrap();
+        let zone = fixed
+            .inspector
+            .keyzones
+            .as_ref()
+            .unwrap()
+            .zones
+            .iter()
+            .find(|zone| zone.keyzone_id == fixed.keyzone_id)
+            .unwrap();
+        assert_eq!(zone.formed_at, "1735689600000000000");
+        assert_eq!(zone.finalized_at.as_deref(), Some("1735689600000000000"));
+        let request = CreateObservation {
+            context: context.clone(),
+            keyzone_id: fixed.keyzone_id,
+            request_id: "client-intent".into(),
+            start_at: None,
+            n: "3".into(),
+            x: 0.5,
+            completion: Completion::UntilDeadline,
+            deadline: "1735690200000000000".into(),
+        };
+        let created = session
+            .observation(ObservationCommand::Create(request.clone()))
+            .unwrap();
+        assert!(matches!(created.operation, Operation::Created));
+        let repeated = session
+            .observation(ObservationCommand::Create(request.clone()))
+            .unwrap();
+        assert!(matches!(repeated.operation, Operation::Existing));
+        assert_eq!(repeated.observation_id, created.observation_id);
+        let task = repeated
+            .inspector
+            .keyzones
+            .as_ref()
+            .unwrap()
+            .observations
+            .iter()
+            .find(|task| task.observation_id == created.observation_id)
+            .unwrap();
+        assert_eq!(
+            task.consumer_id,
+            session.observation_owner.value().to_string()
+        );
+        let mut conflict = request.clone();
+        conflict.n = "2".into();
+        let error = session
+            .observation(ObservationCommand::Create(conflict))
+            .unwrap_err();
+        assert_eq!(error.code, crate::ipc::IpcErrorCode::Conflict);
+        let cancelled = session
+            .observation(ObservationCommand::Cancel(CancelObservation {
+                context,
+                observation_id: created.observation_id.clone(),
+            }))
+            .unwrap();
+        assert!(matches!(cancelled.operation, Operation::Cancelled));
+        let after_cancel = session
+            .observation(ObservationCommand::Create(request))
+            .unwrap();
+        assert!(matches!(after_cancel.operation, Operation::Existing));
+        assert_eq!(after_cancel.observation_id, created.observation_id);
+        assert_eq!(
+            after_cancel
+                .inspector
+                .keyzones
+                .as_ref()
+                .unwrap()
+                .observations
+                .iter()
+                .find(|task| task.observation_id == created.observation_id)
+                .unwrap()
+                .state,
+            "Cancelled"
+        );
+        session.dispose().unwrap();
     }
 }

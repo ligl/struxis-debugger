@@ -430,9 +430,9 @@ fn fixed_price_range_creation_is_separate_from_observation_and_survives_step() {
     assert_eq!(fixed.state, "Finalized");
     assert_eq!(fixed.lower, "0.00005");
     assert_eq!(fixed.upper, "0.00010");
-    assert_eq!(fixed.formed_at, fixed.created_at);
-    assert_eq!(fixed.finalized_at.as_ref(), Some(&fixed.created_at));
-    // Fixed ranges may observe history preceding their system creation time.
+    assert_eq!(fixed.formed_at, time(14));
+    assert_eq!(fixed.finalized_at.as_ref(), Some(&time(14)));
+    // Fixed ranges may observe history preceding their explicit market position.
     observation.keyzone_id = created.keyzone_id.clone();
     let observed = manager
         .observation(ObservationCommand::Create(observation))

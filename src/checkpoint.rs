@@ -529,8 +529,8 @@ impl KeyZoneCheckpoint {
                     let r = o.request();
                     KeyZoneObservation {
                         observation_id: o.id().value().to_string(),
-                        consumer_id: r.observer_id.clone(),
-                        request_id: r.request_id.clone(),
+                        consumer_id: r.observer_id.value().to_string(),
+                        request_id: r.request_id.value().to_string(),
                         keyzone_id: r.keyzone_id.value().to_string(),
                         observer: ObservationStateKey {
                             instrument_id: r.stream_key.instrument_id.to_string(),
@@ -698,15 +698,19 @@ pub(crate) mod keyzone_projection_tests {
                 registry
                     .create_observation(
                         ObservationTaskRequest {
-                            observer_id: "projection".into(),
-                            request_id: "record".into(),
+                            observer_id: capitus_struxis::keyzone::KeyZoneEngine::new()
+                                .new_observer_id()
+                                .unwrap(),
+                            request_id: capitus_struxis::keyzone::KeyZoneEngine::new()
+                                .new_request_id()
+                                .unwrap(),
                             instrument_id: instrument,
                             keyzone_id: id,
                             stream_key: key,
                             start: ObservationTaskStart::FromTime(100_u64.into()),
                             config: InteractionConfig::new(1, 0.5).unwrap(),
                             completion: ObservationTaskCompletion::UntilDeadline,
-                            deadline: 400_u64.into(),
+                            deadline: Some(400_u64.into()),
                         },
                         history,
                         1000_u64.into(),
@@ -807,15 +811,19 @@ pub(crate) mod keyzone_projection_tests {
         registry
             .create_observation(
                 ObservationTaskRequest {
-                    observer_id: "wire-observer".into(),
-                    request_id: "wire-request".into(),
+                    observer_id: capitus_struxis::keyzone::KeyZoneEngine::new()
+                        .new_observer_id()
+                        .unwrap(),
+                    request_id: capitus_struxis::keyzone::KeyZoneEngine::new()
+                        .new_request_id()
+                        .unwrap(),
                     instrument_id: instrument,
                     keyzone_id: id,
                     stream_key: key,
                     start: ObservationTaskStart::FromTime(100_u64.into()),
                     config: InteractionConfig::default(),
                     completion: ObservationTaskCompletion::UntilDeadline,
-                    deadline: 400_u64.into(),
+                    deadline: Some(400_u64.into()),
                 },
                 history,
                 1000_u64.into(),
@@ -832,7 +840,7 @@ pub(crate) mod keyzone_projection_tests {
         assert_eq!(wire["interactions"][0]["state"], "Invalidated");
         assert_eq!(wire["zones"][0]["state"], "Invalidated");
         assert_eq!(wire["observations"][0]["state"], "SourceInvalidated");
-        assert_eq!(wire["observations"][0]["consumerId"], "wire-observer");
+        assert_eq!(wire["observations"][0]["consumerId"], "1");
         assert_eq!(
             wire["observations"][0]["observer"]["instrumentId"],
             "AUD/USD.SIM"
