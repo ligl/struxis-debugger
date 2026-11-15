@@ -552,11 +552,28 @@ impl WorkerSession {
             crate::checkpoint::KeyZoneCheckpoint::from_registry(registry)
                 .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))?,
         );
+        drop(keyzone);
+        self.release_removed_requests(&inspector);
         self.latest_inspector = Some(inspector.clone());
         Ok(crate::observation::FixedPriceRangeResult {
             keyzone_id: zone.value().to_string(),
             inspector,
         })
+    }
+
+    // Client request names belong only to tasks still retained by this Run.
+    fn release_removed_requests(&mut self, inspector: &ReplayInspectorProjection) {
+        if let Some(registry) = &inspector.keyzones {
+            let owner = self.observation_owner.value().to_string();
+            let retained = registry
+                .observations
+                .iter()
+                .filter(|task| task.consumer_id == owner)
+                .map(|task| task.request_id.as_str())
+                .collect::<std::collections::BTreeSet<_>>();
+            self.observation_requests
+                .retain(|_, id| retained.contains(id.value().to_string().as_str()));
+        }
     }
 
     fn observation(
@@ -707,6 +724,7 @@ impl WorkerSession {
                     .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))
             })?;
         inspector.keyzones = Some(projection);
+        self.release_removed_requests(&inspector);
         self.latest_inspector = Some(inspector.clone());
         let operation = match result.operation {
             ObservationTaskOperation::Created => Operation::Created,
@@ -1009,6 +1027,7 @@ impl WorkerSession {
 
         self.state.confirm_checkpoint(sbar_id)?;
         self.owned_checkpoints.push(owned_checkpoint);
+        self.release_removed_requests(&inspector);
         self.latest_inspector = Some(inspector);
         self.next_index += 1;
         if self.owned_checkpoints.len() != self.state.processed_count {
@@ -2003,6 +2022,81 @@ mod tests {
             .find(|task| task.observation_id == result.observation_id)
             .unwrap();
         assert_eq!(task.config_n, "4294967295");
+        session.dispose().unwrap();
+    }
+    #[test]
+    fn capacity_removal_releases_client_request_names_and_keeps_old_inspector_facts() {
+        use crate::observation::{
+            Completion, CreateFixedPriceRange, CreateObservation, ObservationCommand,
+            ObservationContext,
+        };
+        let input = LoadedInput::from_test(&fixture_test()).unwrap();
+        let mut session = super::WorkerSession::initialize(
+            ReplayWorkerConfig {
+                run_id: "capacity-removal".into(),
+                input,
+                instrument: InstrumentAny::CurrencyPair(audusd_sim()),
+            },
+            None,
+        )
+        .unwrap();
+        session.step(None).unwrap();
+        let context = ObservationContext {
+            run_id: "capacity-removal".into(),
+            expected_sbar_id: "1735689600000000000".into(),
+        };
+        let fixed = || CreateFixedPriceRange {
+            context: context.clone(),
+            lower: "0.64000".into(),
+            upper: "0.66000".into(),
+        };
+        let zone = session
+            .create_fixed_price_range(fixed())
+            .unwrap()
+            .keyzone_id;
+        let task = session
+            .observation(ObservationCommand::Create(CreateObservation {
+                context: context.clone(),
+                keyzone_id: zone.clone(),
+                request_id: "retained-client".into(),
+                start_at: None,
+                n: "3".into(),
+                x: 0.5,
+                completion: Completion::UntilDeadline,
+                deadline: "1735690200000000000".into(),
+            }))
+            .unwrap()
+            .observation_id;
+        let before = session.latest_inspector.clone().unwrap();
+        assert_eq!(session.observation_requests.len(), 1);
+        for _ in 0..100 {
+            session.create_fixed_price_range(fixed()).unwrap();
+        }
+        assert!(session.observation_requests.is_empty());
+        let current = session
+            .latest_inspector
+            .as_ref()
+            .unwrap()
+            .keyzones
+            .as_ref()
+            .unwrap();
+        assert_eq!(current.zones.len(), 100);
+        assert!(
+            current
+                .observations
+                .iter()
+                .all(|item| item.observation_id != task)
+        );
+        assert!(current.zones.iter().all(|item| item.keyzone_id != zone));
+        assert!(
+            before
+                .keyzones
+                .as_ref()
+                .unwrap()
+                .observations
+                .iter()
+                .any(|item| item.observation_id == task)
+        );
         session.dispose().unwrap();
     }
 }
