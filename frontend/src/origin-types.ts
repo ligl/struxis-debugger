@@ -435,6 +435,14 @@ export interface KeyZoneInteractionDto {
   configN: string;
   configX: number;
   outsideCount: string;
+  startedOpenPosition: "Below" | "Within" | "Above";
+  departureSide: "Below" | "Above" | null;
+  endedSide: "Below" | "Above" | null;
+  sideSwitchCount: string;
+  barCount: string;
+  closeWithinCount: string;
+  firstCloseWithinAt: string | null;
+  reentryCount: string;
   lastProcessedAt: string | null;
   startedAt: string;
   startedDetectedAt: string;

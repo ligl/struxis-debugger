@@ -71,7 +71,15 @@ const fields = computed(() => [
           <InspectorPropertyField label="Observer" :value="`${item.observer.instrumentId} · ${item.observer.timeframe}`" wide />
           <InspectorPropertyField label="N" :value="item.configN" />
           <InspectorPropertyField label="X" :value="String(item.configX)" />
-          <InspectorPropertyField label="Outside count" :value="item.outsideCount" />
+          <InspectorPropertyField label="Started Open position" test-id="interaction-started-open-position" :value="item.startedOpenPosition" />
+          <InspectorPropertyField label="Departure side" test-id="interaction-departure-side" :value="item.departureSide ?? '—'" />
+          <InspectorPropertyField label="Ended side" test-id="interaction-ended-side" :value="item.endedSide ?? '—'" />
+          <InspectorPropertyField label="Same-side outside count" test-id="interaction-outside-count" :value="item.outsideCount" />
+          <InspectorPropertyField label="Side switches" test-id="interaction-side-switch-count" :value="item.sideSwitchCount" />
+          <InspectorPropertyField label="Observed bars" test-id="interaction-bar-count" :value="item.barCount" />
+          <InspectorPropertyField label="Closes within zone" test-id="interaction-close-within-count" :value="item.closeWithinCount" />
+          <InspectorPropertyField label="First close within · UTC" test-id="interaction-first-close-within-at" :value="formatDomainTimestamp(item.firstCloseWithinAt, item.observerTimeframe)" :copy-value="item.firstCloseWithinAt ?? undefined" wide />
+          <InspectorPropertyField label="Reentries" test-id="interaction-reentry-count" :value="item.reentryCount" />
           <InspectorPropertyField label="Started · UTC" :value="formatDomainTimestamp(item.startedAt, item.observerTimeframe)" :copy-value="item.startedAt" wide />
           <InspectorPropertyField label="Last processed · UTC" :value="formatDomainTimestamp(item.lastProcessedAt, item.observerTimeframe)" :copy-value="item.lastProcessedAt ?? undefined" wide />
           <InspectorPropertyField label="Ended · UTC" :value="formatDomainTimestamp(item.endedAt, item.observerTimeframe)" :copy-value="item.endedAt ?? undefined" wide />

@@ -412,6 +412,14 @@ pub(crate) struct KeyZoneInteraction {
     pub(crate) config_n: String,
     pub(crate) config_x: f64,
     pub(crate) outside_count: String,
+    pub(crate) started_open_position: String,
+    pub(crate) departure_side: Option<String>,
+    pub(crate) ended_side: Option<String>,
+    pub(crate) side_switch_count: String,
+    pub(crate) bar_count: String,
+    pub(crate) close_within_count: String,
+    pub(crate) first_close_within_at: Option<String>,
+    pub(crate) reentry_count: String,
     pub(crate) last_processed_at: Option<String>,
     pub(crate) started_at: String,
     pub(crate) started_detected_at: String,
@@ -483,6 +491,7 @@ impl KeyZoneCheckpoint {
                 .interactions_for(zone.id())
                 .map_err(|error| error.to_string())?
             {
+                let summary = interaction.summary().map_err(|error| error.to_string())?;
                 interactions.push(KeyZoneInteraction {
                     interaction_id: interaction.id().value().to_string(),
                     keyzone_id: zone.id().value().to_string(),
@@ -509,6 +518,14 @@ impl KeyZoneCheckpoint {
                     config_n: interaction.config().n().to_string(),
                     config_x: interaction.config().x(),
                     outside_count: interaction.outside_count().to_string(),
+                    started_open_position: format!("{:?}", interaction.started_open_position()),
+                    departure_side: interaction.departure_side().map(|side| format!("{side:?}")),
+                    ended_side: interaction.ended_side().map(|side| format!("{side:?}")),
+                    side_switch_count: summary.side_switch_count.to_string(),
+                    bar_count: summary.bar_count.to_string(),
+                    close_within_count: summary.close_within_count.to_string(),
+                    first_close_within_at: summary.first_close_within_at.map(|at| at.to_string()),
+                    reentry_count: summary.reentry_count.to_string(),
                     last_processed_at: interaction.last_processed_at().map(|at| at.to_string()),
                     started_at: interaction.started_at().to_string(),
                     started_detected_at: interaction.started_detected_at().to_string(),
@@ -958,5 +975,117 @@ pub(crate) mod keyzone_projection_tests {
         assert_eq!(first.finalized_at.as_deref(), Some("100"));
         assert!(projected.interactions.is_empty());
         assert!(projected.observations.is_empty());
+    }
+    #[test]
+    fn interaction_projection_records_spatial_facts_and_accumulated_summary() {
+        let checkpoint = observation_projection();
+        let ended = &checkpoint.interactions[0];
+        assert_eq!(ended.started_open_position, "Within");
+        assert_eq!(ended.departure_side.as_deref(), Some("Above"));
+        assert_eq!(ended.ended_side.as_deref(), Some("Above"));
+        assert_eq!(ended.bar_count, "2");
+        assert_eq!(ended.close_within_count, "1");
+        assert_eq!(ended.first_close_within_at.as_deref(), Some("100"));
+        assert_eq!(ended.reentry_count, "0");
+        assert_eq!(ended.side_switch_count, "0");
+        let interrupted = &checkpoint.interactions[1];
+        assert_eq!(interrupted.bar_count, "1");
+        assert_eq!(interrupted.close_within_count, "1");
+        assert_eq!(interrupted.first_close_within_at.as_deref(), Some("300"));
+        assert_eq!(interrupted.ended_side, None);
+        let json = serde_json::to_value(&checkpoint).unwrap();
+        assert_eq!(json["interactions"][0]["barCount"], "2");
+        assert_eq!(json["interactions"][0]["endedSide"], "Above");
+        assert_eq!(
+            serde_json::from_value::<KeyZoneCheckpoint>(json).unwrap(),
+            checkpoint
+        );
+    }
+    #[test]
+    fn accumulated_projection_survives_history_loss_and_preserves_previous_checkpoints() {
+        use capitus_struxis::{
+            NautilusRuntime, Struxis, StruxisConfig, StruxisRegistrant, StruxisStateKey, keyzone::*,
+        };
+        use nautilus_common::cache::Cache;
+        use nautilus_model::{
+            data::{Bar, BarType},
+            types::Quantity,
+        };
+        use std::{cell::RefCell, rc::Rc, str::FromStr};
+        let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL").unwrap();
+        let cache = Rc::new(RefCell::new(Cache::default()));
+        let key = StruxisStateKey::from_bar_type(&bar_type);
+        let mut registry = KeyZoneRegistry::new(key.instrument_id);
+        let (zone, _) = registry
+            .create_fixed(
+                key.timeframe,
+                PriceRange::new(Price::from("10"), Price::from("12")).unwrap(),
+                0_u64.into(),
+            )
+            .unwrap();
+        let first = Bar::new(
+            bar_type,
+            Price::from("11"),
+            Price::from("12"),
+            Price::from("10"),
+            Price::from("11"),
+            Quantity::from("1"),
+            1_u64.into(),
+            1_u64.into(),
+        );
+        cache.borrow_mut().add_bar(first).unwrap();
+        let binding = Struxis::new(
+            StruxisConfig::builder().enable_structure(false).build(),
+            NautilusRuntime::new(Rc::clone(&cache)),
+        );
+        binding.register(
+            key,
+            StruxisRegistrant::Strategy(nautilus_model::identifiers::StrategyId::from(
+                "SUMMARY-PROJECTION",
+            )),
+        );
+        binding.process(&first);
+        let series = binding.state(key).unwrap().sbars().clone();
+        let mut ids = KeyZoneEngine::new();
+        registry
+            .create_observation(
+                ObservationTaskRequest {
+                    observer_id: ids.new_observer_id().unwrap(),
+                    request_id: ids.new_request_id().unwrap(),
+                    instrument_id: key.instrument_id,
+                    keyzone_id: zone,
+                    stream_key: key,
+                    start: ObservationTaskStart::FromTime(1_u64.into()),
+                    config: InteractionConfig::new(1, 0.5).unwrap(),
+                    completion: ObservationTaskCompletion::AfterOneInteraction,
+                    deadline: None,
+                },
+                BarHistoryView::new(&series, 1_u64.into(), None).unwrap(),
+                10_u64.into(),
+            )
+            .unwrap();
+        let before = KeyZoneCheckpoint::from_registry(&registry).unwrap();
+        let second = Bar::new(
+            bar_type,
+            Price::from("13"),
+            Price::from("13"),
+            Price::from("13"),
+            Price::from("13"),
+            Quantity::from("1"),
+            2_u64.into(),
+            2_u64.into(),
+        );
+        cache.borrow_mut().add_bar(second).unwrap();
+        registry.advance(key, &second, 20_u64.into()).unwrap();
+        let after = KeyZoneCheckpoint::from_registry(&registry).unwrap();
+        assert_eq!(before.interactions[0].bar_count, "1");
+        assert_eq!(before.interactions[0].state, "Active");
+        assert_eq!(before.interactions[0].ended_side, None);
+        assert_eq!(after.interactions[0].bar_count, "2");
+        assert_eq!(after.interactions[0].state, "Ended");
+        assert_eq!(after.interactions[0].ended_side.as_deref(), Some("Above"));
+        cache.borrow_mut().reset();
+        assert_eq!(KeyZoneCheckpoint::from_registry(&registry).unwrap(), after);
+        assert_eq!(before.interactions[0].bar_count, "1");
     }
 }

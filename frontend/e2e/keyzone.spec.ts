@@ -272,6 +272,11 @@ for (const chartKind of ["Origin", "Live Replay", "Snapshot Reference"] as const
     await expect(details).toContainText("9007199254740993");
     await expect(details).toContainText(chartKind === "Origin" ? "9.00001" : chartKind === "Live Replay" ? "9.25001" : "8.50001");
     await expect(details).toContainText("12.00002");
+    const interaction = details.getByTestId("keyzone-interaction").first();
+    await interaction.locator("summary").click();
+    await expect(interaction.getByTestId("interaction-started-open-position")).toHaveText("Within");
+    await expect(interaction.getByTestId("interaction-bar-count")).toHaveText("4");
+    await expect(interaction.getByTestId("interaction-side-switch-count")).toHaveText("0");
     {
       await expect.poll(async () => (await frame())?.labels).toEqual(["O1 · I1 Ended", "O1 · I2 Ended", "O1 · I3 Active"]);
       await expect(details.getByTestId("keyzone-observation")).toHaveCount(2);

@@ -69,6 +69,8 @@ test("Live Replay creates, advances and cancels an observation without losing th
         registry.observations[0]!.lastProcessedAt = data.run.cursorSbarId;
         registry.interactions.push({ interactionId: "1", keyzoneId: registry.zones[0]!.keyzoneId, observationId: "1",
           observer: { instrumentId: registry.instrumentId, timeframe: "1m" }, observerTimeframe: "1m", state: "Active", configN: "3", configX: 0.5,
+          startedOpenPosition: "Within", departureSide: null, endedSide: null, sideSwitchCount: "0",
+          barCount: "1", closeWithinCount: "1", firstCloseWithinAt: data.run.cursorSbarId, reentryCount: "0",
           outsideCount: "0", lastProcessedAt: data.run.cursorSbarId, startedAt: data.run.cursorSbarId, startedDetectedAt: data.run.cursorSbarId,
           endedAt: null, endedDetectedAt: null, invalidatedAt: null, invalidatedDetectedAt: null });
         return structuredClone({ runState: data.run, inspector: data.inspector });
@@ -104,6 +106,12 @@ test("Live Replay creates, advances and cancels an observation without losing th
   await page.getByTestId("run-step").click();
   await expect(page.getByTestId("keyzone-details")).toBeVisible();
   await expect(page.getByTestId("keyzone-interaction")).toContainText("Active");
+  const interaction = page.getByTestId("keyzone-interaction");
+  await interaction.locator("summary").click();
+  await expect(interaction.getByTestId("interaction-started-open-position")).toHaveText("Within");
+  await expect(interaction.getByTestId("interaction-bar-count")).toHaveText("1");
+  await expect(interaction.getByTestId("interaction-close-within-count")).toHaveText("1");
+  await expect(interaction.getByTestId("interaction-side-switch-count")).toHaveText("0");
   await controls.getByRole("button", { name: "Cancel observation 1", exact: true }).click();
   await expect(controls.getByRole("status")).toHaveText("Observation 1 cancelled.");
   await expect(controls.getByRole("button", { name: "Cancel observation 1", exact: true })).toHaveCount(0);

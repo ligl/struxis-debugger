@@ -15,6 +15,8 @@ export function keyzoneFixture(): KeyZoneCheckpointDto {
     interactions: [{ interactionId: "9007199254740995", keyzoneId: "9007199254740993", observerTimeframe: "1m",
       observationId: "1", observer: { instrumentId: "AUD/USD.SIM", timeframe: "1m" },
       state: "Active", configN: "3", configX: 0.5, outsideCount: "0",
+      startedOpenPosition: "Within", departureSide: null, endedSide: null, sideSwitchCount: "0",
+      barCount: "4", closeWithinCount: "4", firstCloseWithinAt: "1700000000000000000", reentryCount: "0",
       lastProcessedAt: "1700000180000000000", startedAt: "1700000000000000000", startedDetectedAt: "1700000000000000009",
       endedAt: null, endedDetectedAt: null, invalidatedAt: null, invalidatedDetectedAt: null }],
   };

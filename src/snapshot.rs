@@ -1006,12 +1006,29 @@ fn validate_keyzone_integer(value: &str, field: &str) -> Result<u64, String> {
     u64::try_from(integer).map_err(|error| format!("{field} exceeds domain integer range: {error}"))
 }
 
+fn validate_keyzone_count(value: &str, field: &str) -> Result<u32, String> {
+    let count = parse_canonical_u128(value, field)?;
+    u32::try_from(count).map_err(|error| format!("{field} exceeds domain count range: {error}"))
+}
+
 fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> {
     use std::collections::BTreeSet;
     let checkpoint: crate::checkpoint::KeyZoneCheckpoint = serde_json::from_value(value.clone())
         .map_err(|error| format!("Invalid KeyZone checkpoint: {error}"))?;
     if checkpoint.instrument_id.is_empty() {
         return Err("Invalid KeyZone Instrument".into());
+    }
+    if let Some(interactions) = value
+        .get("interactions")
+        .and_then(serde_json::Value::as_array)
+    {
+        for interaction in interactions {
+            for field in ["departureSide", "endedSide", "firstCloseWithinAt"] {
+                if interaction.get(field).is_none() {
+                    return Err(format!("Missing Interaction fact: {field}"));
+                }
+            }
+        }
     }
     let mut zone_ids = BTreeSet::new();
     for zone in &checkpoint.zones {
@@ -1088,7 +1105,7 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
             || deadline.is_some_and(|deadline| start >= deadline)
             || !task.config_x.is_finite()
             || task.config_x < 0.0
-            || validate_keyzone_integer(&task.config_n, "Observation configN")? == 0
+            || validate_keyzone_count(&task.config_n, "Observation configN")? == 0
         {
             return Err("Invalid Observation identity, observer, window or configuration".into());
         }
@@ -1156,7 +1173,7 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
             || interaction.observer_timeframe.is_empty()
             || !interaction.config_x.is_finite()
             || interaction.config_x < 0.0
-            || validate_keyzone_integer(&interaction.config_n, "Interaction configN")? == 0
+            || validate_keyzone_count(&interaction.config_n, "Interaction configN")? == 0
         {
             return Err("Invalid Interaction configuration or state".into());
         }
@@ -1241,7 +1258,43 @@ fn validate_keyzone_checkpoint(value: &serde_json::Value) -> Result<(), String> 
         {
             return Err("Interaction lifecycle state does not match its timestamps".into());
         }
-        validate_keyzone_integer(&interaction.outside_count, "outsideCount")?;
+        validate_keyzone_count(&interaction.outside_count, "outsideCount")?;
+        if !["Below", "Within", "Above"].contains(&interaction.started_open_position.as_str())
+            || [
+                interaction.departure_side.as_deref(),
+                interaction.ended_side.as_deref(),
+            ]
+            .into_iter()
+            .flatten()
+            .any(|side| !["Below", "Above"].contains(&side))
+            || (interaction.state == "Ended") != interaction.ended_side.is_some()
+            || (interaction.ended_side.is_some()
+                && interaction.ended_side != interaction.departure_side)
+        {
+            return Err("Invalid Interaction position or exit side".into());
+        }
+        let bar_count = validate_keyzone_count(&interaction.bar_count, "barCount")?;
+        let within = validate_keyzone_count(&interaction.close_within_count, "closeWithinCount")?;
+        let reentries = validate_keyzone_count(&interaction.reentry_count, "reentryCount")?;
+        let switches = validate_keyzone_count(&interaction.side_switch_count, "sideSwitchCount")?;
+        if bar_count == 0
+            || within > bar_count
+            || reentries > within
+            || switches >= bar_count
+            || (within > 0) != interaction.first_close_within_at.is_some()
+        {
+            return Err("Invalid Interaction summary counts".into());
+        }
+        if let Some(first) = &interaction.first_close_within_at {
+            let first = validate_keyzone_integer(first, "firstCloseWithinAt")?;
+            let last = interaction
+                .last_processed_at
+                .as_deref()
+                .ok_or_else(|| "Interaction summary missing progress".to_owned())?;
+            if first < start || first > validate_keyzone_integer(last, "lastProcessedAt")? {
+                return Err("Interaction first close within is outside observation range".into());
+            }
+        }
         for (field, time) in [
             ("startedAt", Some(&interaction.started_at)),
             ("startedDetectedAt", Some(&interaction.started_detected_at)),
@@ -1870,6 +1923,93 @@ mod tests {
 mod keyzone_snapshot_tests {
     use super::*;
     use crate::checkpoint::keyzone_projection_tests::fixed_projection;
+
+    #[test]
+    fn interaction_fact_validation_rejects_missing_invalid_and_inconsistent_values() {
+        let base = serde_json::to_value(
+            crate::checkpoint::keyzone_projection_tests::observation_projection(),
+        )
+        .unwrap();
+        assert!(validate_keyzone_checkpoint(&base).is_ok());
+        for field in [
+            "startedOpenPosition",
+            "departureSide",
+            "endedSide",
+            "sideSwitchCount",
+            "barCount",
+            "closeWithinCount",
+            "firstCloseWithinAt",
+            "reentryCount",
+        ] {
+            let mut invalid = base.clone();
+            invalid["interactions"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove(field);
+            assert!(
+                validate_keyzone_checkpoint(&invalid).is_err(),
+                "missing {field}"
+            );
+        }
+        for (field, invalid_value) in [
+            ("startedOpenPosition", serde_json::json!("Unknown")),
+            ("departureSide", serde_json::json!("Within")),
+            ("endedSide", serde_json::Value::Null),
+            ("sideSwitchCount", serde_json::json!("4294967296")),
+            ("barCount", serde_json::json!("0")),
+            ("closeWithinCount", serde_json::json!("3")),
+            ("reentryCount", serde_json::json!("2")),
+            ("firstCloseWithinAt", serde_json::json!("99")),
+        ] {
+            let mut invalid = base.clone();
+            invalid["interactions"][0][field] = invalid_value;
+            assert!(
+                validate_keyzone_checkpoint(&invalid).is_err(),
+                "invalid {field}"
+            );
+        }
+    }
+
+    #[test]
+    fn keyzone_count_validation_uses_u32_while_identity_keeps_u64() {
+        assert_eq!(
+            validate_keyzone_count("4294967295", "count").unwrap(),
+            u32::MAX
+        );
+        assert_eq!(
+            validate_keyzone_integer("18446744073709551615", "id").unwrap(),
+            u64::MAX
+        );
+        for invalid in ["4294967296", "18446744073709551615", "-1", "01"] {
+            assert!(validate_keyzone_count(invalid, "count").is_err());
+        }
+        let base = serde_json::to_value(
+            crate::checkpoint::keyzone_projection_tests::observation_projection(),
+        )
+        .unwrap();
+        for (collection, field) in [
+            ("observations", "configN"),
+            ("interactions", "configN"),
+            ("interactions", "outsideCount"),
+        ] {
+            let mut invalid = base.clone();
+            invalid[collection][0][field] = serde_json::json!("4294967296");
+            let error = validate_keyzone_checkpoint(&invalid).unwrap_err();
+            assert!(
+                error.contains("count range"),
+                "{collection}/{field}: {error}"
+            );
+        }
+        let mut maximum = base.clone();
+        for task in maximum["observations"].as_array_mut().unwrap() {
+            task["configN"] = serde_json::json!("4294967295");
+        }
+        for interaction in maximum["interactions"].as_array_mut().unwrap() {
+            interaction["configN"] = serde_json::json!("4294967295");
+            interaction["outsideCount"] = serde_json::json!("4294967295");
+        }
+        assert!(validate_keyzone_checkpoint(&maximum).is_ok());
+    }
 
     #[test]
     fn optional_deadline_keeps_window_checks_and_rejects_unbounded_deadline_termination() {

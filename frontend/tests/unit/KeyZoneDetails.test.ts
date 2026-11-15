@@ -130,3 +130,41 @@ describe("FixedPriceRange creation entry in the Inspector", () => {
     }
   });
 });
+
+
+describe("Interaction spatial facts", () => {
+  it("renders accumulated counts, first open and null sides without interpreting them", async () => {
+    const previous = keyzoneFixture();
+    const registry = reactive(structuredClone(previous));
+    const wrapper = mount(KeyZoneDetails, { props: { zone: registry.zones[0]!, registry } });
+    const item = wrapper.get('[data-testid="keyzone-interaction"]');
+    expect(item.get('[data-testid="interaction-started-open-position"]').text()).toBe("Within");
+    expect(item.get('[data-testid="interaction-departure-side"]').text()).toBe("—");
+    expect(item.get('[data-testid="interaction-ended-side"]').text()).toBe("—");
+    expect(item.get('[data-testid="interaction-bar-count"]').text()).toBe("4");
+    expect(item.get('[data-testid="interaction-close-within-count"]').text()).toBe("4");
+    expect(item.get('[data-testid="interaction-reentry-count"]').text()).toBe("0");
+    expect(item.get('[data-testid="interaction-side-switch-count"]').text()).toBe("0");
+    expect(item.get('[data-testid="interaction-first-close-within-at"]').attributes("data-copy-value")).toBe("1700000000000000000");
+    Object.assign(registry.interactions[0]!, { state: "Ended", departureSide: "Below", endedSide: "Below",
+      outsideCount: "3", sideSwitchCount: "2", barCount: "10", closeWithinCount: "4", reentryCount: "1" });
+    await nextTick();
+    expect(item.get('[data-testid="interaction-ended-side"]').text()).toBe("Below");
+    expect(item.get('[data-testid="interaction-outside-count"]').text()).toBe("3");
+    expect(item.get('[data-testid="interaction-side-switch-count"]').text()).toBe("2");
+    expect(item.get('[data-testid="interaction-bar-count"]').text()).toBe("10");
+    expect(item.get('[data-testid="interaction-reentry-count"]').text()).toBe("1");
+    expect(previous.interactions[0]!.barCount).toBe("4");
+  });
+
+  it.each(["Active", "Interrupted", "Invalidated"] as const)("does not show a confirmed exit for %s", (state) => {
+    const registry = keyzoneFixture();
+    Object.assign(registry.interactions[0]!, { state, startedOpenPosition: "Above", departureSide: "Above",
+      endedSide: null, outsideCount: "1", sideSwitchCount: "0", barCount: "1", closeWithinCount: "0",
+      reentryCount: "0", firstCloseWithinAt: null });
+    const wrapper = mount(KeyZoneDetails, { props: { zone: registry.zones[0]!, registry } });
+    expect(wrapper.get('[data-testid="interaction-departure-side"]').text()).toBe("Above");
+    expect(wrapper.get('[data-testid="interaction-ended-side"]').text()).toBe("—");
+    expect(wrapper.get('[data-testid="interaction-first-close-within-at"]').text()).toBe("—");
+  });
+});

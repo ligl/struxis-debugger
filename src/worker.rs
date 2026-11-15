@@ -619,8 +619,13 @@ impl WorkerSession {
                             )
                         })?
                 };
-                let config = InteractionConfig::new(integer(&request.n, "N")?, request.x)
-                    .map_err(domain_error)?;
+                let n = u32::try_from(integer(&request.n, "N")?).map_err(|_| {
+                    IpcError::new(
+                        IpcErrorCode::InvalidArgument,
+                        "N exceeds the u32 count range",
+                    )
+                })?;
+                let config = InteractionConfig::new(n, request.x).map_err(domain_error)?;
                 let deadline = integer(&request.deadline, "Deadline")?;
                 let start = match request.start_at {
                     Some(value) => ObservationTaskStart::FromTime(integer(&value, "Start")?.into()),
@@ -1934,6 +1939,70 @@ mod tests {
                 .state,
             "Cancelled"
         );
+        session.dispose().unwrap();
+    }
+    #[test]
+    fn observation_n_accepts_u32_max_and_rejects_larger_counts_without_mutation() {
+        use crate::observation::{
+            Completion, CreateFixedPriceRange, CreateObservation, ObservationCommand,
+            ObservationContext,
+        };
+        let input = LoadedInput::from_test(&fixture_test()).unwrap();
+        let mut session = super::WorkerSession::initialize(
+            ReplayWorkerConfig {
+                run_id: "count-boundary".into(),
+                input,
+                instrument: InstrumentAny::CurrencyPair(audusd_sim()),
+            },
+            None,
+        )
+        .unwrap();
+        session.step(None).unwrap();
+        let context = ObservationContext {
+            run_id: "count-boundary".into(),
+            expected_sbar_id: "1735689600000000000".into(),
+        };
+        let fixed = session
+            .create_fixed_price_range(CreateFixedPriceRange {
+                context: context.clone(),
+                lower: "0.64000".into(),
+                upper: "0.66000".into(),
+            })
+            .unwrap();
+        let before = session.latest_inspector.clone();
+        let mut request = CreateObservation {
+            context,
+            keyzone_id: fixed.keyzone_id,
+            request_id: "count-limit".into(),
+            start_at: None,
+            n: "4294967296".into(),
+            x: 0.5,
+            completion: Completion::UntilDeadline,
+            deadline: "1735690200000000000".into(),
+        };
+        for invalid in ["4294967296", "18446744073709551615", "0", "-1", "bad"] {
+            request.n = invalid.into();
+            let error = session
+                .observation(ObservationCommand::Create(request.clone()))
+                .unwrap_err();
+            assert_eq!(error.code, crate::ipc::IpcErrorCode::InvalidArgument);
+            assert_eq!(session.latest_inspector, before);
+            assert!(session.observation_requests.is_empty());
+        }
+        request.n = "4294967295".into();
+        let result = session
+            .observation(ObservationCommand::Create(request))
+            .unwrap();
+        let task = result
+            .inspector
+            .keyzones
+            .as_ref()
+            .unwrap()
+            .observations
+            .iter()
+            .find(|task| task.observation_id == result.observation_id)
+            .unwrap();
+        assert_eq!(task.config_n, "4294967295");
         session.dispose().unwrap();
     }
 }
