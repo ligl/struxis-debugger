@@ -9,7 +9,10 @@
 //! save operation after completion; it never participates in Start or Step.
 
 use std::{
-    sync::{Arc, mpsc::{self, Receiver, SyncSender}},
+    sync::{
+        Arc,
+        mpsc::{self, Receiver, SyncSender},
+    },
     thread::{self, JoinHandle},
 };
 
@@ -215,7 +218,9 @@ impl ReplayWorker {
             }
             Err(error) => {
                 let _ = join.join();
-                return Err(format!("Replay worker exited during initialization: {error}"));
+                return Err(format!(
+                    "Replay worker exited during initialization: {error}"
+                ));
             }
         };
 
@@ -236,7 +241,9 @@ impl ReplayWorker {
         if self.terminal_state.is_some() {
             return Ok(None);
         }
-        let _permit = self.command_gate.try_enter(ReplayCommandKind::GetInspector)?;
+        let _permit = self
+            .command_gate
+            .try_enter(ReplayCommandKind::GetInspector)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
         if let Err(error) = self.commands.send(WorkerCommand::GetInspector(reply_tx)) {
             let detail = format!("Replay worker is unavailable during GetInspector: {error}");
@@ -297,8 +304,7 @@ impl ReplayWorker {
     }
 
     pub(crate) fn step_checkpoint(&mut self) -> Result<ReplayStepResult, String> {
-        let _permit = self.command_gate
-            .try_enter(ReplayCommandKind::Step)?;
+        let _permit = self.command_gate.try_enter(ReplayCommandKind::Step)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
         if let Err(error) = self.commands.send(WorkerCommand::Step(reply_tx)) {
             let detail = format!("Replay worker is unavailable during Step: {error}");
@@ -396,8 +402,7 @@ impl ReplayWorker {
         if let Some(state) = &self.terminal_state {
             return Ok(state.clone());
         }
-        let _permit = self.command_gate
-            .try_enter(ReplayCommandKind::Dispose)?;
+        let _permit = self.command_gate.try_enter(ReplayCommandKind::Dispose)?;
         let (reply_tx, reply_rx) = mpsc::sync_channel(0);
         if let Err(error) = self.commands.send(WorkerCommand::Dispose(reply_tx)) {
             let detail = format!("Replay worker is unavailable during Dispose: {error}");
@@ -428,12 +433,10 @@ impl ReplayWorker {
     fn join_after_transport_failure(&mut self, detail: String) -> String {
         match self.join.take() {
             Some(join) => match join.join() {
-                Ok(()) => format!(
-                    "{detail}; worker thread exited but resource release is unconfirmed"
-                ),
-                Err(_) => format!(
-                    "{detail}; worker panicked and resource release is unconfirmed"
-                ),
+                Ok(()) => {
+                    format!("{detail}; worker thread exited but resource release is unconfirmed")
+                }
+                Err(_) => format!("{detail}; worker panicked and resource release is unconfirmed"),
             },
             None => format!("{detail}; worker thread was already joined"),
         }
@@ -531,7 +534,7 @@ impl WorkerSession {
         );
         self.latest_inspector = Some(inspector.clone());
         Ok(crate::observation::FixedPriceRangeResult {
-            keyzone_id: zone.id.value().to_string(),
+            keyzone_id: zone.value().to_string(),
             inspector,
         })
     }
@@ -547,8 +550,8 @@ impl WorkerSession {
             },
         };
         use capitus_struxis::keyzone::{
-            InteractionConfig, KeyZoneRef, ObservationTaskOperation, ObservationTaskRef,
-            ObservationTaskRequest, ObservationTaskStart,
+            InteractionConfig, ObservationTaskOperation, ObservationTaskRequest,
+            ObservationTaskStart,
         };
         let context = command.context();
         if context.run_id != self.state.run_id
@@ -615,10 +618,8 @@ impl WorkerSession {
                     .observe_keyzone(ObservationTaskRequest {
                         observer_id: "struxis-debugger".into(),
                         request_id: request.request_id,
-                        zone: KeyZoneRef {
-                            instrument_id: self.input.state_key.instrument_id,
-                            id: zone_id,
-                        },
+                        instrument_id: self.input.state_key.instrument_id,
+                        keyzone_id: zone_id,
                         stream_key: self.input.state_key,
                         start,
                         config,
@@ -652,10 +653,7 @@ impl WorkerSession {
                 };
                 self.struxis
                     .keyzone_mut()
-                    .cancel_observation_request(ObservationTaskRef {
-                        instrument_id: self.input.state_key.instrument_id,
-                        id,
-                    })
+                    .cancel_observation_request(self.input.state_key.instrument_id, id)
                     .map_err(domain_error)?
             }
         };
@@ -682,7 +680,7 @@ impl WorkerSession {
             ObservationTaskOperation::AlreadyTerminated => Operation::AlreadyTerminated,
         };
         Ok(ObservationCommandResult {
-            observation_id: result.observation.id.value().to_string(),
+            observation_id: result.observation_id.value().to_string(),
             operation,
             inspector,
         })
@@ -697,11 +695,9 @@ impl WorkerSession {
         if config.input.bars.is_empty() {
             return Err("Replay worker cannot start with an empty Test input".into());
         }
-        let actual_fingerprint = crate::dataset::sequence_fingerprint(
-            config.input.state_key,
-            &config.input.bars,
-        )
-        .map_err(|error| format!("Replay worker input fingerprint failed: {error}"))?;
+        let actual_fingerprint =
+            crate::dataset::sequence_fingerprint(config.input.state_key, &config.input.bars)
+                .map_err(|error| format!("Replay worker input fingerprint failed: {error}"))?;
         if actual_fingerprint != config.input.sbar_sequence_fingerprint {
             return Err(format!(
                 "Replay worker input fingerprint mismatch: expected={}, actual={actual_fingerprint}",
@@ -775,11 +771,12 @@ impl WorkerSession {
             // registered until the entire Worker-owned Struxis is dropped:
             // Strategy teardown must not become the last unregister while
             // observations are still active. No task is cancelled here.
-            let observer_id = ActorId::new_checked(format!(
-                "STRUXIS-DEBUGGER-OBSERVATIONS-{}",
-                config.run_id
-            ))?;
-            struxis.register(config.input.state_key, StruxisRegistrant::Actor(observer_id));
+            let observer_id =
+                ActorId::new_checked(format!("STRUXIS-DEBUGGER-OBSERVATIONS-{}", config.run_id))?;
+            struxis.register(
+                config.input.state_key,
+                StruxisRegistrant::Actor(observer_id),
+            );
             Ok(struxis)
         })();
 
@@ -842,10 +839,7 @@ impl WorkerSession {
         Ok(self.state.clone())
     }
 
-    fn step(
-        &mut self,
-        sink: Option<&mut dyn CheckpointSink>,
-    ) -> Result<ReplayStepResult, String> {
+    fn step(&mut self, sink: Option<&mut dyn CheckpointSink>) -> Result<ReplayStepResult, String> {
         let mut sink = sink;
         if !matches!(self.state.status, RunStatus::Ready | RunStatus::Paused) {
             return Err(format!(
@@ -853,19 +847,22 @@ impl WorkerSession {
                 self.state.run_id, self.state.status
             ));
         }
-        let bar = self.input.bars.get(self.next_index)
+        let bar = self
+            .input
+            .bars
+            .get(self.next_index)
             .cloned()
             .ok_or_else(|| "Replay has no unprocessed Test SBar remaining".to_owned())?;
 
         self.engine.clear_data();
-        if let Err(error) = self.engine
+        if let Err(error) = self
+            .engine
             .add_data(vec![Data::Bar(bar.clone())], None, true, true)
             .and_then(|()| self.engine.run(None, None, None, true))
         {
             let diagnostic = format!(
                 "Nautilus Step failed at input_index={} sbar_id={}: {error}",
-                self.next_index,
-                bar.ts_event
+                self.next_index, bar.ts_event
             );
             let _ = self.state.fail(diagnostic.clone());
             notify_sink_failure(&mut sink, &diagnostic);
@@ -893,7 +890,8 @@ impl WorkerSession {
                 notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             }
-            let keyzones = self.struxis
+            let keyzones = self
+                .struxis
                 .keyzone()
                 .registry(self.input.state_key.instrument_id)
                 .ok_or_else(|| "KeyZone Registry unavailable at confirmed checkpoint".to_owned())
@@ -923,7 +921,9 @@ impl WorkerSession {
         }
 
         let commit_result = match sink.as_deref_mut() {
-            Some(sink) => sink.commit_checkpoint(self.next_index, &bar.ts_event.to_string(), &projection),
+            Some(sink) => {
+                sink.commit_checkpoint(self.next_index, &bar.ts_event.to_string(), &projection)
+            }
             None => Ok(()),
         };
         if let Err(error) = commit_result {
@@ -937,22 +937,19 @@ impl WorkerSession {
         }
 
         let sbar_id = bar.ts_event.to_string();
-        let owned_checkpoint = match OwnedCheckpoint::from_projection(
-            self.next_index,
-            &sbar_id,
-            &projection,
-        ) {
-            Ok(checkpoint) => checkpoint,
-            Err(error) => {
-                let diagnostic = format!(
-                    "Owned Checkpoint extraction failed at input_index={} sbar_id={}: {error}",
-                    self.next_index, sbar_id
-                );
-                let _ = self.state.fail(diagnostic.clone());
-                notify_sink_failure(&mut sink, &diagnostic);
-                return Err(diagnostic);
-            }
-        };
+        let owned_checkpoint =
+            match OwnedCheckpoint::from_projection(self.next_index, &sbar_id, &projection) {
+                Ok(checkpoint) => checkpoint,
+                Err(error) => {
+                    let diagnostic = format!(
+                        "Owned Checkpoint extraction failed at input_index={} sbar_id={}: {error}",
+                        self.next_index, sbar_id
+                    );
+                    let _ = self.state.fail(diagnostic.clone());
+                    notify_sink_failure(&mut sink, &diagnostic);
+                    return Err(diagnostic);
+                }
+            };
         let inspector = match projection.inspector_projection(self.next_index, &sbar_id) {
             Ok(inspector) => inspector,
             Err(error) => {
@@ -982,7 +979,8 @@ impl WorkerSession {
 
         if self.state.status == RunStatus::Completed {
             if let Err(error) = self.engine.end() {
-                let diagnostic = format!("BacktestEngine finalization failed after final checkpoint: {error}");
+                let diagnostic =
+                    format!("BacktestEngine finalization failed after final checkpoint: {error}");
                 let _ = self.state.fail(diagnostic.clone());
                 notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
@@ -1012,15 +1010,12 @@ impl WorkerSession {
         target_sbar_id: &str,
         sink: Option<&mut dyn CheckpointSink>,
     ) -> Result<ReplayStepResult, String> {
-        let target_index = self
-            .input
-            .index_of_sbar_id(target_sbar_id)
-            .ok_or_else(|| {
-                format!(
-                    "Restart to SBar rejected: target {target_sbar_id} is not in Test Dataset {}",
-                    self.input.test_dataset_id
-                )
-            })?;
+        let target_index = self.input.index_of_sbar_id(target_sbar_id).ok_or_else(|| {
+            format!(
+                "Restart to SBar rejected: target {target_sbar_id} is not in Test Dataset {}",
+                self.input.test_dataset_id
+            )
+        })?;
 
         let mut sink = sink;
         let mut final_result = None;
@@ -1028,9 +1023,8 @@ impl WorkerSession {
             let result = self.step(sink.as_deref_mut())?;
             final_result = Some(result);
         }
-        final_result.ok_or_else(|| {
-            format!("Restart to SBar did not process target {target_sbar_id}")
-        })
+        final_result
+            .ok_or_else(|| format!("Restart to SBar did not process target {target_sbar_id}"))
     }
 
     /// Nautilus exposes BacktestEngine::dispose as an infallible, void API.
@@ -1076,7 +1070,9 @@ fn worker_loop(
                         "Snapshot save requires Completed Run, got {:?}",
                         session.state.status
                     ))
-                } else if session.completed_checkpoints.as_ref()
+                } else if session
+                    .completed_checkpoints
+                    .as_ref()
                     .map_or(session.owned_checkpoints.len(), |items| items.len())
                     != session.input.bars.len()
                 {
@@ -1108,10 +1104,8 @@ fn worker_loop(
                 let _ = reply.send(session.step(sink.as_deref_mut()));
             }
             WorkerCommand::FastForwardToSBar(target_sbar_id, reply) => {
-                let _ = reply.send(session.fast_forward_to_sbar(
-                    &target_sbar_id,
-                    sink.as_deref_mut(),
-                ));
+                let _ =
+                    reply.send(session.fast_forward_to_sbar(&target_sbar_id, sink.as_deref_mut()));
             }
             WorkerCommand::Stop(reply) => {
                 let result = session.stop();
@@ -1127,10 +1121,7 @@ fn worker_loop(
     }
 }
 
-fn notify_sink_failure(
-    sink: &mut Option<&mut dyn CheckpointSink>,
-    diagnostic: &str,
-) {
+fn notify_sink_failure(sink: &mut Option<&mut dyn CheckpointSink>, diagnostic: &str) {
     if let Some(sink) = sink.as_deref_mut() {
         let _ = sink.fail(diagnostic);
     }
@@ -1153,10 +1144,14 @@ impl CheckpointSink for MemoryCheckpointSink {
         initial_state: &RunState,
         effective_config: &EffectiveStruxisConfig,
     ) -> Result<(), String> {
-        *self.initialized.lock().map_err(|_| "sink lock poisoned".to_owned())? =
-            Some(initial_state.clone());
-        *self.effective_config.lock().map_err(|_| "sink lock poisoned".to_owned())? =
-            Some(effective_config.clone());
+        *self
+            .initialized
+            .lock()
+            .map_err(|_| "sink lock poisoned".to_owned())? = Some(initial_state.clone());
+        *self
+            .effective_config
+            .lock()
+            .map_err(|_| "sink lock poisoned".to_owned())? = Some(effective_config.clone());
         Ok(())
     }
 
@@ -1166,7 +1161,9 @@ impl CheckpointSink for MemoryCheckpointSink {
         sbar_id: &str,
         projection: &ReplayCheckpointProjection,
     ) -> Result<(), String> {
-        self.checkpoints.lock().map_err(|_| "sink lock poisoned".to_owned())?
+        self.checkpoints
+            .lock()
+            .map_err(|_| "sink lock poisoned".to_owned())?
             .push((checkpoint_index, sbar_id.to_owned(), projection.clone()));
         Ok(())
     }
@@ -1218,19 +1215,21 @@ mod tests {
     fn fixture_test() -> TestDataset {
         let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL")
             .expect("fixture BarType should parse");
-        let bars = (0..3).map(|index| {
-            let ts = 1_735_689_600_000_000_000_u64 + index * 60_000_000_000;
-            Bar::new(
-                bar_type,
-                Price::from("0.65000"),
-                Price::from("0.65100"),
-                Price::from("0.64900"),
-                Price::from("0.65050"),
-                Quantity::from("100000"),
-                ts.into(),
-                ts.into(),
-            )
-        }).collect::<Vec<_>>();
+        let bars = (0..3)
+            .map(|index| {
+                let ts = 1_735_689_600_000_000_000_u64 + index * 60_000_000_000;
+                Bar::new(
+                    bar_type,
+                    Price::from("0.65000"),
+                    Price::from("0.65100"),
+                    Price::from("0.64900"),
+                    Price::from("0.65050"),
+                    Quantity::from("100000"),
+                    ts.into(),
+                    ts.into(),
+                )
+            })
+            .collect::<Vec<_>>();
         let state_key = StruxisStateKey::from_bar_type(&bar_type);
         let fingerprint = sequence_fingerprint(state_key, &bars).expect("fingerprint");
         let origin = OriginLoad {
@@ -1294,7 +1293,7 @@ mod tests {
         use capitus_struxis::{
             StruxisRegistrant,
             keyzone::{
-                InteractionConfig, InteractionState, KeyZoneRef, ObservationTaskCompletion,
+                InteractionConfig, InteractionState, ObservationTaskCompletion,
                 ObservationTaskRequest, ObservationTaskStart, ObservationTaskState,
             },
         };
@@ -1379,10 +1378,8 @@ mod tests {
             .observe_keyzone(ObservationTaskRequest {
                 observer_id: "struxis-debugger".into(),
                 request_id: "owner-registration".into(),
-                zone: KeyZoneRef {
-                    instrument_id: key.instrument_id,
-                    id: zone,
-                },
+                instrument_id: key.instrument_id,
+                keyzone_id: zone,
                 stream_key: key,
                 start: ObservationTaskStart::AfterCurrentCursor,
                 config: InteractionConfig::new(2, 0.5).unwrap(),
@@ -1390,7 +1387,7 @@ mod tests {
                 deadline: (base + 20 * minute).into(),
             })
             .unwrap()
-            .observation;
+            .observation_id;
         session.step(None).unwrap();
         let before = session.latest_inspector.clone();
         // Without the debugger's independent ownership this is the last
@@ -1407,7 +1404,7 @@ mod tests {
             session
                 .struxis
                 .keyzone()
-                .query_observation(observation)
+                .query_observation(key.instrument_id, observation)
                 .unwrap()
                 .state(),
             ObservationTaskState::Observing
@@ -1416,7 +1413,7 @@ mod tests {
             session
                 .struxis
                 .keyzone()
-                .query_interactions(observation)
+                .query_interactions(key.instrument_id, observation)
                 .unwrap()[0]
                 .state(),
             InteractionState::Active
@@ -1427,7 +1424,7 @@ mod tests {
             session
                 .struxis
                 .keyzone()
-                .query_observation(observation)
+                .query_observation(key.instrument_id, observation)
                 .unwrap()
                 .state(),
             ObservationTaskState::Observing
@@ -1445,9 +1442,8 @@ mod tests {
             terminal_state: None,
         };
 
-        let error = worker.join_after_transport_failure(
-            "injected Dispose transport failure".to_owned(),
-        );
+        let error =
+            worker.join_after_transport_failure("injected Dispose transport failure".to_owned());
 
         assert!(error.contains("worker thread exited"));
         assert!(error.contains("resource release is unconfirmed"));
@@ -1466,7 +1462,9 @@ mod tests {
             terminal_state: None,
         };
 
-        let error = worker.state().expect_err("state query should fail after worker exit");
+        let error = worker
+            .state()
+            .expect_err("state query should fail after worker exit");
 
         assert!(error.contains("Replay worker is unavailable during GetState"));
         assert!(error.contains("resource release is unconfirmed"));
@@ -1489,7 +1487,10 @@ mod tests {
 
         assert!(error.contains("resource release is unconfirmed"), "{error}");
         assert!(worker.join.is_none(), "failed Step should reap the worker");
-        assert!(worker.terminal_state.is_none(), "failed Step must not cache a terminal state");
+        assert!(
+            worker.terminal_state.is_none(),
+            "failed Step must not cache a terminal state"
+        );
     }
 
     #[test]
@@ -1505,11 +1506,17 @@ mod tests {
 
         let play_error = worker.play().expect_err("Play is frontend-owned");
         assert!(play_error.contains("Play is frontend-owned"));
-        assert!(worker.join.is_some(), "rejected Play must not reap the worker");
+        assert!(
+            worker.join.is_some(),
+            "rejected Play must not reap the worker"
+        );
 
         let pause_error = worker.pause().expect_err("Pause is frontend-owned");
         assert!(pause_error.contains("Pause is frontend-owned"));
-        assert!(worker.join.is_some(), "rejected Pause must not reap the worker");
+        assert!(
+            worker.join.is_some(),
+            "rejected Pause must not reap the worker"
+        );
 
         // Ensure Drop's best-effort Dispose send cannot block on this test's
         // deliberately non-consuming rendezvous receiver.
@@ -1524,15 +1531,14 @@ mod tests {
             "test-dataset".into(),
             "fingerprint".into(),
             1,
-        ).expect("fixture state");
-        let join = std::thread::spawn(move || {
-            match receiver.recv().expect("Stop command") {
-                super::WorkerCommand::Stop(reply) => {
-                    reply.send(Ok(state)).expect("Stop response receiver");
-                    panic!("injected worker panic after terminal response");
-                }
-                _ => panic!("expected Stop command"),
+        )
+        .expect("fixture state");
+        let join = std::thread::spawn(move || match receiver.recv().expect("Stop command") {
+            super::WorkerCommand::Stop(reply) => {
+                reply.send(Ok(state)).expect("Stop response receiver");
+                panic!("injected worker panic after terminal response");
             }
+            _ => panic!("expected Stop command"),
         });
         let mut worker = ReplayWorker {
             commands,
@@ -1541,7 +1547,9 @@ mod tests {
             terminal_state: None,
         };
 
-        let error = worker.stop().expect_err("join panic must invalidate release confirmation");
+        let error = worker
+            .stop()
+            .expect_err("join panic must invalidate release confirmation");
 
         assert!(error.contains("resource release is unconfirmed"));
         assert!(worker.terminal_state.is_none());
@@ -1560,15 +1568,24 @@ mod tests {
                 instrument,
             },
             Box::new(MemoryCheckpointSink::default()),
-        ).expect("worker should initialize");
+        )
+        .expect("worker should initialize");
 
         let stopped = worker.stop().expect("first Stop should release the worker");
         assert_eq!(stopped.status, RunStatus::Disposed);
 
-        let disposed = worker.dispose().expect("Dispose after Stop should be idempotent");
+        let disposed = worker
+            .dispose()
+            .expect("Dispose after Stop should be idempotent");
         assert_eq!(disposed, stopped);
-        assert_eq!(worker.state().expect("terminal state remains queryable"), stopped);
-        assert_eq!(worker.stop().expect("repeated Stop should be idempotent"), stopped);
+        assert_eq!(
+            worker.state().expect("terminal state remains queryable"),
+            stopped
+        );
+        assert_eq!(
+            worker.stop().expect("repeated Stop should be idempotent"),
+            stopped
+        );
     }
 
     #[test]
@@ -1585,26 +1602,40 @@ mod tests {
                 instrument,
             },
             Box::new(sink),
-        ).expect("worker should initialize");
+        )
+        .expect("worker should initialize");
 
         assert_eq!(initial.status, RunStatus::Ready);
         assert_eq!(initial.processed_count, 0);
         let initialized = observed.initialized.lock().expect("sink initialization");
-        assert_eq!(initialized.as_ref().map(|state| state.status), Some(RunStatus::Ready));
-        assert_eq!(initialized.as_ref().map(|state| state.processed_count), Some(0));
+        assert_eq!(
+            initialized.as_ref().map(|state| state.status),
+            Some(RunStatus::Ready)
+        );
+        assert_eq!(
+            initialized.as_ref().map(|state| state.processed_count),
+            Some(0)
+        );
         drop(initialized);
         {
             let effective = observed.effective_config.lock().expect("effective config");
-            let effective = effective.as_ref().expect("sink receives effective Struxis config");
+            let effective = effective
+                .as_ref()
+                .expect("sink receives effective Struxis config");
             assert!(effective.enable_structure);
             assert_eq!(effective.structure_cbars_capacity, 10000);
             assert_eq!(effective.structure_swings_capacity, 2000);
             assert_eq!(effective.structure_trends_capacity, 666);
             assert_eq!(
-                effective.fingerprint().expect("effective config fingerprint"),
+                effective
+                    .fingerprint()
+                    .expect("effective config fingerprint"),
                 crate::effective_config::fingerprint_canonical_config(
-                    &effective.canonical_json().expect("canonical effective config")
-                ).expect("canonical config fingerprint")
+                    &effective
+                        .canonical_json()
+                        .expect("canonical effective config")
+                )
+                .expect("canonical config fingerprint")
             );
         }
         let first = worker.step().expect("first Step");
@@ -1628,7 +1659,10 @@ mod tests {
         let disposed = worker.dispose().expect("worker Dispose");
         assert_eq!(disposed.status, RunStatus::Disposed);
         assert_eq!(disposed.processed_count, 3);
-        assert_eq!(disposed.cursor_sbar_id.as_deref(), Some("1735689720000000000"));
+        assert_eq!(
+            disposed.cursor_sbar_id.as_deref(),
+            Some("1735689720000000000")
+        );
     }
 
     #[test]
@@ -1640,18 +1674,31 @@ mod tests {
             run_id: "worker-restart-to-sbar-contract".into(),
             input,
             instrument,
-        }).expect("worker should initialize");
+        })
+        .expect("worker should initialize");
         assert_eq!(initial.processed_count, 0);
 
-        let target = worker.fast_forward_to_sbar("1735689660000000000".into())
+        let target = worker
+            .fast_forward_to_sbar("1735689660000000000".into())
             .expect("target SBar should be processed");
         assert_eq!(target.run_state.processed_count, 2);
-        assert_eq!(target.run_state.cursor_sbar_id.as_deref(), Some("1735689660000000000"));
-        assert_eq!(target.inspector.as_ref().map(|item| item.sbar_id.as_str()), Some("1735689660000000000"));
+        assert_eq!(
+            target.run_state.cursor_sbar_id.as_deref(),
+            Some("1735689660000000000")
+        );
+        assert_eq!(
+            target.inspector.as_ref().map(|item| item.sbar_id.as_str()),
+            Some("1735689660000000000")
+        );
 
-        let next = worker.step_checkpoint().expect("ordinary Step after target");
+        let next = worker
+            .step_checkpoint()
+            .expect("ordinary Step after target");
         assert_eq!(next.run_state.processed_count, 3);
-        assert_eq!(next.run_state.cursor_sbar_id.as_deref(), Some("1735689720000000000"));
+        assert_eq!(
+            next.run_state.cursor_sbar_id.as_deref(),
+            Some("1735689720000000000")
+        );
         assert_eq!(next.run_state.status, RunStatus::Completed);
         worker.dispose().expect("worker Dispose");
     }
@@ -1665,9 +1712,11 @@ mod tests {
             run_id: "worker-restart-to-sbar-invalid-target".into(),
             input,
             instrument,
-        }).expect("worker should initialize");
+        })
+        .expect("worker should initialize");
 
-        let error = worker.fast_forward_to_sbar("not-a-test-sbar".into())
+        let error = worker
+            .fast_forward_to_sbar("not-a-test-sbar".into())
             .expect_err("unknown target must be rejected");
         assert!(error.contains("is not in Test Dataset"));
         let state = worker.state().expect("RunState remains queryable");
@@ -1688,16 +1737,22 @@ mod tests {
                 instrument,
             },
             Box::new(FailingCheckpointSink),
-        ).expect("worker should initialize");
+        )
+        .expect("worker should initialize");
 
         let error = worker.step().expect_err("checkpoint commit should fail");
         assert!(error.contains("injected checkpoint failure"));
         let failed = worker.dispose().expect("Dispose should release failed Run");
         assert_eq!(failed.status, RunStatus::Disposed);
         assert_eq!(failed.processed_count, 0);
-        assert!(failed.failure_diagnostic.as_deref().unwrap().contains("injected checkpoint failure"));
+        assert!(
+            failed
+                .failure_diagnostic
+                .as_deref()
+                .unwrap()
+                .contains("injected checkpoint failure")
+        );
     }
-
 
     #[test]
     fn backend_play_and_pause_are_rejected_without_advancing_replay() {
@@ -1711,11 +1766,22 @@ mod tests {
                 instrument,
             },
             Box::new(MemoryCheckpointSink::default()),
-        ).expect("worker should initialize");
+        )
+        .expect("worker should initialize");
 
         assert_eq!(initial.status, RunStatus::Ready);
-        assert!(worker.play().expect_err("backend Play must be rejected").contains("frontend-owned"));
-        assert!(worker.pause().expect_err("backend Pause must be rejected").contains("frontend-owned"));
+        assert!(
+            worker
+                .play()
+                .expect_err("backend Play must be rejected")
+                .contains("frontend-owned")
+        );
+        assert!(
+            worker
+                .pause()
+                .expect_err("backend Pause must be rejected")
+                .contains("frontend-owned")
+        );
 
         let unchanged = worker.state().expect("RunState remains queryable");
         assert_eq!(unchanged.status, RunStatus::Ready);
@@ -1723,5 +1789,4 @@ mod tests {
         assert_eq!(unchanged.cursor_sbar_id, None);
         worker.dispose().expect("worker Dispose");
     }
-
 }

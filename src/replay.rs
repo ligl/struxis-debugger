@@ -46,7 +46,10 @@ impl ReplayCommandGate {
         Self::default()
     }
 
-    pub(crate) fn try_enter(&self, command: ReplayCommandKind) -> Result<ReplayCommandPermit, String> {
+    pub(crate) fn try_enter(
+        &self,
+        command: ReplayCommandKind,
+    ) -> Result<ReplayCommandPermit, String> {
         self.active
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .map_err(|_| format!("{command:?} rejected: another Replay command is still active"))?;
@@ -68,7 +71,6 @@ impl Drop for ReplayCommandPermit {
         self.active.store(false, Ordering::Release);
     }
 }
-
 
 /// Owned, immutable Run input constructed only from the selected Test Dataset.
 ///
@@ -102,7 +104,10 @@ impl LoadedInput {
         }
 
         let expected_bar_type = bars[0].bar_type.to_string();
-        if bars.iter().any(|bar| bar.bar_type.to_string() != expected_bar_type) {
+        if bars
+            .iter()
+            .any(|bar| bar.bar_type.to_string() != expected_bar_type)
+        {
             return Err("LoadedInput contains more than one BarType".into());
         }
         if expected_bar_type != test.bar_type() {
@@ -134,7 +139,6 @@ impl LoadedInput {
 #[cfg(test)]
 mod tests {
     use super::{LoadedInput, ReplayCommandGate, ReplayCommandKind};
-
 
     use crate::{
         catalog::OriginLoad,
@@ -193,9 +197,16 @@ mod tests {
         let loaded = LoadedInput::from_test(&test).expect("LoadedInput should validate");
         assert_eq!(loaded.test_dataset_id, test.test_dataset_id().to_string());
         assert_eq!(loaded.bars.len(), test.bars().len());
-        assert_eq!(loaded.sbar_sequence_fingerprint, test.sbar_sequence_fingerprint());
         assert_eq!(
-            loaded.bars.iter().map(|bar| bar.ts_event.to_string()).collect::<Vec<_>>(),
+            loaded.sbar_sequence_fingerprint,
+            test.sbar_sequence_fingerprint()
+        );
+        assert_eq!(
+            loaded
+                .bars
+                .iter()
+                .map(|bar| bar.ts_event.to_string())
+                .collect::<Vec<_>>(),
             vec!["100", "200"]
         );
     }

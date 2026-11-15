@@ -63,9 +63,8 @@ fn create_test_bars(count: usize) -> Vec<Bar> {
 
 fn create_test_input(bars: Vec<Bar>) -> LoadedInput {
     let state_key = test_state_key();
-    let sbar_sequence_fingerprint =
-        crate::dataset::sequence_fingerprint(state_key, &bars)
-            .expect("fixture SBar sequence fingerprint should compute");
+    let sbar_sequence_fingerprint = crate::dataset::sequence_fingerprint(state_key, &bars)
+        .expect("fixture SBar sequence fingerprint should compute");
 
     LoadedInput {
         test_dataset_id: "test-integration-001".to_string(),
@@ -82,7 +81,8 @@ fn create_initial_run_state(input: &LoadedInput) -> RunState {
         input.test_dataset_id.clone(),
         input.sbar_sequence_fingerprint.clone(),
         input.bars.len(),
-    ).expect("test input should produce a valid Ready Run")
+    )
+    .expect("test input should produce a valid Ready Run")
 }
 
 fn create_effective_config() -> EffectiveStruxisConfig {
@@ -104,8 +104,8 @@ fn create_minimal_checkpoint(index: usize, sbar_id: &str) -> ReplayCheckpointPro
 
 #[test]
 fn snapshot_writer_full_lifecycle_with_three_checkpoints() {
-    let temp_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/snapshot_integration");
+    let temp_dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/snapshot_integration");
     fs::create_dir_all(&temp_dir).expect("Create temporary snapshot directory");
 
     let bars = create_test_bars(3);
@@ -153,10 +153,8 @@ fn snapshot_writer_full_lifecycle_with_three_checkpoints() {
 
     // 6. Read back and verify
     let (manifest, records) =
-        crate::snapshot_store::read_complete_snapshot(
-            writer.published_path(),
-        )
-        .expect("Published snapshot should be readable");
+        crate::snapshot_store::read_complete_snapshot(writer.published_path())
+            .expect("Published snapshot should be readable");
 
     assert_eq!(manifest.status, "Complete");
     assert_eq!(manifest.checkpoint_count, 3);
@@ -171,8 +169,8 @@ fn snapshot_writer_full_lifecycle_with_three_checkpoints() {
 
 #[test]
 fn snapshot_writer_rejects_checkpoint_index_out_of_order() {
-    let temp_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/snapshot_order_test");
+    let temp_dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/snapshot_order_test");
     fs::create_dir_all(&temp_dir).unwrap();
 
     let bars = create_test_bars(2);
@@ -180,18 +178,24 @@ fn snapshot_writer_rejects_checkpoint_index_out_of_order() {
     let initial_state = create_initial_run_state(&input);
     let config = create_effective_config();
 
-    let mut writer = SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string()).unwrap();
+    let mut writer =
+        SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string()).unwrap();
     writer.initialize(&initial_state, &config).unwrap();
 
     // First checkpoint succeeds
     let proj0 = create_minimal_checkpoint(0, &input.bars[0].ts_event.to_string());
-    writer.commit_checkpoint(0, &input.bars[0].ts_event.to_string(), &proj0).unwrap();
+    writer
+        .commit_checkpoint(0, &input.bars[0].ts_event.to_string(), &proj0)
+        .unwrap();
 
     // Second checkpoint with wrong index should fail
     let proj1 = create_minimal_checkpoint(1, &input.bars[1].ts_event.to_string());
     let result = writer.commit_checkpoint(99, &input.bars[1].ts_event.to_string(), &proj1);
 
-    assert!(result.is_err(), "Out-of-order checkpoint index should be rejected");
+    assert!(
+        result.is_err(),
+        "Out-of-order checkpoint index should be rejected"
+    );
     assert!(
         result.unwrap_err().contains("Expected checkpoint index 1"),
         "Error message should indicate expected index"
@@ -202,15 +206,23 @@ fn snapshot_writer_rejects_checkpoint_index_out_of_order() {
         fs::read_dir(&temp_dir)
             .unwrap()
             .flatten()
-            .filter(|entry| entry.path().extension().map(|e| e == "tmp").unwrap_or(false))
-            .for_each(|entry| { let _ = fs::remove_file(entry.path()); });
+            .filter(|entry| {
+                entry
+                    .path()
+                    .extension()
+                    .map(|e| e == "tmp")
+                    .unwrap_or(false)
+            })
+            .for_each(|entry| {
+                let _ = fs::remove_file(entry.path());
+            });
     }
 }
 
 #[test]
 fn snapshot_writer_fail_marks_status_without_progression() {
-    let temp_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/snapshot_fail_test");
+    let temp_dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/snapshot_fail_test");
     fs::create_dir_all(&temp_dir).unwrap();
 
     let bars = create_test_bars(5);
@@ -218,12 +230,15 @@ fn snapshot_writer_fail_marks_status_without_progression() {
     let initial_state = create_initial_run_state(&input);
     let config = create_effective_config();
 
-    let mut writer = SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string()).unwrap();
+    let mut writer =
+        SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string()).unwrap();
     writer.initialize(&initial_state, &config).unwrap();
 
     // Commit one successful checkpoint
     let proj0 = create_minimal_checkpoint(0, &input.bars[0].ts_event.to_string());
-    writer.commit_checkpoint(0, &input.bars[0].ts_event.to_string(), &proj0).unwrap();
+    writer
+        .commit_checkpoint(0, &input.bars[0].ts_event.to_string(), &proj0)
+        .unwrap();
 
     // Fail before completing all checkpoints
     writer
@@ -241,7 +256,9 @@ fn snapshot_writer_fail_marks_status_without_progression() {
         fs::read_dir(&temp_dir)
             .unwrap()
             .flatten()
-            .for_each(|entry| { let _ = fs::remove_file(entry.path()); });
+            .for_each(|entry| {
+                let _ = fs::remove_file(entry.path());
+            });
     }
 }
 
@@ -261,7 +278,8 @@ fn snapshot_writer_atomic_publish_renames_temp_to_final() {
     let initial_state = create_initial_run_state(&input);
     let config = create_effective_config();
 
-    let mut writer = SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string()).unwrap();
+    let mut writer =
+        SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string()).unwrap();
     writer.initialize(&initial_state, &config).unwrap();
 
     let proj0 = create_minimal_checkpoint(0, &input.bars[0].ts_event.to_string());
@@ -321,20 +339,17 @@ fn snapshot_writer_does_not_overwrite_existing_publish_destination() {
         .duration_since(UNIX_EPOCH)
         .expect("System clock should be after Unix epoch")
         .as_nanos();
-    let temp_dir = std::env::temp_dir()
-        .join(format!("capitus-snapshot-publish-collision-{unique_suffix}"));
+    let temp_dir = std::env::temp_dir().join(format!(
+        "capitus-snapshot-publish-collision-{unique_suffix}"
+    ));
     fs::create_dir_all(&temp_dir).expect("Create isolated Snapshot directory");
 
     let bars = create_test_bars(1);
     let input = create_test_input(bars);
     let initial_state = create_initial_run_state(&input);
     let config = create_effective_config();
-    let mut writer = SnapshotWriter::new(
-        &temp_dir,
-        &input,
-        &test_instrument_id().to_string(),
-    )
-    .expect("SnapshotWriter should be created");
+    let mut writer = SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string())
+        .expect("SnapshotWriter should be created");
     writer
         .initialize(&initial_state, &config)
         .expect("SnapshotWriter should initialize");
@@ -383,8 +398,8 @@ fn snapshot_writer_does_not_overwrite_existing_publish_destination() {
                 .is_some_and(|name| name.starts_with('.') && name.ends_with(".snapshot.tmp"))
         })
         .expect("Failed unpublished Snapshot should remain as a temporary artifact");
-    let connection = rusqlite::Connection::open(&temporary_path)
-        .expect("Open retained temporary Snapshot");
+    let connection =
+        rusqlite::Connection::open(&temporary_path).expect("Open retained temporary Snapshot");
     let payload: String = connection
         .query_row(
             "SELECT payload FROM snapshot_manifest WHERE singleton=1",
@@ -433,20 +448,17 @@ fn snapshot_writer_rejects_finalization_when_checkpoints_are_incomplete() {
         .duration_since(UNIX_EPOCH)
         .expect("System clock should be after Unix epoch")
         .as_nanos();
-    let temp_dir = std::env::temp_dir()
-        .join(format!("capitus-snapshot-incomplete-finalize-{unique_suffix}"));
+    let temp_dir = std::env::temp_dir().join(format!(
+        "capitus-snapshot-incomplete-finalize-{unique_suffix}"
+    ));
     fs::create_dir_all(&temp_dir).expect("Create isolated Snapshot directory");
 
     let bars = create_test_bars(2);
     let input = create_test_input(bars);
     let initial_state = create_initial_run_state(&input);
     let config = create_effective_config();
-    let mut writer = SnapshotWriter::new(
-        &temp_dir,
-        &input,
-        &test_instrument_id().to_string(),
-    )
-    .expect("SnapshotWriter should be created");
+    let mut writer = SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string())
+        .expect("SnapshotWriter should be created");
     writer
         .initialize(&initial_state, &config)
         .expect("SnapshotWriter should initialize");
@@ -485,19 +497,15 @@ fn snapshot_writer_rejects_diagnostic_from_another_checkpoint() {
         .duration_since(UNIX_EPOCH)
         .expect("System clock should be after Unix epoch")
         .as_nanos();
-    let temp_dir = std::env::temp_dir()
-        .join(format!("capitus-snapshot-diagnostic-index-{unique_suffix}"));
+    let temp_dir =
+        std::env::temp_dir().join(format!("capitus-snapshot-diagnostic-index-{unique_suffix}"));
     fs::create_dir_all(&temp_dir).expect("Create isolated Snapshot directory");
 
     let input = create_test_input(create_test_bars(1));
     let initial_state = create_initial_run_state(&input);
     let config = create_effective_config();
-    let mut writer = SnapshotWriter::new(
-        &temp_dir,
-        &input,
-        &test_instrument_id().to_string(),
-    )
-    .expect("SnapshotWriter should be created");
+    let mut writer = SnapshotWriter::new(&temp_dir, &input, &test_instrument_id().to_string())
+        .expect("SnapshotWriter should be created");
     writer
         .initialize(&initial_state, &config)
         .expect("SnapshotWriter should initialize");
@@ -539,8 +547,9 @@ fn snapshot_writer_rejects_diagnostic_from_another_checkpoint() {
         .finalize(&completed_state)
         .expect("Snapshot with a correctly indexed diagnostic should finalize");
 
-    let (manifest, records) = crate::snapshot_store::read_complete_snapshot(writer.published_path())
-        .expect("Published Snapshot should be readable");
+    let (manifest, records) =
+        crate::snapshot_store::read_complete_snapshot(writer.published_path())
+            .expect("Published Snapshot should be readable");
     assert_eq!(manifest.checkpoint_count, 1);
     assert_eq!(records.len(), 1);
     crate::diagnostics::validate_checkpoint_diagnostics_json(&records[0].diagnostics, 0)

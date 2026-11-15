@@ -29,7 +29,11 @@ impl TestDataset {
     /// Selection boundaries are real SBar IDs represented as lossless decimal
     /// strings at the UI/IPC boundary. A new object ID is assigned on every
     /// successful call; object identity is excluded from the sequence fingerprint.
-    pub(crate) fn create(origin: &OriginLoad, start_sbar_id: &str, end_sbar_id: &str) -> Result<Self> {
+    pub(crate) fn create(
+        origin: &OriginLoad,
+        start_sbar_id: &str,
+        end_sbar_id: &str,
+    ) -> Result<Self> {
         validate_origin(origin)?;
 
         let start_index = origin
@@ -241,8 +245,7 @@ mod tests {
 
     fn bar(ts_event: u64, ts_init: u64, open: &str) -> Bar {
         Bar::new(
-            BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL")
-                .expect("valid fixture BarType"),
+            BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").expect("valid fixture BarType"),
             Price::from(open),
             Price::from("12.00"),
             Price::from("9.00"),

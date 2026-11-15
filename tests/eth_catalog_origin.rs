@@ -13,36 +13,36 @@
 mod app;
 #[path = "../src/catalog.rs"]
 mod catalog;
-#[path = "../src/compare.rs"]
-mod compare;
-#[path = "../src/commands.rs"]
-mod commands;
-#[path = "../src/dataset.rs"]
-mod dataset;
-#[path = "../src/discovery.rs"]
-mod discovery;
-#[path = "../src/ipc.rs"]
-mod ipc;
-#[path = "../src/run.rs"]
-mod run;
-#[path = "../src/replay.rs"]
-mod replay;
 #[path = "../src/checkpoint.rs"]
 mod checkpoint;
+#[path = "../src/commands.rs"]
+mod commands;
+#[path = "../src/compare.rs"]
+mod compare;
+#[path = "../src/dataset.rs"]
+mod dataset;
 #[path = "../src/diagnostics.rs"]
 mod diagnostics;
-#[path = "../src/worker.rs"]
-mod worker;
-#[path = "../src/manager.rs"]
-mod manager;
-#[path = "../src/snapshot.rs"]
-mod snapshot;
-#[path = "../src/snapshot_writer.rs"]
-mod snapshot_writer;
-#[path = "../src/snapshot_store.rs"]
-mod snapshot_store;
+#[path = "../src/discovery.rs"]
+mod discovery;
 #[path = "../src/effective_config.rs"]
 mod effective_config;
+#[path = "../src/ipc.rs"]
+mod ipc;
+#[path = "../src/manager.rs"]
+mod manager;
+#[path = "../src/replay.rs"]
+mod replay;
+#[path = "../src/run.rs"]
+mod run;
+#[path = "../src/snapshot.rs"]
+mod snapshot;
+#[path = "../src/snapshot_store.rs"]
+mod snapshot_store;
+#[path = "../src/snapshot_writer.rs"]
+mod snapshot_writer;
+#[path = "../src/worker.rs"]
+mod worker;
 
 #[test]
 fn loads_ethusdt_perpetual_daily_origin_with_structure_enabled() {
@@ -51,13 +51,11 @@ fn loads_ethusdt_perpetual_daily_origin_with_structure_enabled() {
     // Exact stream reported to fail in the debugger. Do not replace this with
     // another instrument/timeframe, or the regression may stop reproducing it.
     const ETH_BAR_TYPE: &str = "ETHUSDT-PERP.BINANCE-1-DAY-LAST-EXTERNAL";
-    let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../test_data/catalog");
+    let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test_data/catalog");
 
-    let origin = catalog::load_origin(&catalog_path, ETH_BAR_TYPE, true)
-        .unwrap_or_else(|error| {
-            panic!("Origin Load failed for regression stream {ETH_BAR_TYPE}: {error:#}")
-        });
+    let origin = catalog::load_origin(&catalog_path, ETH_BAR_TYPE, true).unwrap_or_else(|error| {
+        panic!("Origin Load failed for regression stream {ETH_BAR_TYPE}: {error:#}")
+    });
 
     assert_eq!(origin.bar_type, ETH_BAR_TYPE);
     assert!(

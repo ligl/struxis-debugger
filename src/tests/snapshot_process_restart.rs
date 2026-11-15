@@ -12,16 +12,16 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use capitus_struxis::{StruxisConfig, StruxisStateKey};
 use crate::{
     checkpoint::ReplayCheckpointProjection,
     effective_config::EffectiveStruxisConfig,
     replay::LoadedInput,
     run::{RunState, RunStatus},
-    snapshot_store::{discover_snapshot_artifacts, read_complete_snapshot, SnapshotArtifactKind},
+    snapshot_store::{SnapshotArtifactKind, discover_snapshot_artifacts, read_complete_snapshot},
     snapshot_writer::SnapshotWriter,
     worker::CheckpointSink,
 };
+use capitus_struxis::{StruxisConfig, StruxisStateKey};
 use nautilus_model::{
     data::{Bar, BarType},
     identifiers::InstrumentId,
@@ -70,9 +70,7 @@ fn fixture() -> (LoadedInput, RunState, EffectiveStruxisConfig) {
         input.bars.len(),
     )
     .expect("Fixture Run should be Ready");
-    let config = EffectiveStruxisConfig::from_struxis_config(
-        &StruxisConfig::builder().build(),
-    );
+    let config = EffectiveStruxisConfig::from_struxis_config(&StruxisConfig::builder().build());
     (input, run, config)
 }
 
@@ -90,7 +88,11 @@ fn snapshot_reader_child_process() {
         .iter()
         .filter(|artifact| artifact.kind == SnapshotArtifactKind::Complete)
         .collect();
-    assert_eq!(complete.len(), 1, "Fresh process should discover exactly one Complete Snapshot");
+    assert_eq!(
+        complete.len(),
+        1,
+        "Fresh process should discover exactly one Complete Snapshot"
+    );
 
     let (manifest, records) = read_complete_snapshot(&complete[0].path)
         .expect("Fresh process should read and verify the published Snapshot");
@@ -111,7 +113,9 @@ fn published_snapshot_is_discoverable_and_verifiable_after_os_process_restart() 
     let instrument_id = InstrumentId::from("BTCUSDT-PERP.BINANCE");
     let mut writer = SnapshotWriter::new(&root, &input, &instrument_id.to_string())
         .expect("Create SnapshotWriter");
-    writer.initialize(&initial_state, &config).expect("Initialize SnapshotWriter");
+    writer
+        .initialize(&initial_state, &config)
+        .expect("Initialize SnapshotWriter");
 
     let sbar_id = input.bars[0].ts_event.to_string();
     let projection = ReplayCheckpointProjection {
@@ -121,7 +125,7 @@ fn published_snapshot_is_discoverable_and_verifiable_after_os_process_restart() 
         sbar_count: 1,
         sbars: Vec::new(),
         structure: None,
-    diagnostics: Vec::new(),
+        diagnostics: Vec::new(),
     };
     writer
         .commit_checkpoint(0, &sbar_id, &projection)
@@ -131,18 +135,27 @@ fn published_snapshot_is_discoverable_and_verifiable_after_os_process_restart() 
         processed_count: 1,
         ..initial_state
     };
-    writer.finalize(&completed_state).expect("Finalize Snapshot");
+    writer
+        .finalize(&completed_state)
+        .expect("Finalize Snapshot");
 
     let published_path = writer.published_path().to_path_buf();
     assert!(published_path.is_file(), "Published Snapshot should exist");
     drop(writer); // Ensure the parent process closes all Writer handles before spawning.
 
     let status = Command::new(std::env::current_exe().expect("Resolve current test binary"))
-        .args(["--exact", "tests::snapshot_process_restart::snapshot_reader_child_process", "--nocapture"])
+        .args([
+            "--exact",
+            "tests::snapshot_process_restart::snapshot_reader_child_process",
+            "--nocapture",
+        ])
         .env(CHILD_ROOT_ENV, &root)
         .status()
         .expect("Launch a separate OS process to read the Snapshot");
-    assert!(status.success(), "Fresh-process Snapshot readback must succeed");
+    assert!(
+        status.success(),
+        "Fresh-process Snapshot readback must succeed"
+    );
 
     fs::remove_dir_all(&root).expect("Remove isolated Snapshot root");
 }

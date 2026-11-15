@@ -5,8 +5,7 @@
 //! direct reads; Compare retains full checksum and checkpoint validation.
 
 use std::{
-    fmt,
-    fs,
+    fmt, fs,
     path::{Path, PathBuf},
 };
 
@@ -14,8 +13,8 @@ use rusqlite::{Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 
 use crate::snapshot::{
-    verify_complete_snapshot, SnapshotCheckpointRecord, SnapshotManifest,
-    STATUS_COMPLETE, STATUS_FAILED, STATUS_FINALIZING, STATUS_RECORDING,
+    STATUS_COMPLETE, STATUS_FAILED, STATUS_FINALIZING, STATUS_RECORDING, SnapshotCheckpointRecord,
+    SnapshotManifest, verify_complete_snapshot,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -72,13 +71,18 @@ pub(crate) struct SnapshotArtifact {
 
 /// Enumerates only files using the Snapshot artifact suffixes. Results are
 /// sorted by filename for stable UI and test behavior.
-pub(crate) fn discover_snapshot_artifacts(root: impl AsRef<Path>) -> Result<Vec<SnapshotArtifact>, String> {
+pub(crate) fn discover_snapshot_artifacts(
+    root: impl AsRef<Path>,
+) -> Result<Vec<SnapshotArtifact>, String> {
     let root = root.as_ref();
     if !root.exists() {
         return Ok(Vec::new());
     }
     if !root.is_dir() {
-        return Err(format!("Snapshot root is not a directory: {}", root.display()));
+        return Err(format!(
+            "Snapshot root is not a directory: {}",
+            root.display()
+        ));
     }
 
     let entries = fs::read_dir(root)
@@ -91,19 +95,24 @@ pub(crate) fn discover_snapshot_artifacts(root: impl AsRef<Path>) -> Result<Vec<
             continue;
         }
         let name = entry.file_name().to_string_lossy().into_owned();
-        if name.ends_with(".snapshot.sqlite") || (name.starts_with('.') && name.ends_with(".snapshot.tmp")) {
+        if name.ends_with(".snapshot.sqlite")
+            || (name.starts_with('.') && name.ends_with(".snapshot.tmp"))
+        {
             paths.push((name, path));
         }
     }
     paths.sort_by(|left, right| left.0.cmp(&right.0));
 
-    Ok(paths.into_iter().map(|(file_name, path)| {
-        if file_name.ends_with(".snapshot.sqlite") {
-            classify_published(file_name, path)
-        } else {
-            classify_temporary(file_name, path)
-        }
-    }).collect())
+    Ok(paths
+        .into_iter()
+        .map(|(file_name, path)| {
+            if file_name.ends_with(".snapshot.sqlite") {
+                classify_published(file_name, path)
+            } else {
+                classify_temporary(file_name, path)
+            }
+        })
+        .collect())
 }
 
 /// Opens and validates a published Snapshot without permitting writes.
@@ -273,14 +282,36 @@ fn classify_published(file_name: String, path: PathBuf) -> SnapshotArtifact {
     // verify the content checksum here. Reference trusts published content;
     // Compare performs full verification independently.
     match read_manifest(&path) {
-        Ok(manifest) if manifest.status == STATUS_COMPLETE => {
-            artifact(file_name, path, SnapshotArtifactKind::Complete, Some(&manifest), None, None)
-        }
+        Ok(manifest) if manifest.status == STATUS_COMPLETE => artifact(
+            file_name,
+            path,
+            SnapshotArtifactKind::Complete,
+            Some(&manifest),
+            None,
+            None,
+        ),
         Ok(manifest) => {
-            let diagnostic = format!("Published Snapshot Manifest is not Complete (status={})", manifest.status);
-            artifact(file_name, path, SnapshotArtifactKind::InvalidPublished, Some(&manifest), None, Some(diagnostic))
+            let diagnostic = format!(
+                "Published Snapshot Manifest is not Complete (status={})",
+                manifest.status
+            );
+            artifact(
+                file_name,
+                path,
+                SnapshotArtifactKind::InvalidPublished,
+                Some(&manifest),
+                None,
+                Some(diagnostic),
+            )
         }
-        Err(error) => artifact(file_name, path, SnapshotArtifactKind::InvalidPublished, None, None, Some(error)),
+        Err(error) => artifact(
+            file_name,
+            path,
+            SnapshotArtifactKind::InvalidPublished,
+            None,
+            None,
+            Some(error),
+        ),
     }
 }
 
@@ -292,15 +323,30 @@ fn classify_temporary(file_name: String, path: PathBuf) -> SnapshotArtifact {
                 STATUS_FINALIZING => SnapshotArtifactKind::FinalizingTemporary,
                 STATUS_FAILED => SnapshotArtifactKind::FailedTemporary,
                 STATUS_COMPLETE => SnapshotArtifactKind::CompleteButUnpublished,
-                other => return artifact(file_name, path, SnapshotArtifactKind::UnreadableTemporary, Some(&manifest), None,
-                    Some(format!("Unsupported temporary Snapshot status {other}"))),
+                other => {
+                    return artifact(
+                        file_name,
+                        path,
+                        SnapshotArtifactKind::UnreadableTemporary,
+                        Some(&manifest),
+                        None,
+                        Some(format!("Unsupported temporary Snapshot status {other}")),
+                    );
+                }
             };
             // Even a fully checksummed Complete Manifest remains a residual
             // artifact while it has the temporary suffix. Discovery never
             // renames it into the published namespace.
             artifact(file_name, path, kind, Some(&manifest), None, None)
         }
-        Err(error) => artifact(file_name, path, SnapshotArtifactKind::UnreadableTemporary, None, None, Some(error)),
+        Err(error) => artifact(
+            file_name,
+            path,
+            SnapshotArtifactKind::UnreadableTemporary,
+            None,
+            None,
+            Some(error),
+        ),
     }
 }
 
@@ -333,10 +379,15 @@ fn read_manifest(path: &Path) -> Result<SnapshotManifest, String> {
     let connection = Connection::open_with_flags(
         path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-    ).map_err(|error| format!("Open Snapshot read-only {}: {error}", path.display()))?;
-    let payload: String = connection.query_row(
-        "SELECT payload FROM snapshot_manifest WHERE singleton=1", [], |row| row.get(0),
-    ).map_err(|error| format!("Read Snapshot Manifest: {error}"))?;
+    )
+    .map_err(|error| format!("Open Snapshot read-only {}: {error}", path.display()))?;
+    let payload: String = connection
+        .query_row(
+            "SELECT payload FROM snapshot_manifest WHERE singleton=1",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|error| format!("Read Snapshot Manifest: {error}"))?;
     serde_json::from_str(&payload).map_err(|error| format!("Decode Snapshot Manifest: {error}"))
 }
 
@@ -344,24 +395,35 @@ fn read_database(path: &Path) -> Result<(SnapshotManifest, Vec<SnapshotCheckpoin
     let connection = Connection::open_with_flags(
         path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-    ).map_err(|error| format!("Open Snapshot read-only {}: {error}", path.display()))?;
-    let payload: String = connection.query_row(
-        "SELECT payload FROM snapshot_manifest WHERE singleton=1", [], |row| row.get(0),
-    ).map_err(|error| format!("Read Snapshot Manifest: {error}"))?;
+    )
+    .map_err(|error| format!("Open Snapshot read-only {}: {error}", path.display()))?;
+    let payload: String = connection
+        .query_row(
+            "SELECT payload FROM snapshot_manifest WHERE singleton=1",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|error| format!("Read Snapshot Manifest: {error}"))?;
     let manifest: SnapshotManifest = serde_json::from_str(&payload)
         .map_err(|error| format!("Decode Snapshot Manifest: {error}"))?;
-    let mut statement = connection.prepare(
-        "SELECT checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics
+    let mut statement = connection
+        .prepare(
+            "SELECT checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics
          FROM snapshot_checkpoints ORDER BY checkpoint_index",
-    ).map_err(|error| format!("Prepare Snapshot checkpoint read: {error}"))?;
-    let rows = statement.query_map([], |row| Ok((
-        row.get::<_, i64>(0)?,
-        row.get::<_, String>(1)?,
-        row.get::<_, String>(2)?,
-        row.get::<_, String>(3)?,
-        row.get::<_, String>(4)?,
-        row.get::<_, String>(5)?,
-    ))).map_err(|error| format!("Query Snapshot checkpoints: {error}"))?;
+        )
+        .map_err(|error| format!("Prepare Snapshot checkpoint read: {error}"))?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(|error| format!("Query Snapshot checkpoints: {error}"))?;
 
     let mut checkpoints = Vec::new();
     for row in rows {
@@ -389,7 +451,10 @@ mod tests {
     fn temp_root() -> PathBuf {
         std::env::temp_dir().join(format!(
             "capitus-snapshot-store-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ))
     }
 
@@ -420,10 +485,12 @@ mod tests {
         connection.execute_batch(
             "CREATE TABLE snapshot_manifest(singleton INTEGER PRIMARY KEY, payload TEXT NOT NULL);",
         ).unwrap();
-        connection.execute(
-            "INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
-            [serde_json::to_string(&manifest(status)).unwrap()],
-        ).unwrap();
+        connection
+            .execute(
+                "INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
+                [serde_json::to_string(&manifest(status)).unwrap()],
+            )
+            .unwrap();
     }
 
     fn reference_fixture() -> (SnapshotManifest, Vec<SnapshotCheckpointRecord>) {
@@ -647,7 +714,10 @@ mod tests {
 
         let artifacts = discover_snapshot_artifacts(&root).unwrap();
         assert_eq!(artifacts.len(), 1);
-        assert_eq!(artifacts[0].kind, SnapshotArtifactKind::CompleteButUnpublished);
+        assert_eq!(
+            artifacts[0].kind,
+            SnapshotArtifactKind::CompleteButUnpublished
+        );
         assert_eq!(artifacts[0].snapshot_id.as_deref(), Some("snapshot-test"));
         assert!(!root.join("snapshot-test.snapshot.sqlite").exists());
 
@@ -663,7 +733,11 @@ mod tests {
 
         let artifacts = discover_snapshot_artifacts(&root).unwrap();
         assert_eq!(artifacts[0].kind, SnapshotArtifactKind::RecordingTemporary);
-        assert!(read_complete_snapshot(&path).unwrap_err().contains("Only published"));
+        assert!(
+            read_complete_snapshot(&path)
+                .unwrap_err()
+                .contains("Only published")
+        );
 
         let _ = fs::remove_dir_all(root);
     }
@@ -700,10 +774,7 @@ mod tests {
         let artifacts = discover_snapshot_artifacts(&root).unwrap();
 
         assert_eq!(artifacts.len(), 1);
-        assert_eq!(
-            artifacts[0].kind,
-            SnapshotArtifactKind::UnreadableTemporary
-        );
+        assert_eq!(artifacts[0].kind, SnapshotArtifactKind::UnreadableTemporary);
         assert!(artifacts[0].diagnostic.is_some());
         assert_eq!(
             fs::read(&path).unwrap(),
@@ -726,7 +797,10 @@ mod tests {
         let unrelated = [
             ("ordinary.tmp", b"temporary".as_slice()),
             ("ordinary.sqlite", b"sqlite".as_slice()),
-            ("visible.snapshot.tmp", b"not a hidden temporary artifact".as_slice()),
+            (
+                "visible.snapshot.tmp",
+                b"not a hidden temporary artifact".as_slice(),
+            ),
             ("notes.txt", b"notes".as_slice()),
         ];
         for (name, bytes) in unrelated {
@@ -754,7 +828,9 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
         let path = root.join("bad.snapshot.sqlite");
         let connection = Connection::open(&path).unwrap();
-        connection.execute_batch("CREATE TABLE unrelated(value TEXT);").unwrap();
+        connection
+            .execute_batch("CREATE TABLE unrelated(value TEXT);")
+            .unwrap();
         drop(connection);
 
         let artifacts = discover_snapshot_artifacts(&root).unwrap();

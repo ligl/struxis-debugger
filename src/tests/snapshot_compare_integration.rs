@@ -7,9 +7,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use capitus_struxis::{StruxisConfig, StruxisStateKey};
 use crate::{
-    checkpoint::{CBarCheckpoint, ReplayCheckpointProjection, StructureCheckpoint, TrendCheckpoint},
+    checkpoint::{
+        CBarCheckpoint, ReplayCheckpointProjection, StructureCheckpoint, TrendCheckpoint,
+    },
     compare::{CompareRejectCategory, compare_snapshot_paths},
     dataset::sequence_fingerprint,
     effective_config::EffectiveStruxisConfig,
@@ -19,6 +20,7 @@ use crate::{
     snapshot_writer::SnapshotWriter,
     worker::CheckpointSink,
 };
+use capitus_struxis::{StruxisConfig, StruxisStateKey};
 use nautilus_model::{
     data::{Bar, BarType},
     identifiers::InstrumentId,
@@ -33,19 +35,21 @@ fn test_state_key() -> StruxisStateKey {
 fn test_bars() -> Vec<Bar> {
     let bar_type = BarType::from_str("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL").unwrap();
     let base_ts = 1_700_000_000_000_000_000_u64;
-    (0..2).map(|i| {
-        let ts = base_ts + i as u64 * 300_000_000_000;
-        Bar::new(
-            bar_type,
-            Price::from(format!("{:.1}", 100.0 + i as f64 * 0.1)),
-            Price::from(format!("{:.1}", 101.0 + i as f64 * 0.1)),
-            Price::from(format!("{:.1}", 99.0 + i as f64 * 0.1)),
-            Price::from(format!("{:.1}", 100.5 + i as f64 * 0.1)),
-            Quantity::from((10 + i).to_string()),
-            ts.into(),
-            ts.into(),
-        )
-    }).collect()
+    (0..2)
+        .map(|i| {
+            let ts = base_ts + i as u64 * 300_000_000_000;
+            Bar::new(
+                bar_type,
+                Price::from(format!("{:.1}", 100.0 + i as f64 * 0.1)),
+                Price::from(format!("{:.1}", 101.0 + i as f64 * 0.1)),
+                Price::from(format!("{:.1}", 99.0 + i as f64 * 0.1)),
+                Price::from(format!("{:.1}", 100.5 + i as f64 * 0.1)),
+                Quantity::from((10 + i).to_string()),
+                ts.into(),
+                ts.into(),
+            )
+        })
+        .collect()
 }
 
 fn test_input() -> LoadedInput {
@@ -108,7 +112,6 @@ fn checkpoint(
                 updated_at: "2".into(),
             }],
             feature_sequence: None,
-
         }),
         diagnostics: if include_diagnostic {
             vec![crate::diagnostics::Diagnostic {
@@ -137,18 +140,31 @@ fn publish_snapshot(
         root,
         input,
         &InstrumentId::from("BTCUSDT-PERP.BINANCE").to_string(),
-    ).unwrap();
+    )
+    .unwrap();
     let initial = RunState::ready(
-        format!("run-{}", if changed_final_high { "candidate" } else { "baseline" }),
+        format!(
+            "run-{}",
+            if changed_final_high {
+                "candidate"
+            } else {
+                "baseline"
+            }
+        ),
         input.test_dataset_id.clone(),
         input.sbar_sequence_fingerprint.clone(),
         input.bars.len(),
-    ).unwrap();
+    )
+    .unwrap();
     let config = EffectiveStruxisConfig::from_struxis_config(&StruxisConfig::builder().build());
     writer.initialize(&initial, &config).unwrap();
 
     for index in 0..input.bars.len() {
-        let high = if changed_final_high && index == 1 { "102.0" } else { "101.0" };
+        let high = if changed_final_high && index == 1 {
+            "102.0"
+        } else {
+            "101.0"
+        };
         let sbar_id = input.bars[index].ts_event.to_string();
         writer
             .commit_checkpoint(
@@ -171,7 +187,10 @@ fn publish_snapshot(
 }
 
 fn temp_root() -> PathBuf {
-    let suffix = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
     std::env::temp_dir().join(format!("capitus-snapshot-compare-{suffix}"))
 }
 
@@ -194,7 +213,10 @@ fn compares_two_verified_sqlite_snapshots_by_domain_identity() {
     assert_eq!(result.differences[0].checkpoint_index, 1);
     assert_eq!(result.differences[0].object_type, "CBar");
     assert_eq!(result.differences[0].object_id, "1700000000000000000");
-    assert_eq!(result.differences[0].kind, crate::compare::DifferenceKind::Modified);
+    assert_eq!(
+        result.differences[0].kind,
+        crate::compare::DifferenceKind::Modified
+    );
     assert_eq!(result.differences[0].properties.len(), 1);
     assert_eq!(result.differences[0].properties[0].field, "high");
     assert_eq!(result.differences[1].checkpoint_index, 1);
@@ -202,13 +224,19 @@ fn compares_two_verified_sqlite_snapshots_by_domain_identity() {
     assert_eq!(result.differences[1].object_id, "30");
     assert_eq!(result.differences[1].properties[0].field, "high");
     assert_eq!(
-        result.first_structural_divergence.as_ref().map(|value| value.checkpoint_index),
+        result
+            .first_structural_divergence
+            .as_ref()
+            .map(|value| value.checkpoint_index),
         Some(1),
     );
 
     let artifacts = discover_snapshot_artifacts(&baseline_root).unwrap();
     assert_eq!(artifacts.len(), 1);
-    assert_eq!(artifacts[0].kind, crate::snapshot_store::SnapshotArtifactKind::Complete);
+    assert_eq!(
+        artifacts[0].kind,
+        crate::snapshot_store::SnapshotArtifactKind::Complete
+    );
 
     fs::remove_dir_all(root).unwrap();
 }
@@ -243,23 +271,36 @@ fn compare_preserves_unreadable_category_for_published_snapshot_with_missing_man
     let input = test_input();
     let baseline_path = publish_snapshot(&root, &input, false, false);
     let candidate_path = publish_snapshot(&root, &input, false, false);
-    let candidate_id = candidate_path.file_name().unwrap().to_str().unwrap()
-        .strip_suffix(".snapshot.sqlite").unwrap().to_owned();
+    let candidate_id = candidate_path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .strip_suffix(".snapshot.sqlite")
+        .unwrap()
+        .to_owned();
 
     // Simulate a published artifact whose SQLite/Manifest can no longer be read.
     fs::write(&candidate_path, b"not a SQLite database").unwrap();
 
-    let app = crate::app::AppState::with_snapshot_root(
-        root.join("unused-catalog"),
-        root.clone(),
-    );
-    let rejection = app.compare_snapshots(
-        baseline_path.file_name().unwrap().to_str().unwrap()
-            .strip_suffix(".snapshot.sqlite").unwrap(),
-        &candidate_id,
-    ).expect_err("unreadable published Snapshot must be rejected");
+    let app = crate::app::AppState::with_snapshot_root(root.join("unused-catalog"), root.clone());
+    let rejection = app
+        .compare_snapshots(
+            baseline_path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .strip_suffix(".snapshot.sqlite")
+                .unwrap(),
+            &candidate_id,
+        )
+        .expect_err("unreadable published Snapshot must be rejected");
 
-    assert_eq!(rejection.category, CompareRejectCategory::SnapshotUnreadable);
+    assert_eq!(
+        rejection.category,
+        CompareRejectCategory::SnapshotUnreadable
+    );
     fs::remove_dir_all(root).unwrap();
 }
 

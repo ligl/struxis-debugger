@@ -7,7 +7,7 @@
 use std::str::FromStr;
 
 use capitus_strategy::StruxisDemo;
-use capitus_struxis::{sbar::SBar, NautilusRuntime, Struxis, StruxisConfig, StruxisStateKey};
+use capitus_struxis::{NautilusRuntime, Struxis, StruxisConfig, StruxisStateKey, sbar::SBar};
 use nautilus_backtest::{
     config::{BacktestEngineConfig, SimulatedVenueConfig},
     engine::BacktestEngine,
@@ -106,65 +106,89 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
                 "Step {processed_count}, bar {bar_index}: SBarId"
             );
             assert_eq!(
-                actual.bar_type,
-                expected.bar_type,
+                actual.bar_type, expected.bar_type,
                 "Step {processed_count}, bar {bar_index}: BarType"
             );
             assert_eq!(
-                actual.ts_event,
-                expected.ts_event,
+                actual.ts_event, expected.ts_event,
                 "Step {processed_count}, bar {bar_index}: ts_event"
             );
             assert_eq!(
-                actual.ts_init,
-                expected.ts_init,
+                actual.ts_init, expected.ts_init,
                 "Step {processed_count}, bar {bar_index}: ts_init"
             );
             assert_eq!(
-                actual.open,
-                expected.open,
+                actual.open, expected.open,
                 "Step {processed_count}, bar {bar_index}: open"
             );
             assert_eq!(
-                actual.high,
-                expected.high,
+                actual.high, expected.high,
                 "Step {processed_count}, bar {bar_index}: high"
             );
             assert_eq!(
-                actual.low,
-                expected.low,
+                actual.low, expected.low,
                 "Step {processed_count}, bar {bar_index}: low"
             );
             assert_eq!(
-                actual.close,
-                expected.close,
+                actual.close, expected.close,
                 "Step {processed_count}, bar {bar_index}: close"
             );
             assert_eq!(
-                actual.volume,
-                expected.volume,
+                actual.volume, expected.volume,
                 "Step {processed_count}, bar {bar_index}: volume"
             );
         }
 
         let checkpoint = crate::checkpoint::ReplayCheckpointProjection::from_state_view(&state);
-        assert_eq!(checkpoint.last_ts_event.as_deref(), Some(expected_timestamps[index].to_string().as_str()));
+        assert_eq!(
+            checkpoint.last_ts_event.as_deref(),
+            Some(expected_timestamps[index].to_string().as_str())
+        );
         assert_eq!(checkpoint.sbar_count, processed_count);
         assert_eq!(checkpoint.sbars.len(), processed_count);
-        assert_eq!(checkpoint.sbars.first().map(|bar| bar.sbar_id.as_str()), Some(expected_bars[0].ts_event.to_string().as_str()));
-        assert_eq!(checkpoint.sbars.last().map(|bar| bar.sbar_id.as_str()), Some(expected_bars[index].ts_event.to_string().as_str()));
         assert_eq!(
-            checkpoint.structure.as_ref().map(|structure| structure.cbar_count),
+            checkpoint.sbars.first().map(|bar| bar.sbar_id.as_str()),
+            Some(expected_bars[0].ts_event.to_string().as_str())
+        );
+        assert_eq!(
+            checkpoint.sbars.last().map(|bar| bar.sbar_id.as_str()),
+            Some(expected_bars[index].ts_event.to_string().as_str())
+        );
+        assert_eq!(
+            checkpoint
+                .structure
+                .as_ref()
+                .map(|structure| structure.cbar_count),
             Some(state.structure().expect("structure enabled").cbars().len())
         );
         assert_eq!(
-            checkpoint.structure.as_ref().map(|structure| structure.swing_count),
-            Some(state.structure().expect("structure enabled").swings().iter().count())
+            checkpoint
+                .structure
+                .as_ref()
+                .map(|structure| structure.swing_count),
+            Some(
+                state
+                    .structure()
+                    .expect("structure enabled")
+                    .swings()
+                    .iter()
+                    .count()
+            )
         );
 
         assert_eq!(
-            checkpoint.structure.as_ref().map(|structure| structure.trend_count),
-            Some(state.structure().expect("structure enabled").trends().iter().count())
+            checkpoint
+                .structure
+                .as_ref()
+                .map(|structure| structure.trend_count),
+            Some(
+                state
+                    .structure()
+                    .expect("structure enabled")
+                    .trends()
+                    .iter()
+                    .count()
+            )
         );
 
         assert!(

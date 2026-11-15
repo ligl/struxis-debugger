@@ -9,7 +9,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use rusqlite::{Connection, OpenFlags, params};
 use crate::{
     checkpoint::{OwnedCheckpoint, ReplayCheckpointProjection},
     diagnostics::canonical_diagnostics_json,
@@ -17,11 +16,12 @@ use crate::{
     replay::LoadedInput,
     run::{RunState, RunStatus},
     snapshot::{
-        canonical_checkpoint_state, verify_complete_snapshot, SnapshotCheckpointRecord,
-        SnapshotManifest, STATUS_COMPLETE, STATUS_FAILED, STATUS_RECORDING,
+        STATUS_COMPLETE, STATUS_FAILED, STATUS_RECORDING, SnapshotCheckpointRecord,
+        SnapshotManifest, canonical_checkpoint_state, verify_complete_snapshot,
     },
     worker::CheckpointSink,
 };
+use rusqlite::{Connection, OpenFlags, params};
 
 pub(crate) struct SnapshotWriter {
     root: PathBuf,
@@ -55,8 +55,15 @@ struct InputMetadata {
 }
 
 impl SnapshotWriter {
-    pub(crate) fn new(root: impl AsRef<Path>, input: &LoadedInput, instrument_id: &str) -> Result<Self, String> {
-        let first = input.bars.first().ok_or_else(|| "Snapshot input is empty".to_owned())?;
+    pub(crate) fn new(
+        root: impl AsRef<Path>,
+        input: &LoadedInput,
+        instrument_id: &str,
+    ) -> Result<Self, String> {
+        let first = input
+            .bars
+            .first()
+            .ok_or_else(|| "Snapshot input is empty".to_owned())?;
         let last = input.bars.last().expect("nonempty input checked above");
         let id = uuid::Uuid::new_v4().to_string();
         let root = root.as_ref().to_path_buf();
@@ -74,7 +81,11 @@ impl SnapshotWriter {
                 end_ts: last.ts_event.to_string(),
                 count: input.bars.len(),
                 fingerprint: input.sbar_sequence_fingerprint.clone(),
-                bar_ids: input.bars.iter().map(|bar| bar.ts_event.to_string()).collect(),
+                bar_ids: input
+                    .bars
+                    .iter()
+                    .map(|bar| bar.ts_event.to_string())
+                    .collect(),
             },
             manifest: None,
             checkpoints: Vec::new(),
@@ -114,7 +125,9 @@ impl SnapshotWriter {
         {
             return Err(format!(
                 "Completed Run trajectory does not match fixed input: input={}, processed={}, checkpoints={}",
-                input.bars.len(), completed_state.processed_count, checkpoints.len()
+                input.bars.len(),
+                completed_state.processed_count,
+                checkpoints.len()
             ));
         }
 
@@ -129,7 +142,9 @@ impl SnapshotWriter {
             writer.initialize(&initial_state, effective_config)?;
             writer.commit_owned_checkpoints(checkpoints)?;
             writer.finalize_snapshot(completed_state)?;
-            writer.manifest.as_ref()
+            writer
+                .manifest
+                .as_ref()
                 .map(|manifest| manifest.snapshot_id.clone())
                 .ok_or_else(|| "Snapshot finalization did not produce a Manifest".to_owned())
         })();
@@ -142,13 +157,13 @@ impl SnapshotWriter {
 
     /// Persists an explicit completed trajectory atomically. The Recording
     /// Manifest is advanced once, after every row has been inserted successfully.
-    fn commit_owned_checkpoints(
-        &mut self,
-        checkpoints: &[OwnedCheckpoint],
-    ) -> Result<(), String> {
+    fn commit_owned_checkpoints(&mut self, checkpoints: &[OwnedCheckpoint]) -> Result<(), String> {
         let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
         if manifest.status != STATUS_RECORDING {
-            return Err(format!("Cannot append checkpoints to Snapshot in {}", manifest.status));
+            return Err(format!(
+                "Cannot append checkpoints to Snapshot in {}",
+                manifest.status
+            ));
         }
         if !self.checkpoints.is_empty() {
             return Err("Completed trajectory batch requires an empty Snapshot writer".into());
@@ -156,7 +171,8 @@ impl SnapshotWriter {
         if checkpoints.len() != self.input.count {
             return Err(format!(
                 "Completed trajectory batch count mismatch: expected {}, got {}",
-                self.input.count, checkpoints.len()
+                self.input.count,
+                checkpoints.len()
             ));
         }
 
@@ -168,11 +184,10 @@ impl SnapshotWriter {
                     checkpoint.checkpoint_index
                 ));
             }
-            let expected_sbar_id = self.input.bar_ids.get(expected_index)
-                .ok_or_else(|| format!("Checkpoint index {expected_index} exceeds the fixed input sequence"))?;
-            if checkpoint.sbar_id != *expected_sbar_id
-                || checkpoint.ts_event != *expected_sbar_id
-            {
+            let expected_sbar_id = self.input.bar_ids.get(expected_index).ok_or_else(|| {
+                format!("Checkpoint index {expected_index} exceeds the fixed input sequence")
+            })?;
+            if checkpoint.sbar_id != *expected_sbar_id || checkpoint.ts_event != *expected_sbar_id {
                 return Err(format!(
                     "Owned Checkpoint SBar mismatch at index {expected_index}: expected {expected_sbar_id}, got {} / {}",
                     checkpoint.sbar_id, checkpoint.ts_event
@@ -192,7 +207,10 @@ impl SnapshotWriter {
                     ));
                 }
             }
-            let state_data = canonical_checkpoint_state(checkpoint.structure.as_ref(), checkpoint.keyzones.as_ref())?;
+            let state_data = canonical_checkpoint_state(
+                checkpoint.structure.as_ref(),
+                checkpoint.keyzones.as_ref(),
+            )?;
             let diagnostics = canonical_diagnostics_json(&checkpoint.diagnostics)?;
             records.push(SnapshotCheckpointRecord {
                 checkpoint_index: expected_index,
@@ -204,32 +222,36 @@ impl SnapshotWriter {
             });
         }
         let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
-        let tx = connection.transaction().map_err(|e| format!("Begin checkpoint batch transaction: {e}"))?;
+        let tx = connection
+            .transaction()
+            .map_err(|e| format!("Begin checkpoint batch transaction: {e}"))?;
         {
             let mut insert = tx.prepare(
                 "INSERT INTO snapshot_checkpoints(checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics)
                  VALUES(?1,?2,?3,?4,?5,?6)"
             ).map_err(|e| format!("Prepare checkpoint batch insert: {e}"))?;
             for record in &records {
-                insert.execute(params![
-                    i64::try_from(record.checkpoint_index)
-                        .map_err(|_| "Checkpoint index exceeds SQLite INTEGER range")?,
-                    record.sbar_id,
-                    record.ts_event,
-                    record.record_kind,
-                    record.state_data,
-                    record.diagnostics
-                ]).map_err(|e| format!(
-                    "Insert checkpoint {}: {e}", record.checkpoint_index
-                ))?;
+                insert
+                    .execute(params![
+                        i64::try_from(record.checkpoint_index)
+                            .map_err(|_| "Checkpoint index exceeds SQLite INTEGER range")?,
+                        record.sbar_id,
+                        record.ts_event,
+                        record.record_kind,
+                        record.state_data,
+                        record.diagnostics
+                    ])
+                    .map_err(|e| format!("Insert checkpoint {}: {e}", record.checkpoint_index))?;
             }
         }
         manifest.checkpoint_count = records.len();
         tx.execute(
             "UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
-            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?]
-        ).map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
-        tx.commit().map_err(|e| format!("Commit checkpoint batch transaction: {e}"))?;
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?],
+        )
+        .map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
+        tx.commit()
+            .map_err(|e| format!("Commit checkpoint batch transaction: {e}"))?;
         self.checkpoints = records;
         self.manifest = Some(manifest);
         Ok(())
@@ -247,13 +269,21 @@ impl SnapshotWriter {
     ) -> Result<(), String> {
         let mut manifest = self.manifest.clone().ok_or("Snapshot not initialized")?;
         if manifest.status != STATUS_RECORDING {
-            return Err(format!("Cannot append checkpoint to Snapshot in {}", manifest.status));
+            return Err(format!(
+                "Cannot append checkpoint to Snapshot in {}",
+                manifest.status
+            ));
         }
         if index != self.checkpoints.len() {
-            return Err(format!("Expected checkpoint index {}, got {index}", self.checkpoints.len()));
+            return Err(format!(
+                "Expected checkpoint index {}, got {index}",
+                self.checkpoints.len()
+            ));
         }
-        let expected_sbar_id = self.input.bar_ids.get(index)
-            .ok_or_else(|| format!("Checkpoint index {index} exceeds the fixed input sequence"))?;
+        let expected_sbar_id =
+            self.input.bar_ids.get(index).ok_or_else(|| {
+                format!("Checkpoint index {index} exceeds the fixed input sequence")
+            })?;
         if sbar_id != expected_sbar_id {
             return Err(format!(
                 "Checkpoint SBar ID does not match fixed input at index {index}: expected={expected_sbar_id}, actual={sbar_id}"
@@ -285,7 +315,9 @@ impl SnapshotWriter {
             diagnostics: canonical_diagnostics_json(diagnostics)?,
         };
         let connection = self.connection.as_mut().ok_or("Snapshot DB is closed")?;
-        let tx = connection.transaction().map_err(|e| format!("Begin checkpoint transaction: {e}"))?;
+        let tx = connection
+            .transaction()
+            .map_err(|e| format!("Begin checkpoint transaction: {e}"))?;
         tx.execute("INSERT INTO snapshot_checkpoints(checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics)
                     VALUES(?1,?2,?3,?4,?5,?6)",
             params![
@@ -293,10 +325,13 @@ impl SnapshotWriter {
                 record.sbar_id, record.ts_event, record.record_kind, record.state_data, record.diagnostics
             ]).map_err(|e| format!("Insert checkpoint: {e}"))?;
         manifest.checkpoint_count = index + 1;
-        tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
-            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
-            .map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
-        tx.commit().map_err(|e| format!("Commit checkpoint transaction: {e}"))?;
+        tx.execute(
+            "UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?],
+        )
+        .map_err(|e| format!("Update Manifest checkpoint count: {e}"))?;
+        tx.commit()
+            .map_err(|e| format!("Commit checkpoint transaction: {e}"))?;
         self.checkpoints.push(record);
         self.manifest = Some(manifest);
         Ok(())
@@ -308,20 +343,26 @@ impl SnapshotWriter {
         &self.published_path
     }
 
-    fn finalize_snapshot(
-        &mut self,
-        state: &RunState,
-    ) -> Result<(), String> {
+    fn finalize_snapshot(&mut self, state: &RunState) -> Result<(), String> {
         if state.status != RunStatus::Completed {
-            return Err(format!("Snapshot finalization requires Completed Run, got {:?}", state.status));
+            return Err(format!(
+                "Snapshot finalization requires Completed Run, got {:?}",
+                state.status
+            ));
         }
-        let mut manifest = self.manifest.clone()
+        let mut manifest = self
+            .manifest
+            .clone()
             .ok_or_else(|| "Snapshot finalization requested before initialization".to_owned())?;
         if self.checkpoints.len() != manifest.input_bar_count
             || state.processed_count != manifest.input_bar_count
         {
-            return Err(format!("Snapshot finalization count mismatch: input={}, checkpoints={}, processed={}",
-                manifest.input_bar_count, self.checkpoints.len(), state.processed_count));
+            return Err(format!(
+                "Snapshot finalization count mismatch: input={}, checkpoints={}, processed={}",
+                manifest.input_bar_count,
+                self.checkpoints.len(),
+                state.processed_count
+            ));
         }
         manifest.status = STATUS_COMPLETE.to_owned();
         manifest.checkpoint_count = self.checkpoints.len();
@@ -331,16 +372,23 @@ impl SnapshotWriter {
         manifest.content_checksum =
             manifest.calculate_content_checksum_from_canonical_records(&self.checkpoints)?;
 
-        let connection = self.connection.as_mut()
+        let connection = self
+            .connection
+            .as_mut()
             .ok_or_else(|| "Snapshot database connection is not open".to_owned())?;
-        let tx = connection.transaction().map_err(|e| format!("Begin finalization transaction: {e}"))?;
+        let tx = connection
+            .transaction()
+            .map_err(|e| format!("Begin finalization transaction: {e}"))?;
         tx.execute_batch(
             "CREATE INDEX IF NOT EXISTS snapshot_checkpoints_sbar_id ON snapshot_checkpoints(sbar_id);"
         ).map_err(|e| format!("Create Snapshot SBar index: {e}"))?;
-        tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
-            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
-            .map_err(|e| format!("Persist final Manifest: {e}"))?;
-        tx.commit().map_err(|e| format!("Commit final Manifest: {e}"))?;
+        tx.execute(
+            "UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?],
+        )
+        .map_err(|e| format!("Persist final Manifest: {e}"))?;
+        tx.commit()
+            .map_err(|e| format!("Commit final Manifest: {e}"))?;
         self.manifest = Some(manifest);
         self.connection.take();
 
@@ -350,14 +398,13 @@ impl SnapshotWriter {
         // destination already exists; unlike rename on Unix, it cannot replace
         // a Snapshot created concurrently after an earlier existence check.
         // Both paths are in the same directory, so they are on the same filesystem.
-        fs::hard_link(&self.temporary_path, &self.published_path)
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::AlreadyExists {
-                    "Snapshot publish destination already exists".to_owned()
-                } else {
-                    format!("Atomically publish Snapshot without replacement: {e}")
-                }
-            })?;
+        fs::hard_link(&self.temporary_path, &self.published_path).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                "Snapshot publish destination already exists".to_owned()
+            } else {
+                format!("Atomically publish Snapshot without replacement: {e}")
+            }
+        })?;
         self.published_by_this_writer = true;
 
         // The published file is already valid at this point. If unlinking the
@@ -392,18 +439,25 @@ impl SnapshotWriter {
             return Err("Flush Snapshot directory: simulated directory sync failure".to_owned());
         }
 
-        File::open(&self.root).and_then(|directory| directory.sync_all())
+        File::open(&self.root)
+            .and_then(|directory| directory.sync_all())
             .map_err(|e| format!("Flush Snapshot directory: {e}"))
     }
 }
 
 impl CheckpointSink for SnapshotWriter {
-    fn initialize(&mut self, state: &RunState, config: &EffectiveStruxisConfig) -> Result<(), String> {
+    fn initialize(
+        &mut self,
+        state: &RunState,
+        config: &EffectiveStruxisConfig,
+    ) -> Result<(), String> {
         if self.connection.is_some() || self.manifest.is_some() {
             return Err("SnapshotWriter cannot be initialized twice".into());
         }
-        if state.status != RunStatus::Ready || state.processed_count != 0
-            || state.input_count != self.input.count || state.input_fingerprint != self.input.fingerprint
+        if state.status != RunStatus::Ready
+            || state.processed_count != 0
+            || state.input_count != self.input.count
+            || state.input_fingerprint != self.input.fingerprint
         {
             return Err("Snapshot input metadata does not match initial RunState".into());
         }
@@ -411,11 +465,19 @@ impl CheckpointSink for SnapshotWriter {
         if self.temporary_path.exists() || self.published_path.exists() {
             return Err("Snapshot output path already exists".into());
         }
-        let generated_at = SystemTime::now().duration_since(UNIX_EPOCH)
-            .map_err(|e| format!("System clock error: {e}"))?.as_nanos().to_string();
+        let generated_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| format!("System clock error: {e}"))?
+            .as_nanos()
+            .to_string();
         let manifest = SnapshotManifest {
-            snapshot_id: self.published_path.file_stem().and_then(|s| s.to_str())
-                .and_then(|s| s.strip_suffix(".snapshot")).ok_or("Invalid Snapshot filename")?.to_owned(),
+            snapshot_id: self
+                .published_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .and_then(|s| s.strip_suffix(".snapshot"))
+                .ok_or("Invalid Snapshot filename")?
+                .to_owned(),
             run_id: state.run_id.clone(),
             state_key: self.input.state_key.clone(),
             instrument_id: self.input.instrument_id.clone(),
@@ -435,15 +497,18 @@ impl CheckpointSink for SnapshotWriter {
         };
         let mut connection = Connection::open(&self.temporary_path)
             .map_err(|e| format!("Create temporary SQLite database: {e}"))?;
-        connection.execute_batch(
-            "PRAGMA journal_mode=DELETE;
+        connection
+            .execute_batch(
+                "PRAGMA journal_mode=DELETE;
              PRAGMA synchronous=FULL;
-             PRAGMA foreign_keys=ON;"
-        ).map_err(|e| format!("Configure Snapshot database: {e}"))?;
+             PRAGMA foreign_keys=ON;",
+            )
+            .map_err(|e| format!("Configure Snapshot database: {e}"))?;
         // Schema and the initial Recording Manifest are one atomic initialization
         // transaction. A failed initialization must not leave a valid-looking
         // half-created Snapshot database.
-        let tx = connection.transaction()
+        let tx = connection
+            .transaction()
             .map_err(|e| format!("Begin Snapshot initialization transaction: {e}"))?;
         tx.execute_batch(
             "CREATE TABLE snapshot_manifest(singleton INTEGER PRIMARY KEY CHECK(singleton=1), payload TEXT NOT NULL);
@@ -452,10 +517,13 @@ impl CheckpointSink for SnapshotWriter {
                sbar_id TEXT NOT NULL, ts_event TEXT NOT NULL, record_kind TEXT NOT NULL,
                state_data TEXT NOT NULL, diagnostics TEXT NOT NULL);"
         ).map_err(|e| format!("Create Snapshot schema: {e}"))?;
-        tx.execute("INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
-            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?])
-            .map_err(|e| format!("Persist initial Manifest: {e}"))?;
-        tx.commit().map_err(|e| format!("Commit Snapshot initialization transaction: {e}"))?;
+        tx.execute(
+            "INSERT INTO snapshot_manifest(singleton,payload) VALUES(1,?1)",
+            params![serde_json::to_string(&manifest).map_err(|e| e.to_string())?],
+        )
+        .map_err(|e| format!("Persist initial Manifest: {e}"))?;
+        tx.commit()
+            .map_err(|e| format!("Commit Snapshot initialization transaction: {e}"))?;
         self.manifest = Some(manifest);
         self.connection = Some(connection);
         Ok(())
@@ -514,11 +582,16 @@ impl CheckpointSink for SnapshotWriter {
             .map_err(|e| format!("Encode failed Snapshot Manifest: {e}"))?;
 
         if let Some(connection) = self.connection.as_mut() {
-            let tx = connection.transaction()
+            let tx = connection
+                .transaction()
                 .map_err(|e| format!("Begin failed Snapshot status transaction: {e}"))?;
-            tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1", params![payload])
-                .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
-            tx.commit().map_err(|e| format!("Commit failed Snapshot status: {e}"))?;
+            tx.execute(
+                "UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+                params![payload],
+            )
+            .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
+            tx.commit()
+                .map_err(|e| format!("Commit failed Snapshot status: {e}"))?;
         } else {
             // Finalization closes the writer connection before read-only
             // verification and publication. If either later step fails, reopen
@@ -533,11 +606,16 @@ impl CheckpointSink for SnapshotWriter {
             };
             let mut connection = Connection::open(target)
                 .map_err(|e| format!("Reopen failed Snapshot for status update: {e}"))?;
-            let tx = connection.transaction()
+            let tx = connection
+                .transaction()
                 .map_err(|e| format!("Begin failed Snapshot status transaction: {e}"))?;
-            tx.execute("UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1", params![payload])
-                .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
-            tx.commit().map_err(|e| format!("Commit failed Snapshot status: {e}"))?;
+            tx.execute(
+                "UPDATE snapshot_manifest SET payload=?1 WHERE singleton=1",
+                params![payload],
+            )
+            .map_err(|e| format!("Persist failed Snapshot status: {e}"))?;
+            tx.commit()
+                .map_err(|e| format!("Commit failed Snapshot status: {e}"))?;
         }
         self.manifest = Some(manifest);
         Ok(())
@@ -545,26 +623,49 @@ impl CheckpointSink for SnapshotWriter {
 }
 
 fn read_database(path: &Path) -> Result<(SnapshotManifest, Vec<SnapshotCheckpointRecord>), String> {
-    let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)
-        .map_err(|e| format!("Read-only reopen Snapshot: {e}"))?;
-    let payload: String = connection.query_row(
-        "SELECT payload FROM snapshot_manifest WHERE singleton=1", [], |row| row.get(0))
+    let connection = Connection::open_with_flags(
+        path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|e| format!("Read-only reopen Snapshot: {e}"))?;
+    let payload: String = connection
+        .query_row(
+            "SELECT payload FROM snapshot_manifest WHERE singleton=1",
+            [],
+            |row| row.get(0),
+        )
         .map_err(|e| format!("Read Snapshot Manifest: {e}"))?;
-    let manifest = serde_json::from_str(&payload).map_err(|e| format!("Decode Snapshot Manifest: {e}"))?;
-    let mut stmt = connection.prepare("SELECT checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics
-                                       FROM snapshot_checkpoints ORDER BY checkpoint_index")
+    let manifest =
+        serde_json::from_str(&payload).map_err(|e| format!("Decode Snapshot Manifest: {e}"))?;
+    let mut stmt = connection
+        .prepare(
+            "SELECT checkpoint_index,sbar_id,ts_event,record_kind,state_data,diagnostics
+                                       FROM snapshot_checkpoints ORDER BY checkpoint_index",
+        )
         .map_err(|e| format!("Prepare checkpoint read: {e}"))?;
-    let rows = stmt.query_map([], |row| Ok((
-        row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?,
-        row.get::<_, String>(3)?, row.get::<_, String>(4)?, row.get::<_, String>(5)?,
-    ))).map_err(|e| format!("Query checkpoints: {e}"))?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(|e| format!("Query checkpoints: {e}"))?;
     let mut records = Vec::new();
     for row in rows {
         let (index, sbar_id, ts_event, record_kind, state_data, diagnostics) =
             row.map_err(|e| format!("Read checkpoint: {e}"))?;
         records.push(SnapshotCheckpointRecord {
             checkpoint_index: usize::try_from(index).map_err(|_| "Negative checkpoint index")?,
-            sbar_id, ts_event, record_kind, state_data, diagnostics,
+            sbar_id,
+            ts_event,
+            record_kind,
+            state_data,
+            diagnostics,
         });
     }
     Ok((manifest, records))
@@ -575,7 +676,7 @@ mod tests {
     use super::*;
     use crate::{
         catalog::OriginLoad,
-        dataset::{sequence_fingerprint, TestDataset},
+        dataset::{TestDataset, sequence_fingerprint},
         diagnostics::Diagnostic,
     };
     use capitus_struxis::StruxisStateKey;
@@ -583,17 +684,34 @@ mod tests {
         data::{Bar, BarType},
         types::{Price, Quantity},
     };
-    use std::{str::FromStr, time::{SystemTime, UNIX_EPOCH}};
+    use std::{
+        str::FromStr,
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     fn input() -> LoadedInput {
         let bar_type = BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").unwrap();
         let bars = vec![
-            Bar::new(bar_type, Price::from("10.00"), Price::from("12.00"),
-                Price::from("9.00"), Price::from("11.00"), Quantity::from("100"),
-                100_u64.into(), 100_u64.into()),
-            Bar::new(bar_type, Price::from("11.00"), Price::from("13.00"),
-                Price::from("10.00"), Price::from("12.00"), Quantity::from("100"),
-                200_u64.into(), 200_u64.into()),
+            Bar::new(
+                bar_type,
+                Price::from("10.00"),
+                Price::from("12.00"),
+                Price::from("9.00"),
+                Price::from("11.00"),
+                Quantity::from("100"),
+                100_u64.into(),
+                100_u64.into(),
+            ),
+            Bar::new(
+                bar_type,
+                Price::from("11.00"),
+                Price::from("13.00"),
+                Price::from("10.00"),
+                Price::from("12.00"),
+                Quantity::from("100"),
+                200_u64.into(),
+                200_u64.into(),
+            ),
         ];
         let state_key = StruxisStateKey::from_bar_type(&bar_type);
         let fingerprint = sequence_fingerprint(state_key, &bars).unwrap();
@@ -622,12 +740,20 @@ mod tests {
     fn commits_checkpoints_and_publishes_only_a_verified_complete_snapshot() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-writer-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let input = input();
         let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
-        let mut state = RunState::ready("writer-test".into(), input.test_dataset_id.clone(),
-            input.sbar_sequence_fingerprint.clone(), input.bars.len()).unwrap();
+        let mut state = RunState::ready(
+            "writer-test".into(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            input.bars.len(),
+        )
+        .unwrap();
         writer.initialize(&state, &config()).unwrap();
 
         for (index, sbar_id) in ["100", "200"].iter().enumerate() {
@@ -653,14 +779,19 @@ mod tests {
                     Vec::new()
                 },
             };
-            writer.commit_checkpoint(index, sbar_id, &projection).unwrap();
+            writer
+                .commit_checkpoint(index, sbar_id, &projection)
+                .unwrap();
             state.confirm_checkpoint((*sbar_id).into()).unwrap();
         }
         assert_eq!(state.status, RunStatus::Completed);
         writer.finalize(&state).unwrap();
 
         assert!(writer.published_path().is_file());
-        assert!(!writer.temporary_path.exists(), "successful publication removes the temporary link");
+        assert!(
+            !writer.temporary_path.exists(),
+            "successful publication removes the temporary link"
+        );
         let (manifest, records) = read_database(writer.published_path()).unwrap();
         crate::snapshot::verify_complete_snapshot(&manifest, &records).unwrap();
         assert_eq!(manifest.status, STATUS_COMPLETE);
@@ -678,7 +809,10 @@ mod tests {
     fn directory_sync_failure_preserves_the_verified_checksum_and_status() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-directory-sync-failure-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let input = input();
         let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
@@ -687,7 +821,8 @@ mod tests {
             input.test_dataset_id.clone(),
             input.sbar_sequence_fingerprint.clone(),
             input.bars.len(),
-        ).unwrap();
+        )
+        .unwrap();
         writer.initialize(&state, &config()).unwrap();
 
         for (index, bar) in input.bars.iter().enumerate() {
@@ -699,9 +834,11 @@ mod tests {
                 sbar_count: index + 1,
                 sbars: vec![],
                 structure: None,
-            diagnostics: Vec::new(),
+                diagnostics: Vec::new(),
             };
-            writer.commit_checkpoint(index, &sbar_id, &projection).unwrap();
+            writer
+                .commit_checkpoint(index, &sbar_id, &projection)
+                .unwrap();
             state.confirm_checkpoint(sbar_id).unwrap();
         }
         assert_eq!(state.status, RunStatus::Completed);
@@ -724,8 +861,14 @@ mod tests {
 
         let artifacts = crate::snapshot_store::discover_snapshot_artifacts(&root).unwrap();
         assert_eq!(artifacts.len(), 1);
-        assert_eq!(artifacts[0].kind, crate::snapshot_store::SnapshotArtifactKind::Complete);
-        assert_eq!(artifacts[0].snapshot_id.as_deref(), Some(manifest.snapshot_id.as_str()));
+        assert_eq!(
+            artifacts[0].kind,
+            crate::snapshot_store::SnapshotArtifactKind::Complete
+        );
+        assert_eq!(
+            artifacts[0].snapshot_id.as_deref(),
+            Some(manifest.snapshot_id.as_str())
+        );
 
         drop(writer);
         let _ = fs::remove_dir_all(root);
@@ -735,7 +878,10 @@ mod tests {
     fn publish_destination_collision_never_replaces_existing_file() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-publish-collision-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let input = input();
         let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
@@ -744,7 +890,8 @@ mod tests {
             input.test_dataset_id.clone(),
             input.sbar_sequence_fingerprint.clone(),
             input.bars.len(),
-        ).unwrap();
+        )
+        .unwrap();
         writer.initialize(&state, &config()).unwrap();
 
         for (index, bar) in input.bars.iter().enumerate() {
@@ -758,7 +905,9 @@ mod tests {
                 structure: None,
                 diagnostics: Vec::new(),
             };
-            writer.commit_checkpoint(index, &sbar_id, &projection).unwrap();
+            writer
+                .commit_checkpoint(index, &sbar_id, &projection)
+                .unwrap();
             state.confirm_checkpoint(sbar_id).unwrap();
         }
 
@@ -783,7 +932,10 @@ mod tests {
     fn temporary_link_cleanup_failure_preserves_published_complete_snapshot() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-cleanup-failure-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let input = input();
         let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
@@ -792,7 +944,8 @@ mod tests {
             input.test_dataset_id.clone(),
             input.sbar_sequence_fingerprint.clone(),
             input.bars.len(),
-        ).unwrap();
+        )
+        .unwrap();
         writer.initialize(&state, &config()).unwrap();
 
         for (index, bar) in input.bars.iter().enumerate() {
@@ -806,7 +959,9 @@ mod tests {
                 structure: None,
                 diagnostics: Vec::new(),
             };
-            writer.commit_checkpoint(index, &sbar_id, &projection).unwrap();
+            writer
+                .commit_checkpoint(index, &sbar_id, &projection)
+                .unwrap();
             state.confirm_checkpoint(sbar_id).unwrap();
         }
 
@@ -830,12 +985,20 @@ mod tests {
     fn checkpoint_commit_rejects_identity_mismatches_without_advancing_writer() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-writer-identity-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let input = input();
         let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
-        let state = RunState::ready("writer-identity".into(), input.test_dataset_id.clone(),
-            input.sbar_sequence_fingerprint.clone(), input.bars.len()).unwrap();
+        let state = RunState::ready(
+            "writer-identity".into(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            input.bars.len(),
+        )
+        .unwrap();
         writer.initialize(&state, &config()).unwrap();
 
         let mut projection = ReplayCheckpointProjection {
@@ -845,16 +1008,24 @@ mod tests {
             sbar_count: 1,
             sbars: vec![],
             structure: None,
-        diagnostics: Vec::new(),
+            diagnostics: Vec::new(),
         };
-        assert!(writer.commit_checkpoint(0, "999", &projection).unwrap_err()
-            .contains("does not match fixed input"));
+        assert!(
+            writer
+                .commit_checkpoint(0, "999", &projection)
+                .unwrap_err()
+                .contains("does not match fixed input")
+        );
         assert!(writer.checkpoints.is_empty());
 
         projection.state_key = "wrong-state-key".into();
         projection.last_ts_event = Some("100".into());
-        assert!(writer.commit_checkpoint(0, "100", &projection).unwrap_err()
-            .contains("StruxisStateKey mismatch"));
+        assert!(
+            writer
+                .commit_checkpoint(0, "100", &projection)
+                .unwrap_err()
+                .contains("StruxisStateKey mismatch")
+        );
         assert!(writer.checkpoints.is_empty());
 
         drop(writer);
@@ -865,12 +1036,20 @@ mod tests {
     fn checkpoint_commit_rejects_out_of_order_index_without_advancing_writer() {
         let root = std::env::temp_dir().join(format!(
             "capitus-snapshot-writer-order-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let input = input();
         let mut writer = SnapshotWriter::new(&root, &input, "AUD/USD.SIM").unwrap();
-        let state = RunState::ready("writer-order".into(), input.test_dataset_id.clone(),
-            input.sbar_sequence_fingerprint.clone(), input.bars.len()).unwrap();
+        let state = RunState::ready(
+            "writer-order".into(),
+            input.test_dataset_id.clone(),
+            input.sbar_sequence_fingerprint.clone(),
+            input.bars.len(),
+        )
+        .unwrap();
         writer.initialize(&state, &config()).unwrap();
         let projection = ReplayCheckpointProjection {
             keyzones: None,
@@ -879,10 +1058,14 @@ mod tests {
             sbar_count: 1,
             sbars: vec![],
             structure: None,
-        diagnostics: Vec::new(),
+            diagnostics: Vec::new(),
         };
-        assert!(writer.commit_checkpoint(1, "100", &projection).unwrap_err()
-            .contains("Expected checkpoint index 0"));
+        assert!(
+            writer
+                .commit_checkpoint(1, "100", &projection)
+                .unwrap_err()
+                .contains("Expected checkpoint index 0")
+        );
         assert!(writer.checkpoints.is_empty());
         drop(writer);
         let _ = fs::remove_dir_all(root);

@@ -108,6 +108,9 @@ fn ipc_dto_contract_preserves_wire_names_and_semantic_json_types() {
     assert_eq!(difference_json["sbarId"], "1700000000000000000");
     assert_eq!(difference_json["kind"], "modified");
     assert_eq!(difference_json["properties"][0]["baselineValue"], "10.0");
-    assert_eq!(difference_json["properties"][0]["candidateValue"], serde_json::Value::Null);
+    assert_eq!(
+        difference_json["properties"][0]["candidateValue"],
+        serde_json::Value::Null
+    );
     assert!(difference_json.get("checkpoint_index").is_none());
 }

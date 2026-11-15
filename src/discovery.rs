@@ -17,8 +17,7 @@ use nautilus_model::{
     instruments::Instrument,
 };
 use nautilus_persistence::{
-    backend::parquet::catalog::ParquetDataCatalog,
-    catalog::types::CatalogDataType,
+    backend::parquet::catalog::ParquetDataCatalog, catalog::types::CatalogDataType,
 };
 use serde::Serialize;
 
@@ -58,7 +57,12 @@ pub(crate) fn discover_catalog_datasets(catalog_path: &Path) -> Result<Vec<Catal
 
     let catalog = ParquetDataCatalog::new(catalog_path, None, None, None, None);
     let bar_files = catalog
-        .query_files(&CatalogDataType::from(NautilusDataType::Bar), None, None, None)
+        .query_files(
+            &CatalogDataType::from(NautilusDataType::Bar),
+            None,
+            None,
+            None,
+        )
         .with_context(|| {
             format!(
                 "Failed to discover Bar streams in Catalog {}",
@@ -103,18 +107,18 @@ fn resolve_candidate(catalog: &ParquetDataCatalog, candidate: String) -> Catalog
 
     let instrument_id: InstrumentId = parsed.instrument_id();
     let instrument_filter = instrument_id.to_string();
-    let instruments = match catalog.query_instruments(Some(std::slice::from_ref(&instrument_filter)))
-    {
-        Ok(instruments) => instruments,
-        Err(error) => {
-            return unavailable(
-                candidate,
-                Some(parsed.to_string()),
-                Some(instrument_filter),
-                format!("Failed to resolve Catalog Instrument metadata: {error}"),
-            );
-        }
-    };
+    let instruments =
+        match catalog.query_instruments(Some(std::slice::from_ref(&instrument_filter))) {
+            Ok(instruments) => instruments,
+            Err(error) => {
+                return unavailable(
+                    candidate,
+                    Some(parsed.to_string()),
+                    Some(instrument_filter),
+                    format!("Failed to resolve Catalog Instrument metadata: {error}"),
+                );
+            }
+        };
 
     if !instruments
         .iter()
@@ -230,17 +234,22 @@ mod tests {
 
         let entries = super::discover_catalog_datasets(&catalog_path)
             .expect("Catalog stream discovery should succeed");
-        assert!(!entries.is_empty(), "test Catalog should contain Bar streams");
+        assert!(
+            !entries.is_empty(),
+            "test Catalog should contain Bar streams"
+        );
 
         let expected = entries
             .iter()
             .find(|entry| {
-                entry.bar_type.as_deref()
-                    == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
+                entry.bar_type.as_deref() == Some("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL")
             })
             .expect("expected BTCUSDT perpetual 5-minute stream");
         assert!(expected.available, "{:?}", expected.diagnostic);
-        assert_eq!(expected.instrument_id.as_deref(), Some("BTCUSDT-PERP.BINANCE"));
+        assert_eq!(
+            expected.instrument_id.as_deref(),
+            Some("BTCUSDT-PERP.BINANCE")
+        );
         assert_eq!(expected.timeframe.as_deref(), Some("5-MINUTE-LAST"));
     }
 }

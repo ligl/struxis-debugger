@@ -35,7 +35,9 @@ impl Diagnostic {
             }
         }
         if self.object_type.is_some() != self.object_id.is_some() {
-            return Err("Diagnostic object_type and object_id must both be present or both be null".into());
+            return Err(
+                "Diagnostic object_type and object_id must both be present or both be null".into(),
+            );
         }
         if self.sbar_ids.iter().any(|id| id.trim().is_empty()) {
             return Err("Diagnostic sbar_ids must not contain empty IDs".into());
@@ -54,7 +56,8 @@ pub(crate) fn canonical_diagnostics_json(diagnostics: &[Diagnostic]) -> Result<S
         diagnostic.validate()?;
     }
     ordered.sort_by(|left, right| {
-        left.source.cmp(&right.source)
+        left.source
+            .cmp(&right.source)
             .then_with(|| left.category.cmp(&right.category))
             .then_with(|| left.object_type.cmp(&right.object_type))
             .then_with(|| left.object_id.cmp(&right.object_id))
@@ -95,7 +98,7 @@ pub(crate) fn validate_checkpoint_diagnostics_json(
 
 #[cfg(test)]
 mod tests {
-    use super::{canonical_diagnostics_json, Diagnostic};
+    use super::{Diagnostic, canonical_diagnostics_json};
 
     fn diagnostic(source: &str, category: &str, message: &str) -> Diagnostic {
         Diagnostic {
@@ -152,9 +155,11 @@ mod tests {
         value.checkpoint_index = Some(1);
         let encoded = canonical_diagnostics_json(&[value]).unwrap();
         assert!(super::validate_checkpoint_diagnostics_json(&encoded, 1).is_ok());
-        assert!(super::validate_checkpoint_diagnostics_json(&encoded, 0)
-            .unwrap_err()
-            .contains("does not match enclosing checkpointIndex"));
+        assert!(
+            super::validate_checkpoint_diagnostics_json(&encoded, 0)
+                .unwrap_err()
+                .contains("does not match enclosing checkpointIndex")
+        );
     }
 
     #[test]

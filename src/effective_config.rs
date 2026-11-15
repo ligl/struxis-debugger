@@ -104,29 +104,51 @@ mod tests {
     #[test]
     fn fingerprint_rejects_missing_and_unknown_schema_fields() {
         let missing = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000}"#;
-        assert!(fingerprint_canonical_config(missing).unwrap_err().contains("schema"));
+        assert!(
+            fingerprint_canonical_config(missing)
+                .unwrap_err()
+                .contains("schema")
+        );
 
         let unknown = r#"{"enableStructure":true,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"structureTrendsCapacity":666,"tradingFeeModel":"ignored"}"#;
-        assert!(fingerprint_canonical_config(unknown).unwrap_err().contains("schema"));
+        assert!(
+            fingerprint_canonical_config(unknown)
+                .unwrap_err()
+                .contains("schema")
+        );
     }
 
     #[test]
     fn fingerprint_rejects_string_encoded_capacities() {
         let encoded = r#"{"enableStructure":true,"structureCbarsCapacity":"10000","structureSwingsCapacity":2000,"structureTrendsCapacity":666}"#;
-        assert!(fingerprint_canonical_config(encoded)
-            .unwrap_err()
-            .contains("schema"));
+        assert!(
+            fingerprint_canonical_config(encoded)
+                .unwrap_err()
+                .contains("schema")
+        );
     }
 
     #[test]
     fn fingerprint_is_derived_from_complete_effective_config() {
-        let defaults = EffectiveStruxisConfig::from_struxis_config(&StruxisConfig::builder().build());
+        let defaults =
+            EffectiveStruxisConfig::from_struxis_config(&StruxisConfig::builder().build());
         let altered = EffectiveStruxisConfig::from_struxis_config(
-            &StruxisConfig::builder().structure_cbars_capacity(321).build(),
+            &StruxisConfig::builder()
+                .structure_cbars_capacity(321)
+                .build(),
         );
 
-        assert_ne!(defaults.canonical_json().unwrap(), altered.canonical_json().unwrap());
-        assert_ne!(defaults.fingerprint().unwrap(), altered.fingerprint().unwrap());
-        assert_eq!(defaults.fingerprint().unwrap(), fingerprint_canonical_config(&defaults.canonical_json().unwrap()).unwrap());
+        assert_ne!(
+            defaults.canonical_json().unwrap(),
+            altered.canonical_json().unwrap()
+        );
+        assert_ne!(
+            defaults.fingerprint().unwrap(),
+            altered.fingerprint().unwrap()
+        );
+        assert_eq!(
+            defaults.fingerprint().unwrap(),
+            fingerprint_canonical_config(&defaults.canonical_json().unwrap()).unwrap()
+        );
     }
 }

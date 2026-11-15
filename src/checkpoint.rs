@@ -531,7 +531,7 @@ impl KeyZoneCheckpoint {
                         observation_id: o.id().value().to_string(),
                         consumer_id: r.observer_id.clone(),
                         request_id: r.request_id.clone(),
-                        keyzone_id: r.zone.id.value().to_string(),
+                        keyzone_id: r.keyzone_id.value().to_string(),
                         observer: ObservationStateKey {
                             instrument_id: r.stream_key.instrument_id.to_string(),
                             timeframe: r.stream_key.timeframe.to_string(),
@@ -540,7 +540,9 @@ impl KeyZoneCheckpoint {
                             capitus_struxis::keyzone::ObservationTaskStart::AfterCurrentCursor => {
                                 "AfterCurrentCursor"
                             }
-                            capitus_struxis::keyzone::ObservationTaskStart::FromTime(_) => "FromTime",
+                            capitus_struxis::keyzone::ObservationTaskStart::FromTime(_) => {
+                                "FromTime"
+                            }
                         }
                         .into(),
                         start_at: o.start_at().to_string(),
@@ -698,10 +700,8 @@ pub(crate) mod keyzone_projection_tests {
                         ObservationTaskRequest {
                             observer_id: "projection".into(),
                             request_id: "record".into(),
-                            zone: KeyZoneRef {
-                                instrument_id: instrument,
-                                id,
-                            },
+                            instrument_id: instrument,
+                            keyzone_id: id,
                             stream_key: key,
                             start: ObservationTaskStart::FromTime(100_u64.into()),
                             config: InteractionConfig::new(1, 0.5).unwrap(),
@@ -718,13 +718,7 @@ pub(crate) mod keyzone_projection_tests {
         }
         let task = registry.observations().next().unwrap().id();
         registry
-            .cancel_observation(
-                ObservationTaskRef {
-                    instrument_id: instrument,
-                    id: task,
-                },
-                2000_u64.into(),
-            )
+            .cancel_observation(instrument, task, 2000_u64.into())
             .unwrap();
         KeyZoneCheckpoint::from_registry(&registry).unwrap()
     }
@@ -764,8 +758,8 @@ pub(crate) mod keyzone_projection_tests {
         use capitus_struxis::{
             NautilusRuntime, Struxis, StruxisConfig, StruxisRegistrant, StruxisStateKey,
             keyzone::{
-                InteractionConfig, InteractionState, KeyZoneRef, ObservationTaskCompletion,
-                ObservationTaskRequest, ObservationTaskStart, BarHistoryView,
+                BarHistoryView, InteractionConfig, InteractionState, ObservationTaskCompletion,
+                ObservationTaskRequest, ObservationTaskStart,
             },
         };
         use nautilus_common::cache::Cache;
@@ -815,10 +809,8 @@ pub(crate) mod keyzone_projection_tests {
                 ObservationTaskRequest {
                     observer_id: "wire-observer".into(),
                     request_id: "wire-request".into(),
-                    zone: KeyZoneRef {
-                        instrument_id: instrument,
-                        id,
-                    },
+                    instrument_id: instrument,
+                    keyzone_id: id,
                     stream_key: key,
                     start: ObservationTaskStart::FromTime(100_u64.into()),
                     config: InteractionConfig::default(),

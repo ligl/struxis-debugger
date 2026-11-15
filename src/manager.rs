@@ -135,7 +135,9 @@ impl ReplayManager {
         }
         self.active
             .as_mut()
-            .ok_or_else(|| "Snapshot save rejected: no completed Run trajectory is available".to_owned())?
+            .ok_or_else(|| {
+                "Snapshot save rejected: no completed Run trajectory is available".to_owned()
+            })?
             .snapshot_data()
     }
 
@@ -170,7 +172,8 @@ impl ReplayManager {
 
     pub(crate) fn step_checkpoint(&mut self) -> Result<ReplayStepResult, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Step)?;
-        let step_result = self.active
+        let step_result = self
+            .active
             .as_mut()
             .ok_or_else(|| "Step rejected: ReplayManager has no active Run".to_owned())?
             .step_checkpoint();
@@ -180,7 +183,9 @@ impl ReplayManager {
                 // Domain processing failures are terminal. Preserve their confirmed
                 // state, release runtime resources internally, and free the owner slot.
                 let failed_state = self.active.as_mut().and_then(|worker| worker.state().ok());
-                if let Some(mut state) = failed_state.filter(|state| state.status == crate::run::RunStatus::Failed) {
+                if let Some(mut state) =
+                    failed_state.filter(|state| state.status == crate::run::RunStatus::Failed)
+                {
                     if let Some(worker) = self.active.as_mut() {
                         match worker.dispose() {
                             Ok(released_state) => {
@@ -190,10 +195,15 @@ impl ReplayManager {
                             Err(release_error) => {
                                 state.failure_diagnostic = Some(format!(
                                     "{}; runtime release is unconfirmed: {release_error}",
-                                    state.failure_diagnostic.clone().unwrap_or_else(|| error.clone())
+                                    state
+                                        .failure_diagnostic
+                                        .clone()
+                                        .unwrap_or_else(|| error.clone())
                                 ));
                                 self.last_state = Some(state);
-                                return Err(format!("{error}; Run failed and runtime release is unconfirmed: {release_error}"));
+                                return Err(format!(
+                                    "{error}; Run failed and runtime release is unconfirmed: {release_error}"
+                                ));
                             }
                         }
                     }
@@ -205,8 +215,14 @@ impl ReplayManager {
         if result.inspector.is_some() {
             self.last_inspector = result.inspector.clone();
         }
-        if matches!(result.run_state.status, crate::run::RunStatus::Completed | crate::run::RunStatus::Failed) {
-            let worker = self.active.as_mut().expect("active worker remains owned during Step");
+        if matches!(
+            result.run_state.status,
+            crate::run::RunStatus::Completed | crate::run::RunStatus::Failed
+        ) {
+            let worker = self
+                .active
+                .as_mut()
+                .expect("active worker remains owned during Step");
             let trajectory = if result.run_state.status == crate::run::RunStatus::Completed {
                 Some(worker.snapshot_data())
             } else {
@@ -226,7 +242,9 @@ impl ReplayManager {
                     ));
                     self.last_state = Some(released_state);
                     self.active = None;
-                    return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
+                    return Err(format!(
+                        "Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"
+                    ));
                 }
                 (None, Ok(released_state)) => {
                     self.last_state = Some(released_state);
@@ -235,16 +253,24 @@ impl ReplayManager {
                     self.completed_result = Some(data);
                     let mut state = result.run_state.clone();
                     state.status = crate::run::RunStatus::Failed;
-                    state.failure_diagnostic = Some(format!("Run processing completed, but runtime release is unconfirmed: {error}"));
+                    state.failure_diagnostic = Some(format!(
+                        "Run processing completed, but runtime release is unconfirmed: {error}"
+                    ));
                     self.last_state = Some(state);
-                    return Err(format!("Run completed, but runtime release is unconfirmed: {error}"));
+                    return Err(format!(
+                        "Run completed, but runtime release is unconfirmed: {error}"
+                    ));
                 }
                 (_, Err(error)) => {
                     let mut state = result.run_state.clone();
                     state.status = crate::run::RunStatus::Failed;
-                    state.failure_diagnostic = Some(format!("Terminal Run runtime release is unconfirmed: {error}"));
+                    state.failure_diagnostic = Some(format!(
+                        "Terminal Run runtime release is unconfirmed: {error}"
+                    ));
                     self.last_state = Some(state);
-                    return Err(format!("Run reached a terminal processing state, but runtime release is unconfirmed: {error}"));
+                    return Err(format!(
+                        "Run reached a terminal processing state, but runtime release is unconfirmed: {error}"
+                    ));
                 }
             }
             self.active = None;
@@ -272,10 +298,14 @@ impl ReplayManager {
     /// Confirmed progress remains available as a result state after cleanup.
     pub(crate) fn stop(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Stop)?;
-        let worker = self.active.as_mut()
+        let worker = self
+            .active
+            .as_mut()
             .ok_or_else(|| "Stop rejected: ReplayManager has no active Run".to_owned())?;
         if let Ok(inspector) = worker.inspector() {
-            if inspector.is_some() { self.last_inspector = inspector; }
+            if inspector.is_some() {
+                self.last_inspector = inspector;
+            }
         }
         let state = worker.stop()?;
         self.last_state = Some(state.clone());
@@ -287,7 +317,8 @@ impl ReplayManager {
     /// independently queryable and completed trajectories remain saveable.
     pub(crate) fn dispose(&mut self) -> Result<RunState, String> {
         let _permit = self.gate.try_enter(ReplayCommandKind::Dispose)?;
-        let worker = self.active
+        let worker = self
+            .active
             .as_mut()
             .ok_or_else(|| "Dispose rejected: ReplayManager has no active Run".to_owned())?;
         let state = worker.dispose()?;
@@ -448,7 +479,9 @@ impl ReplayManager {
                     ));
                     self.last_state = Some(state);
                     self.active = None;
-                    return Err(format!("Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"));
+                    return Err(format!(
+                        "Run completed and runtime released, but its Checkpoint trajectory could not be retained for Snapshot save: {error}"
+                    ));
                 }
                 (Ok(data), Err(error)) => {
                     // Trajectory completeness and runtime release are independent.
@@ -461,7 +494,9 @@ impl ReplayManager {
                         "Run processing completed, but runtime release is unconfirmed: {error}"
                     ));
                     self.last_state = Some(state);
-                    return Err(format!("Run completed, but runtime release is unconfirmed: {error}"));
+                    return Err(format!(
+                        "Run completed, but runtime release is unconfirmed: {error}"
+                    ));
                 }
                 (Err(trajectory_error), Err(release_error)) => {
                     let mut state = result.run_state.clone();
@@ -508,9 +543,7 @@ impl ReplayManager {
     pub(crate) fn has_owned_run(&self) -> bool {
         self.active.is_some()
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -552,8 +585,8 @@ mod tests {
     }
 
     fn worker_config(run_id: &str) -> ReplayWorkerConfig {
-        let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL")
-            .expect("fixture BarType");
+        let bar_type =
+            BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL").expect("fixture BarType");
         let bars = (0..3)
             .map(|index| {
                 let ts = 1_735_689_600_000_000_000_u64 + index * 60_000_000_000;
@@ -580,12 +613,8 @@ mod tests {
             bars,
             structure: None,
         };
-        let test = TestDataset::create(
-            &origin,
-            "1735689600000000000",
-            "1735689720000000000",
-        )
-        .expect("Test Dataset");
+        let test = TestDataset::create(&origin, "1735689600000000000", "1735689720000000000")
+            .expect("Test Dataset");
         ReplayWorkerConfig {
             run_id: run_id.to_owned(),
             input: LoadedInput::from_test(&test).expect("LoadedInput"),
@@ -604,17 +633,29 @@ mod tests {
             .start(worker_config("manager-inspector"), sink())
             .expect("Run starts");
 
-        assert!(manager.inspector().expect("initial Inspector query").is_none());
+        assert!(
+            manager
+                .inspector()
+                .expect("initial Inspector query")
+                .is_none()
+        );
 
         let stepped = manager.step().expect("one checkpoint is processed");
         assert_eq!(stepped.processed_count, 1);
-        let projection = manager.inspector()
+        let projection = manager
+            .inspector()
             .expect("Inspector query")
             .expect("confirmed checkpoint is available");
         assert_eq!(projection.checkpoint_index, 0);
-        assert_eq!(projection.sbar_id, stepped.cursor_sbar_id.expect("cursor exists"));
+        assert_eq!(
+            projection.sbar_id,
+            stepped.cursor_sbar_id.expect("cursor exists")
+        );
         assert_eq!(projection.sbar.sbar_id, projection.sbar_id);
-        assert_eq!(projection.structure.as_ref().map(|state| state.cbar_count), Some(1));
+        assert_eq!(
+            projection.structure.as_ref().map(|state| state.cbar_count),
+            Some(1)
+        );
 
         manager.dispose().expect("Run cleanup");
     }
@@ -660,18 +701,28 @@ mod tests {
     #[test]
     fn completed_run_releases_worker_but_retains_snapshot_trajectory() {
         let mut manager = ReplayManager::new();
-        manager.start_interactive(worker_config("manager-auto-cleanup"),).expect("Run starts");
+        manager
+            .start_interactive(worker_config("manager-auto-cleanup"))
+            .expect("Run starts");
         for expected in 1..=3 {
             let result = manager.step_checkpoint().expect("Step succeeds");
             assert_eq!(result.run_state.processed_count, expected);
         }
 
-        assert!(!manager.has_owned_run(), "Completed Run must not retain a Worker");
-        let state = manager.state().expect("state query").expect("last result remains visible");
+        assert!(
+            !manager.has_owned_run(),
+            "Completed Run must not retain a Worker"
+        );
+        let state = manager
+            .state()
+            .expect("state query")
+            .expect("last result remains visible");
         assert_eq!(state.status, crate::run::RunStatus::Completed);
         assert_eq!(state.processed_count, 3);
 
-        let snapshot = manager.snapshot_data().expect("completed trajectory remains saveable");
+        let snapshot = manager
+            .snapshot_data()
+            .expect("completed trajectory remains saveable");
         assert_eq!(snapshot.state.status, crate::run::RunStatus::Completed);
         assert_eq!(snapshot.checkpoints.len(), 3);
     }
@@ -692,7 +743,10 @@ mod tests {
             result.run_state.cursor_sbar_id.as_deref(),
             Some("1735689720000000000")
         );
-        assert!(!manager.has_owned_run(), "Completed fast-forward releases Worker");
+        assert!(
+            !manager.has_owned_run(),
+            "Completed fast-forward releases Worker"
+        );
 
         let snapshot = manager
             .snapshot_data()
@@ -732,7 +786,9 @@ mod tests {
     #[test]
     fn reset_clears_completed_result_and_run_state() {
         let mut manager = ReplayManager::new();
-        manager.start_interactive(worker_config("manager-reset"),).expect("Run starts");
+        manager
+            .start_interactive(worker_config("manager-reset"))
+            .expect("Run starts");
         for _ in 0..3 {
             manager.step_checkpoint().expect("Step succeeds");
         }
@@ -744,18 +800,20 @@ mod tests {
         assert!(manager.snapshot_data().is_err());
     }
 
-
     #[test]
     fn stop_releases_runtime_and_allows_starting_a_new_run() {
         let mut manager = ReplayManager::new();
-        manager.start_interactive(worker_config("manager-stop-old")).expect("first Run starts");
+        manager
+            .start_interactive(worker_config("manager-stop-old"))
+            .expect("first Run starts");
         manager.step_checkpoint().expect("one checkpoint succeeds");
 
         let stopped = manager.stop().expect("Stop ends and releases the Run");
         assert_eq!(stopped.status, crate::run::RunStatus::Disposed);
         assert!(!manager.has_owned_run());
 
-        let next = manager.start_interactive(worker_config("manager-stop-new"))
+        let next = manager
+            .start_interactive(worker_config("manager-stop-new"))
             .expect("Start creates a new Run after Stop");
         assert_eq!(next.status, crate::run::RunStatus::Ready);
         assert_eq!(next.processed_count, 0);
@@ -765,14 +823,17 @@ mod tests {
     #[test]
     fn reset_releases_an_active_run_and_clears_its_state() {
         let mut manager = ReplayManager::new();
-        manager.start_interactive(worker_config("manager-reset-active")).expect("Run starts");
+        manager
+            .start_interactive(worker_config("manager-reset-active"))
+            .expect("Run starts");
         manager.step_checkpoint().expect("one checkpoint succeeds");
         assert!(manager.has_owned_run());
 
-        manager.reset().expect("Reset stops and releases the active Run");
+        manager
+            .reset()
+            .expect("Reset stops and releases the active Run");
         assert!(!manager.has_owned_run());
         assert!(manager.state().expect("state query").is_none());
         assert!(manager.snapshot_data().is_err());
     }
-
 }

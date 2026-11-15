@@ -16,16 +16,22 @@ use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
 use serde::Serialize;
 
 use crate::{
-    checkpoint::{ReplayInspectorProjection, ReplayStepResult, StructureCheckpoint},
     catalog::{OriginLoad, load_origin as load_origin_candidate},
-    compare::{compare_snapshot_paths, CompareRejectCategory, CompareRejection, SnapshotCompareResult},
+    checkpoint::{ReplayInspectorProjection, ReplayStepResult, StructureCheckpoint},
+    compare::{
+        CompareRejectCategory, CompareRejection, SnapshotCompareResult, compare_snapshot_paths,
+    },
     dataset::TestDataset,
     discovery::{CatalogDatasetEntry, configured_catalog_root, discover_catalog_datasets},
     ipc::{IpcError, IpcErrorCode},
+    manager::ReplayManager,
     replay::LoadedInput,
     run::RunState,
-    manager::ReplayManager,
-    snapshot_store::{discover_snapshot_artifacts, read_snapshot_reference, read_reference_checkpoint, read_reference_object_checkpoint, ReferenceCheckpoint, ReferenceObjectKind, SnapshotArtifact, SnapshotArtifactKind},
+    snapshot_store::{
+        ReferenceCheckpoint, ReferenceObjectKind, SnapshotArtifact, SnapshotArtifactKind,
+        discover_snapshot_artifacts, read_reference_checkpoint, read_reference_object_checkpoint,
+        read_snapshot_reference,
+    },
     snapshot_writer::SnapshotWriter,
     worker::ReplayWorkerConfig,
 };
@@ -142,17 +148,13 @@ impl AppState {
             )
         })?;
 
-        let candidate = load_origin_candidate(
-            &self.inner.catalog_path,
-            bar_type,
-            enable_structure,
-        )
-        .map_err(|error| {
-            IpcError::new(
-                IpcErrorCode::Internal,
-                format!("Origin Load failed: {error}"),
-            )
-        })?;
+        let candidate = load_origin_candidate(&self.inner.catalog_path, bar_type, enable_structure)
+            .map_err(|error| {
+                IpcError::new(
+                    IpcErrorCode::Internal,
+                    format!("Origin Load failed: {error}"),
+                )
+            })?;
 
         // Build all frontend metadata before entering the single publication
         // critical section. A failed candidate leaves the previous Origin intact.
@@ -208,12 +210,13 @@ impl AppState {
                 "Load and validate an Origin Dataset before creating a Test Dataset",
             )
         })?;
-        let test = TestDataset::create(&origin.dataset, start_sbar_id, end_sbar_id).map_err(|error| {
-            IpcError::new(
-                IpcErrorCode::InvalidArgument,
-                format!("Test Dataset selection rejected: {error}"),
-            )
-        })?;
+        let test =
+            TestDataset::create(&origin.dataset, start_sbar_id, end_sbar_id).map_err(|error| {
+                IpcError::new(
+                    IpcErrorCode::InvalidArgument,
+                    format!("Test Dataset selection rejected: {error}"),
+                )
+            })?;
         let record = TestRecord { dataset: test };
         let dto = record.to_dto();
         datasets.current_test = Some(record);
@@ -235,43 +238,54 @@ impl AppState {
         baseline_snapshot_id: &str,
         candidate_snapshot_id: &str,
     ) -> Result<SnapshotCompareResult, CompareRejection> {
-        let artifacts = discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|message| {
-            CompareRejection {
-                category: CompareRejectCategory::SnapshotUnreadable,
-                message: format!("Snapshot discovery failed: {message}"),
-            }
-        })?;
+        let artifacts =
+            discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|message| {
+                CompareRejection {
+                    category: CompareRejectCategory::SnapshotUnreadable,
+                    message: format!("Snapshot discovery failed: {message}"),
+                }
+            })?;
         // Resolve published artifacts by their filename identity as well as
         // the decoded Manifest. If a published SQLite file is unreadable, its
         // Manifest may be unavailable; still pass that file to the typed reader
         // so Compare reports SnapshotUnreadable instead of misclassifying it as
         // a missing/incomplete Snapshot.
         let find_published = |snapshot_id: &str| {
-            artifacts.iter().find(|artifact| {
-                matches!(
-                    &artifact.kind,
-                    crate::snapshot_store::SnapshotArtifactKind::Complete
-                        | crate::snapshot_store::SnapshotArtifactKind::InvalidPublished
-                ) && (
-                    artifact.snapshot_id.as_deref() == Some(snapshot_id)
-                        || artifact.file_name.strip_suffix(".snapshot.sqlite") == Some(snapshot_id)
-                )
-            }).map(|artifact| artifact.path.clone())
+            artifacts
+                .iter()
+                .find(|artifact| {
+                    matches!(
+                        &artifact.kind,
+                        crate::snapshot_store::SnapshotArtifactKind::Complete
+                            | crate::snapshot_store::SnapshotArtifactKind::InvalidPublished
+                    ) && (artifact.snapshot_id.as_deref() == Some(snapshot_id)
+                        || artifact.file_name.strip_suffix(".snapshot.sqlite") == Some(snapshot_id))
+                })
+                .map(|artifact| artifact.path.clone())
         };
-        let baseline_path = find_published(baseline_snapshot_id).ok_or_else(|| CompareRejection {
-            category: CompareRejectCategory::SnapshotIncomplete,
-            message: format!("Baseline Snapshot is not a published artifact: {baseline_snapshot_id}"),
-        })?;
-        let candidate_path = find_published(candidate_snapshot_id).ok_or_else(|| CompareRejection {
-            category: CompareRejectCategory::SnapshotIncomplete,
-            message: format!("Candidate Snapshot is not a published artifact: {candidate_snapshot_id}"),
-        })?;
+        let baseline_path =
+            find_published(baseline_snapshot_id).ok_or_else(|| CompareRejection {
+                category: CompareRejectCategory::SnapshotIncomplete,
+                message: format!(
+                    "Baseline Snapshot is not a published artifact: {baseline_snapshot_id}"
+                ),
+            })?;
+        let candidate_path =
+            find_published(candidate_snapshot_id).ok_or_else(|| CompareRejection {
+                category: CompareRejectCategory::SnapshotIncomplete,
+                message: format!(
+                    "Candidate Snapshot is not a published artifact: {candidate_snapshot_id}"
+                ),
+            })?;
         compare_snapshot_paths(baseline_path, candidate_path)
     }
 
     pub(crate) fn discover_snapshots(&self) -> Result<Vec<SnapshotArtifact>, IpcError> {
         discover_snapshot_artifacts(&self.inner.snapshot_root).map_err(|error| {
-            IpcError::new(IpcErrorCode::Internal, format!("Snapshot discovery failed: {error}"))
+            IpcError::new(
+                IpcErrorCode::Internal,
+                format!("Snapshot discovery failed: {error}"),
+            )
         })
     }
 
@@ -411,25 +425,56 @@ impl AppState {
     fn prepare_run(&self) -> Result<ReplayWorkerConfig, IpcError> {
         let test = {
             let datasets = self.inner.datasets.lock().map_err(|_| {
-                IpcError::new(IpcErrorCode::Internal, "Application dataset state lock is poisoned")
+                IpcError::new(
+                    IpcErrorCode::Internal,
+                    "Application dataset state lock is poisoned",
+                )
             })?;
-            datasets.current_test.as_ref().map(|record| record.dataset.clone()).ok_or_else(|| {
-                IpcError::new(IpcErrorCode::InvalidState, "Create a Test Dataset before starting a Run")
-            })?
+            datasets
+                .current_test
+                .as_ref()
+                .map(|record| record.dataset.clone())
+                .ok_or_else(|| {
+                    IpcError::new(
+                        IpcErrorCode::InvalidState,
+                        "Create a Test Dataset before starting a Run",
+                    )
+                })?
         };
         let input = LoadedInput::from_test(&test).map_err(|error| {
-            IpcError::new(IpcErrorCode::InvalidArgument, format!("Replay input rejected: {error}"))
+            IpcError::new(
+                IpcErrorCode::InvalidArgument,
+                format!("Replay input rejected: {error}"),
+            )
         })?;
         let instrument_filter = input.state_key.instrument_id.to_string();
         let catalog = ParquetDataCatalog::new(&self.inner.catalog_path, None, None, None, None);
-        let instruments = catalog.query_instruments(Some(std::slice::from_ref(&instrument_filter)))
-            .map_err(|error| IpcError::new(IpcErrorCode::Internal, format!("Load Replay instrument from Catalog: {error}")))?;
-        let instrument: InstrumentAny = instruments.into_iter()
+        let instruments = catalog
+            .query_instruments(Some(std::slice::from_ref(&instrument_filter)))
+            .map_err(|error| {
+                IpcError::new(
+                    IpcErrorCode::Internal,
+                    format!("Load Replay instrument from Catalog: {error}"),
+                )
+            })?;
+        let instrument: InstrumentAny = instruments
+            .into_iter()
             .find(|instrument| instrument.id().to_string() == instrument_filter)
-            .ok_or_else(|| IpcError::new(IpcErrorCode::NotFound,
-                format!("Catalog has no instrument metadata for {}", input.state_key.instrument_id)))?;
+            .ok_or_else(|| {
+                IpcError::new(
+                    IpcErrorCode::NotFound,
+                    format!(
+                        "Catalog has no instrument metadata for {}",
+                        input.state_key.instrument_id
+                    ),
+                )
+            })?;
         let run_id = uuid::Uuid::new_v4().to_string();
-        Ok(ReplayWorkerConfig { run_id, input, instrument })
+        Ok(ReplayWorkerConfig {
+            run_id,
+            input,
+            instrument,
+        })
     }
 
     pub(crate) fn start_run(&self) -> Result<RunState, IpcError> {
@@ -547,10 +592,12 @@ impl AppState {
             &data.effective_config,
             &data.checkpoints,
         )
-        .map_err(|error| IpcError::new(
-            IpcErrorCode::Internal,
-            format!("Save Run Snapshot failed: {error}"),
-        ))
+        .map_err(|error| {
+            IpcError::new(
+                IpcErrorCode::Internal,
+                format!("Save Run Snapshot failed: {error}"),
+            )
+        })
     }
 
     fn with_replay_manager<T>(
@@ -559,14 +606,14 @@ impl AppState {
     ) -> Result<T, IpcError> {
         let mut manager = self.inner.replay_manager.try_lock().map_err(|error| {
             let message = match error {
-                std::sync::TryLockError::WouldBlock => "Replay command rejected: another command is active",
+                std::sync::TryLockError::WouldBlock => {
+                    "Replay command rejected: another command is active"
+                }
                 std::sync::TryLockError::Poisoned(_) => "ReplayManager lock is poisoned",
             };
             IpcError::new(IpcErrorCode::Conflict, message)
         })?;
-        operation(&mut manager).map_err(|error| {
-            IpcError::new(IpcErrorCode::InvalidState, error)
-        })
+        operation(&mut manager).map_err(|error| IpcError::new(IpcErrorCode::InvalidState, error))
     }
 
     #[cfg(test)]
@@ -575,7 +622,6 @@ impl AppState {
         &self.inner.catalog_path
     }
 }
-
 
 fn reference_error(message: String) -> IpcError {
     IpcError::new(IpcErrorCode::InvalidState, message)
@@ -774,15 +820,10 @@ fn sbar_to_dto(bar: &Bar) -> SBarDto {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::{AppState, OriginRecord};
-    use crate::{
-        catalog::OriginLoad,
-        dataset::sequence_fingerprint,
-        ipc::IpcErrorCode,
-    };
+    use crate::{catalog::OriginLoad, dataset::sequence_fingerprint, ipc::IpcErrorCode};
     use capitus_struxis::StruxisStateKey;
     use nautilus_model::{
         data::{Bar, BarType},
@@ -813,8 +854,8 @@ mod tests {
         ];
         let bar_type = bars[0].bar_type;
         let state_key = StruxisStateKey::from_bar_type(&bar_type);
-        let fingerprint = sequence_fingerprint(state_key, &bars)
-            .expect("fixture fingerprint should compute");
+        let fingerprint =
+            sequence_fingerprint(state_key, &bars).expect("fixture fingerprint should compute");
         OriginLoad {
             keyzones: None,
             origin_dataset_id: Uuid::new_v4(),
@@ -1038,8 +1079,14 @@ mod tests {
             .expect("valid inclusive selection should create Test");
 
         assert_eq!(test.origin_dataset_id, origin.origin_dataset_id);
-        assert_eq!(origin.timeframe, "5m", "Origin DTO must preserve the BarSpecification unit");
-        assert_eq!(test.timeframe, "5m", "Test DTO must preserve the BarSpecification unit");
+        assert_eq!(
+            origin.timeframe, "5m",
+            "Origin DTO must preserve the BarSpecification unit"
+        );
+        assert_eq!(
+            test.timeframe, "5m",
+            "Test DTO must preserve the BarSpecification unit"
+        );
         assert_eq!(test.start_sbar_id, "200");
         assert_eq!(test.end_sbar_id, "300");
         assert_eq!(test.sbar_count, 2);
@@ -1139,14 +1186,18 @@ mod tests {
     #[test]
     fn origin_load_and_test_creation_share_a_mutation_guard() {
         let app = app_with_origin(PathBuf::from("/unused/catalog"));
-        app.inner.mutation_active.store(true, std::sync::atomic::Ordering::Release);
+        app.inner
+            .mutation_active
+            .store(true, std::sync::atomic::Ordering::Release);
         let test_error = app
             .create_test_dataset("100", "200")
             .expect_err("concurrent Test creation must be rejected");
         let load_error = app
             .load_origin("any-dataset", true)
             .expect_err("concurrent Origin Load must be rejected");
-        app.inner.mutation_active.store(false, std::sync::atomic::Ordering::Release);
+        app.inner
+            .mutation_active
+            .store(false, std::sync::atomic::Ordering::Release);
         assert_eq!(test_error.code, IpcErrorCode::Conflict);
         assert_eq!(load_error.code, IpcErrorCode::Conflict);
     }

@@ -1,21 +1,21 @@
 mod app;
 mod catalog;
-mod compare;
-mod commands;
-mod dataset;
-mod discovery;
-mod ipc;
-mod run;
-mod replay;
 mod checkpoint;
+mod commands;
+mod compare;
+mod dataset;
 mod diagnostics;
-mod worker;
-mod manager;
-mod snapshot;
-mod snapshot_writer;
-mod snapshot_store;
+mod discovery;
 mod effective_config;
+mod ipc;
+mod manager;
 mod observation;
+mod replay;
+mod run;
+mod snapshot;
+mod snapshot_store;
+mod snapshot_writer;
+mod worker;
 
 #[tauri::command]
 fn open_devtools(window: tauri::WebviewWindow) {

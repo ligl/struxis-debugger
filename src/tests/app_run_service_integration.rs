@@ -30,15 +30,15 @@ impl LifecycleCatalog {
         use nautilus_persistence::backend::parquet::catalog::ParquetDataCatalog;
         use std::str::FromStr;
 
-        let path = std::env::temp_dir()
-            .join(format!("struxis-app-lifecycle-{}", uuid::Uuid::new_v4()));
+        let path =
+            std::env::temp_dir().join(format!("struxis-app-lifecycle-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&path).expect("create lifecycle Catalog");
         let catalog = ParquetDataCatalog::new(&path, None, None, None, None);
         catalog
             .write_instruments(vec![InstrumentAny::CurrencyPair(currency_pair_btcusdt())])
             .expect("write lifecycle instrument");
-        let bar_type = BarType::from_str("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
-            .expect("lifecycle BarType");
+        let bar_type =
+            BarType::from_str("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL").expect("lifecycle BarType");
         let bars: Vec<_> = (0..3_u64)
             .map(|index| {
                 let timestamp = 1_735_689_600_000_000_000 + index * 300_000_000_000;
@@ -54,7 +54,9 @@ impl LifecycleCatalog {
                 )
             })
             .collect();
-        catalog.write_to_parquet(&bars, None, None, None).expect("write lifecycle bars");
+        catalog
+            .write_to_parquet(&bars, None, None, None)
+            .expect("write lifecycle bars");
         Self(path)
     }
 }
@@ -110,7 +112,10 @@ fn app_state_get_run_state_returns_none_when_inactive() {
 
     let result = state.replay_state();
 
-    assert_eq!(result.expect("inactive Run state is a valid empty state"), None);
+    assert_eq!(
+        result.expect("inactive Run state is a valid empty state"),
+        None
+    );
 }
 
 #[test]
@@ -129,7 +134,8 @@ fn app_state_snapshot_discovery_works_on_empty_directory() {
 
     let result = state.discover_snapshots();
 
-    let artifacts = result.expect("an existing empty Snapshot directory should be a successful discovery");
+    let artifacts =
+        result.expect("an existing empty Snapshot directory should be a successful discovery");
     assert!(
         artifacts.is_empty(),
         "Empty directory should return no artifacts"
@@ -190,12 +196,13 @@ fn active_run_rejects_origin_and_test_dataset_replacement() {
         .into_iter()
         .find(|entry| {
             entry.available
-                && entry.bar_type.as_deref()
-                    == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
+                && entry.bar_type.as_deref() == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
         })
         .expect("fixture BTCUSDT stream should be available");
 
-    let origin = state.load_origin(&entry.id, true).expect("Origin should load");
+    let origin = state
+        .load_origin(&entry.id, true)
+        .expect("Origin should load");
     assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
     let test = state
         .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
@@ -207,17 +214,30 @@ fn active_run_rejects_origin_and_test_dataset_replacement() {
     let test_result = state.create_test_dataset(&origin.first_sbar_id, &origin.last_sbar_id);
     assert_eq!(test_result.unwrap_err().code, IpcErrorCode::Conflict);
 
-    let current_origin = state.current_origin().expect("current Origin query").expect("Origin remains loaded");
-    let current_test = state.current_test_dataset().expect("current Test query").expect("Test remains loaded");
+    let current_origin = state
+        .current_origin()
+        .expect("current Origin query")
+        .expect("Origin remains loaded");
+    let current_test = state
+        .current_test_dataset()
+        .expect("current Test query")
+        .expect("Test remains loaded");
     assert_eq!(current_origin.origin_dataset_id, origin.origin_dataset_id);
-    assert_eq!(current_origin.sbar_sequence_fingerprint, origin.sbar_sequence_fingerprint);
+    assert_eq!(
+        current_origin.sbar_sequence_fingerprint,
+        origin.sbar_sequence_fingerprint
+    );
     assert_eq!(current_test.test_dataset_id, test.test_dataset_id);
-    assert_eq!(current_test.sbar_sequence_fingerprint, test.sbar_sequence_fingerprint);
+    assert_eq!(
+        current_test.sbar_sequence_fingerprint,
+        test.sbar_sequence_fingerprint
+    );
 
     // An active Run remains owned until Stop or Reset releases its runtime.
-    state.replay_reset().expect("Reset clears the retained Run context");
+    state
+        .replay_reset()
+        .expect("Reset clears the retained Run context");
 }
-
 
 #[test]
 fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
@@ -240,12 +260,13 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
         .into_iter()
         .find(|entry| {
             entry.available
-                && entry.bar_type.as_deref()
-                    == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
+                && entry.bar_type.as_deref() == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
         })
         .expect("fixture BTCUSDT stream should be available");
 
-    let origin = state.load_origin(&entry.id, true).expect("Origin should load");
+    let origin = state
+        .load_origin(&entry.id, true)
+        .expect("Origin should load");
     assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
     let test = state
         .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
@@ -255,7 +276,8 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     let initial = state.start_run().expect("Run should start");
     assert_eq!(initial.status, RunStatus::Ready);
     assert_eq!(initial.processed_count, 0);
-    let premature_save = state.save_run_snapshot()
+    let premature_save = state
+        .save_run_snapshot()
         .expect_err("Snapshot save must reject a non-completed Run");
     assert!(premature_save.message.contains("Completed Run"));
 
@@ -263,25 +285,38 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
     assert_eq!(first.run_state.processed_count, 1);
     assert_eq!(first.run_state.status, RunStatus::Paused);
     assert_eq!(
-        first.inspector.as_ref().map(|checkpoint| checkpoint.sbar_id.as_str()),
+        first
+            .inspector
+            .as_ref()
+            .map(|checkpoint| checkpoint.sbar_id.as_str()),
         first.run_state.cursor_sbar_id.as_deref(),
         "Step response must pair RunState with its own Inspector Checkpoint"
     );
 
-    let completed = state.replay_step().expect("second SBar should complete Run");
+    let completed = state
+        .replay_step()
+        .expect("second SBar should complete Run");
     assert_eq!(completed.run_state.processed_count, 2);
     assert_eq!(completed.run_state.status, RunStatus::Completed);
     assert_eq!(
-        completed.inspector.as_ref().map(|checkpoint| checkpoint.sbar_id.as_str()),
+        completed
+            .inspector
+            .as_ref()
+            .map(|checkpoint| checkpoint.sbar_id.as_str()),
         completed.run_state.cursor_sbar_id.as_deref(),
         "final Step response must pair RunState with its own Inspector Checkpoint"
     );
 
     assert!(
-        state.discover_snapshots().expect("Snapshot discovery should work before save").is_empty(),
+        state
+            .discover_snapshots()
+            .expect("Snapshot discovery should work before save")
+            .is_empty(),
         "Completing a Run must not implicitly persist a Snapshot"
     );
-    let snapshot_id = state.save_run_snapshot().expect("explicit Snapshot save should succeed");
+    let snapshot_id = state
+        .save_run_snapshot()
+        .expect("explicit Snapshot save should succeed");
     assert!(!snapshot_id.is_empty());
     let state_after_save = state
         .replay_state()
@@ -299,13 +334,14 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
         "Exactly one completed Snapshot should be discoverable"
     );
 
-    state.replay_reset().expect("Reset clears the retained completed Run context");
+    state
+        .replay_reset()
+        .expect("Reset clears the retained completed Run context");
     drop(state);
 
     // Reconstruct the application service with the same persistent root to
     // verify discovery does not depend on the original AppState or Run owner.
-    let reopened_state =
-        AppState::with_snapshot_root(catalog.0.clone(), snapshot_root.clone());
+    let reopened_state = AppState::with_snapshot_root(catalog.0.clone(), snapshot_root.clone());
     let reopened_artifacts = reopened_state
         .discover_snapshots()
         .expect("Completed Snapshot should remain discoverable after AppState reconstruction");
@@ -318,7 +354,6 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
 
     std::fs::remove_dir_all(snapshot_root).expect("temporary Snapshot root should be removed");
 }
-
 
 #[test]
 fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
@@ -344,12 +379,13 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
         .into_iter()
         .find(|entry| {
             entry.available
-                && entry.bar_type.as_deref()
-                    == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
+                && entry.bar_type.as_deref() == Some("BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL")
         })
         .expect("fixture BTCUSDT stream should be available");
 
-    let origin = state.load_origin(&entry.id, true).expect("Origin should load");
+    let origin = state
+        .load_origin(&entry.id, true)
+        .expect("Origin should load");
     assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
     state
         .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
@@ -357,7 +393,9 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
 
     state.start_run().expect("Run should start");
     state.replay_step().expect("first SBar should process");
-    let completed = state.replay_step().expect("second SBar should complete Run");
+    let completed = state
+        .replay_step()
+        .expect("second SBar should complete Run");
     assert_eq!(completed.run_state.status, RunStatus::Completed);
     assert_eq!(completed.run_state.processed_count, 2);
 
@@ -377,12 +415,13 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
     assert_eq!(after_failure.status, RunStatus::Completed);
     assert_eq!(after_failure.processed_count, 2);
     assert_eq!(
-        after_failure.cursor_sbar_id,
-        completed.run_state.cursor_sbar_id,
+        after_failure.cursor_sbar_id, completed.run_state.cursor_sbar_id,
         "failed Snapshot save must not roll back the confirmed cursor"
     );
 
-    state.replay_reset().expect("Reset clears the retained completed Run context");
+    state
+        .replay_reset()
+        .expect("Reset clears the retained completed Run context");
     drop(state);
     std::fs::remove_file(snapshot_root).expect("blocking Snapshot root file should be removed");
 }

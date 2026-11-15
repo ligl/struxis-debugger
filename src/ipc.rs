@@ -58,8 +58,7 @@ mod tests {
         let error = IpcError::new(IpcErrorCode::InvalidArgument, "Invalid dataset selection");
 
         let json = serde_json::to_string(&error).expect("IPC error should serialize");
-        let decoded: IpcError =
-            serde_json::from_str(&json).expect("IPC error should deserialize");
+        let decoded: IpcError = serde_json::from_str(&json).expect("IPC error should deserialize");
 
         assert_eq!(decoded, error);
     }

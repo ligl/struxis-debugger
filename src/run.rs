@@ -49,10 +49,7 @@ impl RunState {
 
     /// Call only after Strategy/Struxis processing and checkpoint commit succeed.
     pub(crate) fn confirm_checkpoint(&mut self, sbar_id: String) -> Result<(), String> {
-        if !matches!(
-            self.status,
-            RunStatus::Ready | RunStatus::Paused
-        ) {
+        if !matches!(self.status, RunStatus::Ready | RunStatus::Paused) {
             return Err(self.invalid_transition("ConfirmCheckpoint", self.status));
         }
         if sbar_id.trim().is_empty() || self.processed_count >= self.input_count {
@@ -93,7 +90,10 @@ impl RunState {
     }
 
     fn invalid_transition(&self, command: &str, status: RunStatus) -> String {
-        format!("{command} is invalid while Run {} is {status:?}", self.run_id)
+        format!(
+            "{command} is invalid while Run {} is {status:?}",
+            self.run_id
+        )
     }
 }
 
@@ -108,7 +108,8 @@ mod tests {
             Uuid::new_v4().to_string(),
             "fingerprint".into(),
             count,
-        ).expect("fixture should be valid")
+        )
+        .expect("fixture should be valid")
     }
 
     #[test]
@@ -151,7 +152,10 @@ mod tests {
         run.dispose().unwrap();
 
         assert_eq!(run.status, RunStatus::Disposed);
-        assert_eq!(run.failure_diagnostic.as_deref(), Some("checkpoint sink failed"));
+        assert_eq!(
+            run.failure_diagnostic.as_deref(),
+            Some("checkpoint sink failed")
+        );
     }
 
     #[test]
