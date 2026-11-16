@@ -22,6 +22,22 @@ use crate::{
     worker::ReplayWorkerConfig,
 };
 
+// Demo strategy observations coexist with user-driven Debugger observations.
+// Always locate the latter by ID; collection position is not an ownership contract.
+fn observation<'a>(
+    snapshot: &'a crate::checkpoint::KeyZoneCheckpoint,
+    id: &str,
+) -> &'a crate::checkpoint::KeyZoneObservation {
+    snapshot.observations.iter().find(|item| item.observation_id == id).expect("observation in projection")
+}
+
+fn interactions_for<'a>(
+    snapshot: &'a crate::checkpoint::KeyZoneCheckpoint,
+    observation_id: &str,
+) -> Vec<&'a crate::checkpoint::KeyZoneInteraction> {
+    snapshot.interactions.iter().filter(|item| item.observation_id == observation_id).collect()
+}
+
 const BASE: u64 = 1_735_689_600_000_000_000;
 fn time(index: u64) -> String {
     (BASE + index * 60_000_000_000).to_string()
