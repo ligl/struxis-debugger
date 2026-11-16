@@ -465,9 +465,12 @@ impl KeyZoneCheckpoint {
         key: capitus_struxis::StruxisStateKey,
     ) -> Result<Self, String> {
         let zones = engine.keyzones(key).collect().map_err(|error| error.to_string())?;
-        let observations = engine.observations().instrument(key.instrument_id)
-            .collect().map_err(|error| error.to_string())?
-            .into_iter().cloned().collect();
+        // ObservationTask progress is partly projected from the registry's
+        // observation cursor. Raw query references do not include snapshot_at().
+        // Preserve the domain-owned snapshot semantics for the Inspector.
+        let registry = engine.registry(key.instrument_id)
+            .ok_or_else(|| "KeyZone Registry unavailable for checkpoint".to_owned())?;
+        let observations = registry.observations().collect();
         Self::from_parts(key.instrument_id, zones, observations, |zone_id| {
             engine.interactions().instrument(key.instrument_id).keyzone(zone_id)
                 .collect().map_err(|error| error.to_string())
