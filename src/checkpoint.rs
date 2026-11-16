@@ -460,13 +460,14 @@ pub(crate) struct KeyZoneObservation {
 }
 
 impl KeyZoneCheckpoint {
-    pub(crate) fn from_registry(
-        registry: &capitus_struxis::keyzone::KeyZoneRegistry,
+    pub(crate) fn from_engine(
+        engine: &capitus_struxis::keyzone::KeyZoneEngine,
+        key: capitus_struxis::StruxisStateKey,
     ) -> Result<Self, String> {
         use capitus_struxis::keyzone::KeyZoneOrigin;
         let mut zones = Vec::new();
         let mut interactions = Vec::new();
-        for zone in registry.keyzones() {
+        for zone in engine.keyzones(key).collect().map_err(|error| error.to_string())? {
             let (origin_kind, origin_id) = match zone.origin() {
                 KeyZoneOrigin::Swing(id) => ("Swing", Some(id.to_string())),
                 KeyZoneOrigin::Trend(id) => ("Trend", Some(id.to_string())),
@@ -487,8 +488,11 @@ impl KeyZoneCheckpoint {
                 invalidated_at: zone.invalidated_at().map(|at| at.to_string()),
                 invalidated_detected_at: zone.invalidated_detected_at().map(|at| at.to_string()),
             });
-            for interaction in registry
-                .interactions_for(zone.id())
+            for interaction in engine
+                .interactions()
+                .instrument(key.instrument_id)
+                .keyzone(zone.id())
+                .collect()
                 .map_err(|error| error.to_string())?
             {
                 let summary = interaction.summary().map_err(|error| error.to_string())?;
@@ -539,9 +543,13 @@ impl KeyZoneCheckpoint {
             }
         }
         Ok(Self {
-            instrument_id: registry.instrument_id().to_string(),
-            observations: registry
+            instrument_id: key.instrument_id.to_string(),
+            observations: engine
                 .observations()
+                .instrument(key.instrument_id)
+                .collect()
+                .map_err(|error| error.to_string())?
+                .into_iter()
                 .map(|o| {
                     let r = o.request();
                     KeyZoneObservation {
@@ -946,8 +954,7 @@ pub(crate) mod keyzone_projection_tests {
             ));
         }
         let keyzone = struxis.keyzone();
-        let registry = keyzone.registry(key.instrument_id).unwrap();
-        let projected = KeyZoneCheckpoint::from_registry(registry).unwrap();
+        let projected = KeyZoneCheckpoint::from_engine(&keyzone, key).unwrap();
         assert_eq!(projected.zones.len(), 4);
         assert_eq!(
             projected
