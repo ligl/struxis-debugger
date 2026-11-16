@@ -466,7 +466,8 @@ impl KeyZoneCheckpoint {
     ) -> Result<Self, String> {
         let zones = engine.keyzones(key).collect().map_err(|error| error.to_string())?;
         let observations = engine.observations().instrument(key.instrument_id)
-            .collect().map_err(|error| error.to_string())?;
+            .collect().map_err(|error| error.to_string())?
+            .into_iter().cloned().collect();
         Self::from_parts(key.instrument_id, zones, observations, |zone_id| {
             engine.interactions().instrument(key.instrument_id).keyzone(zone_id)
                 .collect().map_err(|error| error.to_string())
@@ -488,7 +489,7 @@ impl KeyZoneCheckpoint {
     fn from_parts<'a>(
         instrument_id: nautilus_model::identifiers::InstrumentId,
         zones_source: Vec<&'a capitus_struxis::keyzone::KeyZone>,
-        observations_source: Vec<&'a capitus_struxis::keyzone::ObservationTask>,
+        observations_source: Vec<capitus_struxis::keyzone::ObservationTask>,
         interactions_for: impl Fn(capitus_struxis::keyzone::KeyZoneId)
             -> Result<Vec<&'a capitus_struxis::keyzone::Interaction>, String>,
     ) -> Result<Self, String> {
