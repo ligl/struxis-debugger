@@ -349,7 +349,7 @@ fn old_run_requests_are_rejected_after_restart() {
 fn completion_with_active_observation_preserves_inspector_and_snapshot_facts() {
     let (mut manager, mut request) = paused();
     request.deadline = time(19);
-    manager
+    let created = manager
         .observation(ObservationCommand::Create(request))
         .unwrap();
     for _ in 15..19 {
@@ -361,15 +361,18 @@ fn completion_with_active_observation_preserves_inspector_and_snapshot_facts() {
     );
     let inspector = manager.inspector().unwrap().unwrap();
     let registry = inspector.keyzones.as_ref().unwrap();
-    assert_eq!(registry.observations[0].state, "Observing");
-    assert_eq!(registry.observations[0].reason, None);
-    assert_eq!(registry.observations[0].terminal_at, None);
-    assert_eq!(registry.interactions[0].state, "Active");
+    let task = observation(registry, &created.observation_id);
+    assert_eq!(task.state, "Observing");
+    assert_eq!(task.reason, None);
+    assert_eq!(task.terminal_at, None);
+    let interactions = interactions_for(registry, &created.observation_id);
+    assert_eq!(interactions.len(), 1);
+    assert_eq!(interactions[0].state, "Active");
     assert_eq!(
-        registry.interactions[0].last_processed_at.as_deref(),
+        interactions[0].last_processed_at.as_deref(),
         Some(time(18).as_str())
     );
-    assert_eq!(registry.interactions[0].interrupted_at, None);
+    assert_eq!(interactions[0].interrupted_at, None);
     let snapshot = manager.snapshot_data().unwrap();
     assert_eq!(
         snapshot.checkpoints.last().unwrap().keyzones,
@@ -380,14 +383,16 @@ fn completion_with_active_observation_preserves_inspector_and_snapshot_facts() {
 #[test]
 fn stop_with_active_interaction_preserves_the_last_facts_without_cancelling() {
     let (mut manager, request) = paused();
-    manager
+    let created = manager
         .observation(ObservationCommand::Create(request))
         .unwrap();
     manager.step_checkpoint().unwrap();
     let before = manager.inspector().unwrap().unwrap();
     let registry = before.keyzones.as_ref().unwrap();
-    assert_eq!(registry.observations[0].state, "Observing");
-    assert_eq!(registry.interactions[0].state, "Active");
+    assert_eq!(observation(registry, &created.observation_id).state, "Observing");
+    let interactions = interactions_for(registry, &created.observation_id);
+    assert_eq!(interactions.len(), 1);
+    assert_eq!(interactions[0].state, "Active");
     assert_eq!(
         manager.stop().unwrap().status,
         crate::run::RunStatus::Disposed
@@ -398,7 +403,7 @@ fn stop_with_active_interaction_preserves_the_last_facts_without_cancelling() {
 #[test]
 fn restart_with_active_interaction_releases_old_worker_and_keeps_owned_results_unchanged() {
     let (mut manager, request) = paused();
-    manager
+    let created = manager
         .observation(ObservationCommand::Create(request))
         .unwrap();
     manager.step_checkpoint().unwrap();
@@ -408,17 +413,21 @@ fn restart_with_active_interaction_releases_old_worker_and_keeps_owned_results_u
     assert_ne!(restarted.run_id, old_run_id);
     assert_eq!(restarted.status, crate::run::RunStatus::Ready);
     assert!(manager.inspector().unwrap().is_none());
-    assert_eq!(
-        old.keyzones.as_ref().unwrap().observations[0].state,
-        "Observing"
-    );
-    assert_eq!(
-        old.keyzones.as_ref().unwrap().interactions[0].state,
-        "Active"
-    );
+    let old_zones = old.keyzones.as_ref().unwrap();
+    assert_eq!(observation(old_zones, &created.observation_id).state, "Observing");
+    let old_interactions = interactions_for(old_zones, &created.observation_id);
+    assert_eq!(old_interactions.len(), 1);
+    assert_eq!(old_interactions[0].state, "Active");
     let new = manager.step_checkpoint().unwrap().inspector.unwrap();
-    assert!(new.keyzones.as_ref().unwrap().observations.is_empty());
-    assert!(new.keyzones.as_ref().unwrap().interactions.is_empty());
+    let new_zones = new.keyzones.as_ref().unwrap();
+    assert!(
+        new_zones.observations.iter().all(|task| task.request_id != "debugger-observe"),
+        "restarted Run must not contain the previous user request"
+    );
+    assert!(
+        new_zones.interactions.iter().all(|item| item.observation_id != created.observation_id),
+        "restarted Run must not carry the old user interaction"
+    );
     manager.dispose().unwrap();
 }
 
