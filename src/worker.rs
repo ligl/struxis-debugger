@@ -540,16 +540,8 @@ impl WorkerSession {
             )
             .map_err(crate::observation::domain_error)?;
         let keyzone = self.struxis.keyzone();
-        let registry = keyzone
-            .registry(self.input.state_key.instrument_id)
-            .ok_or_else(|| {
-                IpcError::new(
-                    IpcErrorCode::InvalidState,
-                    "KeyZone Registry unavailable after creation",
-                )
-            })?;
         inspector.keyzones = Some(
-            crate::checkpoint::KeyZoneCheckpoint::from_registry(registry)
+            crate::checkpoint::KeyZoneCheckpoint::from_engine(&keyzone, self.input.state_key)
                 .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))?,
         );
         drop(keyzone);
@@ -617,16 +609,11 @@ impl WorkerSession {
                 let numeric_id = integer(&request.keyzone_id, "KeyZone ID")?;
                 let zone_id = {
                     let keyzone = self.struxis.keyzone();
-                    let registry = keyzone
-                        .registry(self.input.state_key.instrument_id)
-                        .ok_or_else(|| {
-                            IpcError::new(
-                                IpcErrorCode::InvalidState,
-                                "KeyZone Registry unavailable",
-                            )
-                        })?;
-                    registry
-                        .keyzones()
+                    keyzone
+                        .keyzones(self.input.state_key)
+                        .collect()
+                        .map_err(domain_error)?
+                        .into_iter()
                         .find(|zone| zone.id().value() == numeric_id)
                         .map(|zone| zone.id())
                         .ok_or_else(|| {
@@ -684,16 +671,12 @@ impl WorkerSession {
                 let numeric_id = integer(&request.observation_id, "Observation ID")?;
                 let id = {
                     let keyzone = self.struxis.keyzone();
-                    let registry = keyzone
-                        .registry(self.input.state_key.instrument_id)
-                        .ok_or_else(|| {
-                            IpcError::new(
-                                IpcErrorCode::InvalidState,
-                                "KeyZone Registry unavailable",
-                            )
-                        })?;
-                    registry
+                    keyzone
                         .observations()
+                        .instrument(self.input.state_key.instrument_id)
+                        .collect()
+                        .map_err(domain_error)?
+                        .into_iter()
                         .find(|task| task.id().value() == numeric_id)
                         .map(|task| task.id())
                         .ok_or_else(|| {
@@ -709,20 +692,11 @@ impl WorkerSession {
                     .map_err(domain_error)?
             }
         };
-        let projection = self
-            .struxis
-            .keyzone()
-            .registry(self.input.state_key.instrument_id)
-            .ok_or_else(|| {
-                IpcError::new(
-                    IpcErrorCode::InvalidState,
-                    "KeyZone Registry unavailable after operation",
-                )
-            })
-            .and_then(|registry| {
-                crate::checkpoint::KeyZoneCheckpoint::from_registry(registry)
-                    .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))
-            })?;
+        let projection = crate::checkpoint::KeyZoneCheckpoint::from_engine(
+            &self.struxis.keyzone(),
+            self.input.state_key,
+        )
+        .map_err(|error| IpcError::new(IpcErrorCode::Internal, error))?;
         inspector.keyzones = Some(projection);
         self.release_removed_requests(&inspector);
         self.latest_inspector = Some(inspector.clone());
@@ -962,12 +936,10 @@ impl WorkerSession {
                 notify_sink_failure(&mut sink, &diagnostic);
                 return Err(diagnostic);
             }
-            let keyzones = self
-                .struxis
-                .keyzone()
-                .registry(self.input.state_key.instrument_id)
-                .ok_or_else(|| "KeyZone Registry unavailable at confirmed checkpoint".to_owned())
-                .and_then(|registry| crate::checkpoint::KeyZoneCheckpoint::from_registry(registry));
+            let keyzones = crate::checkpoint::KeyZoneCheckpoint::from_engine(
+                &self.struxis.keyzone(),
+                self.input.state_key,
+            );
             let keyzones = match keyzones {
                 Ok(keyzones) => keyzones,
                 Err(diagnostic) => {
@@ -1439,9 +1411,10 @@ mod tests {
         let zone = session
             .struxis
             .keyzone()
-            .registry(key.instrument_id)
+            .keyzones(key)
+            .collect()
             .unwrap()
-            .keyzones()
+            .into_iter()
             .find(|zone| {
                 zone.formed_at().as_u64() == base + minute
                     && matches!(
