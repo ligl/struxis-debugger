@@ -105,7 +105,7 @@ pub(crate) struct SBarCheckpoint {
     pub(crate) body: String,
     pub(crate) upper_shadow: String,
     pub(crate) lower_shadow: String,
-    pub(crate) total_range: String,
+    pub(crate) range: String,
     pub(crate) body_ratio: f64,
     pub(crate) shadow_ratio: f64,
     pub(crate) direction: String,
@@ -303,7 +303,7 @@ fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
             body: bar.body().to_string(),
             upper_shadow: bar.upper_shadow().to_string(),
             lower_shadow: bar.lower_shadow().to_string(),
-            total_range: bar.total_range().to_string(),
+            range: bar.range().to_string(),
             body_ratio: bar.body_ratio(),
             shadow_ratio: bar.shadow_ratio(),
             direction: format!("{:?}", bar.direction()),
@@ -464,16 +464,24 @@ impl KeyZoneCheckpoint {
         engine: &capitus_struxis::keyzone::KeyZoneEngine,
         key: capitus_struxis::StruxisStateKey,
     ) -> Result<Self, String> {
-        let zones = engine.keyzones(key).collect().map_err(|error| error.to_string())?;
+        let zones = engine
+            .keyzones(key)
+            .collect()
+            .map_err(|error| error.to_string())?;
         // ObservationTask progress is partly projected from the registry's
         // observation cursor. Raw query references do not include snapshot_at().
         // Preserve the domain-owned snapshot semantics for the Inspector.
-        let registry = engine.registry(key.instrument_id)
+        let registry = engine
+            .registry(key.instrument_id)
             .ok_or_else(|| "KeyZone Registry unavailable for checkpoint".to_owned())?;
         let observations = registry.observations().collect();
         Self::from_parts(key.instrument_id, zones, observations, |zone_id| {
-            engine.interactions().instrument(key.instrument_id).keyzone(zone_id)
-                .collect().map_err(|error| error.to_string())
+            engine
+                .interactions()
+                .instrument(key.instrument_id)
+                .keyzone(zone_id)
+                .collect()
+                .map_err(|error| error.to_string())
         })
     }
 
@@ -485,7 +493,11 @@ impl KeyZoneCheckpoint {
             registry.instrument_id(),
             registry.keyzones().collect(),
             registry.observations().collect(),
-            |zone_id| registry.interactions_for(zone_id).map_err(|error| error.to_string()),
+            |zone_id| {
+                registry
+                    .interactions_for(zone_id)
+                    .map_err(|error| error.to_string())
+            },
         )
     }
 
@@ -493,7 +505,9 @@ impl KeyZoneCheckpoint {
         instrument_id: nautilus_model::identifiers::InstrumentId,
         zones_source: Vec<&'a capitus_struxis::keyzone::KeyZone>,
         observations_source: Vec<capitus_struxis::keyzone::ObservationTask>,
-        interactions_for: impl Fn(capitus_struxis::keyzone::KeyZoneId)
+        interactions_for: impl Fn(
+            capitus_struxis::keyzone::KeyZoneId,
+        )
             -> Result<Vec<&'a capitus_struxis::keyzone::Interaction>, String>,
     ) -> Result<Self, String> {
         use capitus_struxis::keyzone::KeyZoneOrigin;
@@ -689,18 +703,38 @@ pub(crate) mod keyzone_projection_tests {
         engine.register(instrument, minute);
         engine.register(instrument, hour);
         let range = PriceRange::new(Price::from("9"), Price::from("12")).unwrap();
-        let (minute_id, _) = engine.create_fixed(instrument, minute, 1_u64.into(), range).unwrap();
-        let (hour_id, _) = engine.create_fixed(instrument, hour, 2_u64.into(), range).unwrap();
+        let (minute_id, _) = engine
+            .create_fixed(instrument, minute, 1_u64.into(), range)
+            .unwrap();
+        let (hour_id, _) = engine
+            .create_fixed(instrument, hour, 2_u64.into(), range)
+            .unwrap();
         let minute_projection = KeyZoneCheckpoint::from_engine(
-            &engine, StruxisStateKey { instrument_id: instrument, timeframe: minute },
-        ).unwrap();
+            &engine,
+            StruxisStateKey {
+                instrument_id: instrument,
+                timeframe: minute,
+            },
+        )
+        .unwrap();
         let hour_projection = KeyZoneCheckpoint::from_engine(
-            &engine, StruxisStateKey { instrument_id: instrument, timeframe: hour },
-        ).unwrap();
+            &engine,
+            StruxisStateKey {
+                instrument_id: instrument,
+                timeframe: hour,
+            },
+        )
+        .unwrap();
         assert_eq!(minute_projection.zones.len(), 1);
         assert_eq!(hour_projection.zones.len(), 1);
-        assert_eq!(minute_projection.zones[0].keyzone_id, minute_id.value().to_string());
-        assert_eq!(hour_projection.zones[0].keyzone_id, hour_id.value().to_string());
+        assert_eq!(
+            minute_projection.zones[0].keyzone_id,
+            minute_id.value().to_string()
+        );
+        assert_eq!(
+            hour_projection.zones[0].keyzone_id,
+            hour_id.value().to_string()
+        );
     }
 
     pub(crate) fn fixed_projection() -> KeyZoneCheckpoint {
