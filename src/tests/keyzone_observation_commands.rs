@@ -145,7 +145,7 @@ fn current_observation_refreshes_without_advancing_and_cancel_stops_its_interact
     assert_eq!(result.inspector.sbar_id, time(14));
     let registry = result.inspector.keyzones.unwrap();
     assert_eq!(
-        registry.observations.iter().filter(|item| item.request_id == request.request_id).count(),
+        registry.observations.iter().filter(|item| item.observation_id == result.observation_id).count(),
         1
     );
     assert!(interactions_for(&registry, &result.observation_id).is_empty());
@@ -420,14 +420,8 @@ fn restart_with_active_interaction_releases_old_worker_and_keeps_owned_results_u
     assert_eq!(old_interactions[0].state, "Active");
     let new = manager.step_checkpoint().unwrap().inspector.unwrap();
     let new_zones = new.keyzones.as_ref().unwrap();
-    assert!(
-        new_zones.observations.iter().all(|task| task.request_id != "debugger-observe"),
-        "restarted Run must not contain the previous user request"
-    );
-    assert!(
-        new_zones.interactions.iter().all(|item| item.observation_id != created.observation_id),
-        "restarted Run must not carry the old user interaction"
-    );
+    assert!(new_zones.observations.is_empty());
+    assert!(new_zones.interactions.is_empty());
     manager.dispose().unwrap();
 }
 
