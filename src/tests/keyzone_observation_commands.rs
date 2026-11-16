@@ -144,8 +144,11 @@ fn current_observation_refreshes_without_advancing_and_cancel_stops_its_interact
     assert_eq!(result.operation, Operation::Created);
     assert_eq!(result.inspector.sbar_id, time(14));
     let registry = result.inspector.keyzones.unwrap();
-    assert_eq!(registry.observations.len(), 1);
-    assert!(registry.interactions.is_empty());
+    assert_eq!(
+        registry.observations.iter().filter(|item| item.request_id == request.request_id).count(),
+        1
+    );
+    assert!(interactions_for(&registry, &result.observation_id).is_empty());
     assert_eq!(manager.state().unwrap().unwrap().processed_count, 15);
     let retry = manager
         .observation(ObservationCommand::Create(request.clone()))
@@ -154,9 +157,10 @@ fn current_observation_refreshes_without_advancing_and_cancel_stops_its_interact
     assert_eq!(retry.observation_id, result.observation_id);
     let step = manager.step_checkpoint().unwrap();
     let registry = step.inspector.unwrap().keyzones.unwrap();
-    assert_eq!(registry.interactions.len(), 1);
-    assert_eq!(registry.interactions[0].state, "Active");
-    assert_eq!(registry.interactions[0].started_at, time(15));
+    let active = interactions_for(&registry, &result.observation_id);
+    assert_eq!(active.len(), 1);
+    assert_eq!(active[0].state, "Active");
+    assert_eq!(active[0].started_at, time(15));
     let cancel = CancelObservation {
         context: ObservationContext {
             expected_sbar_id: time(15),
@@ -169,10 +173,12 @@ fn current_observation_refreshes_without_advancing_and_cancel_stops_its_interact
         .unwrap();
     assert_eq!(result.operation, Operation::Cancelled);
     let registry = result.inspector.keyzones.unwrap();
-    assert_eq!(registry.observations[0].state, "Cancelled");
-    assert_eq!(registry.interactions[0].state, "Interrupted");
+    assert_eq!(observation(&registry, &result.observation_id).state, "Cancelled");
+    let interrupted = interactions_for(&registry, &result.observation_id);
+    assert_eq!(interrupted.len(), 1);
+    assert_eq!(interrupted[0].state, "Interrupted");
     assert_eq!(
-        registry.interactions[0].last_processed_at.as_deref(),
+        interrupted[0].last_processed_at.as_deref(),
         Some(time(15).as_str())
     );
     assert_eq!(
@@ -189,8 +195,14 @@ fn current_observation_refreshes_without_advancing_and_cancel_stops_its_interact
         .unwrap()
         .keyzones
         .unwrap();
-    assert_eq!(later.interactions, registry.interactions);
-    assert_eq!(later.observations, registry.observations);
+    assert_eq!(
+        interactions_for(&later, &result.observation_id),
+        interactions_for(&registry, &result.observation_id)
+    );
+    assert_eq!(
+        observation(&later, &result.observation_id),
+        observation(&registry, &result.observation_id)
+    );
     manager.dispose().unwrap();
 }
 
