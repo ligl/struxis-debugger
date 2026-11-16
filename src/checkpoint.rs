@@ -464,10 +464,38 @@ impl KeyZoneCheckpoint {
         engine: &capitus_struxis::keyzone::KeyZoneEngine,
         key: capitus_struxis::StruxisStateKey,
     ) -> Result<Self, String> {
+        let zones = engine.keyzones(key).collect().map_err(|error| error.to_string())?;
+        let observations = engine.observations().instrument(key.instrument_id)
+            .collect().map_err(|error| error.to_string())?;
+        Self::from_parts(key.instrument_id, zones, observations, |zone_id| {
+            engine.interactions().instrument(key.instrument_id).keyzone(zone_id)
+                .collect().map_err(|error| error.to_string())
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn from_registry(
+        registry: &capitus_struxis::keyzone::KeyZoneRegistry,
+    ) -> Result<Self, String> {
+        Self::from_parts(
+            registry.instrument_id(),
+            registry.keyzones().collect(),
+            registry.observations().collect(),
+            |zone_id| registry.interactions_for(zone_id).map_err(|error| error.to_string()),
+        )
+    }
+
+    fn from_parts<'a>(
+        instrument_id: nautilus_model::identifiers::InstrumentId,
+        zones_source: Vec<&'a capitus_struxis::keyzone::KeyZone>,
+        observations_source: Vec<&'a capitus_struxis::keyzone::ObservationTask>,
+        interactions_for: impl Fn(capitus_struxis::keyzone::KeyZoneId)
+            -> Result<Vec<&'a capitus_struxis::keyzone::Interaction>, String>,
+    ) -> Result<Self, String> {
         use capitus_struxis::keyzone::KeyZoneOrigin;
         let mut zones = Vec::new();
         let mut interactions = Vec::new();
-        for zone in engine.keyzones(key).collect().map_err(|error| error.to_string())? {
+        for zone in zones_source {
             let (origin_kind, origin_id) = match zone.origin() {
                 KeyZoneOrigin::Swing(id) => ("Swing", Some(id.to_string())),
                 KeyZoneOrigin::Trend(id) => ("Trend", Some(id.to_string())),
@@ -488,13 +516,7 @@ impl KeyZoneCheckpoint {
                 invalidated_at: zone.invalidated_at().map(|at| at.to_string()),
                 invalidated_detected_at: zone.invalidated_detected_at().map(|at| at.to_string()),
             });
-            for interaction in engine
-                .interactions()
-                .instrument(key.instrument_id)
-                .keyzone(zone.id())
-                .collect()
-                .map_err(|error| error.to_string())?
-            {
+            for interaction in interactions_for(zone.id())? {
                 let summary = interaction.summary().map_err(|error| error.to_string())?;
                 interactions.push(KeyZoneInteraction {
                     interaction_id: interaction.id().value().to_string(),
@@ -543,12 +565,8 @@ impl KeyZoneCheckpoint {
             }
         }
         Ok(Self {
-            instrument_id: key.instrument_id.to_string(),
-            observations: engine
-                .observations()
-                .instrument(key.instrument_id)
-                .collect()
-                .map_err(|error| error.to_string())?
+            instrument_id: instrument_id.to_string(),
+            observations: observations_source
                 .into_iter()
                 .map(|o| {
                     let r = o.request();
