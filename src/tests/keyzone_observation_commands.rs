@@ -466,7 +466,7 @@ fn fixed_price_range_creation_is_separate_from_observation_and_survives_step() {
     let observed_zones = observed.inspector.keyzones.as_ref().unwrap();
     assert_eq!(observed_zones.observations.len(), registry.observations.len() + 1);
     assert_eq!(
-        observation(observed_zones, &observed.observation_id).keyzone_id,
+        self::observation(observed_zones, &observed.observation_id).keyzone_id,
         created.keyzone_id
     );
     let next = manager.step_checkpoint().unwrap();
