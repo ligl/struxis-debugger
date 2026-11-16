@@ -215,31 +215,26 @@ fn historical_observation_completes_from_fixed_market_facts_and_old_checkpoints_
         .observation(ObservationCommand::Create(request))
         .unwrap();
     let registry = result.inspector.keyzones.unwrap();
-    assert_eq!(registry.observations[0].state, "Completed");
-    assert_eq!(
-        registry.observations[0].reason.as_deref(),
-        Some("InteractionCompleted")
-    );
-    assert_eq!(registry.interactions.len(), 1);
-    assert_eq!(registry.interactions[0].started_at, time(1));
-    assert_eq!(
-        registry.interactions[0].ended_at.as_deref(),
-        Some(time(3).as_str())
-    );
+    let task = observation(&registry, &result.observation_id);
+    assert_eq!(task.state, "Completed");
+    assert_eq!(task.reason.as_deref(), Some("InteractionCompleted"));
+    let interactions = interactions_for(&registry, &result.observation_id);
+    assert_eq!(interactions.len(), 1);
+    assert_eq!(interactions[0].started_at, time(1));
+    assert_eq!(interactions[0].ended_at.as_deref(), Some(time(3).as_str()));
     for _ in 15..19 {
         manager.step_checkpoint().unwrap();
     }
     let data = manager.snapshot_data().unwrap();
     assert!(
-        data.checkpoints[14]
-            .keyzones
-            .as_ref()
-            .unwrap()
-            .observations
-            .is_empty()
+        data.checkpoints[14].keyzones.as_ref().unwrap().observations
+            .iter().all(|item| item.observation_id != result.observation_id)
     );
     assert_eq!(
-        data.checkpoints[15].keyzones.as_ref().unwrap().observations[0].state,
+        observation(
+            data.checkpoints[15].keyzones.as_ref().unwrap(),
+            &result.observation_id
+        ).state,
         "Completed"
     );
 }
