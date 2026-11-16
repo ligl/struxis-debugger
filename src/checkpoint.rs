@@ -675,6 +675,30 @@ pub(crate) mod keyzone_projection_tests {
     use nautilus_model::{identifiers::InstrumentId, types::Price};
     use std::num::NonZeroU32;
 
+    #[test]
+    fn engine_projection_keeps_only_the_selected_source_timeframe() {
+        use capitus_struxis::{StruxisStateKey, keyzone::KeyZoneEngine};
+        let instrument = InstrumentId::from("AUD/USD.SIM");
+        let minute = Timeframe::minutes(NonZeroU32::new(1).unwrap());
+        let hour = Timeframe::hours(NonZeroU32::new(1).unwrap());
+        let mut engine = KeyZoneEngine::new();
+        engine.register(instrument, minute);
+        engine.register(instrument, hour);
+        let range = PriceRange::new(Price::from("9"), Price::from("12")).unwrap();
+        let (minute_id, _) = engine.create_fixed(instrument, minute, 1_u64.into(), range).unwrap();
+        let (hour_id, _) = engine.create_fixed(instrument, hour, 2_u64.into(), range).unwrap();
+        let minute_projection = KeyZoneCheckpoint::from_engine(
+            &engine, StruxisStateKey { instrument_id: instrument, timeframe: minute },
+        ).unwrap();
+        let hour_projection = KeyZoneCheckpoint::from_engine(
+            &engine, StruxisStateKey { instrument_id: instrument, timeframe: hour },
+        ).unwrap();
+        assert_eq!(minute_projection.zones.len(), 1);
+        assert_eq!(hour_projection.zones.len(), 1);
+        assert_eq!(minute_projection.zones[0].keyzone_id, minute_id.value().to_string());
+        assert_eq!(hour_projection.zones[0].keyzone_id, hour_id.value().to_string());
+    }
+
     pub(crate) fn fixed_projection() -> KeyZoneCheckpoint {
         let mut registry = KeyZoneRegistry::new(InstrumentId::from("AUD/USD.SIM"));
         registry
