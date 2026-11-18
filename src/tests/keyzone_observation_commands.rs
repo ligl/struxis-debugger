@@ -28,14 +28,22 @@ fn observation<'a>(
     snapshot: &'a crate::checkpoint::KeyZoneCheckpoint,
     id: &str,
 ) -> &'a crate::checkpoint::KeyZoneObservation {
-    snapshot.observations.iter().find(|item| item.observation_id == id).expect("observation in projection")
+    snapshot
+        .observations
+        .iter()
+        .find(|item| item.observation_id == id)
+        .expect("observation in projection")
 }
 
 fn interactions_for<'a>(
     snapshot: &'a crate::checkpoint::KeyZoneCheckpoint,
     observation_id: &str,
 ) -> Vec<&'a crate::checkpoint::KeyZoneInteraction> {
-    snapshot.interactions.iter().filter(|item| item.observation_id == observation_id).collect()
+    snapshot
+        .interactions
+        .iter()
+        .filter(|item| item.observation_id == observation_id)
+        .collect()
 }
 
 const BASE: u64 = 1_735_689_600_000_000_000;
@@ -145,7 +153,11 @@ fn current_observation_refreshes_without_advancing_and_cancel_stops_its_interact
     assert_eq!(result.inspector.sbar_id, time(14));
     let registry = result.inspector.keyzones.unwrap();
     assert_eq!(
-        registry.observations.iter().filter(|item| item.observation_id == result.observation_id).count(),
+        registry
+            .observations
+            .iter()
+            .filter(|item| item.observation_id == result.observation_id)
+            .count(),
         1
     );
     assert!(interactions_for(&registry, &result.observation_id).is_empty());
@@ -173,7 +185,10 @@ fn current_observation_refreshes_without_advancing_and_cancel_stops_its_interact
         .unwrap();
     assert_eq!(result.operation, Operation::Cancelled);
     let registry = result.inspector.keyzones.unwrap();
-    assert_eq!(observation(&registry, &result.observation_id).state, "Cancelled");
+    assert_eq!(
+        observation(&registry, &result.observation_id).state,
+        "Cancelled"
+    );
     let interrupted = interactions_for(&registry, &result.observation_id);
     assert_eq!(interrupted.len(), 1);
     assert_eq!(interrupted[0].state, "Interrupted");
@@ -227,14 +242,20 @@ fn historical_observation_completes_from_fixed_market_facts_and_old_checkpoints_
     }
     let data = manager.snapshot_data().unwrap();
     assert!(
-        data.checkpoints[14].keyzones.as_ref().unwrap().observations
-            .iter().all(|item| item.observation_id != result.observation_id)
+        data.checkpoints[14]
+            .keyzones
+            .as_ref()
+            .unwrap()
+            .observations
+            .iter()
+            .all(|item| item.observation_id != result.observation_id)
     );
     assert_eq!(
         observation(
             data.checkpoints[15].keyzones.as_ref().unwrap(),
             &result.observation_id
-        ).state,
+        )
+        .state,
         "Completed"
     );
 }
@@ -389,7 +410,10 @@ fn stop_with_active_interaction_preserves_the_last_facts_without_cancelling() {
     manager.step_checkpoint().unwrap();
     let before = manager.inspector().unwrap().unwrap();
     let registry = before.keyzones.as_ref().unwrap();
-    assert_eq!(observation(registry, &created.observation_id).state, "Observing");
+    assert_eq!(
+        observation(registry, &created.observation_id).state,
+        "Observing"
+    );
     let interactions = interactions_for(registry, &created.observation_id);
     assert_eq!(interactions.len(), 1);
     assert_eq!(interactions[0].state, "Active");
@@ -414,7 +438,10 @@ fn restart_with_active_interaction_releases_old_worker_and_keeps_owned_results_u
     assert_eq!(restarted.status, crate::run::RunStatus::Ready);
     assert!(manager.inspector().unwrap().is_none());
     let old_zones = old.keyzones.as_ref().unwrap();
-    assert_eq!(observation(old_zones, &created.observation_id).state, "Observing");
+    assert_eq!(
+        observation(old_zones, &created.observation_id).state,
+        "Observing"
+    );
     let old_interactions = interactions_for(old_zones, &created.observation_id);
     assert_eq!(old_interactions.len(), 1);
     assert_eq!(old_interactions[0].state, "Active");
@@ -444,8 +471,14 @@ fn fixed_price_range_creation_is_separate_from_observation_and_survives_step() {
         registry.zones.len(),
         before.keyzones.as_ref().unwrap().zones.len() + 1
     );
-    assert_eq!(registry.observations, before.keyzones.as_ref().unwrap().observations);
-    assert_eq!(registry.interactions, before.keyzones.as_ref().unwrap().interactions);
+    assert_eq!(
+        registry.observations,
+        before.keyzones.as_ref().unwrap().observations
+    );
+    assert_eq!(
+        registry.interactions,
+        before.keyzones.as_ref().unwrap().interactions
+    );
     let fixed = registry
         .zones
         .iter()
@@ -464,7 +497,10 @@ fn fixed_price_range_creation_is_separate_from_observation_and_survives_step() {
         .observation(ObservationCommand::Create(observation))
         .unwrap();
     let observed_zones = observed.inspector.keyzones.as_ref().unwrap();
-    assert_eq!(observed_zones.observations.len(), registry.observations.len() + 1);
+    assert_eq!(
+        observed_zones.observations.len(),
+        registry.observations.len() + 1
+    );
     assert_eq!(
         self::observation(observed_zones, &observed.observation_id).keyzone_id,
         created.keyzone_id
