@@ -440,6 +440,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         &[
             "cbarId",
             "createdAt",
+            "fractalExtremeId",
             "fractalType",
             "high",
             "low",
@@ -447,8 +448,9 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             "sbarStartId",
             "spanSbars",
         ],
-        &["fractalType"],
+        &["fractalType", "fractalExtremeId"],
         &["spanSbars"],
+        &["fractalExtremeId"],
         "CBar",
     )?;
     validate_object_fields(
@@ -472,6 +474,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         ],
         &["endOi", "startOi"],
         &["spanSbars"],
+        &[],
         "Swing",
     )?;
     validate_enum_field(cbars, "fractalType", &["Top", "Bottom"], true, "CBar")?;
@@ -504,6 +507,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         ],
         &["endOi", "startOi"],
         &["spanSbars"],
+        &[],
         "Trend",
     )?;
     validate_enum_field(trends, "direction", &["Up", "Down"], false, "Trend")?;
@@ -519,6 +523,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         &["cbarId", "createdAt", "sbarEndId", "sbarStartId"],
         "CBar",
     )?;
+    validate_optional_unsigned_string_field(cbars, "fractalExtremeId", "CBar")?;
     validate_unsigned_number_fields(cbars, &["spanSbars"], "CBar")?;
     validate_unsigned_string_fields(
         swings,
@@ -570,6 +575,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
                 "sourceEndSwingId",
                 "sourceStartSwingId",
             ],
+            &[],
             &[],
             &[],
             "FeatureElement",
@@ -657,6 +663,26 @@ fn validate_unsigned_string_fields(
     Ok(())
 }
 
+fn validate_optional_unsigned_string_field(
+    objects: &[serde_json::Value],
+    field: &str,
+    kind: &str,
+) -> Result<(), String> {
+    for (index, object) in objects.iter().enumerate() {
+        let Some(value) = object.get(field) else {
+            continue;
+        };
+        if value.is_null() {
+            continue;
+        }
+        let value = value.as_str().ok_or_else(|| {
+            format!("{kind} at index {index} field {field} must be a string or null")
+        })?;
+        parse_canonical_u128(value, &format!("{kind}[{index}].{field}"))?;
+    }
+    Ok(())
+}
+
 fn validate_unsigned_number_fields(
     objects: &[serde_json::Value],
     fields: &[&str],
@@ -682,23 +708,28 @@ fn validate_object_fields(
     expected_fields: &[&str],
     nullable_fields: &[&str],
     number_fields: &[&str],
+    optional_fields: &[&str],
     kind: &str,
 ) -> Result<(), String> {
     for (index, object) in objects.iter().enumerate() {
         let fields = object
             .as_object()
             .ok_or_else(|| format!("{kind} at index {index} must be a JSON object"))?;
-        if fields.len() != expected_fields.len()
-            || expected_fields
-                .iter()
-                .any(|field| !fields.contains_key(*field))
+        if expected_fields
+            .iter()
+            .any(|field| !optional_fields.contains(field) && !fields.contains_key(*field))
+            || fields
+                .keys()
+                .any(|field| !expected_fields.contains(&field.as_str()))
         {
             return Err(format!(
                 "{kind} at index {index} has missing or unexpected fields"
             ));
         }
         for field in expected_fields {
-            let value = &fields[*field];
+            let Some(value) = fields.get(*field) else {
+                continue;
+            };
             let valid = if number_fields.contains(field) {
                 value.as_u64().is_some()
             } else if nullable_fields.contains(field) {
@@ -1427,7 +1458,8 @@ mod tests {
                     sbar_start_id: "20".into(),
                     sbar_end_id: "30".into(),
                     span_sbars: 2,
-                    fractal_type: None,
+                    fractal_type: Some("Top".into()),
+                    fractal_extreme_id: Some("25".into()),
                     created_at: "1".into(),
                 },
                 crate::checkpoint::CBarCheckpoint {
@@ -1438,6 +1470,7 @@ mod tests {
                     sbar_end_id: "4".into(),
                     span_sbars: 2,
                     fractal_type: None,
+                    fractal_extreme_id: None,
                     created_at: "1".into(),
                 },
             ],
@@ -1452,6 +1485,9 @@ mod tests {
         assert_eq!(parsed["cbars"][0]["cbarId"], "2");
         assert_eq!(parsed["cbars"][1]["cbarId"], "10");
         assert_eq!(parsed["cbarCount"], 2);
+        assert!(parsed["cbars"][0]["fractalExtremeId"].is_null());
+        assert_eq!(parsed["cbars"][1]["fractalType"], "Top");
+        assert_eq!(parsed["cbars"][1]["fractalExtremeId"], "25");
         assert_eq!(parsed["swingCount"], 0);
         assert_eq!(parsed["trendCount"], 0);
     }
@@ -1492,6 +1528,12 @@ mod tests {
                 .unwrap_err()
                 .contains("unsupported value Sideways")
         );
+
+        let valid_extreme: serde_json::Value = serde_json::from_str(
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalExtremeId":"2","fractalType":"Top","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
+        )
+        .unwrap();
+        assert!(validate_canonical_structure_state(&valid_extreme).is_ok());
     }
 
     #[test]
@@ -1518,6 +1560,7 @@ mod tests {
                 sbar_end_id: "4".into(),
                 span_sbars: 2,
                 fractal_type: None,
+                fractal_extreme_id: None,
                 created_at: "1".into(),
             }],
             swing_count: 0,

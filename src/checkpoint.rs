@@ -146,6 +146,7 @@ pub(crate) struct CBarCheckpoint {
     pub(crate) sbar_end_id: String,
     pub(crate) span_sbars: u32,
     pub(crate) fractal_type: Option<String>,
+    pub(crate) fractal_extreme_id: Option<String>,
     pub(crate) created_at: String,
 }
 
@@ -327,6 +328,7 @@ pub(crate) fn structure_from_state_view(
                 sbar_end_id: cbar.sbar_end_id.to_string(),
                 span_sbars: cbar.span_sbars,
                 fractal_type: cbar.fractal_type.map(|kind| format!("{kind:?}")),
+                fractal_extreme_id: cbar.fractal_extreme_id.map(|id| id.to_string()),
                 created_at: cbar.created_at.to_string(),
             })
             .collect::<Vec<_>>();
