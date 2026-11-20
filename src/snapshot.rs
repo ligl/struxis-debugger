@@ -496,6 +496,8 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             "endOi",
             "high",
             "low",
+            "highSbarId",
+            "lowSbarId",
             "sbarEndId",
             "sbarStartId",
             "spanSbars",
@@ -547,6 +549,8 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         trends,
         &[
             "createdAt",
+            "highSbarId",
+            "lowSbarId",
             "sbarEndId",
             "sbarStartId",
             "swingEndId",
@@ -1613,12 +1617,18 @@ mod tests {
     #[test]
     fn snapshot_state_validates_trend_fields_and_enum_values() {
         let valid: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[{"createdAt":"1","direction":"Up","endOi":null,"high":"12.5","low":"10.5","sbarEndId":"8","sbarStartId":"2","spanSbars":7,"startOi":null,"state":"Tentative","swingEndId":"7","swingStartId":"3","trendId":"4","updatedAt":"9","volume":"123.25"}]}"#,
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[{"createdAt":"1","direction":"Up","endOi":null,"high":"12.5","low":"10.5","highSbarId":"6","lowSbarId":"2","sbarEndId":"8","sbarStartId":"2","spanSbars":7,"startOi":null,"state":"Tentative","swingEndId":"7","swingStartId":"3","trendId":"4","updatedAt":"9","volume":"123.25"}]}"#,
         ).unwrap();
         assert!(validate_canonical_structure_state(&valid).is_ok());
+        let mut missing_extreme = valid.clone();
+        missing_extreme["trends"][0].as_object_mut().unwrap().remove("highSbarId");
+        assert!(validate_canonical_structure_state(&missing_extreme).is_err());
+        let mut malformed_extreme = valid.clone();
+        malformed_extreme["trends"][0]["lowSbarId"] = serde_json::json!("NaN");
+        assert!(validate_canonical_structure_state(&malformed_extreme).is_err());
 
         let invalid_direction: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[{"createdAt":"1","direction":"Sideways","endOi":null,"high":"12.5","low":"10.5","sbarEndId":"8","sbarStartId":"2","spanSbars":7,"startOi":null,"state":"Tentative","swingEndId":"7","swingStartId":"3","trendId":"4","updatedAt":"9","volume":"123.25"}]}"#,
+            r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":1,"trends":[{"createdAt":"1","direction":"Sideways","endOi":null,"high":"12.5","low":"10.5","highSbarId":"6","lowSbarId":"2","sbarEndId":"8","sbarStartId":"2","spanSbars":7,"startOi":null,"state":"Tentative","swingEndId":"7","swingStartId":"3","trendId":"4","updatedAt":"9","volume":"123.25"}]}"#,
         ).unwrap();
         assert!(
             validate_canonical_structure_state(&invalid_direction)

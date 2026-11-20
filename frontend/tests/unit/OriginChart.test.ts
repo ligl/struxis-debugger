@@ -1289,6 +1289,8 @@ describe("ChartSurface and chart entry adapters", () => {
         swingEndId: "swing-end",
         sbarStartId: bars[0]!.sbarId,
         sbarEndId: bars[1]!.sbarId,
+        highSbarId: bars[1]!.sbarId,
+        lowSbarId: bars[0]!.sbarId,
         startOi: null,
         endOi: null,
         volume: "200",

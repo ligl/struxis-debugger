@@ -53,6 +53,8 @@ const trendRelatedObjects = computed(() => {
     { kind: "swing" as const, label: "End Swing", id: trend.swingEndId },
     { kind: "sbar" as const, label: "Start SBar", id: trend.sbarStartId },
     { kind: "sbar" as const, label: "End SBar", id: trend.sbarEndId },
+    { kind: "sbar" as const, label: "Highest High SBar", id: trend.highSbarId },
+    { kind: "sbar" as const, label: "Lowest Low SBar", id: trend.lowSbarId },
   ].flatMap((item) => {
     const object = item.kind === "swing"
       ? props.structure?.swings.find((swing) => swing.swingId === item.id)
@@ -160,6 +162,8 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="Swing End ID" :value="selectedTrend.swingEndId" test-id="inspector-trend-swingEndId" />
         <InspectorPropertyField label="SBar Start ID" :value="selectedTrend.sbarStartId" test-id="inspector-trend-sbarStartId" />
         <InspectorPropertyField label="SBar End ID" :value="selectedTrend.sbarEndId" test-id="inspector-trend-sbarEndId" />
+        <InspectorPropertyField label="Highest High SBar" :value="selectedTrend.highSbarId" test-id="inspector-trend-highSbarId" />
+        <InspectorPropertyField label="Lowest Low SBar" :value="selectedTrend.lowSbarId" test-id="inspector-trend-lowSbarId" />
         <InspectorPropertyField label="Start OI" :value="formatInspectorValue(selectedTrend.startOi)" test-id="inspector-trend-startOi" />
         <InspectorPropertyField label="End OI" :value="formatInspectorValue(selectedTrend.endOi)" test-id="inspector-trend-endOi" />
         <InspectorPropertyField label="Volume" :value="selectedTrend.volume" test-id="inspector-trend-volume" />

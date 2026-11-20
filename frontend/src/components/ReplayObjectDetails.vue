@@ -50,6 +50,8 @@ const relatedObjects = computed(() => {
       { kind: "swing" as const, label: "End Swing", id: selected.object.swingEndId },
       { kind: "sbar" as const, label: "Start SBar", id: selected.object.sbarStartId },
       { kind: "sbar" as const, label: "End SBar", id: selected.object.sbarEndId },
+      { kind: "sbar" as const, label: "Highest High SBar", id: selected.object.highSbarId },
+      { kind: "sbar" as const, label: "Lowest Low SBar", id: selected.object.lowSbarId },
     ].flatMap((relation) => {
       const object = relation.kind === "swing"
         ? structure?.swings.find((swing) => swing.swingId === relation.id)
@@ -130,6 +132,8 @@ const rows = computed<InspectorRow[]>(() => {
       { label: "Swing End ID", value: trend.swingEndId, copyValue: trend.swingEndId },
       { label: "SBar Start ID", value: trend.sbarStartId, copyValue: trend.sbarStartId },
       { label: "SBar End ID", value: trend.sbarEndId, copyValue: trend.sbarEndId },
+      { label: "Highest High SBar", value: trend.highSbarId, copyValue: trend.highSbarId },
+      { label: "Lowest Low SBar", value: trend.lowSbarId, copyValue: trend.lowSbarId },
       { label: "Start OI", value: formatInspectorValue(trend.startOi) },
       { label: "End OI", value: formatInspectorValue(trend.endOi) },
       { label: "Volume", value: trend.volume },

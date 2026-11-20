@@ -157,6 +157,8 @@ export interface ReplayInspectorTrendDto {
   swingEndId: string;
   sbarStartId: string;
   sbarEndId: string;
+  highSbarId: string;
+  lowSbarId: string;
   startOi: string | null;
   endOi: string | null;
   volume: string;

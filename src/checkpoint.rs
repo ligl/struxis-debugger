@@ -183,6 +183,8 @@ pub(crate) struct TrendCheckpoint {
     pub(crate) swing_end_id: String,
     pub(crate) sbar_start_id: String,
     pub(crate) sbar_end_id: String,
+    pub(crate) high_sbar_id: String,
+    pub(crate) low_sbar_id: String,
     pub(crate) start_oi: Option<String>,
     pub(crate) end_oi: Option<String>,
     pub(crate) volume: String,
@@ -203,6 +205,8 @@ impl From<&Trend> for TrendCheckpoint {
             swing_end_id: trend.swing_end_id.to_string(),
             sbar_start_id: trend.sbar_start_id.to_string(),
             sbar_end_id: trend.sbar_end_id.to_string(),
+            high_sbar_id: trend.high_sbar_id.to_string(),
+            low_sbar_id: trend.low_sbar_id.to_string(),
             start_oi: trend.start_oi.map(|value| value.to_string()),
             end_oi: trend.end_oi.map(|value| value.to_string()),
             volume: trend.volume.to_string(),
@@ -668,6 +672,8 @@ mod trend_checkpoint_tests {
             swing_end_id: "9007199254740995".into(),
             sbar_start_id: "1700000000000000001".into(),
             sbar_end_id: "1700000000000000009".into(),
+            high_sbar_id: "1700000000000000005".into(),
+            low_sbar_id: "1700000000000000002".into(),
             start_oi: Some("100.25".into()),
             end_oi: None,
             volume: "987654321.125".into(),
@@ -681,6 +687,8 @@ mod trend_checkpoint_tests {
         assert_eq!(value["high"], "12345678901234567890.123");
         assert_eq!(value["swingStartId"], "9007199254740993");
         assert_eq!(value["sbarStartId"], "1700000000000000001");
+        assert_eq!(value["highSbarId"], "1700000000000000005");
+        assert_eq!(value["lowSbarId"], "1700000000000000002");
         assert_eq!(value["startOi"], "100.25");
         assert!(value["endOi"].is_null());
         assert_eq!(value["spanSbars"], 9);

@@ -35,7 +35,9 @@ function makeOrigin(id = "origin-1"): OriginDatasetDto {
       trends: [{
         trendId: "trend-1", direction: "Up", high: "13", low: "9",
         swingStartId: "swing-1", swingEndId: "swing-1", sbarStartId: "sbar-1",
-        sbarEndId: "sbar-2", startOi: null, endOi: null, volume: "201",
+        sbarEndId: "sbar-2",
+        highSbarId: "sbar-2",
+        lowSbarId: "sbar-1", startOi: null, endOi: null, volume: "201",
         spanSbars: 2, state: "Tentative", createdAt: "5", updatedAt: "6",
       }],
       swings: [{

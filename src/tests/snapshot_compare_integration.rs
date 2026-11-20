@@ -104,6 +104,8 @@ fn checkpoint(
                 swing_end_id: "25".into(),
                 sbar_start_id: input.bars[0].ts_event.to_string(),
                 sbar_end_id: current_id.clone(),
+                high_sbar_id: current_id.clone(),
+                low_sbar_id: input.bars[0].ts_event.to_string(),
                 start_oi: None,
                 end_oi: None,
                 volume: "10".into(),

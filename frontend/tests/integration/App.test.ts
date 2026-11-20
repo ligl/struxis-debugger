@@ -205,6 +205,8 @@ describe("Origin Load workbench", () => {
       trends: [{
         trendId: "trend-1", direction: "up", high: "13.00", low: "9.00",
         swingStartId: "swing-1", swingEndId: "swing-1", sbarStartId: "100", sbarEndId: "200",
+        highSbarId: "200",
+        lowSbarId: "100",
         startOi: null, endOi: null, volume: "220", spanSbars: 2, state: "confirmed",
         createdAt: "100", updatedAt: "200",
       }],
