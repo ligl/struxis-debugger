@@ -207,7 +207,40 @@ export function projectTrendSegments(options: {
   });
 }
 
+
+/** Project structural Fractal pivot prices independently of whole-Swing raw extrema. */
+export function projectSwingObservationInputs(
+  swings: readonly import("./origin-types").ReplayInspectorSwingDto[],
+  bars: readonly import("./origin-types").SBarDto[],
+): SwingGeometryInput[] {
+  const rawById = new Map(bars.map((bar) => [bar.sbarId, bar]));
+  return swings.flatMap((swing, index) => {
+    const first = rawById.get(swing.sbarStartId);
+    const last = rawById.get(swing.sbarEndId);
+    if (!first || !last) return [];
+    const up = swing.direction === "Up";
+    const active = swing.state === "Extending"
+      || (swing.state === "Tentative" && index === swings.length - 1);
+    const startPrice = Number(up ? first.low : first.high);
+    const endPrice = Number(active ? last.close : up ? last.high : last.low);
+    if (!Number.isFinite(startPrice) || !Number.isFinite(endPrice)) return [];
+    return [{
+      swingId: swing.swingId,
+      sbarStartId: swing.sbarStartId,
+      sbarEndId: swing.sbarEndId,
+      high: swing.high,
+      low: swing.low,
+      direction: swing.direction,
+      state: swing.state,
+      startPrice,
+      endPrice,
+    }];
+  });
+}
+
 export interface SwingGeometryInput {
+  startPrice?: number;
+  endPrice?: number;
   swingId: string;
   sbarStartId: string;
   sbarEndId: string;
@@ -276,8 +309,8 @@ export function projectSwingSegments(
     const x1 = coordinateForSbarId(swing.sbarStartId);
     const x2 = coordinateForSbarId(swing.sbarEndId);
     const startsAtLow = swing.direction === "Up";
-    const y1 = priceToCoordinate(startsAtLow ? low : high);
-    const y2 = priceToCoordinate(startsAtLow ? high : low);
+    const y1 = priceToCoordinate(swing.startPrice ?? (startsAtLow ? low : high));
+    const y2 = priceToCoordinate(swing.endPrice ?? (startsAtLow ? high : low));
     if (
       !isFiniteCoordinate(x1) ||
       !isFiniteCoordinate(x2) ||

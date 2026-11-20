@@ -148,6 +148,8 @@ const rows = computed<InspectorRow[]>(() => {
     { label: "CBar Start ID", value: swing.cbarStartId, copyValue: swing.cbarStartId },
     { label: "CBar End ID", value: swing.cbarEndId, copyValue: swing.cbarEndId },
     { label: "SBar Start ID", value: swing.sbarStartId, copyValue: swing.sbarStartId },
+    { label: "Highest High SBar", value: swing.highSbarId, copyValue: swing.highSbarId },
+    { label: "Lowest Low SBar", value: swing.lowSbarId, copyValue: swing.lowSbarId },
     { label: "SBar End ID", value: swing.sbarEndId, copyValue: swing.sbarEndId },
     { label: "Start OI", value: formatInspectorValue(swing.startOi) },
     { label: "End OI", value: formatInspectorValue(swing.endOi) },

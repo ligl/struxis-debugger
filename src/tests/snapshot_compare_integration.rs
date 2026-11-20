@@ -89,7 +89,7 @@ fn checkpoint(
                 sbar_end_id: first_id,
                 span_sbars: 1,
                 fractal_type: None,
-                fractal_extreme_id: None,
+                extreme_sbar_id: None,
                 created_at: "1".into(),
             }],
             swing_count: 0,

@@ -11,7 +11,7 @@ import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
 import { registerFeaturePrimitive, setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
-import { candlestickBodyWidth, projectStructureOverlayGeometry } from "../sbar-chart-structure-geometry";
+import { candlestickBodyWidth, projectStructureOverlayGeometry, projectSwingObservationInputs } from "../sbar-chart-structure-geometry";
 import { mapSBarsToChart } from "../sbar-chart-data";
 import { createSbarChartIndex, resolveSbarChartAnchor } from "../sbar-chart-index";
 import type { ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -54,6 +54,8 @@ const props = withDefaults(defineProps<{
   showErrorState: true,
   dataMode: "props",
 });
+// Memoize raw pivot lookup: viewport updates should not rescan the entire SBar series.
+const observedSwings = computed(() => projectSwingObservationInputs(props.structure?.swings ?? [], props.bars));
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   chartActivate: [];
@@ -181,7 +183,7 @@ function updateStructureGeometry(): void {
   const timeScale = chart.timeScale();
   const geometry = projectStructureOverlayGeometry({
     cbars: props.structure?.cbars ?? [],
-    swings: props.structure?.swings ?? [],
+    swings: observedSwings.value,
     trends: props.structure?.trends ?? [],
     indexBySbarId,
     visibleRange: timeScale.getVisibleLogicalRange(),
@@ -241,7 +243,7 @@ function syncStructurePrimitives(): void {
     feature: featurePrimitive,
     featureVisible: layerVisibility.value.feature,
     cbars: props.structure?.cbars ?? [],
-    swings: props.structure?.swings ?? [],
+    swings: observedSwings.value,
     features: (props.structure?.featureSequence ?? []).map((feature) => ({
       featureId: feature.featureId, sbarStartId: feature.sbarStartId, sbarEndId: feature.sbarEndId,
       high: feature.high, low: feature.low,

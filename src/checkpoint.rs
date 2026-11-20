@@ -146,7 +146,7 @@ pub(crate) struct CBarCheckpoint {
     pub(crate) sbar_end_id: String,
     pub(crate) span_sbars: u32,
     pub(crate) fractal_type: Option<String>,
-    pub(crate) fractal_extreme_id: Option<String>,
+    pub(crate) extreme_sbar_id: Option<String>,
     pub(crate) created_at: String,
 }
 
@@ -160,6 +160,8 @@ pub(crate) struct SwingCheckpoint {
     pub(crate) cbar_start_id: String,
     pub(crate) cbar_end_id: String,
     pub(crate) sbar_start_id: String,
+    pub(crate) high_sbar_id: String,
+    pub(crate) low_sbar_id: String,
     pub(crate) sbar_end_id: String,
     pub(crate) start_oi: Option<String>,
     pub(crate) end_oi: Option<String>,
@@ -328,7 +330,7 @@ pub(crate) fn structure_from_state_view(
                 sbar_end_id: cbar.sbar_end_id.to_string(),
                 span_sbars: cbar.span_sbars,
                 fractal_type: cbar.fractal_type.map(|kind| format!("{kind:?}")),
-                fractal_extreme_id: cbar.fractal_extreme_id.map(|id| id.to_string()),
+                extreme_sbar_id: cbar.extreme_sbar_id.map(|id| id.to_string()),
                 created_at: cbar.created_at.to_string(),
             })
             .collect::<Vec<_>>();
@@ -343,6 +345,8 @@ pub(crate) fn structure_from_state_view(
                 cbar_start_id: swing.cbar_start_id.to_string(),
                 cbar_end_id: swing.cbar_end_id.to_string(),
                 sbar_start_id: swing.sbar_start_id.to_string(),
+                high_sbar_id: swing.high_sbar_id.to_string(),
+                low_sbar_id: swing.low_sbar_id.to_string(),
                 sbar_end_id: swing.sbar_end_id.to_string(),
                 start_oi: swing.start_oi.map(|value| value.to_string()),
                 end_oi: swing.end_oi.map(|value| value.to_string()),

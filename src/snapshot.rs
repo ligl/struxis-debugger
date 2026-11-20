@@ -440,7 +440,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         &[
             "cbarId",
             "createdAt",
-            "fractalExtremeId",
+            "extremeSbarId",
             "fractalType",
             "high",
             "low",
@@ -448,9 +448,9 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             "sbarStartId",
             "spanSbars",
         ],
-        &["fractalType", "fractalExtremeId"],
+        &["fractalType", "extremeSbarId"],
         &["spanSbars"],
-        &["fractalExtremeId"],
+        &["extremeSbarId"],
         "CBar",
     )?;
     validate_object_fields(
@@ -463,6 +463,8 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             "endOi",
             "high",
             "low",
+            "highSbarId",
+            "lowSbarId",
             "sbarEndId",
             "sbarStartId",
             "spanSbars",
@@ -523,7 +525,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         &["cbarId", "createdAt", "sbarEndId", "sbarStartId"],
         "CBar",
     )?;
-    validate_optional_unsigned_string_field(cbars, "fractalExtremeId", "CBar")?;
+    validate_optional_unsigned_string_field(cbars, "extremeSbarId", "CBar")?;
     validate_unsigned_number_fields(cbars, &["spanSbars"], "CBar")?;
     validate_unsigned_string_fields(
         swings,
@@ -531,6 +533,8 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             "cbarEndId",
             "cbarStartId",
             "createdAt",
+            "highSbarId",
+            "lowSbarId",
             "sbarEndId",
             "sbarStartId",
             "swingId",
@@ -1459,7 +1463,7 @@ mod tests {
                     sbar_end_id: "30".into(),
                     span_sbars: 2,
                     fractal_type: Some("Top".into()),
-                    fractal_extreme_id: Some("25".into()),
+                    extreme_sbar_id: Some("25".into()),
                     created_at: "1".into(),
                 },
                 crate::checkpoint::CBarCheckpoint {
@@ -1470,7 +1474,7 @@ mod tests {
                     sbar_end_id: "4".into(),
                     span_sbars: 2,
                     fractal_type: None,
-                    fractal_extreme_id: None,
+                    extreme_sbar_id: None,
                     created_at: "1".into(),
                 },
             ],
@@ -1485,9 +1489,9 @@ mod tests {
         assert_eq!(parsed["cbars"][0]["cbarId"], "2");
         assert_eq!(parsed["cbars"][1]["cbarId"], "10");
         assert_eq!(parsed["cbarCount"], 2);
-        assert!(parsed["cbars"][0]["fractalExtremeId"].is_null());
+        assert!(parsed["cbars"][0]["extremeSbarId"].is_null());
         assert_eq!(parsed["cbars"][1]["fractalType"], "Top");
-        assert_eq!(parsed["cbars"][1]["fractalExtremeId"], "25");
+        assert_eq!(parsed["cbars"][1]["extremeSbarId"], "25");
         assert_eq!(parsed["swingCount"], 0);
         assert_eq!(parsed["trendCount"], 0);
     }
@@ -1530,7 +1534,7 @@ mod tests {
         );
 
         let valid_extreme: serde_json::Value = serde_json::from_str(
-            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","fractalExtremeId":"2","fractalType":"Top","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
+            r#"{"cbarCount":1,"cbars":[{"cbarId":"1","createdAt":"1","extremeSbarId":"2","fractalType":"Top","high":"2","low":"1","sbarEndId":"3","sbarStartId":"2","spanSbars":1}],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         )
         .unwrap();
         assert!(validate_canonical_structure_state(&valid_extreme).is_ok());
@@ -1560,7 +1564,7 @@ mod tests {
                 sbar_end_id: "4".into(),
                 span_sbars: 2,
                 fractal_type: None,
-                fractal_extreme_id: None,
+                extreme_sbar_id: None,
                 created_at: "1".into(),
             }],
             swing_count: 0,

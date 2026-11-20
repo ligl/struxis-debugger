@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectCBarRectangles, projectFeatureRectangles, projectSwingSegments, projectTrendSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type FeatureGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectFeatureRectangles, projectSwingObservationInputs, projectSwingSegments, projectTrendSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type FeatureGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
 
 function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
   return {
@@ -274,5 +274,32 @@ describe("projectStructureOverlayGeometry", () => {
     });
 
     expect(result).toEqual({ cbarRectangles: [], swingSegments: [], trendSegments: [] });
+  });
+});
+
+describe("projectSwingObservationInputs", () => {
+  it("uses Fractal SBar pivots for a fixed Swing and latest SBar close for Extending", () => {
+    const bars = [
+      { sbarId: "s20", high: "12", low: "5", close: "8", open: "8", volume: "1", barType: "fixture", tsEvent: "20", tsInit: "20" },
+      { sbarId: "s140", high: "34", low: "19", close: "19", open: "19", volume: "1", barType: "fixture", tsEvent: "140", tsInit: "140" },
+      { sbarId: "s160", high: "26", low: "21", close: "21", open: "21", volume: "1", barType: "fixture", tsEvent: "160", tsInit: "160" },
+    ];
+    const fullSwing = {
+      swingId: "20", direction: "Up", state: "Confirmed",
+      high: "34", low: "5", highSbarId: "s140", lowSbarId: "s20",
+      cbarStartId: "20", cbarEndId: "160",
+      sbarStartId: "s20", sbarEndId: "s160",
+      startOi: null, endOi: null, volume: "3", spanSbars: 3,
+      createdAt: "1", updatedAt: "2",
+    };
+    const [fixed] = projectSwingObservationInputs([fullSwing], bars);
+    expect(fixed).toMatchObject({
+      sbarStartId: "s20", sbarEndId: "s160",
+      startPrice: 5, endPrice: 26, high: "34", low: "5",
+    });
+    const [extending] = projectSwingObservationInputs([{ ...fullSwing, state: "Extending" }], bars);
+    expect(extending).toMatchObject({
+      sbarEndId: "s160", startPrice: 5, endPrice: 21,
+    });
   });
 });

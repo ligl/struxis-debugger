@@ -217,6 +217,8 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="CBar Start ID" :value="selectedSwing.cbarStartId" :test-id="'inspector-swing-cbarStartId'" />
         <InspectorPropertyField label="CBar End ID" :value="selectedSwing.cbarEndId" :test-id="'inspector-swing-cbarEndId'" />
         <InspectorPropertyField label="SBar Start ID" :value="selectedSwing.sbarStartId" :test-id="'inspector-swing-sbarStartId'" />
+          <InspectorPropertyField label="Highest High SBar" :value="selectedSwing.highSbarId" />
+          <InspectorPropertyField label="Lowest Low SBar" :value="selectedSwing.lowSbarId" />
         <InspectorPropertyField label="SBar End ID" :value="selectedSwing.sbarEndId" :test-id="'inspector-swing-sbarEndId'" />
         <InspectorPropertyField label="Start OI" :value="formatInspectorValue(selectedSwing.startOi)" :test-id="'inspector-swing-startOi'" />
         <InspectorPropertyField label="End OI" :value="formatInspectorValue(selectedSwing.endOi)" :test-id="'inspector-swing-endOi'" />

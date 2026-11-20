@@ -36,6 +36,8 @@ export interface TrendPrimitiveDto {
 }
 
 export interface SwingPrimitiveDto {
+  startPrice?: number;
+  endPrice?: number;
   swingId: string;
   sbarStartId: string;
   sbarEndId: string;

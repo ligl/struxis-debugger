@@ -124,7 +124,7 @@ export interface ReplayInspectorCBarDto {
   sbarEndId: string;
   spanSbars: number;
   fractalType: string | null;
-  fractalExtremeId?: string | null;
+  extremeSbarId?: string | null;
   createdAt: string;
 }
 
@@ -136,6 +136,8 @@ export interface ReplayInspectorSwingDto {
   cbarStartId: string;
   cbarEndId: string;
   sbarStartId: string;
+  highSbarId: string;
+  lowSbarId: string;
   sbarEndId: string;
   startOi: string | null;
   endOi: string | null;
