@@ -18,7 +18,7 @@ const props = defineProps<{
   bars: SBarDto[];
 }>();
 
-type InspectorRow = { label: string; value: string; copyValue?: string };
+type InspectorRow = { label: string; value: string; copyValue?: string; domainId?: boolean };
 
 const title = computed(() => props.selectedObject.kind.toUpperCase());
 const sourceLabel = computed(() => {
@@ -116,6 +116,7 @@ const rows = computed<InspectorRow[]>(() => {
       { label: "Low", value: cbar.low },
       { label: "SBar Start ID", value: cbar.sbarStartId, copyValue: cbar.sbarStartId },
       { label: "SBar End ID", value: cbar.sbarEndId, copyValue: cbar.sbarEndId },
+      { label: "Extreme SBar", value: cbar.extremeSbarId ?? "—", domainId: cbar.extremeSbarId != null },
       { label: "Span SBars", value: String(cbar.spanSbars) },
       { label: "Fractal Type", value: formatInspectorValue(cbar.fractalType) },
       { label: "Created At", value: formatLifecycleTimestamp(cbar.createdAt), copyValue: cbar.createdAt },
@@ -132,8 +133,8 @@ const rows = computed<InspectorRow[]>(() => {
       { label: "Swing End ID", value: trend.swingEndId, copyValue: trend.swingEndId },
       { label: "SBar Start ID", value: trend.sbarStartId, copyValue: trend.sbarStartId },
       { label: "SBar End ID", value: trend.sbarEndId, copyValue: trend.sbarEndId },
-      { label: "Highest High SBar", value: trend.highSbarId, copyValue: trend.highSbarId },
-      { label: "Lowest Low SBar", value: trend.lowSbarId, copyValue: trend.lowSbarId },
+      { label: "Highest High SBar", value: trend.highSbarId, domainId: true },
+      { label: "Lowest Low SBar", value: trend.lowSbarId, domainId: true },
       { label: "Start OI", value: formatInspectorValue(trend.startOi) },
       { label: "End OI", value: formatInspectorValue(trend.endOi) },
       { label: "Volume", value: trend.volume },
@@ -152,9 +153,9 @@ const rows = computed<InspectorRow[]>(() => {
     { label: "CBar Start ID", value: swing.cbarStartId, copyValue: swing.cbarStartId },
     { label: "CBar End ID", value: swing.cbarEndId, copyValue: swing.cbarEndId },
     { label: "SBar Start ID", value: swing.sbarStartId, copyValue: swing.sbarStartId },
-    { label: "Highest High SBar", value: swing.highSbarId, copyValue: swing.highSbarId },
-    { label: "Lowest Low SBar", value: swing.lowSbarId, copyValue: swing.lowSbarId },
     { label: "SBar End ID", value: swing.sbarEndId, copyValue: swing.sbarEndId },
+    { label: "Highest High SBar", value: swing.highSbarId, domainId: true },
+    { label: "Lowest Low SBar", value: swing.lowSbarId, domainId: true },
     { label: "Start OI", value: formatInspectorValue(swing.startOi) },
     { label: "End OI", value: formatInspectorValue(swing.endOi) },
     { label: "Volume", value: swing.volume },
@@ -181,6 +182,7 @@ const rows = computed<InspectorRow[]>(() => {
       :label="row.label"
       :value="row.value"
       :copy-value="row.copyValue"
+      :domain-id="row.domainId"
       :test-id="'inspector-replay-selected-' + row.label.toLowerCase().replaceAll(' ', '-').replaceAll('·', '').trim()"
       :wide="row.label.includes('ID') || row.label.includes('Time')"
     />
@@ -213,6 +215,7 @@ const rows = computed<InspectorRow[]>(() => {
         <InspectorPropertyField label="Low" :value="(endpoint.object as ReplayInspectorCBarDto).low" />
         <InspectorPropertyField label="SBar Start ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarStartId" wide />
         <InspectorPropertyField label="SBar End ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarEndId" wide />
+        <InspectorPropertyField label="Extreme SBar" :value="(endpoint.object as ReplayInspectorCBarDto).extremeSbarId ?? '—'" :domain-id="(endpoint.object as ReplayInspectorCBarDto).extremeSbarId != null" wide />
         <InspectorPropertyField label="Span SBars" :value="String((endpoint.object as ReplayInspectorCBarDto).spanSbars)" />
         <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue((endpoint.object as ReplayInspectorCBarDto).fractalType)" />
         <InspectorPropertyField label="Created At" :value="formatLifecycleTimestamp((endpoint.object as ReplayInspectorCBarDto).createdAt)" :copy-value="(endpoint.object as ReplayInspectorCBarDto).createdAt" wide />

@@ -309,6 +309,7 @@ describe("Origin Load workbench", () => {
         sbarEndId: "200",
         spanSbars: 2,
         fractalType: "Top",
+        extremeSbarId: "200",
         createdAt: "100",
       }],
       swingCount: 1,
@@ -353,9 +354,13 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-cbar-cbarId"]').text()).toBe("cbar-100");
     expect(wrapper.get('[data-testid="inspector-cbar-high"]').text()).toBe("13.00");
     expect(wrapper.get('[data-testid="inspector-cbar-fractalType"]').text()).toBe("Top");
+    const extremeSbar = wrapper.get('[data-testid="inspector-cbar-extremeSbarId"]');
+    expect(extremeSbar.text()).toBe("200");
+    expect(extremeSbar.attributes("aria-label")).toBe("Domain ID");
+    expect(extremeSbar.attributes("data-copy-value")).toBe("200");
     expect(wrapper.get('[data-testid="inspector-cbar-createdAt"]').attributes("data-copy-value")).toBe("100");
     expect(Array.from(wrapper.get('[data-testid="inspector-cbar-cbarId"]').element.closest(".inspector-fields")!.querySelectorAll("dt")).map((field) => field.textContent ?? "")).toEqual([
-      "CBar ID", "High", "Low", "SBar Start ID", "SBar End ID", "Span SBars", "Fractal Type", "Created At",
+      "CBar ID", "High", "Low", "SBar Start ID", "SBar End ID", "Extreme SBar", "Span SBars", "Fractal Type", "Created At",
     ]);
 
     await wrapper.get('[data-testid="origin-swing-click-swing-100"]').trigger("click");
@@ -364,10 +369,17 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-swing-volume"]').text()).toBe("220");
     expect(wrapper.get('[data-testid="inspector-swing-startOi"]').text()).toBe("null");
     expect(wrapper.get('[data-testid="inspector-swing-endOi"]').text()).toBe("null");
+    const highestHigh = wrapper.get('[data-testid="inspector-swing-highSbarId"]');
+    const lowestLow = wrapper.get('[data-testid="inspector-swing-lowSbarId"]');
+    expect(highestHigh.attributes("aria-label")).toBe("Domain ID");
+    expect(highestHigh.attributes("data-copy-value")).toBe("200");
+    expect(lowestLow.attributes("aria-label")).toBe("Domain ID");
+    expect(lowestLow.attributes("data-copy-value")).toBe("100");
     expect(wrapper.get('[data-testid="inspector-swing-updatedAt"]').attributes("data-copy-value")).toBe("200");
     expect(Array.from(wrapper.get('[data-testid="inspector-swing-swingId"]').element.closest(".inspector-fields")!.querySelectorAll("dt")).map((field) => field.textContent ?? "")).toEqual([
       "Swing ID", "Direction", "High", "Low", "CBar Start ID", "CBar End ID",
-      "SBar Start ID", "SBar End ID", "Start OI", "End OI", "Volume", "Span SBars",
+      "SBar Start ID", "SBar End ID", "Highest High SBar", "Lowest Low SBar",
+      "Start OI", "End OI", "Volume", "Span SBars",
       "State", "Created At", "Updated At",
     ]);
 

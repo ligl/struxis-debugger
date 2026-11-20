@@ -679,6 +679,7 @@ describe("ChartSurface and chart entry adapters", () => {
         tsInit: "1700000060000000001",
         high: "13",
         low: "10",
+        close: "12",
       }),
     ];
     const baseSwing = {
@@ -689,6 +690,8 @@ describe("ChartSurface and chart entry adapters", () => {
       cbarEndId: bars[1]!.sbarId,
       sbarStartId: bars[0]!.sbarId,
       sbarEndId: bars[1]!.sbarId,
+      highSbarId: bars[1]!.sbarId,
+      lowSbarId: bars[0]!.sbarId,
       startOi: null,
       endOi: null,
       volume: "200",

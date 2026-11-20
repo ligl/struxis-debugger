@@ -117,6 +117,7 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="Low" :value="selectedCbar.low" :test-id="'inspector-cbar-low'" />
         <InspectorPropertyField label="SBar Start ID" :value="selectedCbar.sbarStartId" :test-id="'inspector-cbar-sbarStartId'" />
         <InspectorPropertyField label="SBar End ID" :value="selectedCbar.sbarEndId" :test-id="'inspector-cbar-sbarEndId'" />
+        <InspectorPropertyField label="Extreme SBar" :value="selectedCbar.extremeSbarId ?? '—'" test-id="inspector-cbar-extremeSbarId" :domain-id="selectedCbar.extremeSbarId != null" />
         <InspectorPropertyField label="Span SBars" :value="String(selectedCbar.spanSbars)" :test-id="'inspector-cbar-spanSbars'" />
         <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue(selectedCbar.fractalType)" :copy-value="formatInspectorValue(selectedCbar.fractalType)" :test-id="'inspector-cbar-fractalType'" />
         <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', selectedCbar.createdAt)" :copy-value="selectedCbar.createdAt" :test-id="'inspector-cbar-createdAt'" />
@@ -162,8 +163,8 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="Swing End ID" :value="selectedTrend.swingEndId" test-id="inspector-trend-swingEndId" />
         <InspectorPropertyField label="SBar Start ID" :value="selectedTrend.sbarStartId" test-id="inspector-trend-sbarStartId" />
         <InspectorPropertyField label="SBar End ID" :value="selectedTrend.sbarEndId" test-id="inspector-trend-sbarEndId" />
-        <InspectorPropertyField label="Highest High SBar" :value="selectedTrend.highSbarId" test-id="inspector-trend-highSbarId" />
-        <InspectorPropertyField label="Lowest Low SBar" :value="selectedTrend.lowSbarId" test-id="inspector-trend-lowSbarId" />
+        <InspectorPropertyField label="Highest High SBar" :value="selectedTrend.highSbarId" test-id="inspector-trend-highSbarId" domain-id />
+        <InspectorPropertyField label="Lowest Low SBar" :value="selectedTrend.lowSbarId" test-id="inspector-trend-lowSbarId" domain-id />
         <InspectorPropertyField label="Start OI" :value="formatInspectorValue(selectedTrend.startOi)" test-id="inspector-trend-startOi" />
         <InspectorPropertyField label="End OI" :value="formatInspectorValue(selectedTrend.endOi)" test-id="inspector-trend-endOi" />
         <InspectorPropertyField label="Volume" :value="selectedTrend.volume" test-id="inspector-trend-volume" />
@@ -221,9 +222,9 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="CBar Start ID" :value="selectedSwing.cbarStartId" :test-id="'inspector-swing-cbarStartId'" />
         <InspectorPropertyField label="CBar End ID" :value="selectedSwing.cbarEndId" :test-id="'inspector-swing-cbarEndId'" />
         <InspectorPropertyField label="SBar Start ID" :value="selectedSwing.sbarStartId" :test-id="'inspector-swing-sbarStartId'" />
-          <InspectorPropertyField label="Highest High SBar" :value="selectedSwing.highSbarId" />
-          <InspectorPropertyField label="Lowest Low SBar" :value="selectedSwing.lowSbarId" />
         <InspectorPropertyField label="SBar End ID" :value="selectedSwing.sbarEndId" :test-id="'inspector-swing-sbarEndId'" />
+        <InspectorPropertyField label="Highest High SBar" :value="selectedSwing.highSbarId" test-id="inspector-swing-highSbarId" domain-id />
+        <InspectorPropertyField label="Lowest Low SBar" :value="selectedSwing.lowSbarId" test-id="inspector-swing-lowSbarId" domain-id />
         <InspectorPropertyField label="Start OI" :value="formatInspectorValue(selectedSwing.startOi)" :test-id="'inspector-swing-startOi'" />
         <InspectorPropertyField label="End OI" :value="formatInspectorValue(selectedSwing.endOi)" :test-id="'inspector-swing-endOi'" />
         <InspectorPropertyField label="Volume" :value="selectedSwing.volume" :test-id="'inspector-swing-volume'" />
@@ -247,6 +248,7 @@ function formatReplayField(field: string, value: unknown): string {
             <InspectorPropertyField label="Low" :value="endpoint.object.low" />
             <InspectorPropertyField label="SBar Start ID" :value="endpoint.object.sbarStartId" wide />
             <InspectorPropertyField label="SBar End ID" :value="endpoint.object.sbarEndId" wide />
+            <InspectorPropertyField label="Extreme SBar" :value="endpoint.object.extremeSbarId ?? '—'" :domain-id="endpoint.object.extremeSbarId != null" wide />
             <InspectorPropertyField label="Span SBars" :value="String(endpoint.object.spanSbars)" />
             <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue(endpoint.object.fractalType)" :copy-value="formatInspectorValue(endpoint.object.fractalType)" />
             <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', endpoint.object.createdAt)" :copy-value="endpoint.object.createdAt" wide />

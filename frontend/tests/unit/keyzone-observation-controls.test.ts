@@ -4,14 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import KeyZoneObservationControls from "../../src/components/KeyZoneObservationControls.vue";
 import KeyZoneDetails from "../../src/components/KeyZoneDetails.vue";
 import { useKeyZoneObservations } from "../../src/composables/useKeyZoneObservations";
-import * as bridge from "../../src/origin-bridge";
 import type { CreateObservationDto, ObservationCommandResultDto, ObservationControlsContext, ReplayInspectorDto, RunStateDto } from "../../src/origin-types";
 import { keyzoneFixture, keyzoneBars } from "./keyzone-fixture";
 
-vi.mock("../../src/origin-bridge", () => ({
-  createKeyZoneObservation: vi.fn(), cancelKeyZoneObservation: vi.fn(),
-  describeIpcError: (error: { message?: string }) => error.message ?? "Operation failed",
-}));
+const { invokeMock } = vi.hoisted(() => ({ invokeMock: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 
 function fixture() {
   const registry = keyzoneFixture();
@@ -245,12 +242,15 @@ describe("KeyZone observation controls", () => {
     const inspector = ref<ReplayInspectorDto | null>(null);
     const controls = useKeyZoneObservations(run, busy, computed(() => busy.value), inspector);
     let finish!: (result: ObservationCommandResultDto) => void;
-    vi.mocked(bridge.createKeyZoneObservation).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    invokeMock.mockImplementationOnce(() => new Promise<ObservationCommandResultDto>((resolve) => {
+      finish = resolve;
+    }));
     const request: CreateObservationDto = { context: { runId: "run-a", expectedSbarId: f.context.cursorSbarId }, keyzoneId: f.props.zone.keyzoneId,
       requestId: "request-a", startAt: null, n: "3", x: 0.5, completion: "AfterOneInteraction", deadline: "1700000180000000001" };
     const first = controls.create(request);
     expect(busy.value).toBe(true);
     await expect(controls.create(request)).rejects.toThrow("wait for the current operation");
+    expect(invokeMock).toHaveBeenCalledExactlyOnceWith("create_keyzone_observation", { request });
     run.value = { ...run.value, runId: "run-b" };
     finish(f.result);
     await expect(first).rejects.toThrow("Run changed");
