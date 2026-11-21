@@ -1621,7 +1621,10 @@ mod tests {
         ).unwrap();
         assert!(validate_canonical_structure_state(&valid).is_ok());
         let mut missing_extreme = valid.clone();
-        missing_extreme["trends"][0].as_object_mut().unwrap().remove("highSbarId");
+        missing_extreme["trends"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("highSbarId");
         assert!(validate_canonical_structure_state(&missing_extreme).is_err());
         let mut malformed_extreme = valid.clone();
         malformed_extreme["trends"][0]["lowSbarId"] = serde_json::json!("NaN");
