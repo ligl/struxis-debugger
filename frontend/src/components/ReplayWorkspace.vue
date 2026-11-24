@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SwingLegReference } from "../origin-types";
 import type { KeyZoneCheckpointDto } from "../origin-types";
 import { computed, ref, watch } from "vue";
 import { resolveReplaySyncOffset, type ReplaySyncSequenceDescriptor } from "../replay-sync";
@@ -16,6 +17,9 @@ const props = withDefaults(defineProps<{
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
   selectedObject: ReplayChartSelection | null;
+  highlightedLiveLeg?: SwingLegReference | null;
+  highlightedSnapshotLeg?: SwingLegReference | null;
+  highlightedSnapshotId?: string | null;
   targetSbarId: string | null;
   snapshots: SnapshotArtifactDto[];
 }>(), {
@@ -106,10 +110,12 @@ watch(
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :keyzones="keyzones" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-owner="activeChartOwner" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :highlighted-leg="highlightedLiveLeg" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :keyzones="keyzones" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-owner="activeChartOwner" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel
+          :highlighted-leg="highlightedSnapshotLeg"
+          :highlighted-snapshot-id="highlightedSnapshotId"
           :active="active"
           :instrument-id="testDataset?.instrumentId ?? null"
           :snapshots="snapshots"

@@ -5,6 +5,7 @@ import {
   registerSwingPrimitive,
   registerTrendPrimitive,
   registerFeaturePrimitive,
+  registerSelectedStructurePrimitive,
   syncStructurePrimitiveControllers,
 } from "../../src/sbar-chart-structure-primitives";
 import type { ISeriesApi, ISeriesPrimitive, Time } from "lightweight-charts";
@@ -34,6 +35,8 @@ function createHarness() {
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     stroke: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
     strokeStyle: "",
     lineWidth: 0,
     lineCap: "butt",
@@ -424,4 +427,65 @@ describe("syncStructurePrimitiveControllers", () => {
     expect(cbar.setData).toHaveBeenLastCalledWith([], projection);
     expect(swing.setData).toHaveBeenLastCalledWith([], projection);
   });
+});
+
+it("draws the selected Swing legs with observation dashes and no endpoint dots", () => {
+  const h = createHarness();
+  const controller = registerSelectedStructurePrimitive(h.host, h.series);
+  controller.setData([{
+    sbarStartId: "s1", sbarEndId: "s3", startPrice: "10", endPrice: "14",
+    legs: [
+      {
+        direction: "Up", endKind: "Fractal", cbarStartId: "c1", cbarEndId: "c2",
+        sbarStartId: "s1", sbarEndId: "s2", startPrice: "10", endPrice: "18",
+        high: "18", low: "10", highSbarId: "s2", lowSbarId: "s1", volume: "4", spanSbars: 2,
+      },
+      {
+        direction: "Down", endKind: "Observation", cbarStartId: "c2", cbarEndId: "c3",
+        sbarStartId: "s2", sbarEndId: "s3", startPrice: "18", endPrice: "14",
+        high: "20", low: "13", highSbarId: "s2", lowSbarId: "s3", volume: "4", spanSbars: 2,
+      },
+    ],
+  }], h.projection);
+  controller.setInteractionState({ hoveredId: "c2:s2", selectedId: null });
+  const view = h.attached[0]?.paneViews?.()[0];
+  view?.renderer()?.draw(h.target as never);
+  expect(h.context.setLineDash.mock.calls).toEqual([[[]], [[4, 3]]]);
+  expect(h.context.moveTo.mock.calls).toEqual([[10, 90], [30, 82]]);
+  expect(h.context.lineTo.mock.calls).toEqual([[30, 82], [50, 86]]);
+  expect(h.context.arc).not.toHaveBeenCalled();
+  expect(h.context.strokeStyle).toBe("#F5E6CD");
+  controller.setData([], h.projection);
+  expect(view?.renderer()).toBeNull();
+});
+
+it("keeps the Swing dash pattern and marks only the endpoints when it has one Leg", () => {
+  const h = createHarness();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  const swing = registerSwingPrimitive(h.host, h.series);
+  const selectedOverlay = registerSelectedStructurePrimitive(h.host, h.series);
+  const selected = {
+    swingId: "swing-1", direction: "Up", state: "Tentative", high: "18", low: "10",
+    sbarStartId: "s1", sbarEndId: "s2", startPrice: "10", endPrice: "18",
+    legs: [{
+      direction: "Up", endKind: "Fractal", cbarStartId: "c1", cbarEndId: "c2",
+      sbarStartId: "s1", sbarEndId: "s2", startPrice: "10", endPrice: "18",
+      high: "18", low: "10", highSbarId: "s2", lowSbarId: "s1", volume: "4", spanSbars: 2,
+    }],
+  } as const;
+  swing.setData([selected], h.projection);
+  swing.setInteractionState({ hoveredId: null, selectedId: selected.swingId });
+  selectedOverlay.setData([selected], h.projection);
+
+  h.attached[0]?.paneViews?.()[0]?.renderer()?.draw(h.target as never);
+  expect(h.context.setLineDash).toHaveBeenCalledWith([6, 3]);
+  expect(h.context.stroke).toHaveBeenCalledTimes(1);
+
+  h.attached[1]?.paneViews?.()[0]?.renderer()?.draw(h.target as never);
+  expect(h.context.stroke).toHaveBeenCalledTimes(1);
+
+  expect(h.context.arc.mock.calls).toEqual([
+    [10, 90, 2.5, 0, Math.PI * 2],
+    [30, 82, 2.5, 0, Math.PI * 2],
+  ]);
 });

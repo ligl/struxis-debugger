@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SwingLegReference } from "../origin-types";
 import { computed, ref } from "vue";
 import KeyZoneFixedPriceRangeControls from "./KeyZoneFixedPriceRangeControls.vue";
 import KeyZoneDetails from "./KeyZoneDetails.vue";
@@ -11,6 +12,7 @@ import { formatDomainTimestamp } from "../timestamp-format";
 
 const props = defineProps<{
   context: InspectorWorkspaceContext;
+  legScope?: string | null;
   origin: OriginDatasetDto | null;
   originBars: SBarDto[];
   originStructure: ReplayInspectorStructureDto | null;
@@ -19,6 +21,8 @@ const props = defineProps<{
   createObservation?: (request: CreateObservationDto) => Promise<ObservationCommandResultDto>;
   cancelObservation?: (request: CancelObservationDto) => Promise<ObservationCommandResultDto>;
 }>();
+
+const emit = defineEmits<{ legHighlight: [leg: SwingLegReference | null] }>();
 
 // These projections keep the existing view templates readable while ensuring
 // that only one valid workspace-specific input shape can reach this component.
@@ -171,6 +175,8 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
       </section>
       <KeyZoneDetails v-else-if="selectedKeyzone" :zone="selectedKeyzone.object" :registry="selectedKeyzone.registry" />
       <DatasetObjectDetails v-else
+        :leg-scope="legScope"
+        @leg-highlight="emit('legHighlight', $event)"
         :selected-sbar="selectedSbar"
         :selected-cbar="selectedCbar"
         :selected-swing="selectedSwing"
@@ -194,6 +200,8 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
         :observation-context="selectedReplayObject.source === 'snapshot' ? undefined : observationContext"
         :create-observation="createObservation" :cancel-observation="cancelObservation" />
       <ReplayObjectDetails v-else
+        :leg-scope="legScope"
+        @leg-highlight="emit('legHighlight', $event)"
         :selected-object="selectedReplayObject"
         :timeframe="timeframe"
         :checkpoint="replayInspector"

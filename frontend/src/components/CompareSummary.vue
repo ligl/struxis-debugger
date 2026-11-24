@@ -55,6 +55,9 @@ const identityLabel = computed(() => {
     </div>
     <span class="spacer"></span>
     <span v-if="compareError" class="error-message compare-summary-error" data-testid="compare-summary-error" role="alert">{{ compareError }}</span>
+    <span v-else-if="compareResult?.unavailableStructureFields?.length" class="footnote" data-testid="compare-unavailable-structure-fields">
+      Not recorded in both snapshots · {{ compareResult.unavailableStructureFields.join(", ") }}
+    </span>
     <span v-else class="footnote">SAME COMPLETE ORDERED SBAR SEQUENCE REQUIRED</span>
   </div>
 </template>

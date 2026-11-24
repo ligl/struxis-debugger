@@ -22,16 +22,18 @@ function mountApp() {
           props: ["origin", "loadStatus", "loadError", "formatDomainTimestamp"],
         },
         OriginChart: {
+          name: "OriginChart",
           template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button><button v-for="cbar in structure?.cbars ?? []" :key="cbar.cbarId" :data-testid="\'origin-cbar-click-\' + cbar.cbarId" @click="$emit(\'object-click\', { kind: \'cbar\', id: cbar.cbarId, originDatasetId })">Select CBar</button><button v-for="swing in structure?.swings ?? []" :key="swing.swingId" :data-testid="\'origin-swing-click-\' + swing.swingId" @click="$emit(\'object-click\', { kind: \'swing\', id: swing.swingId, originDatasetId })">Select Swing</button></section>',
-          props: ["bars", "originDatasetId", "structure"],
+          props: ["bars", "originDatasetId", "structure", "highlightedLeg"],
         },
         SnapshotReferenceChart: {
           template: '<section data-testid="snapshot-reference-chart-test-stub"></section>',
           props: ["bars", "structure", "snapshotId", "syncEnabled", "syncRequest", "crosshairSync", "liveBarCount", "playbackEnabled", "playbackOffset", "processedCount"],
         },
         RunChart: {
+          name: "RunChart",
           template: '<section data-testid="run-chart-test-stub"><h3>Test Dataset SBar chart</h3></section>',
-          props: ["origin", "testDataset"],
+          props: ["origin", "testDataset", "selectedObject", "highlightedLeg"],
         },
       },
     },
@@ -320,6 +322,13 @@ describe("Origin Load workbench", () => {
       swings: [{
         swingId: "swing-100",
         direction: "Up",
+        startPrice: "9.00",
+        endPrice: "12.50",
+        legs: [{
+          direction: "Up", endKind: "Fractal", cbarStartId: "100", cbarEndId: "200",
+          sbarStartId: "100", sbarEndId: "200", startPrice: "9.00", endPrice: "12.50",
+          high: "13.00", low: "9.00", highSbarId: "200", lowSbarId: "100", volume: "220", spanSbars: 2,
+        }],
         high: "13.00",
         low: "9.00",
         cbarStartId: "cbar-100",
@@ -382,6 +391,20 @@ describe("Origin Load workbench", () => {
       "Start OI", "End OI", "Volume", "Span SBars",
       "State", "Created At", "Updated At",
     ]);
+
+    const prices = wrapper.get('[aria-label="Endpoint prices"]');
+    expect(prices.text()).toContain("9.00");
+    expect(prices.text()).toContain("12.50");
+    const legs = wrapper.get('[aria-label="Leg composition"]');
+    const legToggle = legs.get('button[aria-expanded]');
+    expect(legToggle.attributes("aria-expanded")).toBe("false");
+    await legToggle.trigger("click");
+    expect(legs.get("li button").text()).toContain("Fractal");
+    await legs.get("li").trigger("mouseenter");
+    const originChart = wrapper.findAllComponents({ name: "OriginChart" }).find((chart) => chart.props("originDatasetId") === origin.originDatasetId);
+    expect(originChart?.props("highlightedLeg")).toEqual({ swingId: "swing-100", cbarStartId: "100", sbarStartId: "100" });
+    await legToggle.trigger("click");
+    expect(originChart?.props("highlightedLeg")).toBeNull();
 
     const initialRangeStatus = wrapper.get('[data-testid="origin-range-selection-status"]').text();
     const relatedCbar = wrapper.get('[data-testid="inspector-related-start-cbar"]');
@@ -460,6 +483,13 @@ describe("Origin Load workbench", () => {
         swings: [{
           swingId: "100",
           direction: "Up",
+          startPrice: "9.00",
+          endPrice: "11.50",
+          legs: [{
+            direction: "Up", endKind: "Observation", cbarStartId: "100", cbarEndId: "200",
+            sbarStartId: "100", sbarEndId: "200", startPrice: "9.00", endPrice: "11.50",
+            high: "12.00", low: "9.00", highSbarId: "200", lowSbarId: "100", volume: "220", spanSbars: 2,
+          }],
           high: "12.00",
           low: "9.00",
           cbarStartId: "100",
@@ -478,6 +508,19 @@ describe("Origin Load workbench", () => {
         }],
       },
     };
+    const revisedSwing = {
+      ...replayInspector.structure.swings[0]!,
+      state: "Confirmed",
+      endPrice: "12.25",
+      legs: [{ ...replayInspector.structure.swings[0]!.legs[0]!, endKind: "Fractal", endPrice: "12.25" }],
+    };
+    const revisedInspector = {
+      ...replayInspector,
+      sbarId: "200",
+      checkpointIndex: 1,
+      structure: { ...replayInspector.structure, swings: [revisedSwing] },
+    };
+    let step = 0;
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(makeOrigin("origin-existing"));
@@ -485,6 +528,10 @@ describe("Origin Load workbench", () => {
       if (command === "list_snapshots") return Promise.resolve([]);
       if (command === "get_run_state") return Promise.resolve(readyRun);
       if (command === "step_run") {
+        if (++step === 2) return Promise.resolve({
+          runState: { ...pausedRun, status: "completed", processedCount: 2, cursorSbarId: "200" },
+          inspector: revisedInspector,
+        });
         return Promise.resolve({
           runState: pausedRun,
           inspector: replayInspector,
@@ -517,6 +564,21 @@ describe("Origin Load workbench", () => {
     expect(wrapper.find('[data-testid="inspector-select-cbar-100"]').exists()).toBe(false);
     expect(invokeMock).toHaveBeenCalledWith("get_replay_inspector");
     expect(wrapper.text()).toContain("backend-confirmed checkpoint");
+
+    const runChart = wrapper.findComponent({ name: "RunChart" });
+    runChart.vm.$emit("objectSelect", { kind: "swing", id: "100", checkpointSbarId: "100" });
+    await flushPromises();
+    const legs = wrapper.get('[aria-label="Leg composition"]');
+    await legs.get("button[aria-expanded]").trigger("click");
+    await legs.get("li button").trigger("click");
+    expect(legs.get("li button").text()).toContain("Observation");
+    await legs.get("li").trigger("mouseenter");
+    expect(runChart.props("highlightedLeg")).toEqual({ swingId: "100", cbarStartId: "100", sbarStartId: "100" });
+
+    await wrapper.get('[data-testid="run-step"]').trigger("click");
+    await vi.waitFor(() => expect(legs.get("li button").text()).toContain("Fractal"));
+    expect(legs.get("li button").attributes("aria-expanded")).toBe("true");
+    expect(legs.get("li button").text()).toContain("12.25");
   });
 
   it("links a selected Compare difference to the Inspector and clears it when leaving Compare", async () => {

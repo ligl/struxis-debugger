@@ -10,7 +10,7 @@ import Diagnostics from "./components/Diagnostics.vue";
 import DatasetWorkspace from "./components/DatasetWorkspace.vue";
 import ReplayWorkspace from "./components/ReplayWorkspace.vue";
 import CompareWorkspace from "./components/CompareWorkspace.vue";
-import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayChartSelection, ReplaySnapshotInspectorSelection } from "./origin-types";
+import type { InspectorWorkspaceContext, ObjectDifferenceDto, OriginObjectSelection, ReplayChartSelection, ReplaySnapshotInspectorSelection, SwingLegReference } from "./origin-types";
 import type { RunCommand } from "./run-command-eligibility";
 import { hasCompletedRunResult, isRunCommandEligible } from "./run-command-eligibility";
 import { useSnapshots } from "./composables/useSnapshots";
@@ -231,7 +231,9 @@ function handleReplayObjectSelection(selection: ReplayChartSelection): void {
       ? currentCheckpoint.keyzones?.zones.some((zone) => zone.keyzoneId === selection.id)
       : selection.kind === "cbar"
       ? structure?.cbars.some((item) => item.cbarId === selection.id)
-      : structure?.swings.some((item) => item.swingId === selection.id);
+      : selection.kind === "swing"
+        ? structure?.swings.some((item) => item.swingId === selection.id)
+        : structure?.trends.some((item) => item.trendId === selection.id);
     if (!exists) return;
   }
   selectedReplaySnapshotObject.value = null;
@@ -297,20 +299,18 @@ const selectedReplayInspectorObject = computed<ReplayInspectorSelection>(() => {
     return inputBar ? { kind: "sbar", object: inputBar, source: "input" } : null;
   }
 
-  if (
-    !currentRun ||
-    !checkpoint ||
-    currentRun.testDatasetId !== currentTest.testDatasetId ||
-    selection.checkpointSbarId !== currentRun.cursorSbarId ||
-    checkpoint.sbarId !== currentRun.cursorSbarId
-  ) return null;
+  if (!currentRun || !checkpoint || currentRun.testDatasetId !== currentTest.testDatasetId) return null;
+  if (selection.kind === "swing") {
+    // While the next Step projection arrives, keep the last confirmed Swing in
+    // the Inspector so its disclosure does not get remounted between frames.
+    if (selection.checkpointSbarId !== checkpoint.sbarId) return null;
+    const object = checkpoint.structure?.swings.find((item) => item.swingId === selection.id);
+    return object ? { kind: "swing", object } : null;
+  }
+  if (selection.checkpointSbarId !== currentRun.cursorSbarId || checkpoint.sbarId !== currentRun.cursorSbarId) return null;
   if (selection.kind === "cbar") {
     const object = checkpoint.structure?.cbars.find((item) => item.cbarId === selection.id);
     return object ? { kind: "cbar", object } : null;
-  }
-  if (selection.kind === "swing") {
-    const object = checkpoint.structure?.swings.find((item) => item.swingId === selection.id);
-    return object ? { kind: "swing", object } : null;
   }
   if (selection.kind === "keyzone") {
     const registry = checkpoint.keyzones;
@@ -329,12 +329,30 @@ watch(
   ],
   ([runId, cursor, testId], [previousRunId, , previousTestId]) => {
     const selection = selectedReplayChartObject.value;
-    if (runId === previousRunId && testId === previousTestId && cursor && selection?.kind === "keyzone" &&
-      replayInspector.value?.keyzones?.zones.some((zone) => zone.keyzoneId === selection.id)) {
-      selectedReplayChartObject.value = { ...selection, checkpointSbarId: cursor };
-    } else selectedReplayChartObject.value = null;
+    if (runId === previousRunId && testId === previousTestId && cursor) {
+      if (selection?.kind === "swing") {
+        reconcileSelectedReplaySwing();
+        return;
+      }
+      if (selection?.kind === "keyzone" && replayInspector.value?.keyzones?.zones.some((zone) => zone.keyzoneId === selection.id)) {
+        selectedReplayChartObject.value = { ...selection, checkpointSbarId: cursor };
+        return;
+      }
+    }
+    selectedReplayChartObject.value = null;
   },
 );
+
+function reconcileSelectedReplaySwing(): void {
+  const selection = selectedReplayChartObject.value;
+  const checkpoint = replayInspector.value;
+  if (selection?.kind !== "swing" || !checkpoint || checkpoint.sbarId !== runState.value?.cursorSbarId) return;
+  selectedReplayChartObject.value = checkpoint.structure?.swings.some((swing) => swing.swingId === selection.id)
+    ? { ...selection, checkpointSbarId: checkpoint.sbarId }
+    : null;
+}
+
+watch(replayInspector, reconcileSelectedReplaySwing);
 
 watch(() => testDataset.value?.testDatasetId, () => {
   targetSbarId.value = null;
@@ -514,6 +532,25 @@ watch(workspaceMode, (mode) => {
   if (mode === "replay") void refreshReplayInspector();
 });
 
+const inspectorSwingScope = computed(() => {
+  const context = inspectorContext.value;
+  if (context.workspace === "compare" || context.selectedObject?.kind !== "swing") return null;
+  const swingId = context.selectedObject.object.swingId;
+  if (context.workspace === "dataset") return JSON.stringify(["dataset", context.originDatasetId, swingId]);
+  return context.selectedObject.source === "snapshot"
+    ? JSON.stringify(["snapshot", context.snapshotId, swingId])
+    : JSON.stringify(["live", runState.value?.runId, swingId]);
+});
+const highlightedLeg = ref<{ scope: string; leg: SwingLegReference } | null>(null);
+function handleLegHighlight(leg: SwingLegReference | null): void {
+  const scope = inspectorSwingScope.value;
+  highlightedLeg.value = leg && scope ? { scope, leg } : null;
+}
+const activeLegHighlight = computed(() => !inspectorCollapsed.value && highlightedLeg.value?.scope === inspectorSwingScope.value
+  ? highlightedLeg.value?.leg ?? null
+  : null);
+watch(inspectorSwingScope, () => { highlightedLeg.value = null; });
+
 const {
   inspectorCollapsed, diagnosticsCollapsed, inspectorDock, diagnosticsDock,
   inspectorWidth, inspectorHeight, diagnosticsWidth, diagnosticsHeight,
@@ -522,6 +559,7 @@ const {
   diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
   closeDockMenus,
 } = useDockLayout();
+watch(() => inspectorCollapsed.value, (collapsed) => { if (collapsed) highlightedLeg.value = null; });
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
 let originHandoffDuringStartup = false;
@@ -831,6 +869,7 @@ onMounted(async () => {
               :can-mutate-test="canMutateTest"
               :test-error="testError"
               :selected-object="selectedInspectorObject"
+              :highlighted-leg="workspaceMode === 'dataset' ? activeLegHighlight : null"
               :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
               :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
               :selection-pending="rangeSelectionPendingStart !== null"
@@ -857,6 +896,9 @@ onMounted(async () => {
               :structure="replayInspector?.sbarId === runState?.cursorSbarId ? (replayInspector?.structure ?? null) : null"
               :keyzones="replayInspector?.sbarId === runState?.cursorSbarId ? replayInspector?.keyzones : null"
               :selected-object="selectedReplayChartObject"
+              :highlighted-live-leg="workspaceMode === 'replay' && !selectedReplaySnapshotObject ? activeLegHighlight : null"
+              :highlighted-snapshot-leg="workspaceMode === 'replay' && selectedReplaySnapshotObject ? activeLegHighlight : null"
+              :highlighted-snapshot-id="selectedReplaySnapshotObject?.snapshotId ?? null"
               :target-sbar-id="targetSbarId"
               :fast-forwarding="fastForwarding"
               :snapshots="snapshots"
@@ -907,6 +949,8 @@ onMounted(async () => {
         <ObjectInspector
           v-if="!inspectorCollapsed"
           :context="inspectorContext"
+          :leg-scope="inspectorSwingScope"
+          @leg-highlight="handleLegHighlight"
           :origin="origin"
           :origin-bars="origin?.bars ?? []"
           :origin-structure="origin?.structure ?? null"

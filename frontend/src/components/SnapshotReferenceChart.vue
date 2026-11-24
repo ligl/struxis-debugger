@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KeyZoneCheckpointDto } from "../origin-types";
+import type { KeyZoneCheckpointDto, SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SnapshotRangeMarkerPrimitive, type SnapshotRangeMarkerState } from "../snapshot-reference-primitives";
 import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
@@ -25,6 +25,7 @@ const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
+  highlightedLeg?: SwingLegReference | null;
   keyzoneObserver?: import("../origin-types").ObservationStateKeyDto | null;
   keyzoneUntil?: string | null;
   snapshotId: string;
@@ -49,6 +50,12 @@ const emit = defineEmits<{
 const surface = ref<ChartSurfacePort | null>(null);
 const hoveredObject = ref<ReplayChartSelection | null>(null);
 const selectedObject = ref<ReplayChartSelection | null>(null);
+const selectedStructure = computed(() => {
+  const selected = selectedObject.value;
+  return selected && (selected.kind === "swing" || selected.kind === "trend")
+    ? { kind: selected.kind, id: selected.id }
+    : null;
+});
 const hoveredSbarMarker = ref<ChartSurfaceSBarMarker | null>(null);
 const selectedSbarMarker = ref<ChartSurfaceSBarMarker | null>(null);
 const crosshairGate = new ReplayCrosshairSyncGate();
@@ -454,6 +461,8 @@ watch(() => props.syncEnabled, (enabled) => {
   applyCrosshairRequest(props.crosshairSync);
 });
 
+watch(() => props.snapshotId, () => { selectedObject.value = null; });
+
 watch(() => [props.snapshotId, props.bars.map((bar) => bar.sbarId).join("\\u0000")] as const, () => {
   // Sequence transitions invalidate peer commands immediately. The workspace
   // coordinator must publish fresh commands for the new qualified sequence.
@@ -504,6 +513,9 @@ onBeforeUnmount(() => {
     ref="surface"
     :bars="bars"
     :structure="structure"
+    :selected-structure="selectedStructure"
+    :highlighted-leg="highlightedLeg"
+    indicate-legacy-structure
     :keyzones="keyzones"
         :keyzone-observer="keyzoneObserver"
     :keyzone-until="keyzoneUntil"

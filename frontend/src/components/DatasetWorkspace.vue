@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SwingLegReference } from "../origin-types";
 import CatalogPanel from "./CatalogPanel.vue";
 import OriginChart from "./OriginChart.vue";
 import TestDatasetPanel from "./TestDatasetPanel.vue";
@@ -36,6 +37,7 @@ defineProps<{
   canMutateTest: boolean;
   testError: string;
   selectedObject: OriginObjectSelection | null;
+  highlightedLeg?: SwingLegReference | null;
   selectionStartSbarId: string | null;
   selectionEndSbarId: string | null;
   selectionPending: boolean;
@@ -102,6 +104,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
     </TestDatasetPanel>
   </div>
   <OriginChart
+    :highlighted-leg="highlightedLeg"
     v-if="origin && loadStatus !== 'loading'"
     v-show="active"
     :bars="origin.bars"

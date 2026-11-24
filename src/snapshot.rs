@@ -450,6 +450,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
         ],
         &["fractalType", "extremeSbarId"],
         &["spanSbars"],
+        &[],
         &["extremeSbarId"],
         "CBar",
     )?;
@@ -471,12 +472,16 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             "startOi",
             "state",
             "swingId",
+            "startPrice",
+            "endPrice",
+            "legs",
             "updatedAt",
             "volume",
         ],
         &["endOi", "startOi"],
         &["spanSbars"],
-        &[],
+        &["legs"],
+        &["startPrice", "endPrice", "legs"],
         "Swing",
     )?;
     validate_enum_field(cbars, "fractalType", &["Top", "Bottom"], true, "CBar")?;
@@ -506,12 +511,15 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             "swingEndId",
             "swingStartId",
             "trendId",
+            "startPrice",
+            "endPrice",
             "updatedAt",
             "volume",
         ],
         &["endOi", "startOi"],
         &["spanSbars"],
         &[],
+        &["startPrice", "endPrice"],
         "Trend",
     )?;
     validate_enum_field(trends, "direction", &["Up", "Down"], false, "Trend")?;
@@ -567,6 +575,17 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
     validate_sorted_domain_objects(cbars, "sbarStartId", "cbarId", "CBar")?;
     validate_sorted_domain_objects(swings, "sbarStartId", "swingId", "Swing")?;
     validate_sorted_domain_objects(trends, "sbarStartId", "trendId", "Trend")?;
+    for (index, swing) in swings.iter().enumerate() {
+        let has_prices = validate_endpoint_prices(swing, "Swing")?;
+        match (swing.get("legs"), has_prices) {
+            (Some(legs), true) => validate_swing_legs(swing, legs, index + 1 < swings.len())?,
+            (None, false) => {}
+            _ => return Err("Swing must record endpoint prices and Legs together".into()),
+        }
+    }
+    for trend in trends {
+        validate_endpoint_prices(trend, "Trend")?;
+    }
 
     if let Some(feature_sequence) = object.get("featureSequence") {
         let features = feature_sequence
@@ -583,6 +602,7 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
                 "sourceEndSwingId",
                 "sourceStartSwingId",
             ],
+            &[],
             &[],
             &[],
             &[],
@@ -619,6 +639,100 @@ fn validate_canonical_structure_state(state: &serde_json::Value) -> Result<(), S
             previous_end = Some(end);
         }
         validate_unique_domain_ids(features, "featureId", "FeatureElement")?;
+    }
+    Ok(())
+}
+
+fn validate_endpoint_prices(object: &serde_json::Value, kind: &str) -> Result<bool, String> {
+    match (object.get("startPrice"), object.get("endPrice")) {
+        (None, None) => Ok(false),
+        (Some(_), Some(_)) => {
+            let price = |field| {
+                object
+                    .get(field)
+                    .and_then(serde_json::Value::as_str)
+                    .and_then(|value| value.parse::<nautilus_model::types::Price>().ok())
+                    .ok_or_else(|| format!("{kind} field {field} must be a valid price"))
+            };
+            let (low, high) = (price("low")?, price("high")?);
+            for field in ["startPrice", "endPrice"] {
+                if !(low..=high).contains(&price(field)?) {
+                    return Err(format!("{kind} field {field} is outside its price range"));
+                }
+            }
+            Ok(true)
+        }
+        _ => Err(format!("{kind} must record both endpoint prices together")),
+    }
+}
+
+fn validate_swing_legs(
+    swing: &serde_json::Value,
+    value: &serde_json::Value,
+    has_successor: bool,
+) -> Result<(), String> {
+    let entries = value.as_array().ok_or("Swing legs must be an array")?;
+    let invalid = || "Swing legs must cover its boundaries in order".to_owned();
+    let mut previous: Option<crate::checkpoint::LegCheckpoint> = None;
+    let mut steps = 0_u64;
+    for value in entries {
+        let leg: crate::checkpoint::LegCheckpoint = serde_json::from_value(value.clone())
+            .map_err(|error| format!("Invalid Leg record: {error}"))?;
+        validate_endpoint_prices(value, "Leg")?;
+        let id = |value: &str| {
+            value
+                .parse::<u64>()
+                .ok()
+                .filter(|id| id.to_string() == value)
+                .ok_or_else(|| "Leg contains an invalid domain ID".to_owned())
+        };
+        let cbar_start = id(&leg.cbar_start_id)?;
+        let cbar_end = id(&leg.cbar_end_id)?;
+        let sbar_start = id(&leg.sbar_start_id)?;
+        let sbar_end = id(&leg.sbar_end_id)?;
+        if !matches!(leg.direction.as_str(), "Up" | "Down")
+            || !matches!(leg.end_kind.as_str(), "Fractal" | "Observation")
+            || cbar_start >= cbar_end
+            || sbar_start >= sbar_end
+            || !(sbar_start..=sbar_end).contains(&id(&leg.high_sbar_id)?)
+            || !(sbar_start..=sbar_end).contains(&id(&leg.low_sbar_id)?)
+            || leg.span_sbars < 2
+            || leg
+                .volume
+                .parse::<nautilus_model::types::Quantity>()
+                .is_err()
+        {
+            return Err("Invalid Leg direction, endpoint, or interval statistics".into());
+        }
+        steps += u64::from(leg.span_sbars - 1);
+        if let Some(prior) = &previous {
+            if prior.end_kind != "Fractal"
+                || prior.direction == leg.direction
+                || prior.cbar_end_id != leg.cbar_start_id
+                || prior.sbar_end_id != leg.sbar_start_id
+                || prior.end_price != leg.start_price
+            {
+                return Err(invalid());
+            }
+        } else if swing["direction"] != leg.direction
+            || swing["cbarStartId"] != leg.cbar_start_id
+            || swing["sbarStartId"] != leg.sbar_start_id
+            || swing["startPrice"] != leg.start_price
+        {
+            return Err(invalid());
+        }
+        previous = Some(leg);
+    }
+    let last = previous.ok_or_else(invalid)?;
+    let fixed = swing["state"] == "Confirmed" || (swing["state"] == "Tentative" && has_successor);
+    if swing["cbarEndId"] != last.cbar_end_id
+        || swing["sbarEndId"] != last.sbar_end_id
+        || swing["endPrice"] != last.end_price
+        || swing["spanSbars"].as_u64() != Some(steps + 1)
+        || (fixed && (last.end_kind != "Fractal" || swing["direction"] != last.direction))
+        || (!fixed && (has_successor || last.end_kind != "Observation"))
+    {
+        return Err(invalid());
     }
     Ok(())
 }
@@ -716,6 +830,7 @@ fn validate_object_fields(
     expected_fields: &[&str],
     nullable_fields: &[&str],
     number_fields: &[&str],
+    array_fields: &[&str],
     optional_fields: &[&str],
     kind: &str,
 ) -> Result<(), String> {
@@ -740,6 +855,8 @@ fn validate_object_fields(
             };
             let valid = if number_fields.contains(field) {
                 value.as_u64().is_some()
+            } else if array_fields.contains(field) {
+                value.is_array()
             } else if nullable_fields.contains(field) {
                 value.is_null() || value.is_string()
             } else {
@@ -1590,6 +1707,59 @@ mod tests {
             canonical_structure_state(None).unwrap(),
             r#"{"cbarCount":0,"cbars":[],"swingCount":0,"swings":[],"trendCount":0,"trends":[]}"#,
         );
+    }
+
+    #[test]
+    fn validates_legacy_and_complete_leg_recordings_without_reordering_legs() {
+        let legacy = serde_json::json!({
+            "cbarCount": 0, "cbars": [], "swingCount": 1, "trendCount": 0, "trends": [],
+            "swings": [{
+                "swingId": "11", "direction": "Up", "state": "Extending",
+                "cbarStartId": "11", "cbarEndId": "31", "sbarStartId": "12", "sbarEndId": "31",
+                "high": "40", "low": "10", "highSbarId": "25", "lowSbarId": "12",
+                "startOi": null, "endOi": null, "volume": "7", "spanSbars": 4,
+                "createdAt": "1", "updatedAt": "2"
+            }]
+        });
+        validate_canonical_structure_state(&legacy).unwrap();
+
+        let mut recorded = legacy;
+        let swing = &mut recorded["swings"][0];
+        swing["startPrice"] = serde_json::json!("10");
+        swing["endPrice"] = serde_json::json!("23");
+        swing["legs"] = serde_json::json!([
+            {
+                "direction": "Up", "endKind": "Fractal",
+                "cbarStartId": "11", "cbarEndId": "21", "sbarStartId": "12", "sbarEndId": "22",
+                "startPrice": "10", "endPrice": "35", "high": "35", "low": "10",
+                "highSbarId": "22", "lowSbarId": "12", "volume": "3", "spanSbars": 2
+            },
+            {
+                "direction": "Down", "endKind": "Observation",
+                "cbarStartId": "21", "cbarEndId": "31", "sbarStartId": "22", "sbarEndId": "31",
+                "startPrice": "35", "endPrice": "23", "high": "40", "low": "20",
+                "highSbarId": "25", "lowSbarId": "25", "volume": "5", "spanSbars": 3
+            }
+        ]);
+        validate_canonical_structure_state(&recorded).unwrap();
+
+        let mut incomplete = recorded.clone();
+        incomplete["swings"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("endPrice");
+        assert!(validate_canonical_structure_state(&incomplete).is_err());
+
+        let mut invalid_anchor = recorded.clone();
+        invalid_anchor["swings"][0]["legs"][1]["sbarStartId"] = serde_json::json!("23");
+        assert!(validate_canonical_structure_state(&invalid_anchor).is_err());
+
+        let mut reversed = recorded;
+        reversed["swings"][0]["legs"]
+            .as_array_mut()
+            .unwrap()
+            .reverse();
+        assert!(validate_canonical_structure_state(&reversed).is_err());
     }
 
     #[test]

@@ -11,7 +11,10 @@ use crate::{diagnostics::Diagnostic, run::RunState};
 use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
-    structure::trend::{Trend, TrendSeries},
+    structure::{
+        leg::Leg,
+        trend::{Trend, TrendSeries},
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -155,6 +158,9 @@ pub(crate) struct CBarCheckpoint {
 pub(crate) struct SwingCheckpoint {
     pub(crate) swing_id: String,
     pub(crate) direction: String,
+    pub(crate) start_price: String,
+    pub(crate) end_price: String,
+    pub(crate) legs: Vec<LegCheckpoint>,
     pub(crate) high: String,
     pub(crate) low: String,
     pub(crate) cbar_start_id: String,
@@ -172,11 +178,53 @@ pub(crate) struct SwingCheckpoint {
     pub(crate) updated_at: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct LegCheckpoint {
+    pub(crate) direction: String,
+    pub(crate) end_kind: String,
+    pub(crate) cbar_start_id: String,
+    pub(crate) cbar_end_id: String,
+    pub(crate) sbar_start_id: String,
+    pub(crate) sbar_end_id: String,
+    pub(crate) high_sbar_id: String,
+    pub(crate) low_sbar_id: String,
+    pub(crate) start_price: String,
+    pub(crate) end_price: String,
+    pub(crate) high: String,
+    pub(crate) low: String,
+    pub(crate) volume: String,
+    pub(crate) span_sbars: u32,
+}
+
+impl From<&Leg> for LegCheckpoint {
+    fn from(leg: &Leg) -> Self {
+        Self {
+            direction: format!("{:?}", leg.direction),
+            end_kind: format!("{:?}", leg.end_kind),
+            cbar_start_id: leg.cbar_start_id.to_string(),
+            cbar_end_id: leg.cbar_end_id.to_string(),
+            sbar_start_id: leg.sbar_start_id.to_string(),
+            sbar_end_id: leg.sbar_end_id.to_string(),
+            high_sbar_id: leg.high_sbar_id.to_string(),
+            low_sbar_id: leg.low_sbar_id.to_string(),
+            start_price: leg.start_price.to_string(),
+            end_price: leg.end_price.to_string(),
+            high: leg.high.to_string(),
+            low: leg.low.to_string(),
+            volume: leg.volume.to_string(),
+            span_sbars: leg.span_sbars,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TrendCheckpoint {
     pub(crate) trend_id: String,
     pub(crate) direction: String,
+    pub(crate) start_price: String,
+    pub(crate) end_price: String,
     pub(crate) high: String,
     pub(crate) low: String,
     pub(crate) swing_start_id: String,
@@ -199,6 +247,8 @@ impl From<&Trend> for TrendCheckpoint {
         Self {
             trend_id: trend.id.to_string(),
             direction: format!("{:?}", trend.direction),
+            start_price: trend.start_price.to_string(),
+            end_price: trend.end_price.to_string(),
             high: trend.high.to_string(),
             low: trend.low.to_string(),
             swing_start_id: trend.swing_start_id.to_string(),
@@ -344,6 +394,9 @@ pub(crate) fn structure_from_state_view(
             .map(|swing| SwingCheckpoint {
                 swing_id: swing.id.to_string(),
                 direction: format!("{:?}", swing.direction),
+                start_price: swing.start_price.to_string(),
+                end_price: swing.end_price.to_string(),
+                legs: swing.legs().iter().map(LegCheckpoint::from).collect(),
                 high: swing.high.to_string(),
                 low: swing.low.to_string(),
                 cbar_start_id: swing.cbar_start_id.to_string(),
@@ -666,6 +719,8 @@ mod trend_checkpoint_tests {
         let trend = TrendCheckpoint {
             trend_id: "18446744073709551614".into(),
             direction: "Up".into(),
+            start_price: "12345678901234567889.123".into(),
+            end_price: "12345678901234567890.122".into(),
             high: "12345678901234567890.123".into(),
             low: "12345678901234567889.123".into(),
             swing_start_id: "9007199254740993".into(),
@@ -684,6 +739,8 @@ mod trend_checkpoint_tests {
         };
         let value = serde_json::to_value(trend).unwrap();
         assert_eq!(value["trendId"], "18446744073709551614");
+        assert_eq!(value["startPrice"], "12345678901234567889.123");
+        assert_eq!(value["endPrice"], "12345678901234567890.122");
         assert_eq!(value["high"], "12345678901234567890.123");
         assert_eq!(value["swingStartId"], "9007199254740993");
         assert_eq!(value["sbarStartId"], "1700000000000000001");

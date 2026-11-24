@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import SnapshotReferenceChart from "./SnapshotReferenceChart.vue";
 import { describeIpcError, getSnapshotReference, getSnapshotReferenceCheckpoint, getSnapshotReferenceObject } from "../origin-bridge";
@@ -10,6 +11,8 @@ const props = withDefaults(defineProps<{
   active?: boolean;
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
+  highlightedLeg?: SwingLegReference | null;
+  highlightedSnapshotId?: string | null;
   liveSbarIds?: string[];
   syncEligible?: boolean;
   keyboardActive?: boolean;
@@ -451,6 +454,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
           :keyzone-observer="{ instrumentId: reference.instrumentId, timeframe: reference.timeframe }"
           :keyzone-until="keyzoneUntil"
           :snapshot-id="reference.snapshotId"
+          :highlighted-leg="highlightedSnapshotId === reference.snapshotId ? highlightedLeg : null"
           :sync-enabled="syncEligible"
           :keyboard-active="keyboardActive"
           :sync-owner="syncOwner"

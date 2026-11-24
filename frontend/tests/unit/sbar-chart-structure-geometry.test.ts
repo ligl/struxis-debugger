@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectCBarRectangles, projectFeatureRectangles, projectSwingObservationInputs, projectSwingSegments, projectTrendSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type FeatureGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
+import { projectCBarRectangles, projectFeatureRectangles, projectLegSegments, projectSwingObservationInputs, projectSwingSegments, projectTrendSegments, projectStructureOverlayGeometry, type CBarGeometryInput, type FeatureGeometryInput, type SwingGeometryInput } from "../../src/sbar-chart-structure-geometry";
 
 function cbar(overrides: Partial<CBarGeometryInput> = {}): CBarGeometryInput {
   return {
@@ -301,5 +301,34 @@ describe("projectSwingObservationInputs", () => {
     expect(extending).toMatchObject({
       sbarEndId: "s160", startPrice: 5, endPrice: 21,
     });
+  });
+});
+
+
+describe("recorded endpoint prices", () => {
+  it("uses the published Swing and Trend endpoints independently of SBar Close and interval extrema", () => {
+    const structure = {
+      swingId: "swing", trendId: "trend", direction: "Up", state: "Extending",
+      cbarStartId: "20", cbarEndId: "50", sbarStartId: "20", sbarEndId: "50",
+      highSbarId: "40", lowSbarId: "20", high: "38.0", low: "28.0",
+      startPrice: "29.0", endPrice: "32.0", startOi: null, endOi: null,
+      volume: "10", spanSbars: 4, createdAt: "20", updatedAt: "50",
+    };
+    const options = {
+      coordinateForSbarId: (id: string) => Number(id),
+      priceToCoordinate: (price: number) => 100 - price,
+    };
+    const swings = projectSwingObservationInputs([structure], []);
+    expect(projectSwingSegments({ ...options, swings })).toEqual([
+      { id: "swing", x1: 20, y1: 71, x2: 50, y2: 68, state: "Extending" },
+    ]);
+    expect(projectTrendSegments({ ...options, trends: [structure] })).toEqual([
+      { id: "trend", x1: 20, y1: 71, x2: 50, y2: 68, state: "Extending" },
+    ]);
+    expect(projectLegSegments([{
+      direction: "Down", endKind: "Observation", cbarStartId: "40", cbarEndId: "50",
+      sbarStartId: "41", sbarEndId: "50", startPrice: "36.0", endPrice: "32.0",
+      high: "38.0", low: "28.0", highSbarId: "42", lowSbarId: "49", volume: "6", spanSbars: 4,
+    }], options)).toEqual([{ id: "40:41", x1: 41, y1: 64, x2: 50, y2: 68, state: "Observation" }]);
   });
 });

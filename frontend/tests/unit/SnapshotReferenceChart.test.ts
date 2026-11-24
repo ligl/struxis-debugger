@@ -463,6 +463,7 @@ describe("SnapshotReferenceChart", () => {
     });
     await nextTick();
 
+    expect(wrapper.get('[data-testid="chart-legacy-structure-prices"]').text()).toContain("Endpoint prices not recorded");
     const surface = wrapper.getComponent(ChartSurface);
     const [cbarPrimitive, , trendPrimitive] = attachedStructurePrimitives();
     const cbarInteraction = vi.spyOn(cbarPrimitive!, "setInteractionState");
@@ -496,6 +497,18 @@ describe("SnapshotReferenceChart", () => {
       id: "trend-1",
       checkpointSbarId: bars[1]!.sbarId,
     });
+    chartMocks.priceToCoordinate.mockImplementation((price: number) => 120 - price * 5);
+    await wrapper.setProps({
+      structure: {
+        ...structure,
+        swings: structure.swings.map((swing) => ({ ...swing, startPrice: "10", endPrice: "11" })),
+        trends: structure.trends.map((trend) => ({ ...trend, startPrice: "10", endPrice: "11" })),
+      },
+    } as never);
+    expect(wrapper.find('[data-testid="chart-legacy-structure-prices"]').exists()).toBe(false);
+    expect((surface.vm as unknown as ChartSurfacePort).getStructureGeometry().trendSegments).toEqual([
+      expect.objectContaining({ id: "trend-1", y1: 70, y2: 65 }),
+    ]);
     wrapper.unmount();
   });
 

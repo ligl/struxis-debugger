@@ -6,8 +6,9 @@ import type {
   Time,
 } from "lightweight-charts";
 import type { ChartPrimitiveHost, ChartPrimitiveBinding } from "./sbar-chart-primitive-host";
+import type { LegDto } from "./origin-types";
 import { alignStrokeCoordinate } from "./chart-canvas-pixel-alignment";
-import { candlestickBodyWidth, projectCBarRectangles, projectFeatureRectangles, projectSwingSegments, projectTrendSegments } from "./sbar-chart-structure-geometry";
+import { candlestickBodyWidth, projectCBarRectangles, projectFeatureRectangles, projectLegSegments, projectSwingSegments, projectTrendSegments, type SwingSegmentGeometry } from "./sbar-chart-structure-geometry";
 
 export interface CBarPrimitiveDto {
   cbarId: string;
@@ -26,6 +27,8 @@ export interface FeaturePrimitiveDto {
 }
 
 export interface TrendPrimitiveDto {
+  startPrice?: string;
+  endPrice?: string;
   trendId: string;
   sbarStartId: string;
   sbarEndId: string;
@@ -36,8 +39,8 @@ export interface TrendPrimitiveDto {
 }
 
 export interface SwingPrimitiveDto {
-  startPrice?: number;
-  endPrice?: number;
+  startPrice?: string | number;
+  endPrice?: string | number;
   swingId: string;
   sbarStartId: string;
   sbarEndId: string;
@@ -45,6 +48,14 @@ export interface SwingPrimitiveDto {
   low: string;
   direction: string;
   state: string;
+}
+
+export interface SelectedStructureOverlay {
+  sbarStartId: string;
+  sbarEndId: string;
+  startPrice?: string;
+  endPrice?: string;
+  legs?: readonly LegDto[];
 }
 
 export interface StructurePrimitiveProjection {
@@ -70,7 +81,7 @@ export interface StructurePrimitivePlaybackState {
 
 export interface StructurePrimitiveController {
   setData(
-    objects: readonly (CBarPrimitiveDto | FeaturePrimitiveDto | SwingPrimitiveDto | TrendPrimitiveDto)[],
+    objects: readonly (CBarPrimitiveDto | FeaturePrimitiveDto | SwingPrimitiveDto | TrendPrimitiveDto | SelectedStructureOverlay)[],
     projection: StructurePrimitiveProjection,
   ): void;
   setVisible(visible: boolean): void;
@@ -665,6 +676,7 @@ class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
       this.segments = [];
       return;
     }
+    const swingById = new Map(this.objects.map((object) => [object.swingId, object]));
     this.segments = projectSwingSegments({
       swings: this.objects,
       indexBySbarId: this.projection.indexBySbarId,
@@ -682,7 +694,7 @@ class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
         color: style.color,
         dash: style.dash,
         extending: segment.state === "Extending",
-        dimmed: this.isDimmedAtSbar(this.objects.find((object) => object.swingId === segment.id)?.sbarEndId),
+        dimmed: this.isDimmedAtSbar(swingById.get(segment.id)?.sbarEndId),
       };
     });
   }
@@ -698,6 +710,79 @@ class SwingSeriesPrimitive extends StructureSeriesPrimitive<SwingPrimitiveDto> {
   protected createRenderer(): IPrimitivePaneRenderer {
     return this.paneRenderer;
   }
+}
+
+class SelectedStructurePrimitive extends StructureSeriesPrimitive<SelectedStructureOverlay> {
+  private segments: SwingSegmentGeometry[] = [];
+  private endpoints: Array<{ x: number; y: number }> = [];
+
+  protected project(): void {
+    this.clearGeometry();
+    const selected = this.objects[0];
+    if (!this.visible || !this.chart || !this.series || !selected) return;
+
+    if (selected.legs && selected.legs.length > 1) {
+      this.segments = projectLegSegments(selected.legs, {
+        indexBySbarId: this.projection.indexBySbarId,
+        visibleRange: this.getVisibleLogicalRange(),
+        coordinateForSbarId: (id) => this.coordinateForSbarId(id),
+        priceToCoordinate: (price) => this.priceToCoordinate(String(price)),
+      });
+      return;
+    }
+    if (selected.legs?.length === 0) return;
+
+    const addEndpoint = (sbarId: string, price?: string) => {
+      if (price === undefined) return;
+      const x = this.coordinateForSbarId(sbarId);
+      const y = this.priceToCoordinate(price);
+      if (x === null || y === null) return;
+      this.endpoints.push({ x, y });
+    };
+    addEndpoint(selected.sbarStartId, selected.startPrice);
+    if (selected.sbarEndId !== selected.sbarStartId) {
+      addEndpoint(selected.sbarEndId, selected.endPrice);
+    }
+  }
+
+  protected clearGeometry(): void {
+    this.segments = [];
+    this.endpoints = [];
+  }
+
+  protected hasGeometry(): boolean {
+    return this.segments.length > 0 || this.endpoints.length > 0;
+  }
+
+  protected createRenderer(): IPrimitivePaneRenderer {
+    return this.paneRenderer;
+  }
+
+  private readonly paneRenderer: IPrimitivePaneRenderer = {
+    draw: (target) => target.useMediaCoordinateSpace(({ context }) => {
+      context.save();
+      try {
+        for (const segment of this.segments) {
+          const highlighted = segment.id === this.interactionState.hoveredId;
+          context.strokeStyle = highlighted ? "#F5E6CD" : "#D2BC97";
+          context.lineWidth = highlighted ? 2.5 : 1.25;
+          context.setLineDash(segment.state === "Observation" ? [4, 3] : []);
+          context.beginPath();
+          context.moveTo(segment.x1, segment.y1);
+          context.lineTo(segment.x2, segment.y2);
+          context.stroke();
+        }
+        context.fillStyle = "#D2BC97";
+        for (const { x, y } of this.endpoints) {
+          context.beginPath();
+          context.arc(x, y, 2.5, 0, Math.PI * 2);
+          context.fill();
+        }
+      } finally {
+        context.restore();
+      }
+    }),
+  };
 }
 
 function registerSeriesPrimitive<TObject, TPrimitive extends StructureSeriesPrimitive<TObject>>(
@@ -750,6 +835,15 @@ export function registerCBarPrimitive(
   series: ISeriesApi<"Candlestick">,
 ): StructurePrimitiveController {
   return registerSeriesPrimitive<CBarPrimitiveDto, CBarSeriesPrimitive>(host, "structure.cbar", series, new CBarSeriesPrimitive());
+}
+
+export function registerSelectedStructurePrimitive(
+  host: ChartPrimitiveHost,
+  series: ISeriesApi<"Candlestick">,
+): StructurePrimitiveController {
+  return registerSeriesPrimitive<SelectedStructureOverlay, SelectedStructurePrimitive>(
+    host, "structure.selection", series, new SelectedStructurePrimitive(),
+  );
 }
 
 export function registerFeaturePrimitive(

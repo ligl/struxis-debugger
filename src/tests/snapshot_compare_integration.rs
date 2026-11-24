@@ -9,7 +9,8 @@ use std::{
 
 use crate::{
     checkpoint::{
-        CBarCheckpoint, ReplayCheckpointProjection, StructureCheckpoint, TrendCheckpoint,
+        CBarCheckpoint, LegCheckpoint, ReplayCheckpointProjection, StructureCheckpoint,
+        SwingCheckpoint, TrendCheckpoint,
     },
     compare::{CompareRejectCategory, compare_snapshot_paths},
     dataset::sequence_fingerprint,
@@ -73,6 +74,46 @@ fn checkpoint(
 ) -> ReplayCheckpointProjection {
     let first_id = input.bars[0].ts_event.to_string();
     let current_id = input.bars[index].ts_event.to_string();
+    let mut swings = Vec::new();
+    if index == 1 {
+        swings.push(SwingCheckpoint {
+            swing_id: first_id.clone(),
+            direction: "Up".into(),
+            start_price: "99.0".into(),
+            end_price: "100.5".into(),
+            high: "101.0".into(),
+            low: "99.0".into(),
+            cbar_start_id: first_id.clone(),
+            cbar_end_id: current_id.clone(),
+            sbar_start_id: first_id.clone(),
+            sbar_end_id: current_id.clone(),
+            high_sbar_id: first_id.clone(),
+            low_sbar_id: first_id.clone(),
+            start_oi: None,
+            end_oi: None,
+            volume: "21".into(),
+            span_sbars: 2,
+            state: "Extending".into(),
+            created_at: "1".into(),
+            updated_at: "2".into(),
+            legs: vec![LegCheckpoint {
+                direction: "Up".into(),
+                end_kind: "Observation".into(),
+                cbar_start_id: first_id.clone(),
+                cbar_end_id: current_id.clone(),
+                sbar_start_id: first_id.clone(),
+                sbar_end_id: current_id.clone(),
+                start_price: "99.0".into(),
+                end_price: "100.5".into(),
+                high: "101.0".into(),
+                low: "99.0".into(),
+                high_sbar_id: first_id.clone(),
+                low_sbar_id: first_id.clone(),
+                volume: "21".into(),
+                span_sbars: 2,
+            }],
+        });
+    }
     ReplayCheckpointProjection {
         keyzones: None,
         state_key: format!("{:?}", test_state_key()),
@@ -92,12 +133,14 @@ fn checkpoint(
                 extreme_sbar_id: None,
                 created_at: "1".into(),
             }],
-            swing_count: 0,
-            swings: Vec::new(),
+            swing_count: swings.len(),
+            swings,
             trend_count: 1,
             trends: vec![TrendCheckpoint {
                 trend_id: "30".into(),
                 direction: "Up".into(),
+                start_price: "99.0".into(),
+                end_price: "99.0".into(),
                 high: high.to_owned(),
                 low: "99.0".into(),
                 swing_start_id: "20".into(),
@@ -208,6 +251,13 @@ fn compares_two_verified_sqlite_snapshots_by_domain_identity() {
     let input = test_input();
     let baseline_path = publish_snapshot(&baseline_root, &input, false, false);
     let candidate_path = publish_snapshot(&candidate_root, &input, true, false);
+
+    let (_, reopened) = crate::snapshot_store::read_complete_snapshot_typed(&baseline_path)
+        .expect("written Leg composition should survive a verified reopen");
+    let structure: serde_json::Value = serde_json::from_str(&reopened[1].state_data).unwrap();
+    assert_eq!(structure["swings"][0]["endPrice"], "100.5");
+    assert_eq!(structure["swings"][0]["legs"][0]["endKind"], "Observation");
+    assert_eq!(structure["swings"][0]["legs"][0]["volume"], "21");
 
     let result = compare_snapshot_paths(&baseline_path, &candidate_path)
         .expect("two independently published complete Snapshots should compare");

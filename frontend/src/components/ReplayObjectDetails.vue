@@ -3,6 +3,8 @@ import { computed } from "vue";
 import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import { formatInspectorValue } from "../inspector-format";
+import type { SwingLegReference } from "../origin-types";
+import SwingLegDetails from "./SwingLegDetails.vue";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
 import InspectorDomainId from "./InspectorDomainId.vue";
 
@@ -11,12 +13,15 @@ type ReplaySelectedObject = Extract<InspectorWorkspaceContext, { workspace: "rep
 const props = defineProps<{
   selectedObject: NonNullable<ReplaySelectedObject>;
   timeframe: string | null;
+  legScope?: string | null;
   checkpoint: ReplayInspectorDto | null;
   snapshotStructure?: ReplayInspectorStructureDto | null;
   snapshotId?: string | null;
   snapshotLabel?: string | null;
   bars: SBarDto[];
 }>();
+
+const emit = defineEmits<{ legHighlight: [leg: SwingLegReference | null] }>();
 
 type InspectorRow = { label: string; value: string; copyValue?: string; domainId?: boolean };
 
@@ -175,6 +180,11 @@ const rows = computed<InspectorRow[]>(() => {
     </div>
     <span class="inspector-object-kind">{{ selectedObject.kind.toUpperCase() }}</span>
   </div>
+  <dl v-if="selectedObject.kind === 'swing' || selectedObject.kind === 'trend'"
+    class="inspector-fields" aria-label="Endpoint prices">
+    <InspectorPropertyField label="Start Price" :value="selectedObject.object.startPrice ?? 'Not recorded'" />
+    <InspectorPropertyField label="End Price" :value="selectedObject.object.endPrice ?? 'Not recorded'" />
+  </dl>
   <dl class="inspector-fields">
     <InspectorPropertyField
       v-for="row in rows"
@@ -187,6 +197,9 @@ const rows = computed<InspectorRow[]>(() => {
       :wide="row.label.includes('ID') || row.label.includes('Time')"
     />
   </dl>
+  <SwingLegDetails v-if="selectedObject.kind === 'swing'" :key="legScope ?? selectedObject.object.swingId"
+    :swing-id="selectedObject.object.swingId" :legs="selectedObject.object.legs"
+    @leg-highlight="emit('legHighlight', $event)" />
   <section
     v-if="relatedObjects.length > 0"
     class="inspector-related"

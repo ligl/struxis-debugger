@@ -117,6 +117,7 @@ pub(crate) struct SnapshotCompareResult {
     pub(crate) checkpoint_count: usize,
     pub(crate) checkpoints: Vec<CheckpointCompareSummary>,
     pub(crate) differences: Vec<ObjectDifference>,
+    pub(crate) unavailable_structure_fields: Vec<String>,
     pub(crate) first_structural_divergence: Option<CheckpointCompareSummary>,
     pub(crate) diagnostics_differences: Vec<DiagnosticsDifference>,
     pub(crate) first_diagnostics_divergence: Option<usize>,
@@ -151,6 +152,7 @@ pub(crate) fn compare_snapshot_paths(
 
     let mut checkpoints = Vec::with_capacity(baseline_records.len());
     let mut differences = Vec::new();
+    let mut unavailable_structure_fields = std::collections::BTreeSet::new();
     let mut diagnostics_differences = Vec::new();
     let mut first_structural_divergence = None;
     let mut first_diagnostics_divergence = None;
@@ -170,7 +172,11 @@ pub(crate) fn compare_snapshot_paths(
         }
 
         let before = differences.len();
-        compare_structure_record(baseline, candidate, &mut differences)?;
+        unavailable_structure_fields.extend(compare_structure_record(
+            baseline,
+            candidate,
+            &mut differences,
+        )?);
         let summary = CheckpointCompareSummary {
             checkpoint_index: baseline.checkpoint_index,
             sbar_id: baseline.sbar_id.clone(),
@@ -201,6 +207,7 @@ pub(crate) fn compare_snapshot_paths(
         checkpoint_count: checkpoints.len(),
         checkpoints,
         differences,
+        unavailable_structure_fields: unavailable_structure_fields.into_iter().collect(),
         first_structural_divergence,
         diagnostics_differences,
         first_diagnostics_divergence,
@@ -247,7 +254,7 @@ fn compare_structure_record(
     baseline: &SnapshotCheckpointRecord,
     candidate: &SnapshotCheckpointRecord,
     output: &mut Vec<ObjectDifference>,
-) -> Result<(), CompareRejection> {
+) -> Result<std::collections::BTreeSet<String>, CompareRejection> {
     if baseline.record_kind != "Full" || candidate.record_kind != "Full" {
         return Err(reject(
             CompareRejectCategory::StateReconstructionFailure,
@@ -256,7 +263,7 @@ fn compare_structure_record(
     }
     let baseline_state = parse_json(&baseline.state_data, "baseline state_data")?;
     let candidate_state = parse_json(&candidate.state_data, "candidate state_data")?;
-    let before = output.len();
+    let mut unavailable_fields = std::collections::BTreeSet::new();
     compare_object_collection(
         baseline.checkpoint_index,
         &baseline.sbar_id,
@@ -265,6 +272,7 @@ fn compare_structure_record(
         candidate_state.get("cbars"),
         "cbarId",
         output,
+        &mut unavailable_fields,
     )?;
     compare_object_collection(
         baseline.checkpoint_index,
@@ -274,6 +282,7 @@ fn compare_structure_record(
         candidate_state.get("swings"),
         "swingId",
         output,
+        &mut unavailable_fields,
     )?;
     compare_object_collection(
         baseline.checkpoint_index,
@@ -283,6 +292,7 @@ fn compare_structure_record(
         candidate_state.get("trends"),
         "trendId",
         output,
+        &mut unavailable_fields,
     )?;
 
     // Missing featureSequence represents no active sequence in the existing
@@ -304,6 +314,7 @@ fn compare_structure_record(
         ),
         "featureId",
         output,
+        &mut unavailable_fields,
     )?;
 
     match (
@@ -319,6 +330,7 @@ fn compare_structure_record(
                 after.get("observations"),
                 "observationId",
                 output,
+                &mut unavailable_fields,
             )?;
             for (collection, identity, label) in [
                 ("zones", "keyzoneId", "KeyZone"),
@@ -332,6 +344,7 @@ fn compare_structure_record(
                     after.get(collection),
                     identity,
                     output,
+                    &mut unavailable_fields,
                 )?;
             }
             let field = "instrumentId";
@@ -432,8 +445,7 @@ fn compare_structure_record(
             }
         }
     }
-    let _ = before;
-    Ok(())
+    Ok(unavailable_fields)
 }
 
 fn compare_object_collection(
@@ -444,6 +456,7 @@ fn compare_object_collection(
     candidate_values: Option<&Value>,
     id_field: &str,
     output: &mut Vec<ObjectDifference>,
+    unavailable_fields: &mut std::collections::BTreeSet<String>,
 ) -> Result<(), CompareRejection> {
     let baseline = indexed_objects(baseline_values, object_type, id_field)?;
     let candidate = indexed_objects(candidate_values, object_type, id_field)?;
@@ -483,7 +496,8 @@ fn compare_object_collection(
                     .collect(),
             }),
             (Some(before), Some(after)) => {
-                let properties = compare_properties(before, after, id_field);
+                let properties =
+                    compare_properties(before, after, id_field, object_type, unavailable_fields);
                 if !properties.is_empty() {
                     output.push(ObjectDifference {
                         checkpoint_index,
@@ -550,6 +564,8 @@ fn compare_properties(
     baseline: &BTreeMap<String, Value>,
     candidate: &BTreeMap<String, Value>,
     id_field: &str,
+    object_type: &str,
+    unavailable_fields: &mut std::collections::BTreeSet<String>,
 ) -> Vec<PropertyDifference> {
     let fields: std::collections::BTreeSet<_> = baseline
         .keys()
@@ -567,6 +583,14 @@ fn compare_properties(
         .filter_map(|field| {
             let before = baseline.get(&field);
             let after = candidate.get(&field);
+            let optional_fact = matches!(
+                (object_type, field.as_str()),
+                ("Swing" | "Trend", "startPrice" | "endPrice") | ("Swing", "legs")
+            );
+            if optional_fact && (before.is_none() || after.is_none()) {
+                unavailable_fields.insert(format!("{object_type}.{field}"));
+                return None;
+            }
             (before != after).then(|| PropertyDifference {
                 field,
                 baseline_value: before.cloned(),
@@ -708,6 +732,36 @@ mod tests {
         assert_eq!(differences.len(), 2);
         assert_eq!(differences[0].kind, DifferenceKind::Removed);
         assert_eq!(differences[1].kind, DifferenceKind::Added);
+    }
+
+    #[test]
+    fn compares_recorded_leg_facts_and_marks_one_sided_recordings_unavailable() {
+        let legacy = record(0, "100", "[]", r#"[{"swingId":"80","state":"Extending"}]"#);
+        let recorded = record(
+            0,
+            "100",
+            "[]",
+            concat!(
+                r#"[{"swingId":"80","state":"Extending","startPrice":"10","endPrice":"12","#,
+                r#""legs":[{"endKind":"Observation"}]}]"#,
+            ),
+        );
+        let mut differences = Vec::new();
+        let unavailable = compare_structure_record(&legacy, &recorded, &mut differences).unwrap();
+        assert!(differences.is_empty());
+        assert_eq!(
+            unavailable.into_iter().collect::<Vec<_>>(),
+            ["Swing.endPrice", "Swing.legs", "Swing.startPrice"]
+        );
+
+        let changed = SnapshotCheckpointRecord {
+            state_data: recorded.state_data.replace("Observation", "Fractal"),
+            ..recorded.clone()
+        };
+        let unavailable = compare_structure_record(&recorded, &changed, &mut differences).unwrap();
+        assert!(unavailable.is_empty());
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].properties[0].field, "legs");
     }
 
     #[test]

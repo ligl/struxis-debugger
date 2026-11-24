@@ -2,6 +2,8 @@
 import { computed } from "vue";
 import type { ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, ReplayInspectorTrendDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
+import type { SwingLegReference } from "../origin-types";
+import SwingLegDetails from "./SwingLegDetails.vue";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
 import InspectorDomainId from "./InspectorDomainId.vue";
 import { formatInspectorValue } from "../inspector-format";
@@ -13,9 +15,12 @@ const props = defineProps<{
   selectedTrend: ReplayInspectorTrendDto | null;
   originDatasetId: string | null;
   timeframe: string | null;
+  legScope?: string | null;
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
 }>();
+
+const emit = defineEmits<{ legHighlight: [leg: SwingLegReference | null] }>();
 
 const cbarRelatedObjects = computed(() => {
   const cbar = props.selectedCbar;
@@ -154,6 +159,10 @@ function formatReplayField(field: string, value: unknown): string {
         </div>
         <span class="inspector-object-kind">{{ selectedTrend.state.toUpperCase() }}</span>
       </div>
+      <dl class="inspector-fields" aria-label="Endpoint prices">
+        <InspectorPropertyField label="Start Price" :value="selectedTrend.startPrice ?? 'Not recorded'" />
+        <InspectorPropertyField label="End Price" :value="selectedTrend.endPrice ?? 'Not recorded'" />
+      </dl>
       <dl class="inspector-fields">
         <InspectorPropertyField label="Trend ID" :value="selectedTrend.trendId" test-id="inspector-trend-trendId" />
         <InspectorPropertyField label="Direction" :value="selectedTrend.direction" test-id="inspector-trend-direction" />
@@ -214,6 +223,10 @@ function formatReplayField(field: string, value: unknown): string {
         </div>
         <span class="inspector-object-kind">{{ selectedSwing.state.toUpperCase() }}</span>
       </div>
+      <dl class="inspector-fields" aria-label="Endpoint prices">
+        <InspectorPropertyField label="Start Price" :value="selectedSwing.startPrice ?? 'Not recorded'" />
+        <InspectorPropertyField label="End Price" :value="selectedSwing.endPrice ?? 'Not recorded'" />
+      </dl>
       <dl class="inspector-fields">
         <InspectorPropertyField label="Swing ID" :value="selectedSwing.swingId" :test-id="'inspector-swing-swingId'" />
         <InspectorPropertyField label="Direction" :value="selectedSwing.direction" :test-id="'inspector-swing-direction'" />
@@ -233,6 +246,8 @@ function formatReplayField(field: string, value: unknown): string {
         <InspectorPropertyField label="Created At" :value="formatReplayField('createdAt', selectedSwing.createdAt)" :copy-value="selectedSwing.createdAt" :test-id="'inspector-swing-createdAt'" />
         <InspectorPropertyField label="Updated At" :value="formatReplayField('updatedAt', selectedSwing.updatedAt)" :copy-value="selectedSwing.updatedAt" :test-id="'inspector-swing-updatedAt'" />
       </dl>
+      <SwingLegDetails :key="legScope ?? selectedSwing.swingId" :swing-id="selectedSwing.swingId"
+        :legs="selectedSwing.legs" @leg-highlight="emit('legHighlight', $event)" />
       <section class="inspector-related" data-testid="inspector-related-objects">
         <p class="section-index">RELATED OBJECTS</p>
         <details

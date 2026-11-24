@@ -1,3 +1,4 @@
+import { legStartKey, type LegDto } from "./origin-types";
 /**
  * Pure CBar screen-geometry projection shared by chart adapters.
  *
@@ -172,6 +173,8 @@ export function projectFeatureRectangles(options: {
 }
 
 export interface TrendGeometryInput {
+  startPrice?: string;
+  endPrice?: string;
   trendId: string;
   sbarStartId: string;
   sbarEndId: string;
@@ -193,6 +196,8 @@ export function projectTrendSegments(options: {
   return projectSwingSegments({
     swings: options.trends.map((trend) => ({
       swingId: trend.trendId,
+      startPrice: trend.startPrice,
+      endPrice: trend.endPrice,
       sbarStartId: trend.sbarStartId,
       sbarEndId: trend.sbarEndId,
       high: trend.high,
@@ -213,8 +218,12 @@ export function projectSwingObservationInputs(
   swings: readonly import("./origin-types").ReplayInspectorSwingDto[],
   bars: readonly import("./origin-types").SBarDto[],
 ): SwingGeometryInput[] {
-  const rawById = new Map(bars.map((bar) => [bar.sbarId, bar]));
-  return swings.flatMap((swing, index) => {
+  let rawById: Map<string, (typeof bars)[number]> | undefined;
+  return swings.flatMap<SwingGeometryInput>((swing, index) => {
+    if (swing.startPrice !== undefined || swing.endPrice !== undefined) {
+      return swing.startPrice !== undefined && swing.endPrice !== undefined ? [swing] : [];
+    }
+    rawById ??= new Map(bars.map((bar) => [bar.sbarId, bar]));
     const first = rawById.get(swing.sbarStartId);
     const last = rawById.get(swing.sbarEndId);
     if (!first || !last) return [];
@@ -239,8 +248,8 @@ export function projectSwingObservationInputs(
 }
 
 export interface SwingGeometryInput {
-  startPrice?: number;
-  endPrice?: number;
+  startPrice?: number | string;
+  endPrice?: number | string;
   swingId: string;
   sbarStartId: string;
   sbarEndId: string;
@@ -302,15 +311,16 @@ export function projectSwingSegments(
       ) return [];
     }
 
-    const high = Number(swing.high);
-    const low = Number(swing.low);
-    if (!Number.isFinite(high) || !Number.isFinite(low)) return [];
+    if ((swing.startPrice === undefined) !== (swing.endPrice === undefined)) return [];
+    const startsAtLow = swing.direction === "Up";
+    const startPrice = Number(swing.startPrice ?? (startsAtLow ? swing.low : swing.high));
+    const endPrice = Number(swing.endPrice ?? (startsAtLow ? swing.high : swing.low));
+    if (!Number.isFinite(startPrice) || !Number.isFinite(endPrice)) return [];
 
     const x1 = coordinateForSbarId(swing.sbarStartId);
     const x2 = coordinateForSbarId(swing.sbarEndId);
-    const startsAtLow = swing.direction === "Up";
-    const y1 = priceToCoordinate(swing.startPrice ?? (startsAtLow ? low : high));
-    const y2 = priceToCoordinate(swing.endPrice ?? (startsAtLow ? high : low));
+    const y1 = priceToCoordinate(startPrice);
+    const y2 = priceToCoordinate(endPrice);
     if (
       !isFiniteCoordinate(x1) ||
       !isFiniteCoordinate(x2) ||
@@ -329,6 +339,16 @@ export function projectSwingSegments(
   });
 }
 
+
+export function projectLegSegments(
+  legs: readonly LegDto[],
+  projection: Omit<ProjectSwingSegmentsOptions, "swings">,
+): SwingSegmentGeometry[] {
+  return projectSwingSegments({
+    ...projection,
+    swings: legs.map((leg) => ({ ...leg, swingId: legStartKey(leg), state: leg.endKind })),
+  });
+}
 
 export interface ProjectStructureOverlayOptions {
   cbars: readonly CBarGeometryInput[];

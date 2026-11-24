@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KeyZoneCheckpointDto } from "../origin-types";
+import type { KeyZoneCheckpointDto, SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { Time } from "lightweight-charts";
 import ChartSurface from "./ChartSurface.vue";
@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<{
   runState: RunStateDto | null;
   structure?: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
+  highlightedLeg?: SwingLegReference | null;
   selectedObject?: ReplayChartSelection | null;
   targetSbarId?: string | null;
   keyboardActive?: boolean;
@@ -39,6 +40,12 @@ const emit = defineEmits<{
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
 }>();
 
+const selectedStructure = computed(() => {
+  const selected = props.selectedObject;
+  return selected && (selected.kind === "swing" || selected.kind === "trend") && selected.checkpointSbarId === props.runState?.cursorSbarId
+    ? { kind: selected.kind, id: selected.id }
+    : null;
+});
 const surface = ref<ChartSurfacePort | null>(null);
 const chartError = ref("");
 const layerVisibility = ref({ sbar: true, volume: true, cbar: true, swing: true, trend: true, feature: false, keyzone: true });
@@ -771,6 +778,8 @@ onBeforeUnmount(() => {
         ref="surface"
         :bars="bars"
         :structure="structure ?? null"
+        :selected-structure="selectedStructure"
+        :highlighted-leg="highlightedLeg"
         :keyzones="keyzones"
         :keyzone-observer="origin ? { instrumentId: origin.instrumentId, timeframe: origin.timeframe } : null"
         :keyzone-until="runState?.cursorSbarId ?? null"

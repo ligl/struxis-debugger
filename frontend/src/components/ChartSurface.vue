@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KeyZoneCheckpointDto } from "../origin-types";
+import { legStartKey, type KeyZoneCheckpointDto, type SwingLegReference } from "../origin-types";
 import { KeyZonePrimitive } from "../keyzone-primitives";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { DrawingManager, type DrawingKind, type Drawing } from "lightweight-charts-drawing";
@@ -8,7 +8,7 @@ import DrawingToolbar from "./DrawingToolbar.vue";
 import { CrosshairMode, type CandlestickData, type HistogramData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from "lightweight-charts";
 import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import { registerFeaturePrimitive, setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
+import { registerFeaturePrimitive, registerSelectedStructurePrimitive, type StructurePrimitiveObjectReference, setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
 import { candlestickBodyWidth, projectStructureOverlayGeometry, projectSwingObservationInputs } from "../sbar-chart-structure-geometry";
@@ -27,6 +27,9 @@ const props = withDefaults(defineProps<{
   keyzoneUntil?: string | null;
   selectedKeyzoneId?: string | null;
   keyzoneSelectable?: boolean;
+  selectedStructure?: StructurePrimitiveObjectReference | null;
+  highlightedLeg?: SwingLegReference | null;
+  indicateLegacyStructure?: boolean;
   sequenceId: string;
   headerTitle?: string;
   headerTag?: string;
@@ -54,8 +57,22 @@ const props = withDefaults(defineProps<{
   showErrorState: true,
   dataMode: "props",
 });
-// Memoize raw pivot lookup: viewport updates should not rescan the entire SBar series.
+// Only historical records without endpoint prices need the legacy raw-bar lookup.
 const observedSwings = computed(() => projectSwingObservationInputs(props.structure?.swings ?? [], props.bars));
+const selectedStructureObject = computed(() => {
+  const selected = props.selectedStructure;
+  if (selected?.kind === "swing" && layerVisibility.value.swing) {
+    return props.structure?.swings.find((swing) => swing.swingId === selected.id);
+  }
+  if (selected?.kind === "trend" && layerVisibility.value.trend) {
+    return props.structure?.trends.find((trend) => trend.trendId === selected.id);
+  }
+  return undefined;
+});
+const hasLegacyStructure = computed(() => props.indicateLegacyStructure && (
+  (layerVisibility.value.swing && props.structure?.swings.some((swing) => swing.startPrice === undefined)) ||
+  (layerVisibility.value.trend && props.structure?.trends.some((trend) => trend.startPrice === undefined))
+));
 const latestBar = computed(() => props.bars[props.bars.length - 1] ?? null);
 const emit = defineEmits<{
   chartActivate: [];
@@ -93,6 +110,7 @@ function syncKeyzones(): void {
   keyzonePrimitive.setData(props.keyzones ?? null, props.bars, props.keyzoneUntil === undefined ? (props.bars.at(-1)?.tsEvent ?? null) : props.keyzoneUntil, props.keyzoneObserver ?? null);
 }
 let featurePrimitive: StructurePrimitiveController | null = null;
+let selectedStructurePrimitive: StructurePrimitiveController | null = null;
 let structurePlaybackState: ChartSurfaceStructurePlaybackState = {
   enabled: false, offset: null, processedCount: 0, liveCount: 0,
 };
@@ -234,6 +252,21 @@ function updateSbarCoordinates(): void {
   updateStructureGeometry();
 }
 
+function syncLegHighlight(): void {
+  const leg = props.highlightedLeg;
+  const selected = props.selectedStructure;
+  selectedStructurePrimitive?.setInteractionState({
+    hoveredId: selected?.kind === "swing" && leg?.swingId === selected.id ? legStartKey(leg) : null,
+    selectedId: null,
+  });
+}
+
+function syncSelectedStructure(): void {
+  const selected = selectedStructureObject.value;
+  selectedStructurePrimitive?.setData(selected ? [selected] : [], { timeBySbarId, indexBySbarId });
+  syncLegHighlight();
+}
+
 function syncStructurePrimitives(): void {
   keyzonePrimitive.setVisible(layerVisibility.value.keyzone);
   syncStructurePrimitiveControllers({
@@ -248,16 +281,14 @@ function syncStructurePrimitives(): void {
       featureId: feature.featureId, sbarStartId: feature.sbarStartId, sbarEndId: feature.sbarEndId,
       high: feature.high, low: feature.low,
     })),
-    trends: (props.structure?.trends ?? []).map((trend) => ({
-      trendId: trend.trendId, sbarStartId: trend.sbarStartId, sbarEndId: trend.sbarEndId,
-      high: trend.high, low: trend.low, direction: trend.direction, state: trend.state,
-    })),
+    trends: props.structure?.trends ?? [],
     projection: { timeBySbarId, indexBySbarId },
     cbarVisible: layerVisibility.value.cbar,
     swingVisible: layerVisibility.value.swing,
     trendVisible: layerVisibility.value.trend,
     playbackState: structurePlaybackState,
   });
+  syncSelectedStructure();
 }
 
 
@@ -894,7 +925,10 @@ onMounted(() => {
   cbarPrimitive = runtime.cbarPrimitive;
   swingPrimitive = runtime.swingPrimitive;
   trendPrimitive = runtime.trendPrimitive;
-  if (primitiveHost && candleSeries) featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
+  if (primitiveHost && candleSeries) {
+    featurePrimitive = registerFeaturePrimitive(primitiveHost, candleSeries);
+    selectedStructurePrimitive = registerSelectedStructurePrimitive(primitiveHost, candleSeries);
+  }
   registerPrimitive("keyzone", keyzonePrimitive);
   syncKeyzones();
   keyzonePrimitive.setSelected(props.selectedKeyzoneId ?? null);
@@ -930,6 +964,8 @@ watch(() => [props.sequenceId, props.keyzones, props.bars, props.keyzoneUntil] a
 watch([() => props.keyzoneObserver?.instrumentId, () => props.keyzoneObserver?.timeframe], syncKeyzones);
 watch(() => [props.keyzoneSelectable, chartError.value, drawingTool.value, selectedDrawingCount.value] as const, clearKeyzoneHover);
 watch(() => props.selectedKeyzoneId, (id) => keyzonePrimitive.setSelected(id ?? null));
+watch(selectedStructureObject, syncSelectedStructure);
+watch(() => props.highlightedLeg, syncLegHighlight);
 watch(() => props.structure, () => {
   // A Snapshot checkpoint replaces the authoritative structure snapshot without
   // rebuilding immutable candle/volume series. Structure hit-testing must see
@@ -962,6 +998,7 @@ onBeforeUnmount(() => {
   primitiveHost = null;
   cbarPrimitive = null;
   swingPrimitive = null;
+  selectedStructurePrimitive = null;
   chart = null;
   candleSeries = null;
   volumeSeries = null;
@@ -1031,6 +1068,9 @@ onBeforeUnmount(() => {
         @clear="clearDrawings"
       />
       <slot name="chart-interaction-overlay" />
+      <span v-if="hasLegacyStructure" class="legacy-structure-prices" data-testid="chart-legacy-structure-prices">
+        Legacy structure lines · Endpoint prices not recorded
+      </span>
       <div v-if="showLegend !== false" class="origin-chart-legend" role="group" aria-label="Chart layer visibility">
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.sbar }" :aria-pressed="layerVisibility.sbar" data-testid="layer-toggle-sbar" @click="toggleLayer('sbar')"><i class="legend-dot sbar-dot"></i>SBar</button>
         <button type="button" class="origin-chart-legend-item" :class="{ active: layerVisibility.cbar }" :aria-pressed="layerVisibility.cbar" :disabled="!structure || structure.cbars.length === 0" data-testid="layer-toggle-cbar" @click="toggleLayer('cbar')"><i class="legend-dot cbar-dot"></i>CBar</button>
@@ -1051,6 +1091,15 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.legacy-structure-prices {
+  position: absolute;
+  top: 8px;
+  right: 76px;
+  pointer-events: none;
+  color: var(--dbg-text-muted);
+  font-size: 10px;
+}
+
 .origin-chart-panel {
   display: flex;
   min-width: 0;

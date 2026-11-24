@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KeyZoneCheckpointDto } from "../origin-types";
+import type { KeyZoneCheckpointDto, SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import ChartSurface from "./ChartSurface.vue";
 import type { OriginObjectSelection, ReplayInspectorStructureDto, SBarDto } from "../origin-types";
@@ -11,6 +11,7 @@ const props = defineProps<{
   bars: SBarDto[];
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
+  highlightedLeg?: SwingLegReference | null;
   keyzoneObserver?: import("../origin-types").ObservationStateKeyDto | null;
   originDatasetId: string;
   selectedObject?: OriginObjectSelection | null;
@@ -28,6 +29,12 @@ const emit = defineEmits<{
   cancelRangeSelection: [];
 }>();
 
+const selectedStructure = computed(() => {
+  const selected = props.selectedObject;
+  return selected && (selected.kind === "swing" || selected.kind === "trend") && selected.originDatasetId === props.originDatasetId
+    ? { kind: selected.kind, id: selected.id }
+    : null;
+});
 const surface = ref<ChartSurfacePort | null>(null);
 const selectedSbarMarker = ref<ChartSurfaceSBarMarker | null>(null);
 const hoveredObject = ref<OriginObjectSelection | null>(null);
@@ -331,6 +338,8 @@ watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: 
       ref="surface"
       :bars="bars"
         :structure="structure"
+        :selected-structure="selectedStructure"
+        :highlighted-leg="highlightedLeg"
       :keyzones="keyzones"
         :keyzone-observer="keyzoneObserver"
       :selected-keyzone-id="selectedObject?.kind === 'keyzone' ? selectedObject.id : null"

@@ -128,8 +128,38 @@ export interface ReplayInspectorCBarDto {
   createdAt: string;
 }
 
+export interface LegDto {
+  direction: "Up" | "Down";
+  endKind: "Fractal" | "Observation";
+  cbarStartId: string;
+  cbarEndId: string;
+  sbarStartId: string;
+  sbarEndId: string;
+  startPrice: string;
+  endPrice: string;
+  high: string;
+  low: string;
+  highSbarId: string;
+  lowSbarId: string;
+  volume: string;
+  spanSbars: number;
+}
+
+export interface SwingLegReference {
+  swingId: string;
+  cbarStartId: string;
+  sbarStartId: string;
+}
+
+export function legStartKey(leg: Pick<LegDto, "cbarStartId" | "sbarStartId">): string {
+  return `${leg.cbarStartId}:${leg.sbarStartId}`;
+}
+
 export interface ReplayInspectorSwingDto {
   swingId: string;
+  startPrice?: string;
+  endPrice?: string;
+  legs?: LegDto[];
   direction: string;
   high: string;
   low: string;
@@ -150,6 +180,8 @@ export interface ReplayInspectorSwingDto {
 
 export interface ReplayInspectorTrendDto {
   trendId: string;
+  startPrice?: string;
+  endPrice?: string;
   direction: string;
   high: string;
   low: string;
@@ -399,6 +431,7 @@ export interface SnapshotCompareResultDto {
   checkpointCount: number;
   checkpoints: CheckpointCompareSummaryDto[];
   differences: ObjectDifferenceDto[];
+  unavailableStructureFields?: string[];
   firstStructuralDivergence: CheckpointCompareSummaryDto | null;
   diagnosticsDifferences: DiagnosticsDifferenceDto[];
   firstDiagnosticsDivergence: number | null;
