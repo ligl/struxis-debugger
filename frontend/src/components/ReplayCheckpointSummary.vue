@@ -21,7 +21,7 @@ defineProps<{
       <dl class="inspector-fields">
         <InspectorPropertyField label="State Key" :value="replayInspector.stateKey" wide />
         <InspectorPropertyField label="Checkpoint" :value="String(replayInspector.checkpointIndex)" test-id="inspector-replay-checkpoint" />
-        <InspectorPropertyField label="Confirmed SBar ID" :value="replayInspector.sbarId" test-id="inspector-replay-sbar-id" wide />
+        <InspectorPropertyField label="Confirmed SBar ID" :value="replayInspector.sbarId" test-id="inspector-replay-sbar-id" wide reference-kind="sbar" />
       </dl>
       <div class="inspector-subsection">
         <p class="section-index">CONFIRMED SBAR</p>

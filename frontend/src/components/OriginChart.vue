@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { InspectorChartReference } from "../inspector-chart-hover";
 import type { KeyZoneCheckpointDto, SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import ChartSurface from "./ChartSurface.vue";
@@ -12,6 +13,7 @@ const props = defineProps<{
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
   highlightedLeg?: SwingLegReference | null;
+  highlightedId?: InspectorChartReference | null;
   keyzoneObserver?: import("../origin-types").ObservationStateKeyDto | null;
   originDatasetId: string;
   selectedObject?: OriginObjectSelection | null;
@@ -24,6 +26,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   sbarClick: [sbarId: string];
   objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" | "keyzone" }>];
+  clearObjectSelection: [];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
@@ -226,13 +229,22 @@ function handleChartClick(point: { x: number; y: number | null } | null): void {
     emit("selectionError", "The click did not resolve to a chart coordinate.");
     return;
   }
+  const hasSelection = props.selectedObject?.originDatasetId === props.originDatasetId;
+  const selectRangeByPosition = props.selectionPending || (props.selectionEditable !== false && !hasSelection);
   if (typeof point.y === "number" && Number.isFinite(point.y)) {
     const selectedStructureObject = hitTestStructureObject(point.x, point.y);
     if (selectedStructureObject) {
       emit("objectClick", selectedStructureObject);
       return;
     }
+    if (!selectRangeByPosition) {
+      const selectedSbar = hitTestSbar(point.x, point.y);
+      if (selectedSbar) emit("sbarClick", selectedSbar.id);
+      else if (hasSelection) emit("clearObjectSelection");
+      return;
+    }
   }
+  if (!selectRangeByPosition) return;
   const sbarId = surface.value?.getSbarIdAtCoordinate(point.x);
   if (!sbarId || !surface.value?.hasSbarId(sbarId)) {
     emit("selectionError", "The clicked horizontal position does not map to an SBar in the current sequence.");
@@ -340,6 +352,7 @@ watch([hoveredSbarMarker, selectedSbarMarker], syncSbarMarkerPrimitive, { deep: 
         :structure="structure"
         :selected-structure="selectedStructure"
         :highlighted-leg="highlightedLeg"
+        :highlighted-id="highlightedId"
       :keyzones="keyzones"
         :keyzone-observer="keyzoneObserver"
       :selected-keyzone-id="selectedObject?.kind === 'keyzone' ? selectedObject.id : null"

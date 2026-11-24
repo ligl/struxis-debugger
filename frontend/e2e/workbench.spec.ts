@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import type { OriginDatasetDto } from "../src/origin-types";
+import { keyzoneBars } from "../tests/unit/keyzone-fixture";
 
 const viewports = [
   { name: "minimum supported desktop", width: 920, height: 800 },
@@ -856,6 +858,78 @@ for (const inspectorDirection of ["top", "bottom"] as const) {
 }
 
 
+
+test("Origin selects an inclusive range with blank plot clicks", async ({ page }) => {
+  const bars = keyzoneBars();
+  const [first, second, , last] = bars;
+  const origin: OriginDatasetDto = {
+    originDatasetId: "origin-pointer-range", sourceCatalog: "fixture", enableStructure: false,
+    instrumentId: "AUD/USD.SIM", barType: first!.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
+    sbarCount: bars.length, firstSbarId: first!.sbarId, lastSbarId: last!.sbarId,
+    firstTsEvent: first!.tsEvent, lastTsEvent: last!.tsEvent, bars, structure: null,
+  };
+  await page.addInitScript((origin) => {
+    const responses: Record<string, unknown> = {
+      list_catalog_datasets: [], get_current_origin: origin, get_current_test_dataset: null,
+      list_snapshots: [], get_run_state: null, get_replay_inspector: null,
+    };
+    Object.defineProperty(window, "__TAURI_INTERNALS__", { value: { invoke: async (command: string) => {
+      if (command in responses) return structuredClone(responses[command]);
+      throw new Error(`Unexpected command ${command}`);
+    } } });
+  }, origin);
+  await page.goto("/");
+
+  const panel = page.getByTestId("origin-chart-panel");
+  const chart = panel.getByTestId("origin-chart-canvas");
+  await expect(chart).toBeVisible();
+  // Keep the logical time axis active while turning both data layers off, so
+  // there is no painted object at the pointer position on any screen size.
+  for (const layer of ["sbar", "volume"]) {
+    const toggle = panel.getByTestId(`layer-toggle-${layer}`);
+    if (await toggle.getAttribute("aria-pressed") === "true") await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  }
+  await expect(chart).toHaveAttribute("data-first-sbar-x", /\d/);
+  await expect(chart).toHaveAttribute("data-second-sbar-x", /\d/);
+  const box = (await chart.boundingBox())!;
+  const startX = box.x + Number(await chart.getAttribute("data-first-sbar-x"));
+  const endX = box.x + Number(await chart.getAttribute("data-second-sbar-x"));
+  const plotY = box.y + box.height / 3;
+  expect(startX).toBeGreaterThan(box.x);
+  expect(endX).toBeGreaterThan(startX);
+  expect(endX).toBeLessThan(box.x + box.width);
+
+  const pending = page.getByTestId("test-range-awaiting-end");
+  const range = page.getByTestId("selected-test-range");
+  const selectedId = page.getByTestId("inspector-sbar-id");
+  await expect(pending).toHaveCount(0);
+  await expect(range).toHaveCount(0);
+  await expect(selectedId).toHaveCount(0);
+
+  await page.mouse.click(startX, plotY);
+  await expect(pending).toBeVisible();
+  await expect(selectedId).toHaveText(first!.sbarId);
+  await page.mouse.move(endX, plotY);
+  await expect(panel.getByTestId("origin-selection-preview")).toBeVisible();
+  // Lightweight Charts 5.2.1 suppresses a second single-click within 500 ms.
+  await page.waitForTimeout(550);
+  await page.mouse.click(endX, plotY);
+  await expect(pending).toHaveCount(0);
+  await expect(panel.getByTestId("origin-selection-completed")).toBeVisible();
+  await expect(range.getByTestId("selected-test-range-start")).toHaveAttribute("data-sbar-id", first!.sbarId);
+  await expect(range.getByTestId("selected-test-range-end")).toHaveAttribute("data-sbar-id", second!.sbarId);
+  await expect(range.getByTestId("selected-test-range-count")).toHaveText("2");
+  await expect(selectedId).toHaveText(second!.sbarId);
+
+  await page.waitForTimeout(550);
+  await page.mouse.click((startX + endX) / 2, plotY);
+  await expect(page.getByTestId("inspector-dataset-summary")).toBeVisible();
+  await expect(selectedId).toHaveCount(0);
+  await expect(range.getByTestId("selected-test-range-start")).toHaveAttribute("data-sbar-id", first!.sbarId);
+  await expect(range.getByTestId("selected-test-range-end")).toHaveAttribute("data-sbar-id", second!.sbarId);
+  await expect(panel.getByTestId("origin-selection-completed")).toBeVisible();
+});
 
 test("each navigation click restores the module Inspector after selecting an object", async ({ page }) => {
   const { keyzoneBars, keyzoneFixture } = await import("../tests/unit/keyzone-fixture");

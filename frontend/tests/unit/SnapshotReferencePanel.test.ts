@@ -526,6 +526,25 @@ describe("Snapshot Reference on-demand checkpoints", () => {
     await flushPromises();
     expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toMatchObject({ kind: "sbar", checkpointSbarId: "300" });
   });
+
+  it("does not restore a cleared selection when a delayed object lookup completes", async () => {
+    const pending = deferredCheckpoint();
+    invokeMock.mockResolvedValueOnce(partialReference()).mockReturnValueOnce(pending.promise);
+    const wrapper = mount(SnapshotReferencePanel, { props: { instrumentId: "AUD/USD.SIM", snapshots } });
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue(reference.snapshotId);
+    await flushPromises();
+    const chart = wrapper.findComponent({ name: "SnapshotReferenceChart" });
+    chart.vm.$emit("objectSelect", { kind: "cbar", id: "old-cbar" });
+    expect(invokeMock).toHaveBeenLastCalledWith("get_snapshot_reference_object", {
+      snapshotId: reference.snapshotId, kind: "cbar", objectId: "old-cbar",
+    });
+    chart.vm.$emit("clearObjectSelection");
+    expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toBeNull();
+
+    pending.resolve(historicalCheckpoint);
+    await flushPromises();
+    expect(wrapper.emitted("objectSelect")?.at(-1)?.[0]).toBeNull();
+  });
 });
 
 

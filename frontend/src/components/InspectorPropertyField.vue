@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import type { InspectorChartObjectKind } from "../inspector-chart-hover";
 import InspectorDomainId from "./InspectorDomainId.vue";
 
 const props = defineProps<{
@@ -10,9 +11,10 @@ const props = defineProps<{
   title?: string;
   wide?: boolean;
   domainId?: boolean;
+  referenceKind?: InspectorChartObjectKind;
 }>();
 
-const isDomainId = computed(() => props.domainId === true ||
+const isDomainId = computed(() => props.referenceKind !== undefined || props.domainId === true ||
   /\b(?:(?:Start|End) )?(?:SBar|CBar|Swing|Trend|KeyZone)(?: (?:Start|End))? ID$/i.test(props.label),
 );
 </script>
@@ -26,6 +28,7 @@ const isDomainId = computed(() => props.domainId === true ||
         :value="value"
         :copy-value="copyValue ?? value"
         :test-id="testId"
+        :reference-kind="referenceKind"
       />
       <code
         v-else

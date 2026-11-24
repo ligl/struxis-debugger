@@ -2,6 +2,8 @@
 import { computed } from "vue";
 import type { KeyZoneCheckpointDto, KeyZoneDto, ObservationControlsContext, CreateObservationDto, CancelObservationDto, ObservationCommandResultDto } from "../origin-types";
 import KeyZoneObservationControls from "./KeyZoneObservationControls.vue";
+import type { InspectorChartObjectKind } from "../inspector-chart-hover";
+import InspectorDomainId from "./InspectorDomainId.vue";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 const props = defineProps<{
@@ -13,12 +15,18 @@ const props = defineProps<{
 const interactions = computed(() => props.registry.interactions.filter((item) => item.keyzoneId === props.zone.keyzoneId));
 const groups = computed(() => props.registry.observations.filter((task) => task.keyzoneId === props.zone.keyzoneId)
     .map((task) => ({ id: task.observationId, task, interactions: interactions.value.filter((item) => item.observationId === task.observationId) })));
-const fields = computed(() => [
-  { label: "KeyZone ID", value: props.zone.keyzoneId },
+const originReference = computed<InspectorChartObjectKind | undefined>(() => {
+  if (props.zone.originId === null) return undefined;
+  if (props.zone.originKind === "Swing") return "swing";
+  if (props.zone.originKind === "Trend") return "trend";
+  return undefined;
+});
+const fields = computed<Array<{ label: string; value: string; raw?: string | null; referenceKind?: InspectorChartObjectKind }>>(() => [
+  { label: "KeyZone ID", value: props.zone.keyzoneId, referenceKind: "keyzone" },
   { label: "Instrument", value: props.registry.instrumentId },
   { label: "Source timeframe", value: props.zone.timeframe },
   { label: "Origin", value: props.zone.originKind },
-  { label: "Origin ID", value: props.zone.originId ?? "—" },
+  { label: "Origin ID", value: props.zone.originId ?? "—", referenceKind: originReference.value },
   { label: "State", value: props.zone.state },
   { label: "Lower", value: props.zone.lower },
   { label: "Upper", value: props.zone.upper },
@@ -37,7 +45,7 @@ const fields = computed(() => [
       :key="`${observationContext.runId}:${zone.keyzoneId}`" :zone="zone" :registry="registry" :context="observationContext"
       :create="createObservation" :cancel="cancelObservation" />
     <dl class="inspector-fields">
-      <InspectorPropertyField v-for="field in fields" :key="field.label" :label="field.label" :value="field.value" :copy-value="field.raw ?? field.value" wide />
+      <InspectorPropertyField v-for="field in fields" :key="field.label" :label="field.label" :value="field.value" :copy-value="field.raw ?? field.value" :reference-kind="field.referenceKind" wide />
     </dl>
     <p v-if="!groups.length" class="keyzone-empty" data-testid="keyzone-observations-empty">No observations recorded for this zone.</p>
     <section v-for="group in groups" :key="group.id" class="keyzone-observation" data-testid="keyzone-observation" :data-observation-id="group.task.observationId">
@@ -62,12 +70,12 @@ const fields = computed(() => [
       <p v-if="!group.interactions.length" class="keyzone-empty">No interactions recorded for this zone.</p>
       <details v-for="item in group.interactions" :key="item.interactionId" class="keyzone-interaction" data-testid="keyzone-interaction" :data-interaction-id="item.interactionId">
         <summary>
-          <span class="interaction-title">Interaction {{ item.interactionId }}</span>
+          <span class="interaction-title">Interaction <InspectorDomainId :value="item.interactionId" reference-kind="interaction" /></span>
           <span class="interaction-overview">{{ item.observerTimeframe }} · {{ item.state }}</span>
           <span class="interaction-start">Started · UTC {{ formatDomainTimestamp(item.startedAt, item.observerTimeframe) }}</span>
         </summary>
         <dl class="inspector-fields">
-          <InspectorPropertyField label="Interaction ID" :value="item.interactionId" wide />
+          <InspectorPropertyField label="Interaction ID" :value="item.interactionId" wide reference-kind="interaction" />
           <InspectorPropertyField label="Observer" :value="`${item.observer.instrumentId} · ${item.observer.timeframe}`" wide />
           <InspectorPropertyField label="N" :value="item.configN" />
           <InspectorPropertyField label="X" :value="String(item.configX)" />

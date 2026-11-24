@@ -365,6 +365,13 @@ describe("SnapshotReferenceChart", () => {
       id: "1700000000000000000",
       checkpointSbarId: "1700000000000000000",
     });
+    expect(wrapper.emitted("clearObjectSelection")).toBeUndefined();
+
+    clickHandler?.({ point: { x: 100, y: 150 } });
+    await nextTick();
+    expect(wrapper.emitted("clearObjectSelection")).toEqual([[]]);
+    expect(wrapper.emitted("objectSelect")).toHaveLength(1);
+    expect(markerUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ selected: null }));
     wrapper.unmount();
   });
 

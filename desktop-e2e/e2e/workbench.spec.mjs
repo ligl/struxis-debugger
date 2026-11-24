@@ -451,6 +451,79 @@ describe("Struxis Debugger native desktop", () => {
       "Origin chart must expose distinct ordered SBar identities from its validated sequence.");
     assert.equal(await $('[data-testid="origin-first-sbar-id"]').getText(), firstSbarId);
     assert.equal(await $('[data-testid="origin-last-sbar-id"]').getText(), lastSbarId);
+
+    // Clear the plot visually while keeping the loaded Catalog time axis active.
+    const hiddenLayers = [];
+    try {
+      for (const layer of ["sbar", "cbar", "swing", "trend", "keyzone", "feature", "volume"]) {
+        const selector = `[data-testid="layer-toggle-${layer}"]`;
+        const toggle = await $(selector);
+        if (await toggle.isEnabled() && await toggle.getAttribute("aria-pressed") === "true") {
+          await domClick(selector);
+          hiddenLayers.push(selector);
+          assert.equal(await toggle.getAttribute("aria-pressed"), "false");
+        }
+      }
+      const plot = await browser.execute(() => {
+        const chart = document.querySelector('[data-testid="origin-chart-canvas"]');
+        if (!(chart instanceof HTMLElement)) throw new Error("Origin plot is missing.");
+        chart.scrollIntoView({ block: "nearest" });
+        const pane = Array.from(chart.querySelectorAll("canvas"), (canvas) => canvas.getBoundingClientRect())
+          .sort((a, b) => b.width * b.height - a.width * a.height)[0];
+        if (!pane || !pane.width || !pane.height) throw new Error("Origin canvas has no drawing area.");
+        for (const fraction of [0.25, 0.4, 0.55, 0.7]) {
+          const y = Math.round(pane.y + pane.height * fraction);
+          const visiblePoints = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+            .map((x) => Math.round(pane.x + pane.width * x))
+            .filter((x) => chart.contains(document.elementFromPoint(x, y)));
+          if (visiblePoints.length >= 2) return { startX: visiblePoints[0], endX: visiblePoints.at(-1), y };
+        }
+        throw new Error(`No unobstructed pointer positions in the Origin canvas: ${JSON.stringify(pane)}`);
+      });
+      const pointAt = async (x, button) => {
+        const actions = [{ type: "pointerMove", duration: 0, origin: "viewport", x, y: plot.y }];
+        if (button !== undefined) actions.push({ type: "pointerDown", button }, { type: "pointerUp", button });
+        await browser.performActions([{ type: "pointer", id: "origin-range-mouse", parameters: { pointerType: "mouse" }, actions }]);
+      };
+      const pending = await $('[data-testid="test-range-awaiting-end"]');
+      const completed = await $('[data-testid="selected-test-range"]');
+      assert.equal(await pending.isExisting(), false);
+      assert.equal(await completed.isExisting(), false);
+      await pointAt(plot.startX, 0);
+      try {
+        await pending.waitForDisplayed({ timeout: 5_000, timeoutMsg: "The first blank plot click did not start a range." });
+      } catch (error) {
+        const state = await browser.execute(({ startX, y }) => {
+          const target = document.elementFromPoint(startX, y);
+          const chart = document.querySelector('[data-testid="origin-chart-canvas"]');
+          return {
+            target: target?.tagName,
+            insideChart: chart?.contains(target),
+            firstSbarX: chart?.getAttribute("data-first-sbar-x"),
+            secondSbarX: chart?.getAttribute("data-second-sbar-x"),
+            feedback: document.querySelector('[data-testid="origin-range-selection-status"]')?.textContent?.trim(),
+            selectedSbar: document.querySelector('[data-testid="inspector-sbar-id"]')?.textContent?.trim(),
+          };
+        }, plot);
+        throw new Error(`${error.message} ${JSON.stringify({ plot, ...state })}`, { cause: error });
+      }
+      await pointAt(plot.endX);
+      await $('[data-testid="origin-selection-preview"]').waitForDisplayed({ timeout: 5_000 });
+      // Separate the two single-clicks from the chart's 500 ms double-click window.
+      await browser.pause(550);
+      await pointAt(plot.endX, 0);
+      await completed.waitForDisplayed({ timeout: 5_000, timeoutMsg: "The second blank plot click did not complete the range." });
+      await $('[data-testid="origin-selection-completed"]').waitForDisplayed({ timeout: 5_000 });
+      const startId = await completed.$('[data-testid="selected-test-range-start"]').getAttribute("data-sbar-id");
+      const endId = await completed.$('[data-testid="selected-test-range-end"]').getAttribute("data-sbar-id");
+      assert.ok(startId && endId && BigInt(startId) < BigInt(endId), "The mouse clicks must select distinct, ordered SBar IDs.");
+      await pointAt(plot.endX, 2);
+      await completed.waitForDisplayed({ reverse: true, timeout: 5_000 });
+    } finally {
+      await browser.releaseActions();
+      for (const selector of hiddenLayers) await domClick(selector);
+    }
+
     const structureCounts = await $('[data-testid="origin-structure-overlay"]').getAttribute("data-structure-counts");
     assert.ok(structureCounts, "Origin chart must expose the counts from its authoritative Structure projection.");
     const parsedStructureCounts = JSON.parse(structureCounts);
@@ -459,9 +532,7 @@ describe("Struxis Debugger native desktop", () => {
       `BTCUSDT full-stream Structure projection should contain CBar or Swing objects: ${structureCounts}`,
     );
 
-    // Drive the component's ID-based selection command. This enters the
-    // same OriginChart selection method and emits the same sbarClick event as
-    // pointer input, while keeping this end-to-end test independent of pixels.
+    // Keep exact-ID coverage for the bounded two-SBar workflow below.
     const selectOriginSbarById = async (sbarId, expectedParentState) => {
       await browser.execute((id) => {
         const panel = document.querySelector('[data-testid="origin-chart-panel"]');

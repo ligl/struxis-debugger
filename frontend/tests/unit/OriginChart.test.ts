@@ -1,9 +1,11 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
-import { nextTick } from "vue";
+import { computed, defineComponent, h, nextTick, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ChartSurface from "../../src/components/ChartSurface.vue";
 import OriginChart from "../../src/components/OriginChart.vue";
-import type { SBarDto } from "../../src/origin-types";
+import { useInspectorSelection, type InspectorWorkspaceMode } from "../../src/composables/useInspectorSelection";
+import { useOriginRangeSelection } from "../../src/composables/useOriginRangeSelection";
+import type { OriginDatasetDto, SBarDto } from "../../src/origin-types";
 import type { ChartSurfaceStructureGeometry } from "../../src/chart-surface-contract";
 
 const chartMocks = vi.hoisted(() => ({
@@ -731,7 +733,7 @@ describe("ChartSurface and chart entry adapters", () => {
     wrapper.unmount();
   });
 
-  it("maps horizontal chart positions to lossless SBar IDs regardless of pointer y", async () => {
+  it("maps a pending range endpoint to its lossless SBar ID regardless of pointer y", async () => {
     const wrapper = mount(OriginChart, {
       props: {
         bars: [
@@ -744,6 +746,7 @@ describe("ChartSurface and chart entry adapters", () => {
         ],
         originDatasetId: "origin-clicks",
         structure: null,
+        selectionPending: true,
       },
     });
 
@@ -770,6 +773,109 @@ describe("ChartSurface and chart entry adapters", () => {
     wrapper.unmount();
     expect(chartMocks.unsubscribeClick).toHaveBeenCalledOnce();
     expect(chartMocks.unsubscribeCrosshairMove).toHaveBeenCalledOnce();
+  });
+
+  it("selects the candle on hit and clears the object on blank clicks in the same column", () => {
+    const sbar = bar();
+    const wrapper = mount(OriginChart, {
+      props: {
+        bars: [sbar],
+        originDatasetId: "origin-clicks",
+        structure: null,
+        selectedObject: { kind: "sbar", id: sbar.sbarId, originDatasetId: "origin-clicks" },
+      },
+    });
+    const click = chartMocks.subscribeClick.mock.calls[0]?.[0] as
+      ((param: { point: { x: number; y: number } }) => void);
+
+    click({ point: { x: 100, y: 50 } });
+    expect(wrapper.emitted("sbarClick")).toEqual([[sbar.sbarId]]);
+    expect(wrapper.emitted("clearObjectSelection")).toBeUndefined();
+    click({ point: { x: 100, y: 90 } });
+    expect(wrapper.emitted("clearObjectSelection")).toEqual([[]]);
+    expect(wrapper.emitted("sbarClick")).toEqual([[sbar.sbarId]]);
+    expect(wrapper.emitted("selectionError")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("starts, previews and completes an Origin range with clicks outside the candles", async () => {
+    const first = bar();
+    const second = bar({
+      sbarId: "1700000060000000000",
+      tsEvent: "1700000060000000000",
+      tsInit: "1700000060000000001",
+    });
+    const dataset: OriginDatasetDto = {
+      originDatasetId: "origin-range",
+      sourceCatalog: "test-catalog",
+      enableStructure: false,
+      instrumentId: "TEST",
+      barType: first.barType,
+      timeframe: "1m",
+      sbarSequenceFingerprint: "range-test",
+      sbarCount: 2,
+      firstSbarId: first.sbarId,
+      lastSbarId: second.sbarId,
+      firstTsEvent: first.tsEvent,
+      lastTsEvent: second.tsEvent,
+      bars: [first, second],
+      structure: null,
+    };
+    const wrapper = mount(defineComponent({
+      setup() {
+        const origin = ref(dataset);
+        const range = useOriginRangeSelection(origin, computed(() => true), ref(false));
+        const inspector = useInspectorSelection(origin, ref<InspectorWorkspaceMode>("dataset"));
+        return () => h(OriginChart, {
+          bars: dataset.bars,
+          originDatasetId: dataset.originDatasetId,
+          structure: null,
+          selectedObject: inspector.selectedInspectorObject.value,
+          selectionStartSbarId: range.rangeSelectionPendingStart.value ?? (range.rangeSelectionReady.value ? range.startSbarId.value : null),
+          selectionEndSbarId: range.rangeSelectionReady.value ? range.endSbarId.value : null,
+          selectionPending: range.rangeSelectionPendingStart.value !== null,
+          selectionEditable: true,
+          onSbarClick: (id: string) => {
+            inspector.selectSbar(id);
+            range.handleRangeSbarClick(id);
+          },
+          onClearObjectSelection: inspector.clearSelection,
+        });
+      },
+    }));
+    const click = chartMocks.subscribeClick.mock.calls[0]?.[0] as ((param: { point: { x: number; y: number } }) => void);
+    const move = chartMocks.subscribeCrosshairMove.mock.calls[0]?.[0] as typeof click;
+    const chart = wrapper.getComponent(OriginChart);
+
+    click({ point: { x: 100, y: 90 } });
+    await nextTick();
+    expect(chart.props()).toMatchObject({
+      selectionPending: true,
+      selectionStartSbarId: first.sbarId,
+      selectedObject: { kind: "sbar", id: first.sbarId },
+    });
+
+    move({ point: { x: 200, y: 90 } });
+    await nextTick();
+    expect(wrapper.get('[data-testid="origin-selection-preview"]').attributes("style")).toContain("width: 100px");
+
+    click({ point: { x: 200, y: 90 } });
+    await nextTick();
+    expect(chart.props()).toMatchObject({ selectionPending: false, selectionEndSbarId: second.sbarId });
+    expect(wrapper.get('[data-testid="origin-selection-completed"]').attributes("style")).toContain("width: 100px");
+
+    click({ point: { x: 100, y: 90 } });
+    await nextTick();
+    expect(chart.props()).toMatchObject({
+      selectedObject: null,
+      selectionStartSbarId: first.sbarId,
+      selectionEndSbarId: second.sbarId,
+    });
+
+    click({ point: { x: 200, y: 90 } });
+    await nextTick();
+    expect(chart.props()).toMatchObject({ selectionPending: true, selectionStartSbarId: second.sbarId });
+    wrapper.unmount();
   });
 
   it("pans to a related off-screen selection while preserving the logical zoom span", async () => {

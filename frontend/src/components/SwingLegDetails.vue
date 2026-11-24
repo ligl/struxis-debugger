@@ -68,14 +68,14 @@ watch(() => props.legs, (legs) => {
             <span class="leg-prices">{{ leg.startPrice }} → {{ leg.endPrice }}</span>
           </button>
           <dl v-if="openLegs.has(legStartKey(leg))" class="inspector-fields leg-fields">
-            <InspectorPropertyField label="CBar Start ID" :value="leg.cbarStartId" domain-id />
-            <InspectorPropertyField label="CBar End ID" :value="leg.cbarEndId" domain-id />
-            <InspectorPropertyField label="SBar Start ID" :value="leg.sbarStartId" domain-id />
-            <InspectorPropertyField label="SBar End ID" :value="leg.sbarEndId" domain-id />
+            <InspectorPropertyField label="CBar Start ID" :value="leg.cbarStartId" test-id="inspector-leg-cbar-start-id" reference-kind="cbar" />
+            <InspectorPropertyField label="CBar End ID" :value="leg.cbarEndId" reference-kind="cbar" />
+            <InspectorPropertyField label="SBar Start ID" :value="leg.sbarStartId" reference-kind="sbar" />
+            <InspectorPropertyField label="SBar End ID" :value="leg.sbarEndId" reference-kind="sbar" />
             <InspectorPropertyField label="High" :value="leg.high" />
             <InspectorPropertyField label="Low" :value="leg.low" />
-            <InspectorPropertyField label="Highest High SBar" :value="leg.highSbarId" domain-id />
-            <InspectorPropertyField label="Lowest Low SBar" :value="leg.lowSbarId" domain-id />
+            <InspectorPropertyField label="Highest High SBar" :value="leg.highSbarId" reference-kind="sbar" />
+            <InspectorPropertyField label="Lowest Low SBar" :value="leg.lowSbarId" reference-kind="sbar" />
             <InspectorPropertyField label="Volume" :value="leg.volume" />
             <InspectorPropertyField label="Span SBars" :value="String(leg.spanSbars)" />
           </dl>

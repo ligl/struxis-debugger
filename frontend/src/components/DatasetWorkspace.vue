@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { InspectorChartReference } from "../inspector-chart-hover";
 import type { SwingLegReference } from "../origin-types";
 import CatalogPanel from "./CatalogPanel.vue";
 import OriginChart from "./OriginChart.vue";
@@ -38,6 +39,7 @@ defineProps<{
   testError: string;
   selectedObject: OriginObjectSelection | null;
   highlightedLeg?: SwingLegReference | null;
+  highlightedId?: InspectorChartReference | null;
   selectionStartSbarId: string | null;
   selectionEndSbarId: string | null;
   selectionPending: boolean;
@@ -53,6 +55,7 @@ const emit = defineEmits<{
   selectAllSbars: [];
   sbarClick: [sbarId: string];
   objectClick: [selection: Extract<OriginObjectSelection, { kind: "cbar" | "swing" | "trend" | "keyzone" }>];
+  clearObjectSelection: [];
   rangeBoundaryChange: [edge: "start" | "end", sbarId: string];
   selectionError: [message: string];
   cancelRangeSelection: [];
@@ -105,6 +108,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
   </div>
   <OriginChart
     :highlighted-leg="highlightedLeg"
+    :highlighted-id="highlightedId"
     v-if="origin && loadStatus !== 'loading'"
     v-show="active"
     :bars="origin.bars"
@@ -119,6 +123,7 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
     :selection-editable="selectionEditable"
     @sbar-click="emit('sbarClick', $event)"
     @object-click="emit('objectClick', $event)"
+    @clear-object-selection="emit('clearObjectSelection')"
     @range-boundary-change="handleRangeBoundaryChange"
     @selection-error="emit('selectionError', $event)"
     @cancel-range-selection="emit('cancelRangeSelection')"

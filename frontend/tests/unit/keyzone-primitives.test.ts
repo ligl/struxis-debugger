@@ -228,6 +228,39 @@ describe("selected KeyZone observed interaction ranges", () => {
     expect(fillText).not.toHaveBeenCalled();
     expect(priceReads).toBe(8);
   });
+
+  it("emphasizes only the Interaction referenced by the Inspector", () => {
+    const { bars, registry, zoneId } = episodes();
+    const primitive = new KeyZonePrimitive();
+    const requestUpdate = vi.fn();
+    primitive.setData(registry, bars, bars[3]!.tsEvent, registry.observations[0]!.observer);
+    primitive.attached({ chart: { timeScale: () => ({
+      options: () => ({ barSpacing: 10 }), getVisibleLogicalRange: () => ({ from: -4, to: 5 }),
+      logicalToCoordinate: (i: number) => 100 + i * 10,
+    }) }, series: { priceToCoordinate: (price: number) => 200 - price * 10 }, requestUpdate
+    } as unknown as Parameters<KeyZonePrimitive["attached"]>[0]);
+    primitive.setSelected(zoneId);
+
+    const strokes: Array<{ width: number; color: string }> = [];
+    const context = {
+      lineWidth: 0, strokeStyle: "", save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(),
+      strokeRect: () => strokes.push({ width: context.lineWidth, color: context.strokeStyle }),
+      fillText: vi.fn(),
+    };
+    const target = { useMediaCoordinateSpace: (callback: (arg: { context: typeof context }) => void) => callback({ context }) };
+    const draw = () => primitive.renderer()?.draw(target as never);
+    primitive.setInspectorHighlight({ kind: "interaction", id: "20" });
+    draw();
+    expect(strokes.slice(0, 2)).toEqual([{ width: 1, color: "#82a8c9" }, { width: 2, color: "#F5E6CD" }]);
+    expect(strokes[2]).toEqual({ width: 2, color: "#f0cb87" });
+
+    strokes.length = 0;
+    primitive.setInspectorHighlight(null);
+    draw();
+    expect(strokes[1]).toEqual({ width: 1, color: "#79b58b" });
+    primitive.setVisible(false);
+    expect(primitive.renderer()).toBeNull();
+  });
 });
 
 

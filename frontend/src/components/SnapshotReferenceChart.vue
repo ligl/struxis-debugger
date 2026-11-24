@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { InspectorChartReference } from "../inspector-chart-hover";
 import type { KeyZoneCheckpointDto, SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SnapshotRangeMarkerPrimitive, type SnapshotRangeMarkerState } from "../snapshot-reference-primitives";
@@ -26,6 +27,7 @@ const props = defineProps<{
   structure: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
   highlightedLeg?: SwingLegReference | null;
+  highlightedId?: InspectorChartReference | null;
   keyzoneObserver?: import("../origin-types").ObservationStateKeyDto | null;
   keyzoneUntil?: string | null;
   snapshotId: string;
@@ -45,6 +47,7 @@ const emit = defineEmits<{
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
   crosshairChange: [sync: Omit<ReplayChartCrosshairSync, "revision">];
   objectSelect: [selection: ReplayChartSelection];
+  clearObjectSelection: [];
 }>();
 
 const surface = ref<ChartSurfacePort | null>(null);
@@ -338,7 +341,10 @@ function handleChartClick(point: { x: number; y: number | null } | null): void {
   const port = surface.value;
   if (!point || point.y === null || !port || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
   const anchorSbarId = port.getSbarIdAtCoordinate(point.x);
-  if (!anchorSbarId) return;
+  if (!anchorSbarId) {
+    clearChartSelection();
+    return;
+  }
   const geometry = port.getStructureGeometry();
   const structureHit = hitTestStructureObject({
     x: point.x,
@@ -359,18 +365,26 @@ function handleChartClick(point: { x: number; y: number | null } | null): void {
     return;
   }
   const marker = port.getSbarMarker(anchorSbarId);
-  if (!marker) return;
-  const centerX = marker.x + marker.width / 2;
-  if (
-    Math.abs(point.x - centerX) > Math.max(3, marker.width / 2 + 1) ||
+  if (!marker ||
+    Math.abs(point.x - (marker.x + marker.width / 2)) > Math.max(3, marker.width / 2 + 1) ||
     point.y < marker.y - 5 ||
     point.y > marker.y + marker.height + 5
-  ) return;
+  ) {
+    clearChartSelection();
+    return;
+  }
   const selection = { kind: "sbar", id: anchorSbarId, checkpointSbarId: anchorSbarId } satisfies ReplayChartSelection;
   selectedObject.value = selection;
   updateSbarInteractionMarkers();
   syncStructureInteractionState();
   emit("objectSelect", selection);
+}
+
+function clearChartSelection(): void {
+  selectedObject.value = null;
+  updateSbarInteractionMarkers();
+  syncStructureInteractionState();
+  emit("clearObjectSelection");
 }
 
 function applyViewportRequest(request: ReplayChartViewportSync | null | undefined): void {
@@ -515,6 +529,7 @@ onBeforeUnmount(() => {
     :structure="structure"
     :selected-structure="selectedStructure"
     :highlighted-leg="highlightedLeg"
+    :highlighted-id="highlightedId"
     indicate-legacy-structure
     :keyzones="keyzones"
         :keyzone-observer="keyzoneObserver"

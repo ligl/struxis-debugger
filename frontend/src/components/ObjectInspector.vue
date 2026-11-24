@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SwingLegReference } from "../origin-types";
-import { computed, ref } from "vue";
+import { computed, provide, ref, watch } from "vue";
+import { createInspectorChartHover, inspectorChartHoverKey, type InspectorChartReference } from "../inspector-chart-hover";
+import InspectorDomainId from "./InspectorDomainId.vue";
 import KeyZoneFixedPriceRangeControls from "./KeyZoneFixedPriceRangeControls.vue";
 import KeyZoneDetails from "./KeyZoneDetails.vue";
 import DatasetObjectDetails from "./DatasetObjectDetails.vue";
@@ -13,6 +15,7 @@ import { formatDomainTimestamp } from "../timestamp-format";
 const props = defineProps<{
   context: InspectorWorkspaceContext;
   legScope?: string | null;
+  chartHoverScope?: string | null;
   origin: OriginDatasetDto | null;
   originBars: SBarDto[];
   originStructure: ReplayInspectorStructureDto | null;
@@ -22,7 +25,13 @@ const props = defineProps<{
   cancelObservation?: (request: CancelObservationDto) => Promise<ObservationCommandResultDto>;
 }>();
 
-const emit = defineEmits<{ legHighlight: [leg: SwingLegReference | null] }>();
+const emit = defineEmits<{
+  legHighlight: [leg: SwingLegReference | null];
+  idHighlight: [reference: InspectorChartReference | null];
+}>();
+const chartHover = createInspectorChartHover((reference) => emit("idHighlight", reference));
+provide(inspectorChartHoverKey, chartHover.update);
+watch(() => props.chartHoverScope, chartHover.clear, { flush: "sync" });
 
 // These projections keep the existing view templates readable while ensuring
 // that only one valid workspace-specific input shape can reach this component.
@@ -164,11 +173,11 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
         <div class="inspector-dataset-range">
           <p class="section-index">SBAR EVENT-TIME RANGE · UTC</p>
           <div>
-            <span>FIRST · {{ origin.firstSbarId }}</span>
+            <span>FIRST · <InspectorDomainId :value="origin.firstSbarId" reference-kind="sbar" /></span>
             <strong data-testid="inspector-dataset-first-time">{{ formatDomainTimestamp(origin.firstTsEvent, origin.timeframe) }}</strong>
           </div>
           <div>
-            <span>LAST · {{ origin.lastSbarId }}</span>
+            <span>LAST · <InspectorDomainId :value="origin.lastSbarId" reference-kind="sbar" /></span>
             <strong data-testid="inspector-dataset-last-time">{{ formatDomainTimestamp(origin.lastTsEvent, origin.timeframe) }}</strong>
           </div>
         </div>

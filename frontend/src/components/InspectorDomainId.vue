@@ -1,11 +1,32 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject, onBeforeUnmount, watch } from "vue";
+import { inspectorChartHoverKey, type InspectorChartObjectKind, type InspectorHoverChannel } from "../inspector-chart-hover";
 
 const props = defineProps<{
   value: string;
   copyValue?: string;
   testId?: string;
+  referenceKind?: InspectorChartObjectKind;
 }>();
+
+const reportHover = inject(inspectorChartHoverKey, null);
+const source = Symbol("Inspector ID");
+const reference = computed(() => props.referenceKind && props.value
+  ? { kind: props.referenceKind, id: props.value }
+  : null);
+const interactive = computed(() => reportHover !== null && reference.value !== null);
+
+function updateHover(channel: InspectorHoverChannel, active: boolean): void {
+  reportHover?.(source, channel, active ? reference.value : null);
+}
+
+function clearHover(): void {
+  updateHover("pointer", false);
+  updateHover("focus", false);
+}
+
+watch([() => props.referenceKind, () => props.value], clearHover);
+onBeforeUnmount(clearHover);
 
 // IDs are opaque strings. Group from the right without parsing, padding, or
 // otherwise changing the domain identity.
@@ -30,6 +51,12 @@ const groups = computed(() => {
     :data-copy-value="copyValue ?? value"
     :title="value"
     aria-label="Domain ID"
+    :tabindex="interactive ? 0 : undefined"
+    :class="{ 'inspector-domain-id-reference': interactive }"
+    @mouseenter="updateHover('pointer', true)"
+    @mouseleave="updateHover('pointer', false)"
+    @focus="updateHover('focus', true)"
+    @blur="updateHover('focus', false)"
   ><span
       v-for="(group, index) in groups"
       :key="index"
@@ -50,6 +77,11 @@ const groups = computed(() => {
   white-space: nowrap;
   scrollbar-width: thin;
   font-variant-numeric: tabular-nums;
+}
+
+.inspector-domain-id-reference:hover,
+.inspector-domain-id-reference:focus-visible {
+  color: var(--dbg-accent, #f0cb87);
 }
 
 .inspector-domain-id-group {

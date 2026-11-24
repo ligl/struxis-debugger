@@ -1,6 +1,7 @@
 import type { ISeriesPrimitive, IPrimitivePaneView, IPrimitivePaneRenderer, Time, Logical } from "lightweight-charts";
 import type { KeyZoneCheckpointDto, KeyZoneDto, KeyZoneInteractionDto, SBarDto, ObservationStateKeyDto } from "./origin-types";
 
+import type { InspectorChartReference } from "./inspector-chart-hover";
 import { candlestickBodyWidth } from "./sbar-chart-structure-geometry";
 
 type Attached = Parameters<NonNullable<ISeriesPrimitive<Time>["attached"]>>[0];
@@ -159,6 +160,7 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   private visible = true;
   private selected: string | null = null;
   private hovered: string | null = null;
+  private inspectorHighlight: InspectorChartReference | null = null;
   attached(param: Attached): void { this.attachedTo = param; this.updateAllViews(); }
   detached(): void { this.attachedTo = null; this.rectangles = []; this.fixedMarkers = []; this.interactionRectangles = []; this.hovered = null; }
   setData(checkpoint: KeyZoneCheckpointDto | null, bars: readonly SBarDto[], until: string | null, observer: ObservationStateKeyDto | null = null): void {
@@ -178,6 +180,11 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   setHovered(id: string | null): void {
     if (this.hovered === id) return;
     this.hovered = id;
+    this.attachedTo?.requestUpdate();
+  }
+  setInspectorHighlight(reference: InspectorChartReference | null): void {
+    if (reference?.kind === this.inspectorHighlight?.kind && reference?.id === this.inspectorHighlight?.id) return;
+    this.inspectorHighlight = reference;
     this.attachedTo?.requestUpdate();
   }
   setSelected(id: string | null): void {
@@ -263,8 +270,9 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
   renderer(): IPrimitivePaneRenderer | null {
     if (!this.visible) return null;
     return { draw: (target) => target.useMediaCoordinateSpace(({ context: ctx }) => {
+      const hoveredZoneId = this.inspectorHighlight?.kind === "keyzone" ? this.inspectorHighlight.id : this.hovered;
       for (const marker of this.fixedMarkers) {
-        if (marker.id !== this.hovered && marker.id !== this.selected) continue;
+        if (marker.id !== hoveredZoneId && marker.id !== this.selected) continue;
         ctx.save();
         ctx.fillStyle = marker.id === this.selected ? "#9e8661" : "#8c785b";
         ctx.globalAlpha = 0.1;
@@ -273,9 +281,11 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
       }
       for (const episode of this.interactionRectangles) {
         ctx.save();
-        ctx.strokeStyle = INTERACTION_COLORS[episode.interactionState];
-        ctx.fillStyle = INTERACTION_COLORS[episode.interactionState];
-        ctx.lineWidth = 1;
+        const highlighted = this.inspectorHighlight?.kind === "interaction" && episode.id === this.inspectorHighlight.id;
+        const color = highlighted ? "#F5E6CD" : INTERACTION_COLORS[episode.interactionState];
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = highlighted ? 2 : 1;
         ctx.setLineDash(episode.interactionState === "Active" ? [3, 3] : episode.interactionState === "Invalidated" ? [2, 4] : []);
         ctx.strokeRect(episode.x, episode.y, episode.width, episode.height);
         ctx.font = "10px monospace";
@@ -287,7 +297,7 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
       for (const r of this.rectangles) {
         ctx.save();
         const selected = r.id === this.selected;
-        const hovered = r.id === this.hovered;
+        const hovered = r.id === hoveredZoneId;
         ctx.strokeStyle = selected ? "#f0cb87" : hovered ? "#e3bd80" : r.state === "Invalidated" ? "#7d858c" : "#b49a75";
         ctx.lineWidth = selected ? 2 : hovered ? 1.5 : 1;
         ctx.setLineDash([5,3]);
@@ -297,7 +307,7 @@ export class KeyZonePrimitive implements ISeriesPrimitive<Time>, IPrimitivePaneV
       for (const marker of this.fixedMarkers) {
         ctx.save();
         const selected = marker.id === this.selected;
-        const hovered = marker.id === this.hovered;
+        const hovered = marker.id === hoveredZoneId;
         ctx.strokeStyle = selected ? "#9e8661" : hovered ? "#8c785b" : marker.state === "Invalidated" ? "#596169" : "#756650";
         ctx.lineWidth = selected || hovered ? 1 : 0.75;
         ctx.setLineDash([5, 3]);

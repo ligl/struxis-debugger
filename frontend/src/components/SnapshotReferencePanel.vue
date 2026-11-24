@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { InspectorChartReference } from "../inspector-chart-hover";
 import type { SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import SnapshotReferenceChart from "./SnapshotReferenceChart.vue";
@@ -12,6 +13,7 @@ const props = withDefaults(defineProps<{
   instrumentId: string | null;
   snapshots: SnapshotArtifactDto[];
   highlightedLeg?: SwingLegReference | null;
+  highlightedId?: InspectorChartReference | null;
   highlightedSnapshotId?: string | null;
   liveSbarIds?: string[];
   syncEligible?: boolean;
@@ -340,6 +342,12 @@ function emitCheckpointSelection(
   }
 }
 
+function clearSnapshotObjectSelection(): void {
+  inspectorRevision++;
+  inspectorError.value = "";
+  emit("objectSelect", null);
+}
+
 function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
   const current = reference.value;
   if (!current || current.snapshotId !== selectedSnapshotId.value) return;
@@ -455,6 +463,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
           :keyzone-until="keyzoneUntil"
           :snapshot-id="reference.snapshotId"
           :highlighted-leg="highlightedSnapshotId === reference.snapshotId ? highlightedLeg : null"
+          :highlighted-id="highlightedSnapshotId === reference.snapshotId ? highlightedId : null"
           :sync-enabled="syncEligible"
           :keyboard-active="keyboardActive"
           :sync-owner="syncOwner"
@@ -468,6 +477,7 @@ function handleSnapshotObjectSelect(selection: ReplayChartSelection): void {
           @viewport-change="emit('viewportChange', $event)"
           @crosshair-change="emit('crosshairChange', $event)"
           @object-select="handleSnapshotObjectSelect"
+          @clear-object-selection="clearSnapshotObjectSelection"
         />
       </div>
       <div v-else class="snapshot-reference-empty" data-testid="snapshot-reference-empty">

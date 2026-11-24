@@ -5,6 +5,7 @@ import AppToastHost from "./components/AppToastHost.vue";
 import WorkspaceToolbar from "./components/WorkspaceToolbar.vue";
 import CompareToolbarControls from "./components/CompareToolbarControls.vue";
 import ReplayToolbarControls from "./components/ReplayToolbarControls.vue";
+import type { InspectorChartReference } from "./inspector-chart-hover";
 import ObjectInspector from "./components/ObjectInspector.vue";
 import Diagnostics from "./components/Diagnostics.vue";
 import DatasetWorkspace from "./components/DatasetWorkspace.vue";
@@ -546,7 +547,7 @@ function handleLegHighlight(leg: SwingLegReference | null): void {
   const scope = inspectorSwingScope.value;
   highlightedLeg.value = leg && scope ? { scope, leg } : null;
 }
-const activeLegHighlight = computed(() => !inspectorCollapsed.value && highlightedLeg.value?.scope === inspectorSwingScope.value
+const activeLegHighlight = computed(() => !inspectorCollapsed.value && !activeIdHighlight.value && highlightedLeg.value?.scope === inspectorSwingScope.value
   ? highlightedLeg.value?.leg ?? null
   : null);
 watch(inspectorSwingScope, () => { highlightedLeg.value = null; });
@@ -559,7 +560,47 @@ const {
   diagnosticsWidthLimit, diagnosticsHeightLimit, startDockDrag, allowDockDrop, dropDockPanel,
   closeDockMenus,
 } = useDockLayout();
-watch(() => inspectorCollapsed.value, (collapsed) => { if (collapsed) highlightedLeg.value = null; });
+const inspectorChartScope = computed(() => {
+  const context = inspectorContext.value;
+  if (context.workspace === "compare") return null;
+  if (context.workspace === "dataset") {
+    if (!context.originDatasetId) return null;
+    const selected = selectedInspectorObject.value;
+    return JSON.stringify(["dataset", context.originDatasetId, selected?.kind, selected?.id]);
+  }
+  const snapshot = selectedReplaySnapshotObject.value;
+  if (snapshot) {
+    switch (snapshot.kind) {
+      case "sbar": return JSON.stringify(["snapshot", snapshot.snapshotId, snapshot.kind, snapshot.object.sbarId]);
+      case "cbar": return JSON.stringify(["snapshot", snapshot.snapshotId, snapshot.kind, snapshot.object.cbarId]);
+      case "swing": return JSON.stringify(["snapshot", snapshot.snapshotId, snapshot.kind, snapshot.object.swingId]);
+      case "trend": return JSON.stringify(["snapshot", snapshot.snapshotId, snapshot.kind, snapshot.object.trendId]);
+      case "keyzone": return JSON.stringify(["snapshot", snapshot.snapshotId, snapshot.kind, snapshot.object.keyzoneId]);
+    }
+  }
+  const selected = selectedReplayChartObject.value;
+  if (!testDataset.value) return null;
+  return JSON.stringify(["live", testDataset.value.testDatasetId, runState.value?.runId, selected?.kind, selected?.id]);
+});
+const highlightedId = ref<{ scope: string; reference: InspectorChartReference } | null>(null);
+
+function handleIdHighlight(reference: InspectorChartReference | null): void {
+  const scope = inspectorChartScope.value;
+  highlightedId.value = reference && scope ? { scope, reference } : null;
+}
+
+const activeIdHighlight = computed(() => {
+  const current = highlightedId.value;
+  return !inspectorCollapsed.value && current?.scope === inspectorChartScope.value
+    ? current.reference
+    : null;
+});
+watch(inspectorChartScope, () => { highlightedId.value = null; });
+watch(inspectorCollapsed, (collapsed) => {
+  if (!collapsed) return;
+  highlightedLeg.value = null;
+  highlightedId.value = null;
+});
 // A successful user Load owns the Origin → Test Dataset handoff. Startup must
 // not launch a later refresh that could supersede a Test Dataset created meanwhile.
 let originHandoffDuringStartup = false;
@@ -870,6 +911,7 @@ onMounted(async () => {
               :test-error="testError"
               :selected-object="selectedInspectorObject"
               :highlighted-leg="workspaceMode === 'dataset' ? activeLegHighlight : null"
+              :highlighted-id="workspaceMode === 'dataset' ? activeIdHighlight : null"
               :selection-start-sbar-id="rangeSelectionPendingStart ?? (rangeSelectionReady ? startSbarId : null)"
               :selection-end-sbar-id="rangeSelectionReady ? endSbarId : null"
               :selection-pending="rangeSelectionPendingStart !== null"
@@ -882,6 +924,7 @@ onMounted(async () => {
               @select-all-sbars="selectAllOriginRange"
               @sbar-click="handleOriginSbarClick"
               @object-click="handleOriginObjectClick"
+              @clear-object-selection="clearInspectorSelection"
               @range-boundary-change="handleRangeBoundaryChange"
               @selection-error="handleRangeSelectionError"
               @cancel-range-selection="cancelOriginRangeSelection"
@@ -898,11 +941,14 @@ onMounted(async () => {
               :selected-object="selectedReplayChartObject"
               :highlighted-live-leg="workspaceMode === 'replay' && !selectedReplaySnapshotObject ? activeLegHighlight : null"
               :highlighted-snapshot-leg="workspaceMode === 'replay' && selectedReplaySnapshotObject ? activeLegHighlight : null"
+              :highlighted-live-id="workspaceMode === 'replay' && !selectedReplaySnapshotObject ? activeIdHighlight : null"
+              :highlighted-reference-id="workspaceMode === 'replay' && selectedReplaySnapshotObject ? activeIdHighlight : null"
               :highlighted-snapshot-id="selectedReplaySnapshotObject?.snapshotId ?? null"
               :target-sbar-id="targetSbarId"
               :fast-forwarding="fastForwarding"
               :snapshots="snapshots"
               @object-select="handleReplayObjectSelection"
+              @clear-live-object-selection="selectedReplayChartObject = null"
               @snapshot-select="handleReplaySnapshotSelection"
               @target-select="handleReplayTargetSelection"
               @target-cancel="cancelReplayTarget"
@@ -951,6 +997,8 @@ onMounted(async () => {
           :context="inspectorContext"
           :leg-scope="inspectorSwingScope"
           @leg-highlight="handleLegHighlight"
+          :chart-hover-scope="inspectorChartScope"
+          @id-highlight="handleIdHighlight"
           :origin="origin"
           :origin-bars="origin?.bars ?? []"
           :origin-structure="origin?.structure ?? null"

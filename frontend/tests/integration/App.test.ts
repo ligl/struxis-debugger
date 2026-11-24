@@ -1,7 +1,7 @@
 import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App.vue";
-import type { CatalogDatasetEntry, OriginDatasetDto, SnapshotArtifactDto, SnapshotCompareResultDto, TestDatasetDto } from "../../src/origin-types";
+import type { CatalogDatasetEntry, OriginDatasetDto, SnapshotArtifactDto, SnapshotCompareResultDto, SnapshotReferenceDto, TestDatasetDto } from "../../src/origin-types";
 
 const ipc = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -24,16 +24,17 @@ function mountApp() {
         OriginChart: {
           name: "OriginChart",
           template: '<section data-testid="origin-chart-test-stub"><h3>Origin SBar chart</h3><button v-if="bars.length > 0" data-testid="origin-sbar-click-100" @click="$emit(\'sbar-click\', \'100\')">Select SBar 100</button><button v-if="bars.length > 1" data-testid="origin-sbar-click-200" @click="$emit(\'sbar-click\', \'200\')">Select SBar 200</button><button v-for="cbar in structure?.cbars ?? []" :key="cbar.cbarId" :data-testid="\'origin-cbar-click-\' + cbar.cbarId" @click="$emit(\'object-click\', { kind: \'cbar\', id: cbar.cbarId, originDatasetId })">Select CBar</button><button v-for="swing in structure?.swings ?? []" :key="swing.swingId" :data-testid="\'origin-swing-click-\' + swing.swingId" @click="$emit(\'object-click\', { kind: \'swing\', id: swing.swingId, originDatasetId })">Select Swing</button></section>',
-          props: ["bars", "originDatasetId", "structure", "highlightedLeg"],
+          props: ["bars", "originDatasetId", "structure", "selectedObject", "highlightedLeg", "highlightedId"],
         },
         SnapshotReferenceChart: {
+          name: "SnapshotReferenceChart",
           template: '<section data-testid="snapshot-reference-chart-test-stub"></section>',
-          props: ["bars", "structure", "snapshotId", "syncEnabled", "syncRequest", "crosshairSync", "liveBarCount", "playbackEnabled", "playbackOffset", "processedCount"],
+          props: ["bars", "structure", "snapshotId", "highlightedId", "syncEnabled", "syncRequest", "crosshairSync", "liveBarCount", "playbackEnabled", "playbackOffset", "processedCount"],
         },
         RunChart: {
           name: "RunChart",
           template: '<section data-testid="run-chart-test-stub"><h3>Test Dataset SBar chart</h3></section>',
-          props: ["origin", "testDataset", "selectedObject", "highlightedLeg"],
+          props: ["origin", "testDataset", "selectedObject", "highlightedLeg", "highlightedId"],
         },
       },
     },
@@ -403,6 +404,14 @@ describe("Origin Load workbench", () => {
     await legs.get("li").trigger("mouseenter");
     const originChart = wrapper.findAllComponents({ name: "OriginChart" }).find((chart) => chart.props("originDatasetId") === origin.originDatasetId);
     expect(originChart?.props("highlightedLeg")).toEqual({ swingId: "swing-100", cbarStartId: "100", sbarStartId: "100" });
+    await legs.get("li button").trigger("click");
+    const legStartId = legs.get('[data-testid="inspector-leg-cbar-start-id"]');
+    await legStartId.trigger("mouseenter");
+    expect(originChart?.props("highlightedId")).toEqual({ kind: "cbar", id: "100" });
+    expect(originChart?.props("highlightedLeg")).toBeNull();
+    await legStartId.trigger("mouseleave");
+    expect(originChart?.props("highlightedId")).toBeNull();
+    expect(originChart?.props("highlightedLeg")).toEqual({ swingId: "swing-100", cbarStartId: "100", sbarStartId: "100" });
     await legToggle.trigger("click");
     expect(originChart?.props("highlightedLeg")).toBeNull();
 
@@ -421,6 +430,17 @@ describe("Origin Load workbench", () => {
 
     // Expanding related details must not replace the current primary selection.
     expect(wrapper.get('[data-testid="inspector-swing-swingId"]').text()).toBe("swing-100");
+    expect(wrapper.get('[data-testid="origin-range-selection-status"]').text()).toBe(initialRangeStatus);
+
+    await lowestLow.trigger("focus");
+    expect(originChart?.props("highlightedId")).toEqual({ kind: "sbar", id: "100" });
+    await wrapper.get('[data-testid="origin-cbar-click-cbar-100"]').trigger("click");
+    expect(originChart?.props("highlightedId")).toBeNull();
+    expect(originChart?.props("selectedObject")).toMatchObject({ kind: "cbar", id: "cbar-100" });
+    originChart?.vm.$emit("clearObjectSelection");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="inspector-cbar-cbarId"]').exists()).toBe(false);
+    expect(originChart?.props("selectedObject")).toBeNull();
     expect(wrapper.get('[data-testid="origin-range-selection-status"]').text()).toBe(initialRangeStatus);
   });
 
@@ -565,7 +585,12 @@ describe("Origin Load workbench", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_replay_inspector");
     expect(wrapper.text()).toContain("backend-confirmed checkpoint");
 
+    const currentSbarId = wrapper.get('[data-testid="inspector-replay-sbar-id"]');
     const runChart = wrapper.findComponent({ name: "RunChart" });
+    await currentSbarId.trigger("mouseenter");
+    expect(runChart.props("highlightedId")).toEqual({ kind: "sbar", id: "100" });
+    await currentSbarId.trigger("mouseleave");
+    expect(runChart.props("highlightedId")).toBeNull();
     runChart.vm.$emit("objectSelect", { kind: "swing", id: "100", checkpointSbarId: "100" });
     await flushPromises();
     const legs = wrapper.get('[aria-label="Leg composition"]');
@@ -579,6 +604,71 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() => expect(legs.get("li button").text()).toContain("Fractal"));
     expect(legs.get("li button").attributes("aria-expanded")).toBe("true");
     expect(legs.get("li button").text()).toContain("12.25");
+    runChart.vm.$emit("clearObjectSelection");
+    await flushPromises();
+    expect(wrapper.find('[aria-label="Leg composition"]').exists()).toBe(false);
+    expect(runChart.props("selectedObject")).toBeNull();
+    expect(wrapper.get('[data-testid="inspector-replay-checkpoint"]').text()).toBe("1");
+  });
+
+  it("routes Snapshot Inspector IDs to the Reference chart and never to Live", async () => {
+    const origin = makeOrigin("origin-existing");
+    const snapshot: SnapshotArtifactDto = {
+      fileName: "reference.snapshot", path: "/snapshots/reference.snapshot", kind: "complete",
+      snapshotId: "reference", runId: "reference-run", stateKey: "reference-state",
+      instrumentId: origin.instrumentId, barType: origin.barType,
+      inputStartTsEvent: "100", inputEndTsEvent: "200", generatedAt: "1780000000000000000",
+      checkpointCount: 2, diagnostic: null,
+    };
+    const structure = { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] };
+    const reference: SnapshotReferenceDto = {
+      snapshotId: "reference", runId: "reference-run", instrumentId: origin.instrumentId,
+      barType: origin.barType, timeframe: origin.timeframe, snapshotGeneratedAt: "1780000000000000000",
+      sbarSequenceFingerprint: "snapshot-fingerprint",
+      bars: origin.bars, structure, structureTimeline: [{ sbarId: "200", structure }],
+    };
+    invokeMock.mockImplementation((command) => {
+      if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
+      if (command === "get_current_origin") return Promise.resolve(origin);
+      if (command === "get_current_test_dataset") return Promise.resolve(testDataset);
+      if (command === "list_snapshots") return Promise.resolve([snapshot]);
+      if (command === "get_snapshot_reference") return Promise.resolve(reference);
+      if (command === "get_run_state" || command === "get_replay_inspector") return Promise.resolve(null);
+      return Promise.reject(new Error(`Unexpected IPC command: ${command}`));
+    });
+
+    const wrapper = mountApp();
+    await expectTestDatasetAvailable(wrapper);
+    await enterReplayWorkspace(wrapper);
+    await wrapper.get('[data-testid="replay-reference-select"]').setValue("reference");
+    await flushPromises();
+    const live = wrapper.findComponent({ name: "RunChart" });
+    const referenceChart = wrapper.findComponent({ name: "SnapshotReferenceChart" });
+    referenceChart.vm.$emit("objectSelect", { kind: "sbar", id: "200", checkpointSbarId: "200" });
+    await flushPromises();
+
+    const id = wrapper.get('[data-testid="inspector-replay-selected-sbar-id"]');
+    await id.trigger("mouseenter");
+    expect(referenceChart.props("highlightedId")).toEqual({ kind: "sbar", id: "200" });
+    expect(live.props("highlightedId")).toBeNull();
+
+    live.vm.$emit("clearObjectSelection");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="inspector-replay-selected-sbar-id"]').text()).toBe("200");
+    referenceChart.vm.$emit("clearObjectSelection");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="inspector-replay-selected-sbar-id"]').exists()).toBe(false);
+    expect(referenceChart.props("highlightedId")).toBeNull();
+    expect((wrapper.get('[data-testid="replay-reference-select"]').element as HTMLSelectElement).value).toBe("reference");
+
+    referenceChart.vm.$emit("objectSelect", { kind: "sbar", id: "200", checkpointSbarId: "200" });
+    await flushPromises();
+    await wrapper.get('[data-testid="inspector-replay-selected-sbar-id"]').trigger("mouseenter");
+
+    await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
+    await enterReplayWorkspace(wrapper);
+    expect(wrapper.findComponent({ name: "SnapshotReferenceChart" }).props("highlightedId")).toBeNull();
+    expect(wrapper.findComponent({ name: "RunChart" }).props("highlightedId")).toBeNull();
   });
 
   it("links a selected Compare difference to the Inspector and clears it when leaving Compare", async () => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { InspectorChartReference } from "../inspector-chart-hover";
 import type { KeyZoneCheckpointDto, SwingLegReference } from "../origin-types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { Time } from "lightweight-charts";
@@ -20,6 +21,7 @@ const props = withDefaults(defineProps<{
   structure?: ReplayInspectorStructureDto | null;
   keyzones?: KeyZoneCheckpointDto | null;
   highlightedLeg?: SwingLegReference | null;
+  highlightedId?: InspectorChartReference | null;
   selectedObject?: ReplayChartSelection | null;
   targetSbarId?: string | null;
   keyboardActive?: boolean;
@@ -34,6 +36,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   activate: [];
   objectSelect: [selection: ReplayChartSelection];
+  clearObjectSelection: [];
   targetSelect: [sbarId: string];
   targetCancel: [];
   viewportChange: [sync: Omit<ReplayChartViewportSync, "revision" | "offset">];
@@ -465,7 +468,10 @@ function handleChartClick(param: { point?: { x: number; y: number } | undefined 
   // Match the hover hit-test: only the visible OHLC body bounds select an SBar.
   // Clicks in the same logical column but outside the candle do not select it.
   const sbarId = hitTestSbar(x, y);
-  if (!sbarId) return;
+  if (!sbarId) {
+    emit("clearObjectSelection");
+    return;
+  }
   emit("objectSelect", { kind: "sbar", id: sbarId, checkpointSbarId: checkpointSbarId ?? null });
 }
 
@@ -780,6 +786,7 @@ onBeforeUnmount(() => {
         :structure="structure ?? null"
         :selected-structure="selectedStructure"
         :highlighted-leg="highlightedLeg"
+        :highlighted-id="highlightedId"
         :keyzones="keyzones"
         :keyzone-observer="origin ? { instrumentId: origin.instrumentId, timeframe: origin.timeframe } : null"
         :keyzone-until="runState?.cursorSbarId ?? null"

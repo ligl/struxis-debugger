@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { InspectorChartReference } from "../inspector-chart-hover";
 import type { SwingLegReference } from "../origin-types";
 import type { KeyZoneCheckpointDto } from "../origin-types";
 import { computed, ref, watch } from "vue";
@@ -20,6 +21,8 @@ const props = withDefaults(defineProps<{
   highlightedLiveLeg?: SwingLegReference | null;
   highlightedSnapshotLeg?: SwingLegReference | null;
   highlightedSnapshotId?: string | null;
+  highlightedLiveId?: InspectorChartReference | null;
+  highlightedReferenceId?: InspectorChartReference | null;
   targetSbarId: string | null;
   snapshots: SnapshotArtifactDto[];
 }>(), {
@@ -27,6 +30,7 @@ const props = withDefaults(defineProps<{
 });
 const emit = defineEmits<{
   objectSelect: [selection: ReplayChartSelection];
+  clearLiveObjectSelection: [];
   snapshotSelect: [selection: ReplaySnapshotInspectorSelection | null];
   targetSelect: [sbarId: string];
   targetCancel: [];
@@ -110,11 +114,12 @@ watch(
   <div v-show="active" class="workspace-mode replay-controls" data-testid="replay-workspace">
     <DualChartStack workspace="replay">
       <template #upper>
-        <RunChart v-if="active" :highlighted-leg="highlightedLiveLeg" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :keyzones="keyzones" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-owner="activeChartOwner" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
+        <RunChart v-if="active" :highlighted-leg="highlightedLiveLeg" :highlighted-id="highlightedLiveId" :origin="origin" :test-dataset="testDataset" :run-state="runState" :structure="structure" :keyzones="keyzones" :selected-object="selectedObject" :target-sbar-id="targetSbarId" :keyboard-active="activeChartOwner === 'live'" :sync-owner="activeChartOwner" :sync-enabled="syncEligible" :sync-offset="syncOffset" :sync-request="activeSyncRequest" :crosshair-sync="activeCrosshairSync" @activate="activateChart('live')" @viewport-change="handleViewportChange" @crosshair-change="handleCrosshairChange" @object-select="emit('objectSelect', $event)" @clear-object-selection="emit('clearLiveObjectSelection')" @target-select="emit('targetSelect', $event)" @target-cancel="emit('targetCancel')" />
       </template>
       <template #lower>
         <SnapshotReferencePanel
           :highlighted-leg="highlightedSnapshotLeg"
+          :highlighted-id="highlightedReferenceId"
           :highlighted-snapshot-id="highlightedSnapshotId"
           :active="active"
           :instrument-id="testDataset?.instrumentId ?? null"

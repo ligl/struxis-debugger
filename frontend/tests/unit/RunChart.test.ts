@@ -458,6 +458,7 @@ describe("RunChart", () => {
     mocks.clickListener?.({ point: { x: 60, y: 150 } });
     await nextTick();
     expect(wrapper.emitted("objectSelect")).toHaveLength(1);
+    expect(wrapper.emitted("clearObjectSelection")).toEqual([[]]);
     expect(wrapper.emitted("targetSelect")).toBeUndefined();
 
     // Double-clicking at a different Y coordinate still resolves by the

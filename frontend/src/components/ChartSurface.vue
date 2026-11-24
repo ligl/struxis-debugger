@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { legStartKey, type KeyZoneCheckpointDto, type SwingLegReference } from "../origin-types";
+import type { InspectorChartReference } from "../inspector-chart-hover";
+import { SBarMarkerPrimitive } from "../sbar-marker-primitive";
 import { KeyZonePrimitive } from "../keyzone-primitives";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { DrawingManager, type DrawingKind, type Drawing } from "lightweight-charts-drawing";
@@ -8,7 +10,7 @@ import DrawingToolbar from "./DrawingToolbar.vue";
 import { CrosshairMode, type CandlestickData, type HistogramData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from "lightweight-charts";
 import { applySbarChartSeriesVisibility, createSbarChartRuntime, disposeSbarChartRuntime, replaceSbarChartSeriesData, updateSbarChartSeriesData } from "../sbar-chart-runtime";
 import type { ChartPrimitiveHost } from "../sbar-chart-primitive-host";
-import { registerFeaturePrimitive, registerSelectedStructurePrimitive, type StructurePrimitiveObjectReference, setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
+import { registerFeaturePrimitive, registerSelectedStructurePrimitive, type StructurePrimitiveObjectReference, type StructurePrimitiveInteractionOptions, setStructurePrimitiveInteractionState, syncStructurePrimitiveControllers, type StructurePrimitiveController } from "../sbar-chart-structure-primitives";
 import { observeSbarChartResize } from "../sbar-chart-resize";
 import { createStructureProjectionScheduler } from "../structure-projection-scheduler";
 import { candlestickBodyWidth, projectStructureOverlayGeometry, projectSwingObservationInputs } from "../sbar-chart-structure-geometry";
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<{
   keyzoneSelectable?: boolean;
   selectedStructure?: StructurePrimitiveObjectReference | null;
   highlightedLeg?: SwingLegReference | null;
+  highlightedId?: InspectorChartReference | null;
   indicateLegacyStructure?: boolean;
   sequenceId: string;
   headerTitle?: string;
@@ -103,6 +106,10 @@ let cbarPrimitive: StructurePrimitiveController | null = null;
 let swingPrimitive: StructurePrimitiveController | null = null;
 let trendPrimitive: StructurePrimitiveController | null = null;
 const keyzonePrimitive = new KeyZonePrimitive();
+let inspectorSbarMarker: SBarMarkerPrimitive | null = null;
+let inspectorSbarGeometry: SBarMarker | null = null;
+let inspectorStructureHover: StructurePrimitiveObjectReference | null = null;
+let chartStructureInteraction: StructurePrimitiveInteractionOptions = {};
 function clearKeyzoneHover(): void {
   keyzonePrimitive.setHovered(null);
 }
@@ -250,6 +257,7 @@ function updateSbarCoordinates(): void {
   firstSbarX.value = firstSbarTime === null ? null : timeScale.timeToCoordinate(firstSbarTime);
   secondSbarX.value = secondSbarTime === null ? null : timeScale.timeToCoordinate(secondSbarTime);
   updateStructureGeometry();
+  syncInspectorIdHighlight();
 }
 
 function syncLegHighlight(): void {
@@ -850,24 +858,72 @@ function setStructurePlaybackState(state: ChartSurfaceStructurePlaybackState): v
 }
 
 function setStructureInteractionState(
-  hovered: { kind: "cbar" | "swing" | "trend"; id: string } | null,
-  selected: { kind: "cbar" | "swing" | "trend"; id: string } | null,
+  hovered: StructurePrimitiveObjectReference | null,
+  selected: StructurePrimitiveObjectReference | null,
   hoveredCbarIds: readonly string[] = [],
   selectedCbarIds: readonly string[] = [],
 ): void {
+  chartStructureInteraction = { hovered, selected, hoveredCbarIds, selectedCbarIds };
+  applyStructureInteractionState();
+}
+
+function applyStructureInteractionState(): void {
   setStructurePrimitiveInteractionState({
     cbar: cbarPrimitive,
     swing: swingPrimitive,
     trend: trendPrimitive,
-    hovered,
-    hoveredCbarIds,
-    selected,
-    selectedCbarIds,
+    ...chartStructureInteraction,
+    hovered: inspectorStructureHover ?? chartStructureInteraction.hovered,
+    hoveredCbarIds: inspectorStructureHover ? [] : chartStructureInteraction.hoveredCbarIds,
     selectedColor: "#D99A45",
     cbarSelectedWidth: 2,
     swingSelectedWidth: 2.5,
     trendSelectedWidth: 2.5,
   });
+}
+
+function visibleInspectorStructure(reference: InspectorChartReference | null): StructurePrimitiveObjectReference | null {
+  if (!reference) return null;
+  const { kind, id } = reference;
+  const geometry = kind === "cbar" ? cbarRectangles.value
+    : kind === "swing" ? swingSegments.value
+    : kind === "trend" ? trendSegments.value
+    : null;
+  if ((kind === "cbar" || kind === "swing" || kind === "trend") &&
+    geometry?.some((element) => element.id === id)) return { kind, id };
+  return null;
+}
+
+function syncInspectorSbarMarker(id: string | null): void {
+  const index = id === null ? undefined : indexBySbarId.get(id);
+  const visible = index === undefined ? null : chart?.timeScale().getVisibleLogicalRange();
+  const marker = index !== undefined && visible && index + 0.5 >= visible.from && index - 0.5 <= visible.to
+    ? markerForSbar(id)
+    : null;
+  const previous = inspectorSbarGeometry;
+  if (marker?.id === previous?.id && marker?.x === previous?.x && marker?.y === previous?.y
+    && marker?.width === previous?.width && marker?.height === previous?.height) return;
+
+  if (marker && !inspectorSbarMarker) {
+    const primitive = new SBarMarkerPrimitive();
+    registerPrimitive("inspector-id-sbar", primitive, () => primitive.dispose());
+    inspectorSbarMarker = primitive;
+  }
+  inspectorSbarGeometry = marker;
+  inspectorSbarMarker?.update({
+    hovered: marker, selected: null, selectedFill: "transparent", selectedStroke: "#D99A45", selectedWidth: 1.25,
+  });
+}
+
+function syncInspectorIdHighlight(): void {
+  const reference = props.highlightedId ?? null;
+  const structure = visibleInspectorStructure(reference);
+  if (structure?.kind !== inspectorStructureHover?.kind || structure?.id !== inspectorStructureHover?.id) {
+    inspectorStructureHover = structure;
+    applyStructureInteractionState();
+  }
+  syncInspectorSbarMarker(reference?.kind === "sbar" ? reference.id : null);
+  keyzonePrimitive.setInspectorHighlight(reference?.kind === "keyzone" || reference?.kind === "interaction" ? reference : null);
 }
 
 /**
@@ -966,6 +1022,7 @@ watch(() => [props.keyzoneSelectable, chartError.value, drawingTool.value, selec
 watch(() => props.selectedKeyzoneId, (id) => keyzonePrimitive.setSelected(id ?? null));
 watch(selectedStructureObject, syncSelectedStructure);
 watch(() => props.highlightedLeg, syncLegHighlight);
+watch(() => props.highlightedId, syncInspectorIdHighlight);
 watch(() => props.structure, () => {
   // A Snapshot checkpoint replaces the authoritative structure snapshot without
   // rebuilding immutable candle/volume series. Structure hit-testing must see

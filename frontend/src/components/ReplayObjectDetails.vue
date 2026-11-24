@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { InspectorWorkspaceContext, ReplayInspectorDto, ReplayInspectorCBarDto, ReplayInspectorStructureDto, ReplayInspectorSwingDto, SBarDto } from "../origin-types";
 import { formatDomainTimestamp, formatLifecycleTimestamp } from "../timestamp-format";
 import { formatInspectorValue } from "../inspector-format";
+import type { InspectorChartObjectKind } from "../inspector-chart-hover";
 import type { SwingLegReference } from "../origin-types";
 import SwingLegDetails from "./SwingLegDetails.vue";
 import InspectorPropertyField from "./InspectorPropertyField.vue";
@@ -23,7 +24,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ legHighlight: [leg: SwingLegReference | null] }>();
 
-type InspectorRow = { label: string; value: string; copyValue?: string; domainId?: boolean };
+type InspectorRow = { label: string; value: string; copyValue?: string; referenceKind?: InspectorChartObjectKind };
 
 const title = computed(() => props.selectedObject.kind.toUpperCase());
 const sourceLabel = computed(() => {
@@ -85,8 +86,8 @@ const rows = computed<InspectorRow[]>(() => {
   if (selected.kind === "keyzone") return [];
   if (selected.kind === "sbar") {
     const bar = selected.object;
-    const result = [
-      { label: "SBar ID", value: bar.sbarId, copyValue: bar.sbarId },
+    const result: InspectorRow[] = [
+      { label: "SBar ID", referenceKind: "sbar", value: bar.sbarId, copyValue: bar.sbarId },
       { label: "Bar Type", value: bar.barType, copyValue: bar.barType },
       { label: "Event Time · UTC", value: formatDomainTimestamp(bar.tsEvent, props.timeframe), copyValue: bar.tsEvent },
       { label: "Init Time · UTC", value: formatDomainTimestamp(bar.tsInit, props.timeframe), copyValue: bar.tsInit },
@@ -116,12 +117,12 @@ const rows = computed<InspectorRow[]>(() => {
   if (selected.kind === "cbar") {
     const cbar = selected.object;
     return [
-      { label: "CBar ID", value: cbar.cbarId, copyValue: cbar.cbarId },
+      { label: "CBar ID", referenceKind: "cbar", value: cbar.cbarId, copyValue: cbar.cbarId },
       { label: "High", value: cbar.high },
       { label: "Low", value: cbar.low },
-      { label: "SBar Start ID", value: cbar.sbarStartId, copyValue: cbar.sbarStartId },
-      { label: "SBar End ID", value: cbar.sbarEndId, copyValue: cbar.sbarEndId },
-      { label: "Extreme SBar", value: cbar.extremeSbarId ?? "—", domainId: cbar.extremeSbarId != null },
+      { label: "SBar Start ID", referenceKind: "sbar", value: cbar.sbarStartId, copyValue: cbar.sbarStartId },
+      { label: "SBar End ID", referenceKind: "sbar", value: cbar.sbarEndId, copyValue: cbar.sbarEndId },
+      { label: "Extreme SBar", value: cbar.extremeSbarId ?? "—", referenceKind: cbar.extremeSbarId != null ? "sbar" : undefined },
       { label: "Span SBars", value: String(cbar.spanSbars) },
       { label: "Fractal Type", value: formatInspectorValue(cbar.fractalType) },
       { label: "Created At", value: formatLifecycleTimestamp(cbar.createdAt), copyValue: cbar.createdAt },
@@ -130,16 +131,16 @@ const rows = computed<InspectorRow[]>(() => {
   if (selected.kind === "trend") {
     const trend = selected.object;
     return [
-      { label: "Trend ID", value: trend.trendId, copyValue: trend.trendId },
+      { label: "Trend ID", referenceKind: "trend", value: trend.trendId, copyValue: trend.trendId },
       { label: "Direction", value: trend.direction },
       { label: "High", value: trend.high },
       { label: "Low", value: trend.low },
-      { label: "Swing Start ID", value: trend.swingStartId, copyValue: trend.swingStartId },
-      { label: "Swing End ID", value: trend.swingEndId, copyValue: trend.swingEndId },
-      { label: "SBar Start ID", value: trend.sbarStartId, copyValue: trend.sbarStartId },
-      { label: "SBar End ID", value: trend.sbarEndId, copyValue: trend.sbarEndId },
-      { label: "Highest High SBar", value: trend.highSbarId, domainId: true },
-      { label: "Lowest Low SBar", value: trend.lowSbarId, domainId: true },
+      { label: "Swing Start ID", referenceKind: "swing", value: trend.swingStartId, copyValue: trend.swingStartId },
+      { label: "Swing End ID", referenceKind: "swing", value: trend.swingEndId, copyValue: trend.swingEndId },
+      { label: "SBar Start ID", referenceKind: "sbar", value: trend.sbarStartId, copyValue: trend.sbarStartId },
+      { label: "SBar End ID", referenceKind: "sbar", value: trend.sbarEndId, copyValue: trend.sbarEndId },
+      { label: "Highest High SBar", referenceKind: "sbar", value: trend.highSbarId },
+      { label: "Lowest Low SBar", referenceKind: "sbar", value: trend.lowSbarId },
       { label: "Start OI", value: formatInspectorValue(trend.startOi) },
       { label: "End OI", value: formatInspectorValue(trend.endOi) },
       { label: "Volume", value: trend.volume },
@@ -151,16 +152,16 @@ const rows = computed<InspectorRow[]>(() => {
   }
   const swing = selected.object;
   return [
-    { label: "Swing ID", value: swing.swingId, copyValue: swing.swingId },
+    { label: "Swing ID", referenceKind: "swing", value: swing.swingId, copyValue: swing.swingId },
     { label: "Direction", value: swing.direction },
     { label: "High", value: swing.high },
     { label: "Low", value: swing.low },
-    { label: "CBar Start ID", value: swing.cbarStartId, copyValue: swing.cbarStartId },
-    { label: "CBar End ID", value: swing.cbarEndId, copyValue: swing.cbarEndId },
-    { label: "SBar Start ID", value: swing.sbarStartId, copyValue: swing.sbarStartId },
-    { label: "SBar End ID", value: swing.sbarEndId, copyValue: swing.sbarEndId },
-    { label: "Highest High SBar", value: swing.highSbarId, domainId: true },
-    { label: "Lowest Low SBar", value: swing.lowSbarId, domainId: true },
+    { label: "CBar Start ID", referenceKind: "cbar", value: swing.cbarStartId, copyValue: swing.cbarStartId },
+    { label: "CBar End ID", referenceKind: "cbar", value: swing.cbarEndId, copyValue: swing.cbarEndId },
+    { label: "SBar Start ID", referenceKind: "sbar", value: swing.sbarStartId, copyValue: swing.sbarStartId },
+    { label: "SBar End ID", referenceKind: "sbar", value: swing.sbarEndId, copyValue: swing.sbarEndId },
+    { label: "Highest High SBar", referenceKind: "sbar", value: swing.highSbarId },
+    { label: "Lowest Low SBar", referenceKind: "sbar", value: swing.lowSbarId },
     { label: "Start OI", value: formatInspectorValue(swing.startOi) },
     { label: "End OI", value: formatInspectorValue(swing.endOi) },
     { label: "Volume", value: swing.volume },
@@ -192,7 +193,7 @@ const rows = computed<InspectorRow[]>(() => {
       :label="row.label"
       :value="row.value"
       :copy-value="row.copyValue"
-      :domain-id="row.domainId"
+      :reference-kind="row.referenceKind"
       :test-id="'inspector-replay-selected-' + row.label.toLowerCase().replaceAll(' ', '-').replaceAll('·', '').trim()"
       :wide="row.label.includes('ID') || row.label.includes('Time')"
     />
@@ -212,29 +213,29 @@ const rows = computed<InspectorRow[]>(() => {
       class="inspector-related-item"
       :data-testid="'inspector-replay-related-' + endpoint.label.toLowerCase().replaceAll(' ', '-')"
     >
-      <summary>{{ endpoint.label }} <InspectorDomainId :value="endpoint.id" /></summary>
+      <summary>{{ endpoint.label }} <InspectorDomainId :value="endpoint.id" :reference-kind="endpoint.kind" /></summary>
       <dl v-if="endpoint.kind === 'swing'" class="inspector-fields inspector-related-fields">
-        <InspectorPropertyField label="Swing ID" :value="(endpoint.object as ReplayInspectorSwingDto).swingId" wide />
+        <InspectorPropertyField label="Swing ID" :value="(endpoint.object as ReplayInspectorSwingDto).swingId" wide reference-kind="swing" />
         <InspectorPropertyField label="Direction" :value="(endpoint.object as ReplayInspectorSwingDto).direction" />
         <InspectorPropertyField label="High" :value="(endpoint.object as ReplayInspectorSwingDto).high" />
         <InspectorPropertyField label="Low" :value="(endpoint.object as ReplayInspectorSwingDto).low" />
-        <InspectorPropertyField label="SBar Start ID" :value="(endpoint.object as ReplayInspectorSwingDto).sbarStartId" wide />
-        <InspectorPropertyField label="SBar End ID" :value="(endpoint.object as ReplayInspectorSwingDto).sbarEndId" wide />
+        <InspectorPropertyField label="SBar Start ID" :value="(endpoint.object as ReplayInspectorSwingDto).sbarStartId" wide reference-kind="sbar" />
+        <InspectorPropertyField label="SBar End ID" :value="(endpoint.object as ReplayInspectorSwingDto).sbarEndId" wide reference-kind="sbar" />
         <InspectorPropertyField label="State" :value="(endpoint.object as ReplayInspectorSwingDto).state" />
       </dl>
       <dl v-else-if="endpoint.kind === 'cbar'" class="inspector-fields inspector-related-fields">
-        <InspectorPropertyField label="CBar ID" :value="(endpoint.object as ReplayInspectorCBarDto).cbarId" wide />
+        <InspectorPropertyField label="CBar ID" :value="(endpoint.object as ReplayInspectorCBarDto).cbarId" wide reference-kind="cbar" />
         <InspectorPropertyField label="High" :value="(endpoint.object as ReplayInspectorCBarDto).high" />
         <InspectorPropertyField label="Low" :value="(endpoint.object as ReplayInspectorCBarDto).low" />
-        <InspectorPropertyField label="SBar Start ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarStartId" wide />
-        <InspectorPropertyField label="SBar End ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarEndId" wide />
-        <InspectorPropertyField label="Extreme SBar" :value="(endpoint.object as ReplayInspectorCBarDto).extremeSbarId ?? '—'" :domain-id="(endpoint.object as ReplayInspectorCBarDto).extremeSbarId != null" wide />
+        <InspectorPropertyField label="SBar Start ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarStartId" wide reference-kind="sbar" />
+        <InspectorPropertyField label="SBar End ID" :value="(endpoint.object as ReplayInspectorCBarDto).sbarEndId" wide reference-kind="sbar" />
+        <InspectorPropertyField label="Extreme SBar" :value="(endpoint.object as ReplayInspectorCBarDto).extremeSbarId ?? '—'" :reference-kind="(endpoint.object as ReplayInspectorCBarDto).extremeSbarId != null ? 'sbar' : undefined" wide />
         <InspectorPropertyField label="Span SBars" :value="String((endpoint.object as ReplayInspectorCBarDto).spanSbars)" />
         <InspectorPropertyField label="Fractal Type" :value="formatInspectorValue((endpoint.object as ReplayInspectorCBarDto).fractalType)" />
         <InspectorPropertyField label="Created At" :value="formatLifecycleTimestamp((endpoint.object as ReplayInspectorCBarDto).createdAt)" :copy-value="(endpoint.object as ReplayInspectorCBarDto).createdAt" wide />
       </dl>
       <dl v-else class="inspector-fields inspector-related-fields">
-        <InspectorPropertyField label="SBar ID" :value="(endpoint.object as SBarDto).sbarId" wide />
+        <InspectorPropertyField label="SBar ID" :value="(endpoint.object as SBarDto).sbarId" wide reference-kind="sbar" />
         <InspectorPropertyField label="Bar Type" :value="(endpoint.object as SBarDto).barType" wide />
         <InspectorPropertyField label="Event Time · UTC" :value="formatDomainTimestamp((endpoint.object as SBarDto).tsEvent, timeframe)" :copy-value="(endpoint.object as SBarDto).tsEvent" wide />
         <InspectorPropertyField label="Init Time · UTC" :value="formatDomainTimestamp((endpoint.object as SBarDto).tsInit, timeframe)" :copy-value="(endpoint.object as SBarDto).tsInit" wide />
