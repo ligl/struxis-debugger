@@ -12,7 +12,7 @@ use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
     structure::{
-        StructureView,
+        structure::Structure,
         leg::Leg,
         trend::{Trend, TrendSeries},
     },
@@ -199,7 +199,7 @@ pub(crate) struct LegCheckpoint {
 }
 
 impl LegCheckpoint {
-    fn from_leg(leg: &Leg, structure: &StructureView<'_>) -> Result<Self, String> {
+    fn from_leg(leg: &Leg, structure: &Structure) -> Result<Self, String> {
         let end = structure.cbars().get(leg.cbar_end_id)
             .ok_or_else(|| format!("Leg end CBar {} is unavailable", leg.cbar_end_id))?;
         // Keep the existing snapshot wire format. This is a presentation
@@ -278,7 +278,7 @@ fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
 }
 
 fn project_feature_sequence(
-    structure: &StructureView<'_>,
+    structure: &Structure,
 ) -> Option<Vec<FeatureElementCheckpoint>> {
     structure.feature_sequence().and_then(|elements| {
         elements
@@ -397,9 +397,9 @@ pub(crate) fn structure_from_state_view(
             .swings()
             .iter()
             .map(|swing| -> Result<SwingCheckpoint, String> {
-                let legs = structure.legs(swing.id)
+                let legs = state.legs(swing.id)
                     .map_err(|error| format!("Swing {} composition unavailable: {error}", swing.id))?
-                    .iter().map(|leg| LegCheckpoint::from_leg(leg, &structure))
+                    .iter().map(|leg| LegCheckpoint::from_leg(leg, structure))
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(SwingCheckpoint {
                 swing_id: swing.id.to_string(),
@@ -426,7 +426,7 @@ pub(crate) fn structure_from_state_view(
             })
             .collect::<Result<Vec<_>, _>>()?;
         let trends = project_trends(structure.trends());
-        let feature_sequence = project_feature_sequence(&structure);
+        let feature_sequence = project_feature_sequence(structure);
         Ok(StructureCheckpoint {
             cbar_count: cbars.len(),
             cbars,
