@@ -94,7 +94,7 @@ fn config() -> ReplayWorkerConfig {
             )
         })
         .collect::<Vec<_>>();
-    let state_key = StruxisStateKey::from_bar_type(&bar_type);
+    let state_key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
     let origin = OriginLoad {
         keyzones: None,
         origin_dataset_id: uuid::Uuid::new_v4(),

@@ -322,6 +322,7 @@ impl AppState {
             instrument_id: manifest.instrument_id,
             bar_type: manifest.bar_type,
             timeframe: capitus_struxis::StruxisStateKey::from_bar_type(&bar_type)
+                .map_err(|error| reference_error(format!("Unsupported Reference timeframe: {error}")))?
                 .timeframe
                 .to_string(),
             snapshot_generated_at: manifest.snapshot_generated_at,
@@ -853,7 +854,7 @@ mod tests {
             fixture_bar(300, "10.75"),
         ];
         let bar_type = bars[0].bar_type;
-        let state_key = StruxisStateKey::from_bar_type(&bar_type);
+        let state_key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         let fingerprint =
             sequence_fingerprint(state_key, &bars).expect("fixture fingerprint should compute");
         OriginLoad {

@@ -129,7 +129,7 @@ fn validate_origin(origin: &OriginLoad) -> Result<()> {
         "Origin BarType metadata does not match its SBar sequence"
     );
     ensure!(
-        StruxisStateKey::from_bar_type(&expected_bar_type) == origin.state_key,
+        StruxisStateKey::from_bar_type(&expected_bar_type)? == origin.state_key,
         "Origin StruxisStateKey does not match its BarType"
     );
 
@@ -258,7 +258,7 @@ mod tests {
 
     fn origin(bars: Vec<Bar>) -> OriginLoad {
         let bar_type = bars[0].bar_type;
-        let state_key = StruxisStateKey::from_bar_type(&bar_type);
+        let state_key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         let fingerprint =
             sequence_fingerprint(state_key, &bars).expect("fingerprint should compute");
         OriginLoad {
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn fingerprint_matches_fixed_canonical_vector() {
         let one = bar(100, 100, "10.00");
-        let state_key = StruxisStateKey::from_bar_type(&one.bar_type);
+        let state_key = StruxisStateKey::from_bar_type(&one.bar_type).unwrap();
         let fingerprint = sequence_fingerprint(state_key, &[one]).expect("fingerprint");
         assert_eq!(
             fingerprint,
@@ -354,7 +354,7 @@ mod tests {
     fn fingerprint_changes_when_formal_bar_attributes_change() {
         let baseline = bar(100, 100, "10.00");
         let changed = bar(100, 100, "10.01");
-        let state_key = StruxisStateKey::from_bar_type(&baseline.bar_type);
+        let state_key = StruxisStateKey::from_bar_type(&baseline.bar_type).unwrap();
 
         assert_ne!(
             sequence_fingerprint(state_key, &[baseline]).expect("baseline fingerprint"),
@@ -365,7 +365,7 @@ mod tests {
     #[test]
     fn fingerprint_changes_when_ordered_input_sequence_changes() {
         let bars = vec![bar(100, 100, "10.00"), bar(200, 200, "10.50")];
-        let state_key = StruxisStateKey::from_bar_type(&bars[0].bar_type);
+        let state_key = StruxisStateKey::from_bar_type(&bars[0].bar_type).unwrap();
         let reversed = vec![bars[1].clone(), bars[0].clone()];
 
         assert_ne!(
@@ -380,7 +380,7 @@ mod tests {
         use std::num::NonZeroU32;
 
         let one = bar(100, 100, "10.00");
-        let key = StruxisStateKey::from_bar_type(&one.bar_type);
+        let key = StruxisStateKey::from_bar_type(&one.bar_type).unwrap();
         let equivalent_key = StruxisStateKey {
             instrument_id: key.instrument_id,
             timeframe: Timeframe::seconds(NonZeroU32::new(300).expect("nonzero duration")),

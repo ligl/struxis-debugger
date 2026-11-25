@@ -52,7 +52,7 @@ fn fixture() -> (LoadedInput, RunState, EffectiveStruxisConfig) {
         ts_event.into(),
         ts_event.into(),
     );
-    let state_key = StruxisStateKey::from_bar_type(&bar_type);
+    let state_key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
     let bars = vec![bar];
     let fingerprint = crate::dataset::sequence_fingerprint(state_key, &bars)
         .expect("Fixture SBar sequence fingerprint should compute");

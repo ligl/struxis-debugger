@@ -138,7 +138,7 @@ pub(crate) fn load_origin(
             )
         })?;
 
-    let state_key = StruxisStateKey::from_bar_type(&parsed_bar_type);
+    let state_key = StruxisStateKey::from_bar_type(&parsed_bar_type)?;
     let venue = Venue::new(instrument_id.venue.as_str());
     let engine_config = BacktestEngineConfig {
         logging: nautilus_common::logging::logger::LoggerConfig::from_spec("stdout=Error")?,
@@ -386,7 +386,7 @@ mod tests {
             StruxisConfig::builder().build(),
             NautilusRuntime::new(Rc::clone(&cache)),
         );
-        let key = StruxisStateKey::from_bar_type(&bars[0].bar_type);
+        let key = StruxisStateKey::from_bar_type(&bars[0].bar_type).unwrap();
         let registrant = StruxisRegistrant::Strategy(StrategyId::from("ORIGIN-VALIDATION-TEST"));
         struxis.register(key, registrant);
 

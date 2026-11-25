@@ -30,7 +30,7 @@ use nautilus_model::{
 
 fn test_state_key() -> StruxisStateKey {
     let bar_type = BarType::from_str("BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL").unwrap();
-    StruxisStateKey::from_bar_type(&bar_type)
+    StruxisStateKey::from_bar_type(&bar_type).unwrap()
 }
 
 fn test_bars() -> Vec<Bar> {

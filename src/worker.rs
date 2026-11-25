@@ -1275,7 +1275,7 @@ mod tests {
                 )
             })
             .collect::<Vec<_>>();
-        let state_key = StruxisStateKey::from_bar_type(&bar_type);
+        let state_key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         let fingerprint = sequence_fingerprint(state_key, &bars).expect("fingerprint");
         let origin = OriginLoad {
             keyzones: None,

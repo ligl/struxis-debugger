@@ -58,7 +58,7 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
         StruxisConfig::builder().enable_structure(true).build(),
         runtime,
     );
-    let key = StruxisStateKey::from_bar_type(&bar_type);
+    let key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
     let strategy = StruxisDemo::new(
         struxis.clone(),
         StrategyId::from("STRUXIS-DEBUGGER-STEP-TEST"),

@@ -713,7 +713,7 @@ mod tests {
                 200_u64.into(),
             ),
         ];
-        let state_key = StruxisStateKey::from_bar_type(&bar_type);
+        let state_key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         let fingerprint = sequence_fingerprint(state_key, &bars).unwrap();
         let origin = OriginLoad {
             keyzones: None,

@@ -833,7 +833,7 @@ pub(crate) mod keyzone_projection_tests {
         use std::{cell::RefCell, rc::Rc, str::FromStr};
         let instrument = InstrumentId::from("AUD/USD.SIM");
         let bt = BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").unwrap();
-        let key = StruxisStateKey::from_bar_type(&bt);
+        let key = StruxisStateKey::from_bar_type(&bt).unwrap();
         let cache = Rc::new(RefCell::new(Cache::default()));
         let binding = Struxis::new(
             StruxisConfig::builder().enable_structure(false).build(),
@@ -952,7 +952,7 @@ pub(crate) mod keyzone_projection_tests {
 
         let instrument = InstrumentId::from("AUD/USD.SIM");
         let bar_type = BarType::from_str("AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL").unwrap();
-        let key = StruxisStateKey::from_bar_type(&bar_type);
+        let key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         let cache = Rc::new(RefCell::new(Cache::default()));
         let struxis = Struxis::new(
             StruxisConfig::builder().enable_structure(false).build(),
@@ -1062,7 +1062,7 @@ pub(crate) mod keyzone_projection_tests {
             NautilusRuntime::new(Rc::clone(&cache)),
         );
         let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL").unwrap();
-        let key = StruxisStateKey::from_bar_type(&bar_type);
+        let key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         struxis.register(
             key,
             StruxisRegistrant::Strategy(StrategyId::from("DEBUGGER-KEYZONE")),
@@ -1172,7 +1172,7 @@ pub(crate) mod keyzone_projection_tests {
         use std::{cell::RefCell, rc::Rc, str::FromStr};
         let bar_type = BarType::from_str("AUD/USD.SIM-1-MINUTE-LAST-EXTERNAL").unwrap();
         let cache = Rc::new(RefCell::new(Cache::default()));
-        let key = StruxisStateKey::from_bar_type(&bar_type);
+        let key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         let mut registry = KeyZoneRegistry::new(key.instrument_id);
         let (zone, _) = registry
             .create_fixed(
