@@ -55,7 +55,7 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
 
     let runtime = NautilusRuntime::new(engine.kernel().cache.clone());
     let struxis = Struxis::new(
-        StruxisConfig::builder().enable_structure(true).build(),
+        StruxisConfig::builder().build(),
         runtime,
     );
     let key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
@@ -139,7 +139,8 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
             );
         }
 
-        let checkpoint = crate::checkpoint::ReplayCheckpointProjection::from_state_view(&state);
+        let checkpoint = crate::checkpoint::ReplayCheckpointProjection::from_state_view(&state)
+            .expect("processed state must provide a checkpoint");
         assert_eq!(
             checkpoint.last_ts_event.as_deref(),
             Some(expected_timestamps[index].to_string().as_str())
@@ -159,21 +160,14 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
                 .structure
                 .as_ref()
                 .map(|structure| structure.cbar_count),
-            Some(state.structure().expect("structure enabled").cbars().len())
+            Some(state.structure().cbars().len())
         );
         assert_eq!(
             checkpoint
                 .structure
                 .as_ref()
                 .map(|structure| structure.swing_count),
-            Some(
-                state
-                    .structure()
-                    .expect("structure enabled")
-                    .swings()
-                    .iter()
-                    .count()
-            )
+            Some(state.swings().len())
         );
 
         assert_eq!(
@@ -181,19 +175,12 @@ fn each_streaming_batch_advances_strategy_and_struxis_by_exactly_one_bar() -> an
                 .structure
                 .as_ref()
                 .map(|structure| structure.trend_count),
-            Some(
-                state
-                    .structure()
-                    .expect("structure enabled")
-                    .trends()
-                    .iter()
-                    .count()
-            )
+            Some(state.trends().len())
         );
 
         assert!(
-            state.structure().is_some(),
-            "structure processing must remain enabled throughout replay"
+            checkpoint.structure.is_some(),
+            "each successful Step must capture Structure"
         );
     }
 

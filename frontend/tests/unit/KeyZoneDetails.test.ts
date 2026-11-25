@@ -116,7 +116,7 @@ describe("FixedPriceRange creation entry in the Inspector", () => {
   it("shows the creation button only beside the Replay state summary", () => {
     expect(render(replay).find('button[aria-expanded]').exists()).toBe(true);
     expect(render({ ...replay, checkpoint: null }).find('button[aria-expanded]').exists()).toBe(false);
-    expect(render({ workspace: "dataset", originDatasetId: null, timeframe: null, structureEnabled: false,
+    expect(render({ workspace: "dataset", originDatasetId: null, timeframe: null,
       selectedObject: null }).find('button[aria-expanded]').exists()).toBe(false);
     expect(render({ workspace: "compare", difference: null, baselineSnapshotId: null,
       candidateSnapshotId: null }).find('button[aria-expanded]').exists()).toBe(false);

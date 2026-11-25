@@ -9,7 +9,6 @@ enableAutoUnmount(afterEach);
 const origin: OriginDatasetDto = {
   originDatasetId: "origin-1",
   sourceCatalog: "/workspace/catalog",
-  enableStructure: true,
   instrumentId: "BTCUSDT-PERP.BINANCE",
   barType: "BTCUSDT-PERP.BINANCE-1-DAY-LAST-EXTERNAL",
   timeframe: "1D",

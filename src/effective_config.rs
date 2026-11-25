@@ -14,6 +14,7 @@ const CONFIG_HASH_PREFIX: &[u8] = b"capitus.debug-chart.config\0";
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct EffectiveStruxisConfig {
+    // Retained in canonical Snapshot metadata for compatibility.
     pub(crate) enable_structure: bool,
     pub(crate) structure_cbars_capacity: NonZeroUsize,
     pub(crate) structure_swings_capacity: NonZeroUsize,
@@ -31,7 +32,7 @@ impl EffectiveStruxisConfig {
                 config.structure_trends_capacity,
             );
         Self {
-            enable_structure: config.enable_structure,
+            enable_structure: true,
             structure_cbars_capacity: cbars,
             structure_swings_capacity: swings,
             structure_trends_capacity: trends,
@@ -99,19 +100,27 @@ mod tests {
     }
 
     #[test]
-    fn explicit_capacity_override_and_structure_flag_are_recorded() {
+    fn explicit_capacity_overrides_are_recorded() {
         let config = StruxisConfig::builder()
-            .enable_structure(false)
             .structure_cbars_capacity(NonZeroUsize::new(321).unwrap())
             .structure_swings_capacity(NonZeroUsize::new(123).unwrap())
             .structure_trends_capacity(NonZeroUsize::new(45).unwrap())
             .build();
         let effective = EffectiveStruxisConfig::from_struxis_config(&config);
 
-        assert!(!effective.enable_structure);
+        assert!(effective.enable_structure);
         assert_eq!(effective.structure_cbars_capacity.get(), 321);
         assert_eq!(effective.structure_swings_capacity.get(), 123);
         assert_eq!(effective.structure_trends_capacity.get(), 45);
+    }
+
+    #[test]
+    fn legacy_snapshot_config_preserves_its_fingerprint() {
+        let legacy = r#"{"enableStructure":false,"structureCbarsCapacity":10000,"structureSwingsCapacity":2000,"structureTrendsCapacity":666,"keyzoneCapacity":100}"#;
+        assert_eq!(
+            fingerprint_canonical_config(legacy).unwrap(),
+            "3fb0c8617221fbd1cf4af7b4d0e4fe5a1342ee9c8e5f8044944a90784226a14a"
+        );
     }
 
     #[test]

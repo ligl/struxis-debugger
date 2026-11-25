@@ -35,7 +35,6 @@ import { notifyError } from "./composables/useAppToast";
 const {
   datasets,
   selectedId,
-  enableStructure,
   loading,
   loadStatus,
   loadError,
@@ -500,7 +499,6 @@ const inspectorContext = computed<InspectorWorkspaceContext>(() => {
       workspace: "dataset",
       originDatasetId: origin.value?.originDatasetId ?? null,
       timeframe: origin.value?.timeframe ?? null,
-      structureEnabled: origin.value?.enableStructure ?? false,
       selectedObject,
     };
   }
@@ -894,7 +892,6 @@ onMounted(async () => {
               :loading="originLoading"
               :mutation-busy="!canLoadOrigin"
               :discovery-error="discoveryError"
-              :enable-structure="enableStructure"
               :origin="origin"
               :load-status="displayedOriginLoadStatus"
               :load-error="loadError"
@@ -918,7 +915,6 @@ onMounted(async () => {
               :selection-editable="canMutateTest && !testLoading"
               @refresh-catalog="handleRefreshCatalog"
               @select-dataset="selectedId = $event"
-              @update-enable-structure="enableStructure = $event"
               @load-origin="handleLoadOrigin"
               @create-test-dataset="createSelectedTestDataset"
               @select-all-sbars="selectAllOriginRange"

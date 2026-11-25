@@ -341,7 +341,7 @@ impl ReplayCheckpointProjection {
             last_ts_event: state.last_ts_event().map(|value| value.to_string()),
             sbar_count: sbars.len(),
             sbars,
-            structure,
+            structure: Some(structure),
             keyzones: None,
             diagnostics: Vec::new(),
         })
@@ -375,33 +375,35 @@ fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
 
 pub(crate) fn structure_from_state_view(
     state: &StruxisStateView<'_>,
-) -> Result<Option<StructureCheckpoint>, String> {
-    state.structure().map(|structure| {
-        let cbars = structure
-            .cbars()
-            .last_n(structure.cbars().len())
-            .into_iter()
-            .map(|cbar| CBarCheckpoint {
-                cbar_id: cbar.id.to_string(),
-                high: cbar.high.to_string(),
-                low: cbar.low.to_string(),
-                sbar_start_id: cbar.sbar_start_id.to_string(),
-                sbar_end_id: cbar.sbar_end_id.to_string(),
-                span_sbars: cbar.span_sbars,
-                fractal_type: cbar.fractal_type.map(|kind| format!("{kind:?}")),
-                extreme_sbar_id: cbar.extreme_sbar_id.map(|id| id.to_string()),
-                created_at: cbar.created_at.to_string(),
-            })
-            .collect::<Vec<_>>();
-        let swings = structure
-            .swings()
-            .iter()
-            .map(|swing| -> Result<SwingCheckpoint, String> {
-                let legs = state.legs(swing.id)
-                    .map_err(|error| format!("Swing {} composition unavailable: {error}", swing.id))?
-                    .iter().map(|leg| LegCheckpoint::from_leg(leg, structure))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(SwingCheckpoint {
+) -> Result<StructureCheckpoint, String> {
+    let structure = state.structure();
+    let cbars = structure
+        .cbars()
+        .last_n(structure.cbars().len())
+        .into_iter()
+        .map(|cbar| CBarCheckpoint {
+            cbar_id: cbar.id.to_string(),
+            high: cbar.high.to_string(),
+            low: cbar.low.to_string(),
+            sbar_start_id: cbar.sbar_start_id.to_string(),
+            sbar_end_id: cbar.sbar_end_id.to_string(),
+            span_sbars: cbar.span_sbars,
+            fractal_type: cbar.fractal_type.map(|kind| format!("{kind:?}")),
+            extreme_sbar_id: cbar.extreme_sbar_id.map(|id| id.to_string()),
+            created_at: cbar.created_at.to_string(),
+        })
+        .collect::<Vec<_>>();
+    let swings = structure
+        .swings()
+        .iter()
+        .map(|swing| -> Result<SwingCheckpoint, String> {
+            let legs = state
+                .legs(swing.id)
+                .map_err(|error| format!("Swing {} composition unavailable: {error}", swing.id))?
+                .iter()
+                .map(|leg| LegCheckpoint::from_leg(leg, structure))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(SwingCheckpoint {
                 swing_id: swing.id.to_string(),
                 direction: format!("{:?}", swing.direction),
                 start_price: swing.start_price.to_string(),
@@ -422,21 +424,20 @@ pub(crate) fn structure_from_state_view(
                 state: format!("{:?}", swing.state),
                 created_at: swing.created_at.to_string(),
                 updated_at: swing.updated_at.to_string(),
-                })
             })
-            .collect::<Result<Vec<_>, _>>()?;
-        let trends = project_trends(structure.trends());
-        let feature_sequence = project_feature_sequence(structure);
-        Ok(StructureCheckpoint {
-            cbar_count: cbars.len(),
-            cbars,
-            swing_count: swings.len(),
-            swings,
-            trend_count: trends.len(),
-            trends,
-            feature_sequence,
         })
-    }).transpose()
+        .collect::<Result<Vec<_>, _>>()?;
+    let trends = project_trends(structure.trends());
+    let feature_sequence = project_feature_sequence(structure);
+    Ok(StructureCheckpoint {
+        cbar_count: cbars.len(),
+        cbars,
+        swing_count: swings.len(),
+        swings,
+        trend_count: trends.len(),
+        trends,
+        feature_sequence,
+    })
 }
 
 /// Owned Instrument Registry projection. Absence means this recording predates
@@ -847,7 +848,7 @@ pub(crate) mod keyzone_projection_tests {
         let key = StruxisStateKey::from_bar_type(&bt).unwrap();
         let cache = Rc::new(RefCell::new(Cache::default()));
         let binding = Struxis::new(
-            StruxisConfig::builder().enable_structure(false).build(),
+            StruxisConfig::builder().build(),
             NautilusRuntime::new(Rc::clone(&cache)),
         );
         binding.register(
@@ -966,7 +967,7 @@ pub(crate) mod keyzone_projection_tests {
         let key = StruxisStateKey::from_bar_type(&bar_type).unwrap();
         let cache = Rc::new(RefCell::new(Cache::default()));
         let struxis = Struxis::new(
-            StruxisConfig::builder().enable_structure(false).build(),
+            StruxisConfig::builder().build(),
             NautilusRuntime::new(Rc::clone(&cache)),
         );
         struxis.register(
@@ -1204,7 +1205,7 @@ pub(crate) mod keyzone_projection_tests {
         );
         cache.borrow_mut().add_bar(first).unwrap();
         let binding = Struxis::new(
-            StruxisConfig::builder().enable_structure(false).build(),
+            StruxisConfig::builder().build(),
             NautilusRuntime::new(Rc::clone(&cache)),
         );
         binding.register(

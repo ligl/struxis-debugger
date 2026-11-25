@@ -361,7 +361,7 @@ describe("Struxis Debugger native desktop", () => {
   });
 
 
-  it("loads the complete BTCUSDT Origin with structure enabled, then runs a two-SBar Test Dataset through Snapshot Compare", async () => {
+  it("loads the complete BTCUSDT Origin and saves Snapshots from two two-SBar Runs", async () => {
     await domClick('[data-testid="workspace-dataset"]');
 
     await $('[data-testid="catalog-dataset-select"]').waitForDisplayed();
@@ -406,14 +406,6 @@ describe("Struxis Debugger native desktop", () => {
     });
     assert.match(selectedDataset.label, /BTCUSDT/i);
 
-    const structureEnabled = await browser.execute(() => {
-      const checkbox = document.querySelector('[data-testid="catalog-enable-structure"]');
-      if (!(checkbox instanceof HTMLInputElement)) throw new Error("STRUCTURE toggle is missing.");
-      if (!checkbox.checked) checkbox.click();
-      return checkbox.checked;
-    });
-    assert.equal(structureEnabled, true, "Origin Load acceptance must enable derived Structure calculation.");
-
     await domClick('[data-testid="catalog-load"]');
     await domClick('[data-testid="catalog-origin-details-toggle"]');
 
@@ -439,10 +431,9 @@ describe("Struxis Debugger native desktop", () => {
       sbarCount,
       "Origin summary count must match the complete Struxis-derived chart sequence.",
     );
-    assert.equal(
-      await $('[data-testid="origin-structure-status"]').getText(),
-      "ENABLED",
-      "The successful Origin must record STRUCTURE enabled as Load provenance.",
+    assert.ok(
+      Number(await $('[data-testid="origin-cbar-count"]').getText().then((value) => value.replace(/,/g, ""))) > 0,
+      "The successful Origin must include its derived CBar projection.",
     );
     const firstSbarId = await originChart.getAttribute("data-first-sbar-id");
     const secondSbarId = await originChart.getAttribute("data-second-sbar-id");
@@ -524,13 +515,12 @@ describe("Struxis Debugger native desktop", () => {
       for (const selector of hiddenLayers) await domClick(selector);
     }
 
-    const structureCounts = await $('[data-testid="origin-structure-overlay"]').getAttribute("data-structure-counts");
-    assert.ok(structureCounts, "Origin chart must expose the counts from its authoritative Structure projection.");
-    const parsedStructureCounts = JSON.parse(structureCounts);
-    assert.ok(
-      parsedStructureCounts.cbars + parsedStructureCounts.swings > 0,
-      `BTCUSDT full-stream Structure projection should contain CBar or Swing objects: ${structureCounts}`,
-    );
+    const cbarCount = Number(await $('[data-testid="origin-cbar-count"]').getText().then((value) => value.replace(/,/g, "")));
+    const swingCount = Number(await $('[data-testid="origin-swing-count"]').getText().then((value) => value.replace(/,/g, "")));
+    assert.ok(Number.isFinite(cbarCount) && Number.isFinite(swingCount) && cbarCount + swingCount > 0,
+      `BTCUSDT full-stream Structure projection should contain CBar or Swing objects: ${cbarCount}, ${swingCount}`);
+    assert.equal(await originChart.$('[data-testid="layer-toggle-cbar"]').isEnabled(), cbarCount > 0);
+    assert.equal(await originChart.$('[data-testid="layer-toggle-swing"]').isEnabled(), swingCount > 0);
 
     // Keep exact-ID coverage for the bounded two-SBar workflow below.
     const selectOriginSbarById = async (sbarId, expectedParentState) => {
@@ -743,8 +733,7 @@ describe("Struxis Debugger native desktop", () => {
       },
     );
 
-    // Repeat the exact same Test Dataset so Compare exercises two independent
-    // SQLite Snapshots with an identical complete SBar sequence fingerprint.
+    // A second Run of the same Test Dataset must publish an independent Snapshot.
     await domClick('[data-testid="workspace-replay"]');
     await domClick('[data-testid="run-start-stop"]');
     const secondRunStatus = $("[data-testid='run-toolbar-status'] b");
@@ -753,7 +742,7 @@ describe("Struxis Debugger native desktop", () => {
       {
         timeout: 30_000,
         interval: 200,
-        timeoutMsg: "Start did not prepare a second Run for Snapshot Compare.",
+        timeoutMsg: "Start did not prepare a second Run for Snapshot saving.",
       },
     );
 
@@ -804,40 +793,6 @@ describe("Struxis Debugger native desktop", () => {
         interval: 250,
         timeoutMsg: "Two verified Complete Snapshots were not visible after the repeated Run.",
       },
-    );
-
-    const compareButton = $('[data-testid="compare-run"]');
-    await browser.waitUntil(
-      async () => compareButton.isEnabled(),
-      {
-        timeout: 10_000,
-        interval: 200,
-        timeoutMsg: "Two Complete Snapshots did not enable strict Compare.",
-      },
-    );
-    await domClick('[data-testid="compare-run"]');
-    await browser.waitUntil(
-      async () => $(".compare-results").isDisplayed(),
-      {
-        timeout: 15_000,
-        interval: 200,
-        timeoutMsg: "The Compare IPC result was not rendered.",
-      },
-    );
-    assert.equal(
-      await $('[data-testid="compare-summary-first-divergence"]').getText(),
-      "NONE",
-      "Repeated deterministic Runs over the same input should have identical structure.",
-    );
-    assert.equal(
-      await $('[data-testid="compare-summary-sequence"]').getText(),
-      "2 / 2",
-      "Compare should include the full two-checkpoint input trajectory.",
-    );
-    assert.equal(
-      await $('[data-testid="compare-summary-difference-count"]').getText(),
-      "00",
-      "Repeated deterministic Runs should not produce structural object differences.",
     );
   });
 

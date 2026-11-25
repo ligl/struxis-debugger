@@ -40,7 +40,6 @@ const props = defineProps<{
   loading: boolean;
   mutationBusy: boolean;
   discoveryError: string;
-  enableStructure: boolean;
   origin: OriginDatasetDto | null;
   loadStatus: "idle" | "loading" | "loaded" | "failed";
   loadError: string;
@@ -50,7 +49,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   refresh: [];
   selectDataset: [id: string];
-  "update:enableStructure": [value: boolean];
   load: [];
 }>();
 </script>
@@ -89,17 +87,6 @@ const emit = defineEmits<{
     >
       {{ refreshing ? "…" : "↻" }}
     </button>
-
-    <label class="catalog-structure-toggle">
-      <input
-        data-testid="catalog-enable-structure"
-        :checked="enableStructure"
-        @change="emit('update:enableStructure', ($event.target as HTMLInputElement).checked)"
-        type="checkbox"
-        :disabled="loading || mutationBusy"
-      />
-      <span>STRUCTURE</span>
-    </label>
 
     <button
       class="primary-button catalog-load-action"
@@ -212,78 +199,6 @@ const emit = defineEmits<{
   color: #727b83;
 }
 
-.catalog-structure-toggle {
-  display: inline-flex;
-  min-height: 25px;
-  align-items: center;
-  gap: 6px;
-  padding: 0 7px;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  color: #89949d;
-  font: 8px ui-monospace, SFMono-Regular, Consolas, monospace;
-  line-height: 1;
-  letter-spacing: .045em;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-
-.catalog-structure-toggle:hover {
-  border-color: #343d44;
-  background: #1a2024;
-  color: #b8c1c7;
-}
-
-.catalog-structure-toggle:focus-within {
-  outline: 1px solid #8b6b3f;
-  outline-offset: 1px;
-}
-
-.catalog-structure-toggle input {
-  position: relative;
-  display: inline-grid;
-  width: 12px;
-  height: 12px;
-  flex: 0 0 12px;
-  align-self: center;
-  place-items: center;
-  margin: 0;
-  appearance: none;
-  border: 1px solid #4a535a;
-  border-radius: 2px;
-  background: #14191d;
-  cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-
-.catalog-structure-toggle input::after {
-  width: 5px;
-  height: 3px;
-  content: "";
-  transform: translateY(-1px) rotate(-45deg);
-  border-bottom: 1.5px solid transparent;
-  border-left: 1.5px solid transparent;
-}
-
-.catalog-structure-toggle input:checked {
-  border-color: #9a7848;
-  background: #8d6a3b;
-}
-
-.catalog-structure-toggle input:checked::after {
-  border-color: #f0e5d4;
-}
-
-.catalog-structure-toggle input:disabled {
-  opacity: .45;
-  cursor: not-allowed;
-}
-
-.catalog-structure-toggle:has(input:checked) {
-  color: #b5a184;
-}
-
 .catalog-load-action {
   min-height: 27px;
   padding: 0 8px;
@@ -347,10 +262,6 @@ const emit = defineEmits<{
 @media (max-width: 1100px) {
   .catalog-source-field select {
     width: 145px;
-  }
-
-  .catalog-structure-toggle span {
-    display: none;
   }
 }
 </style>

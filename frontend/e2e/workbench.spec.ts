@@ -863,7 +863,7 @@ test("Origin selects an inclusive range with blank plot clicks", async ({ page }
   const bars = keyzoneBars();
   const [first, second, , last] = bars;
   const origin: OriginDatasetDto = {
-    originDatasetId: "origin-pointer-range", sourceCatalog: "fixture", enableStructure: false,
+    originDatasetId: "origin-pointer-range", sourceCatalog: "fixture",
     instrumentId: "AUD/USD.SIM", barType: first!.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: bars.length, firstSbarId: first!.sbarId, lastSbarId: last!.sbarId,
     firstTsEvent: first!.tsEvent, lastTsEvent: last!.tsEvent, bars, structure: null,
@@ -944,7 +944,7 @@ test("each navigation click restores the module Inspector after selecting an obj
   registry.observations = [];
   registry.interactions = [];
   const structure = { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] };
-  const origin = { originDatasetId: "origin-nav", sourceCatalog: "fixture", enableStructure: true,
+  const origin = { originDatasetId: "origin-nav", sourceCatalog: "fixture",
     instrumentId: registry.instrumentId, barType: template.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: 40, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[39]!.sbarId,
     firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[39]!.tsEvent, bars, structure, keyzones: registry };
@@ -984,7 +984,8 @@ test("each navigation click restores the module Inspector after selecting an obj
     await chart.hover();
     await expect.poll(() => page.evaluate(() => Boolean((window as unknown as { navBorder?: unknown }).navBorder))).toBe(true);
     const border = await page.evaluate(() => (window as unknown as { navBorder: { x: number; y: number } }).navBorder);
-    await page.mouse.click(border.x, border.y);
+    // Keep independent selections outside the chart's 500 ms multi-click window.
+    await page.mouse.click(border.x, border.y, { delay: 550 });
     await expect(page.getByTestId("keyzone-details")).toBeVisible();
     await page.getByTestId(`workspace-${module}`).click();
     await expect(summary).toBeVisible();

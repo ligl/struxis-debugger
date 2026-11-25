@@ -31,6 +31,8 @@ mod effective_config;
 mod ipc;
 #[path = "../src/manager.rs"]
 mod manager;
+#[path = "../src/observation.rs"]
+mod observation;
 #[path = "../src/replay.rs"]
 mod replay;
 #[path = "../src/run.rs"]
@@ -45,7 +47,7 @@ mod snapshot_writer;
 mod worker;
 
 #[test]
-fn loads_ethusdt_perpetual_daily_origin_with_structure_enabled() {
+fn loads_ethusdt_perpetual_daily_origin_with_structure() {
     use std::path::PathBuf;
 
     // Exact stream reported to fail in the debugger. Do not replace this with
@@ -53,7 +55,7 @@ fn loads_ethusdt_perpetual_daily_origin_with_structure_enabled() {
     const ETH_BAR_TYPE: &str = "ETHUSDT-PERP.BINANCE-1-DAY-LAST-EXTERNAL";
     let catalog_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test_data/catalog");
 
-    let origin = catalog::load_origin(&catalog_path, ETH_BAR_TYPE, true).unwrap_or_else(|error| {
+    let origin = catalog::load_origin(&catalog_path, ETH_BAR_TYPE).unwrap_or_else(|error| {
         panic!("Origin Load failed for regression stream {ETH_BAR_TYPE}: {error:#}")
     });
 
@@ -64,7 +66,7 @@ fn loads_ethusdt_perpetual_daily_origin_with_structure_enabled() {
     );
     assert!(
         origin.structure.is_some(),
-        "structure-enabled ETH Origin Load should expose its Struxis structure projection"
+        "ETH Origin Load should expose its Struxis structure projection"
     );
 
     let first = origin.bars.first().expect("non-empty sequence asserted");

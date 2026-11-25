@@ -8,7 +8,6 @@ enableAutoUnmount(afterEach);
 const origin: OriginDatasetDto = {
   originDatasetId: "origin-1",
   sourceCatalog: "/workspace/catalog",
-  enableStructure: true,
   instrumentId: "BTCUSDT-PERP.BINANCE",
   barType: "BTCUSDT-PERP.BINANCE-1-HOUR-LAST-EXTERNAL",
   timeframe: "1H",
@@ -49,12 +48,12 @@ describe("OriginPanel structure counts", () => {
     expect(wrapper.get('[data-testid="origin-trend-count"]').text()).toBe("6");
   });
 
-  it("shows DISABLED when structure calculation was disabled for the Origin", () => {
-    const wrapper = mountPanel({ enableStructure: false, structure: null });
+  it("shows UNAVAILABLE when no structure projection is supplied", () => {
+    const wrapper = mountPanel({ structure: null });
 
-    expect(wrapper.get('[data-testid="origin-cbar-count"]').text()).toBe("DISABLED");
-    expect(wrapper.get('[data-testid="origin-swing-count"]').text()).toBe("DISABLED");
-    expect(wrapper.get('[data-testid="origin-trend-count"]').text()).toBe("DISABLED");
+    expect(wrapper.get('[data-testid="origin-cbar-count"]').text()).toBe("UNAVAILABLE");
+    expect(wrapper.get('[data-testid="origin-swing-count"]').text()).toBe("UNAVAILABLE");
+    expect(wrapper.get('[data-testid="origin-trend-count"]').text()).toBe("UNAVAILABLE");
   });
 
   it("shows UNAVAILABLE when structure is enabled but its projection is absent", () => {

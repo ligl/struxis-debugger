@@ -200,16 +200,14 @@ fn active_run_rejects_origin_and_test_dataset_replacement() {
         })
         .expect("fixture BTCUSDT stream should be available");
 
-    let origin = state
-        .load_origin(&entry.id, true)
-        .expect("Origin should load");
+    let origin = state.load_origin(&entry.id).expect("Origin should load");
     assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
     let test = state
         .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
         .expect("Test Dataset should be created");
     let _run = state.start_run().expect("Run should start");
 
-    let origin_result = state.load_origin(&entry.id, true);
+    let origin_result = state.load_origin(&entry.id);
     assert_eq!(origin_result.unwrap_err().code, IpcErrorCode::Conflict);
     let test_result = state.create_test_dataset(&origin.first_sbar_id, &origin.last_sbar_id);
     assert_eq!(test_result.unwrap_err().code, IpcErrorCode::Conflict);
@@ -264,9 +262,7 @@ fn app_state_run_lifecycle_publishes_discoverable_complete_snapshot() {
         })
         .expect("fixture BTCUSDT stream should be available");
 
-    let origin = state
-        .load_origin(&entry.id, true)
-        .expect("Origin should load");
+    let origin = state.load_origin(&entry.id).expect("Origin should load");
     assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
     let test = state
         .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)
@@ -383,9 +379,7 @@ fn failed_explicit_snapshot_save_does_not_roll_back_completed_run() {
         })
         .expect("fixture BTCUSDT stream should be available");
 
-    let origin = state
-        .load_origin(&entry.id, true)
-        .expect("Origin should load");
+    let origin = state.load_origin(&entry.id).expect("Origin should load");
     assert!(origin.bars.len() >= 2, "fixture needs at least two SBars");
     state
         .create_test_dataset(&origin.first_sbar_id, &origin.bars[1].sbar_id)

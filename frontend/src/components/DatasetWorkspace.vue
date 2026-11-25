@@ -22,7 +22,6 @@ defineProps<{
   loading: boolean;
   mutationBusy: boolean;
   discoveryError: string;
-  enableStructure: boolean;
   origin: OriginDatasetDto | null;
   loadStatus: "idle" | "loading" | "loaded" | "failed";
   loadError: string;
@@ -49,7 +48,6 @@ defineProps<{
 const emit = defineEmits<{
   refreshCatalog: [];
   selectDataset: [id: string];
-  updateEnableStructure: [value: boolean];
   loadOrigin: [];
   createTestDataset: [];
   selectAllSbars: [];
@@ -93,14 +91,12 @@ function handleRangeBoundaryChange(edge: "start" | "end", sbarId: string): void 
           :loading="loading"
           :mutation-busy="mutationBusy"
           :discovery-error="discoveryError"
-          :enable-structure="enableStructure"
           :origin="origin"
           :load-status="loadStatus"
           :load-error="loadError"
           :format-domain-timestamp="formatDomainTimestamp"
           @refresh="emit('refreshCatalog')"
           @select-dataset="emit('selectDataset', $event)"
-          @update:enable-structure="emit('updateEnableStructure', $event)"
           @load="emit('loadOrigin')"
         />
       </template>

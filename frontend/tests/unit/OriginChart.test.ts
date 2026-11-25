@@ -808,7 +808,6 @@ describe("ChartSurface and chart entry adapters", () => {
     const dataset: OriginDatasetDto = {
       originDatasetId: "origin-range",
       sourceCatalog: "test-catalog",
-      enableStructure: false,
       instrumentId: "TEST",
       barType: first.barType,
       timeframe: "1m",

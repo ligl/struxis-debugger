@@ -16,7 +16,6 @@ export type LoadStatus = "idle" | "loading" | "loaded" | "failed";
 export function useOriginLoad() {
   const datasets = ref<CatalogDatasetEntry[]>([]);
   const selectedId = ref("");
-  const enableStructure = ref(true);
   const loading = ref(false);
   const loadStatus = ref<LoadStatus>("idle");
   const loadError = ref("");
@@ -92,7 +91,7 @@ export function useOriginLoad() {
     try {
       let loadedOrigin: OriginDatasetDto;
       try {
-        loadedOrigin = await loadOrigin(selected.id, enableStructure.value);
+        loadedOrigin = await loadOrigin(selected.id);
       } catch (error) {
         // Keep the previous Origin in place; only this attempt changes to Failed.
         loadStatus.value = "failed";
@@ -113,7 +112,6 @@ export function useOriginLoad() {
   return {
     datasets,
     selectedId,
-    enableStructure,
     loading,
     loadStatus,
     loadError,

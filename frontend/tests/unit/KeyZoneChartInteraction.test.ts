@@ -62,7 +62,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 function fixture() {
   const bars = keyzoneBars(), keyzones = keyzoneFixture();
-  const origin: OriginDatasetDto = { originDatasetId: "origin-keyzone", sourceCatalog: "fixture", enableStructure: true,
+  const origin: OriginDatasetDto = { originDatasetId: "origin-keyzone", sourceCatalog: "fixture",
     instrumentId: "AUD/USD.SIM", barType: bars[0]!.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: 4, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[3]!.sbarId,
     firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[3]!.tsEvent, bars, structure: null, keyzones };

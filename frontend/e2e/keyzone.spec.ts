@@ -18,7 +18,7 @@ test("Origin receives the KeyZone recording and renders its controllable chart l
   });
   Object.assign(registry.observations[0]!, { startAt: bars[12]!.tsEvent,
     deadline: (BigInt(bars[39]!.tsEvent) + 60000000000n).toString(), lastProcessedAt: bars[39]!.tsEvent });
-  const origin = { originDatasetId: "origin-keyzone", sourceCatalog: "fixture", enableStructure: true,
+  const origin = { originDatasetId: "origin-keyzone", sourceCatalog: "fixture",
     instrumentId: "AUD/USD.SIM", barType: bars[0]!.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: bars.length, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[39]!.sbarId,
     firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[39]!.tsEvent, bars,
@@ -82,7 +82,7 @@ for (const chartKind of ["Origin", "Live Replay", "Snapshot Reference"] as const
     liveRegistry.zones[0]!.lower = "9.25001";
     snapshotRegistry.zones[0]!.lower = "8.50001";
     const structure = { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] };
-    const origin = { originDatasetId: "origin-hover", sourceCatalog: "fixture", enableStructure: true,
+    const origin = { originDatasetId: "origin-hover", sourceCatalog: "fixture",
       instrumentId: "AUD/USD.SIM", barType: template.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
       sbarCount: 40, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[39]!.sbarId,
       firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[39]!.tsEvent, bars, structure, keyzones: registry };
@@ -191,7 +191,7 @@ for (const chartKind of ["Origin", "Live Replay", "Snapshot Reference"] as const
     liveRegistry.zones[0]!.lower = "9.25001";
     snapshotRegistry.zones[0]!.lower = "8.50001";
     const structure = { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] };
-    const origin = { originDatasetId: "origin-hover", sourceCatalog: "fixture", enableStructure: true,
+    const origin = { originDatasetId: "origin-hover", sourceCatalog: "fixture",
       instrumentId: "AUD/USD.SIM", barType: template.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
       sbarCount: 40, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[39]!.sbarId,
       firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[39]!.tsEvent, bars, structure, keyzones: registry };

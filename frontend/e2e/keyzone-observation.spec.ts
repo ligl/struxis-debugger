@@ -13,7 +13,7 @@ test("Live Replay creates, advances and cancels an observation without losing th
   const zone = registry.zones[0]!;
   Object.assign(zone, { formedAt: bars[12]!.sbarId, createdAt: bars[14]!.sbarId,
     finalizedAt: bars[14]!.sbarId, finalizedDetectedAt: bars[14]!.sbarId });
-  const origin = { originDatasetId: "origin-observation", sourceCatalog: "fixture", enableStructure: true,
+  const origin = { originDatasetId: "origin-observation", sourceCatalog: "fixture",
     instrumentId: registry.instrumentId, barType: base.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: bars.length, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[39]!.sbarId,
     firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[39]!.tsEvent, bars,

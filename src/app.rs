@@ -61,7 +61,6 @@ struct AppDatasets {
 struct OriginRecord {
     dataset: OriginLoad,
     catalog_path: PathBuf,
-    enable_structure: bool,
 }
 
 #[derive(Clone)]
@@ -109,11 +108,7 @@ impl AppState {
         })
     }
 
-    pub(crate) fn load_origin(
-        &self,
-        dataset_id: &str,
-        enable_structure: bool,
-    ) -> Result<OriginDatasetDto, IpcError> {
+    pub(crate) fn load_origin(&self, dataset_id: &str) -> Result<OriginDatasetDto, IpcError> {
         let _permit = self.acquire_mutation_permit()?;
         self.ensure_no_owned_run()?;
 
@@ -148,8 +143,8 @@ impl AppState {
             )
         })?;
 
-        let candidate = load_origin_candidate(&self.inner.catalog_path, bar_type, enable_structure)
-            .map_err(|error| {
+        let candidate =
+            load_origin_candidate(&self.inner.catalog_path, bar_type).map_err(|error| {
                 IpcError::new(
                     IpcErrorCode::Internal,
                     format!("Origin Load failed: {error}"),
@@ -161,7 +156,6 @@ impl AppState {
         let record = OriginRecord {
             dataset: candidate,
             catalog_path: self.inner.catalog_path.clone(),
-            enable_structure,
         };
         self.publish_origin(record)
     }
@@ -695,7 +689,6 @@ impl Drop for MutationPermit<'_> {
 pub(crate) struct OriginDatasetDto {
     pub(crate) origin_dataset_id: String,
     pub(crate) source_catalog: String,
-    pub(crate) enable_structure: bool,
     pub(crate) instrument_id: String,
     pub(crate) bar_type: String,
     pub(crate) timeframe: String,
@@ -790,7 +783,6 @@ impl OriginRecord {
         OriginDatasetDto {
             origin_dataset_id: dataset.origin_dataset_id.to_string(),
             source_catalog: self.catalog_path.display().to_string(),
-            enable_structure: self.enable_structure,
             instrument_id: dataset.state_key.instrument_id.to_string(),
             bar_type: dataset.bar_type.clone(),
             timeframe: dataset.state_key.timeframe.to_string(),
@@ -1060,7 +1052,6 @@ mod tests {
         let record = OriginRecord {
             dataset: fixture_origin(),
             catalog_path: app.catalog_path().to_path_buf(),
-            enable_structure: true,
         };
         app.publish_origin(record)
             .expect("fixture Origin should publish");
@@ -1138,7 +1129,7 @@ mod tests {
             .create_test_dataset("100", "200")
             .expect("Test should be created");
 
-        assert!(app.load_origin("missing-dataset", true).is_err());
+        assert!(app.load_origin("missing-dataset").is_err());
         assert_eq!(
             app.current_origin()
                 .expect("Origin lookup should succeed after failed Load")
@@ -1157,7 +1148,6 @@ mod tests {
         let replacement = OriginRecord {
             dataset: fixture_origin(),
             catalog_path: app.catalog_path().to_path_buf(),
-            enable_structure: false,
         };
         app.publish_origin(replacement)
             .expect("successful Origin publication should succeed");
@@ -1194,7 +1184,7 @@ mod tests {
             .create_test_dataset("100", "200")
             .expect_err("concurrent Test creation must be rejected");
         let load_error = app
-            .load_origin("any-dataset", true)
+            .load_origin("any-dataset")
             .expect_err("concurrent Origin Load must be rejected");
         app.inner
             .mutation_active

@@ -41,7 +41,6 @@ export interface SBarDto {
 export interface OriginDatasetDto {
   originDatasetId: string;
   sourceCatalog: string;
-  enableStructure: boolean;
   instrumentId: string;
   barType: string;
   timeframe: string;
@@ -217,7 +216,6 @@ export type InspectorWorkspaceContext =
       workspace: "dataset";
       originDatasetId: string | null;
       timeframe: string | null;
-      structureEnabled: boolean;
       selectedObject:
         | { kind: "sbar"; object: SBarDto }
         | { kind: "cbar"; object: ReplayInspectorCBarDto }

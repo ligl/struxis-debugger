@@ -8,7 +8,7 @@ test("Replay Inspector creates an independent FixedPriceRange before a separate 
   registry.observations = [];
   registry.interactions = [];
   const structure = { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] };
-  const origin = { originDatasetId: "origin-fixed", sourceCatalog: "fixture", enableStructure: false,
+  const origin = { originDatasetId: "origin-fixed", sourceCatalog: "fixture",
     instrumentId: registry.instrumentId, barType: bars[0]!.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: 4, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[3]!.sbarId,
     firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[3]!.tsEvent, bars, structure, keyzones: registry };
@@ -101,7 +101,7 @@ test("created FixedPriceRange supports 24px right-edge lines, hover and persiste
   registry.observations = [];
   registry.interactions = [];
   const structure = { cbarCount: 0, cbars: [], swingCount: 0, swings: [], trendCount: 0, trends: [] };
-  const origin = { originDatasetId: "origin-fixed-drawing", sourceCatalog: "fixture", enableStructure: false,
+  const origin = { originDatasetId: "origin-fixed-drawing", sourceCatalog: "fixture",
     instrumentId: registry.instrumentId, barType: bars[0]!.barType, timeframe: "1m", sbarSequenceFingerprint: "fixture",
     sbarCount: 4, firstSbarId: bars[0]!.sbarId, lastSbarId: bars[3]!.sbarId,
     firstTsEvent: bars[0]!.tsEvent, lastTsEvent: bars[3]!.tsEvent, bars, structure, keyzones: registry };

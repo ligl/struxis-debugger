@@ -12,7 +12,6 @@ const bars: SBarDto[] = [
 const origin: OriginDatasetDto = {
   originDatasetId: "origin-1",
   sourceCatalog: "/catalog",
-  enableStructure: true,
   instrumentId: "TEST.SIM",
   barType: "TEST-1-MINUTE-LAST-EXTERNAL",
   timeframe: "1m",

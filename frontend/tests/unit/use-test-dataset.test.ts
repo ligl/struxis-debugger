@@ -9,7 +9,6 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 const origin = (id: string): OriginDatasetDto => ({
   originDatasetId: id,
   sourceCatalog: "/catalog",
-  enableStructure: true,
   instrumentId: "AUD/USD.SIM",
   barType: "AUD/USD.SIM-5-MINUTE-LAST-EXTERNAL",
   timeframe: "5m",

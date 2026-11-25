@@ -82,11 +82,10 @@ pub(crate) async fn list_catalog_datasets(
 #[tauri::command]
 pub(crate) async fn load_origin(
     dataset_id: String,
-    enable_structure: bool,
     state: State<'_, AppState>,
 ) -> Result<OriginDatasetDto, IpcError> {
     let state = state.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || state.load_origin(&dataset_id, enable_structure))
+    tauri::async_runtime::spawn_blocking(move || state.load_origin(&dataset_id))
         .await
         .map_err(|error| {
             IpcError::new(

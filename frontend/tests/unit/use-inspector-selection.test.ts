@@ -12,7 +12,6 @@ function makeOrigin(id = "origin-1"): OriginDatasetDto {
   return {
     originDatasetId: id,
     sourceCatalog: "/catalog",
-    enableStructure: true,
     instrumentId: "TEST.SIM",
     barType: "TEST-1-MINUTE-LAST-EXTERNAL",
     timeframe: "1m",

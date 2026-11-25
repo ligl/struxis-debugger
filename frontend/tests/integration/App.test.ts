@@ -18,7 +18,7 @@ function mountApp() {
     global: {
       stubs: {
         OriginPanel: {
-          template: '<section data-testid="origin-panel-test-stub"><h3>Current Origin</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="origin">{{ origin.enableStructure ? "ENABLED" : "DISABLED" }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
+          template: '<section data-testid="origin-panel-test-stub"><h3>Current Origin</h3><span>{{ origin?.originDatasetId ?? "No validated Origin Dataset" }}</span><span>{{ loadStatus }}</span><span v-if="loadError">{{ loadError }}</span><small v-if="origin && loadError">The previous Origin remains available and unchanged.</small></section>',
           props: ["origin", "loadStatus", "loadError", "formatDomainTimestamp"],
         },
         OriginChart: {
@@ -97,11 +97,10 @@ const dataset: CatalogDatasetEntry = {
   diagnostic: null,
 };
 
-function makeOrigin(id: string, enableStructure = true): OriginDatasetDto {
+function makeOrigin(id: string): OriginDatasetDto {
   return {
     originDatasetId: id,
     sourceCatalog: "/workspace/test_data/catalog",
-    enableStructure,
     instrumentId: dataset.instrumentId!,
     barType: dataset.barType!,
     timeframe: "5m",
@@ -175,7 +174,6 @@ describe("Origin Load workbench", () => {
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("load_origin", {
         datasetId: dataset.id,
-        enableStructure: true,
       }),
     );
     await vi.waitFor(() => expect(wrapper.text()).toContain("origin-new"));
@@ -775,8 +773,11 @@ describe("Origin Load workbench", () => {
     expect(wrapper.get('[data-testid="inspector-empty"]').text()).toContain("Select an object difference");
   });
 
-  it("maps a disabled structure checkbox to enableStructure=false and renders the returned mode", async () => {
-    const origin = makeOrigin("origin-without-structure", false);
+  it("loads the selected dataset and renders its structure counts", async () => {
+    const origin = {
+      ...makeOrigin("origin-with-structure"),
+      structure: { cbarCount: 2, swingCount: 0, trendCount: 0, cbars: [], swings: [], trends: [] },
+    };
     invokeMock.mockImplementation((command) => {
       if (command === "list_catalog_datasets") return Promise.resolve([dataset]);
       if (command === "get_current_origin") return Promise.resolve(null);
@@ -787,21 +788,17 @@ describe("Origin Load workbench", () => {
     const wrapper = mountApp();
     await vi.waitFor(() => expect((wrapper.get('[data-testid="catalog-dataset-select"]').element as HTMLSelectElement).value).toBe(dataset.id));
 
-    const structureCheckbox = wrapper.get('[data-testid="catalog-enable-structure"]');
-    expect((structureCheckbox.element as HTMLInputElement).checked).toBe(true);
-    await structureCheckbox.setValue(false);
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
 
     await vi.waitFor(() =>
       expect(invokeMock).toHaveBeenCalledWith("load_origin", {
         datasetId: dataset.id,
-        enableStructure: false,
       }),
     );
-    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-without-structure"));
-    expect(wrapper.get('[data-testid="inspector-dataset-cbar-count"]').text()).toBe("DISABLED");
-    expect(wrapper.get('[data-testid="inspector-dataset-swing-count"]').text()).toBe("DISABLED");
-    expect(wrapper.get('[data-testid="inspector-dataset-trend-count"]').text()).toBe("DISABLED");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("origin-with-structure"));
+    expect(wrapper.get('[data-testid="inspector-dataset-cbar-count"]').text()).toBe("2");
+    expect(wrapper.get('[data-testid="inspector-dataset-swing-count"]').text()).toBe("0");
+    expect(wrapper.get('[data-testid="inspector-dataset-trend-count"]').text()).toBe("0");
   });
 
   it("groups datasets by Instrument and keeps unresolved entries visible but unloadable", async () => {
@@ -927,7 +924,6 @@ describe("Origin Load workbench", () => {
     resolveReset();
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("load_origin", {
       datasetId: dataset.id,
-      enableStructure: true,
     }));
 
     const resetIndex = invokeMock.mock.calls.findIndex(([command]) => command === "reset_run");
@@ -1479,8 +1475,8 @@ describe("Test, Run and Snapshot workbench", () => {
     expect(repeatedEvent.defaultPrevented).toBe(false);
 
     await wrapper.get('[data-testid="workspace-dataset"]').trigger("click");
-    const input = wrapper.get('[data-testid="catalog-enable-structure"]');
-    (input.element as HTMLInputElement).focus();
+    const input = wrapper.get('[data-testid="catalog-dataset-select"]');
+    (input.element as HTMLSelectElement).focus();
     const inputEvent = new KeyboardEvent("keydown", {
       key: " ",
       code: "Space",
@@ -1641,7 +1637,6 @@ describe("startup and user-operation coordination", () => {
     await wrapper.get('[data-testid="catalog-load"]').trigger("click");
     await vi.waitFor(() => expect(invokeMock).toHaveBeenCalledWith("load_origin", {
       datasetId: dataset.id,
-      enableStructure: true,
     }));
     await enterReplayWorkspace(wrapper);
     const startButton = wrapper.get('[data-testid="run-start-stop"]')!;

@@ -7,7 +7,6 @@ import type { OriginDatasetDto } from "../../src/origin-types";
 const origin: OriginDatasetDto = {
   originDatasetId: "origin-1",
   sourceCatalog: "catalog-1",
-  enableStructure: true,
   instrumentId: "BTCUSDT",
   barType: "BTCUSDT-1-MINUTE-LAST-EXTERNAL",
   timeframe: "m",
@@ -23,7 +22,7 @@ const origin: OriginDatasetDto = {
 
 const CatalogPanelStub = defineComponent({
   name: "CatalogPanel",
-  emits: ["refresh", "selectDataset", "update:enableStructure", "load"],
+  emits: ["refresh", "selectDataset", "load"],
   template: "<div data-testid=\"catalog-panel-stub\" />",
 });
 const TestDatasetPanelStub = defineComponent({
@@ -49,7 +48,6 @@ function mountDatasetWorkspace(originValue: OriginDatasetDto | null = origin, lo
       loading: false,
       mutationBusy: false,
       discoveryError: "",
-      enableStructure: true,
       origin: originValue,
       loadStatus,
       loadError: "",
@@ -136,13 +134,11 @@ describe("DatasetWorkspace", () => {
 
     wrapper.getComponent(CatalogPanelStub).vm.$emit("refresh");
     wrapper.getComponent(CatalogPanelStub).vm.$emit("selectDataset", "catalog-1");
-    wrapper.getComponent(CatalogPanelStub).vm.$emit("update:enableStructure", false);
     wrapper.getComponent(CatalogPanelStub).vm.$emit("load");
     wrapper.getComponent(TestDatasetPanelStub).vm.$emit("create");
 
     expect(wrapper.emitted("refreshCatalog")).toEqual([[]]);
     expect(wrapper.emitted("selectDataset")).toEqual([["catalog-1"]]);
-    expect(wrapper.emitted("updateEnableStructure")).toEqual([[false]]);
     expect(wrapper.emitted("loadOrigin")).toEqual([[]]);
     expect(wrapper.emitted("createTestDataset")).toEqual([[]]);
   });

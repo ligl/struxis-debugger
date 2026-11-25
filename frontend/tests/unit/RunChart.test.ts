@@ -72,7 +72,6 @@ function origin(): OriginDatasetDto {
   return {
     originDatasetId: "origin-1",
     sourceCatalog: "/catalog",
-    enableStructure: true,
     structure: null,
     instrumentId: "TEST",
     barType: "TEST-1-MINUTE-LAST-EXTERNAL",

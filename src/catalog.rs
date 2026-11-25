@@ -90,11 +90,7 @@ pub(crate) struct OriginLoad {
 /// This is an Origin Load operation, not a replay step: the complete dataset is
 /// processed in one temporary engine. Each later Run must create its own
 /// independent engine, Cache, Strategy, and Struxis state.
-pub(crate) fn load_origin(
-    catalog_path: &Path,
-    bar_type: &str,
-    enable_structure: bool,
-) -> Result<OriginLoad> {
+pub(crate) fn load_origin(catalog_path: &Path, bar_type: &str) -> Result<OriginLoad> {
     use std::str::FromStr;
 
     use capitus_strategy::StruxisDemo;
@@ -152,7 +148,7 @@ pub(crate) fn load_origin(
     let mut engine = BacktestEngine::new(engine_config)?;
     let setup_result = (|| -> Result<(
         Vec<Bar>,
-        Option<StructureCheckpoint>,
+        StructureCheckpoint,
         Option<crate::checkpoint::KeyZoneCheckpoint>,
     )> {
         engine.add_venue(
@@ -168,9 +164,7 @@ pub(crate) fn load_origin(
         engine.add_instrument(instrument)?;
 
         let runtime = NautilusRuntime::new(engine.kernel().cache.clone());
-        let mut struxis_config = StruxisConfig::builder()
-            .enable_structure(enable_structure)
-            .build();
+        let mut struxis_config = StruxisConfig::builder().build();
         let (cbars, swings, trends) = capitus_struxis::structure::structure::Structure::resolve_capacities(struxis_config.structure_cbars_capacity, struxis_config.structure_swings_capacity, struxis_config.structure_trends_capacity);
         // The input length adds a minimum only when it is nonzero.
         let input_capacity = std::num::NonZeroUsize::new(origin_bars.len());
@@ -196,17 +190,9 @@ pub(crate) fn load_origin(
             let state = struxis.state(state_key).ok_or_else(|| {
                 anyhow::anyhow!("Struxis state {state_key:?} was not created by Origin Load")
             })?;
-            anyhow::ensure!(
-                enable_structure || state.structure().is_none(),
-                "Origin Load configured enable_structure=false but Struxis created Structure"
-            );
-            anyhow::ensure!(
-                !enable_structure || state.structure().is_some(),
-                "Origin Load configured enable_structure=true but Struxis did not create Structure"
-            );
             validate_sbar_series(&origin_bars, state.sbars())?;
             let extracted = state.sbars().last_n(state.sbars().len());
-            let structure = structure_from_state_view(&state);
+            let structure = structure_from_state_view(&state).map_err(anyhow::Error::msg)?;
             anyhow::ensure!(
                 state.last_ts_event() == origin_bars.last().map(|bar| bar.ts_event),
                 "Origin Load ended at {:?}, expected {:?}",
@@ -233,7 +219,7 @@ pub(crate) fn load_origin(
         sbar_sequence_fingerprint,
         bar_type: parsed_bar_type.to_string(),
         bars,
-        structure,
+        structure: Some(structure),
         keyzones,
     })
 }
@@ -430,12 +416,12 @@ mod tests {
             .write_to_parquet(&bars, None, None, None)
             .expect("write complete fixture input");
 
-        let result = super::load_origin(&catalog_path, &bars[0].bar_type.to_string(), false);
+        let result = super::load_origin(&catalog_path, &bars[0].bar_type.to_string());
         std::fs::remove_dir_all(&catalog_path).expect("remove temporary Catalog");
         let origin = result.expect("Origin must retain the complete input beyond 10,000 bars");
         assert_eq!(origin.bars.len(), 10_001);
         assert_eq!(origin.bars, bars);
-        assert!(origin.structure.is_none());
+        assert!(origin.structure.is_some());
     }
 
     #[test]
@@ -648,14 +634,14 @@ mod tests {
         let catalog_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test_data/catalog");
 
-        let with_structure = super::load_origin(&catalog_path, BAR_TYPE, true)
-            .unwrap_or_else(|error| panic!("Origin Load with structure enabled failed: {error:#}"));
-        assert!(!with_structure.bars.is_empty());
-        assert_eq!(with_structure.bar_type, BAR_TYPE);
-        let structure = with_structure
+        let origin = super::load_origin(&catalog_path, BAR_TYPE)
+            .unwrap_or_else(|error| panic!("Origin Load failed: {error:#}"));
+        assert!(!origin.bars.is_empty());
+        assert_eq!(origin.bar_type, BAR_TYPE);
+        let structure = origin
             .structure
             .as_ref()
-            .expect("Origin Load with structure enabled must return a structure checkpoint");
+            .expect("Origin Load must return a structure checkpoint");
         assert!(
             structure.trend_count > 0,
             "the catalog Origin dataset must produce at least one Trend; effective Swings: {:#?}",
@@ -689,17 +675,15 @@ mod tests {
             "the active Trend projection must cover the latest effective Swing"
         );
 
-        let without_structure =
-            super::load_origin(&catalog_path, BAR_TYPE, false).unwrap_or_else(|error| {
-                panic!("Origin Load with structure disabled failed: {error:#}")
-            });
-        assert_eq!(without_structure.bars, with_structure.bars);
+        let reloaded = super::load_origin(&catalog_path, BAR_TYPE)
+            .unwrap_or_else(|error| panic!("Repeated Origin Load failed: {error:#}"));
+        assert_eq!(reloaded.bars, origin.bars);
         assert_eq!(
-            without_structure.sbar_sequence_fingerprint, with_structure.sbar_sequence_fingerprint,
-            "Load structure-calculation mode must not affect input-sequence identity"
+            reloaded.sbar_sequence_fingerprint, origin.sbar_sequence_fingerprint,
+            "Repeated Load must preserve input-sequence identity"
         );
         assert_ne!(
-            without_structure.origin_dataset_id, with_structure.origin_dataset_id,
+            reloaded.origin_dataset_id, origin.origin_dataset_id,
             "each successful Load creates a distinct Origin Dataset instance"
         );
     }

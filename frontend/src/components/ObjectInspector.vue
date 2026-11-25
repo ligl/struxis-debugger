@@ -65,9 +65,6 @@ const timeframe = computed(() =>
     ? props.context.timeframe
     : null,
 );
-const structureEnabled = computed(() =>
-  props.context.workspace === "dataset" ? props.context.structureEnabled : false,
-);
 const selectedDifference = computed(() =>
   props.context.workspace === "compare" ? props.context.difference : null,
 );
@@ -102,7 +99,6 @@ const replaySnapshotStructure = computed(() =>
 );
 
 function formatStructureCount(count: number | undefined): string {
-  if (!props.origin?.enableStructure) return "DISABLED";
   return count?.toLocaleString() ?? "UNAVAILABLE";
 }
 
@@ -136,7 +132,6 @@ async function handleInspectorContextMenu(event: MouseEvent): Promise<void> {
     >
       <span>ORIGIN <code>{{ originDatasetId ?? "—" }}</code></span>
       <span>TIMEFRAME <code>{{ timeframe ?? "—" }}</code></span>
-      <span>STRUCTURE <code>{{ structureEnabled ? "ENABLED" : "DISABLED" }}</code></span>
     </div>
     <KeyZoneFixedPriceRangeControls v-if="workspaceMode === 'replay' && !selectedReplayObject && replayInspector && createFixedPriceRange"
       :context="observationContext" :create="createFixedPriceRange" />

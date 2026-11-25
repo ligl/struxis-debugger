@@ -765,7 +765,7 @@ impl WorkerSession {
         let mut engine = BacktestEngine::new(engine_config)
             .map_err(|error| format!("Replay BacktestEngine creation failed: {error}"))?;
 
-        let mut struxis_config = StruxisConfig::builder().enable_structure(true).build();
+        let mut struxis_config = StruxisConfig::builder().build();
         let (cbars, swings, trends) =
             capitus_struxis::structure::structure::Structure::resolve_capacities(
                 struxis_config.structure_cbars_capacity,

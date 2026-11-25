@@ -18,13 +18,9 @@ export function listCatalogDatasets(): Promise<CatalogDatasetEntry[]> {
   return invoke<CatalogDatasetEntry[]>("list_catalog_datasets");
 }
 
-export function loadOrigin(
-  datasetId: string,
-  enableStructure: boolean,
-): Promise<OriginDatasetDto> {
+export function loadOrigin(datasetId: string): Promise<OriginDatasetDto> {
   return invoke<OriginDatasetDto>("load_origin", {
     datasetId,
-    enableStructure,
   });
 }
 
