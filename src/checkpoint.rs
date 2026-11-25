@@ -12,8 +12,9 @@ use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
     structure::{
-        LegView, StructureView, TrendSeriesView,
-        trend::Trend,
+        StructureView,
+        leg::Leg,
+        trend::{Trend, TrendSeries},
     },
 };
 
@@ -197,11 +198,10 @@ pub(crate) struct LegCheckpoint {
     pub(crate) span_sbars: u32,
 }
 
-impl TryFrom<&LegView<'_>> for LegCheckpoint {
-    type Error = String;
-
-    fn try_from(leg: &LegView<'_>) -> Result<Self, Self::Error> {
-        let end = leg.end_cbar().map_err(|error| error.to_string())?;
+impl LegCheckpoint {
+    fn from_leg(leg: &Leg, structure: &StructureView<'_>) -> Result<Self, String> {
+        let end = structure.cbars().get(leg.cbar_end_id)
+            .ok_or_else(|| format!("Leg end CBar {} is unavailable", leg.cbar_end_id))?;
         // Keep the existing snapshot wire format. This is a presentation
         // property derived from the authoritative terminal CBar, not Leg state.
         Ok(Self {
@@ -273,8 +273,8 @@ impl From<&Trend> for TrendCheckpoint {
     }
 }
 
-fn project_trends(series: TrendSeriesView<'_>) -> Vec<TrendCheckpoint> {
-    series.iter().map(|trend| TrendCheckpoint::from(&*trend)).collect()
+fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
+    series.iter().map(TrendCheckpoint::from).collect()
 }
 
 fn project_feature_sequence(
@@ -286,8 +286,8 @@ fn project_feature_sequence(
             .map(|element| {
                 let start_id = element.source_start_id();
                 let end_id = element.source_end_id();
-                let start_swing = structure.swings().get(start_id)?;
-                let end_swing = structure.swings().get(end_id)?;
+                let start_swing = structure.swings().get_swing(start_id)?;
+                let end_swing = structure.swings().get_swing(end_id)?;
                 Some(FeatureElementCheckpoint {
                     feature_id: format!("{start_id}:{end_id}"),
                     high: element.high().to_string(),
@@ -397,9 +397,10 @@ pub(crate) fn structure_from_state_view(
             .swings()
             .iter()
             .map(|swing| -> Result<SwingCheckpoint, String> {
-                let legs = swing.legs()
+                let legs = structure.legs(swing.id)
                     .map_err(|error| format!("Swing {} composition unavailable: {error}", swing.id))?
-                    .iter().map(LegCheckpoint::try_from).collect::<Result<Vec<_>, _>>()?;
+                    .iter().map(|leg| LegCheckpoint::from_leg(leg, &structure))
+                    .collect::<Result<Vec<_>, _>>()?;
                 Ok(SwingCheckpoint {
                 swing_id: swing.id.to_string(),
                 direction: format!("{:?}", swing.direction),
