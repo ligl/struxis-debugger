@@ -948,7 +948,18 @@ impl WorkerSession {
                     return Err(diagnostic);
                 }
             };
-            let mut projection = ReplayCheckpointProjection::from_state_view(&state_view);
+            let mut projection = match ReplayCheckpointProjection::from_state_view(&state_view) {
+                Ok(projection) => projection,
+                Err(error) => {
+                    let diagnostic = format!(
+                        "Struxis checkpoint query failed at input_index={} sbar_id={}: {error}",
+                        self.next_index, bar.ts_event
+                    );
+                    self.state.fail(diagnostic.clone())?;
+                    notify_sink_failure(&mut sink, &diagnostic);
+                    return Err(diagnostic);
+                }
+            };
             projection.keyzones = Some(keyzones);
             projection
         };

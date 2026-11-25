@@ -12,8 +12,8 @@ use capitus_struxis::{
     StruxisStateView,
     sbar::{SBar, SBarSeries},
     structure::{
-        leg::Leg,
-        trend::{Trend, TrendSeries},
+        LegView, StructureView, TrendSeriesView,
+        trend::Trend,
     },
 };
 
@@ -197,11 +197,16 @@ pub(crate) struct LegCheckpoint {
     pub(crate) span_sbars: u32,
 }
 
-impl From<&Leg> for LegCheckpoint {
-    fn from(leg: &Leg) -> Self {
-        Self {
+impl TryFrom<&LegView<'_>> for LegCheckpoint {
+    type Error = String;
+
+    fn try_from(leg: &LegView<'_>) -> Result<Self, Self::Error> {
+        let end = leg.end_cbar().map_err(|error| error.to_string())?;
+        // Keep the existing snapshot wire format. This is a presentation
+        // property derived from the authoritative terminal CBar, not Leg state.
+        Ok(Self {
             direction: format!("{:?}", leg.direction),
-            end_kind: format!("{:?}", leg.end_kind),
+            end_kind: if end.fractal_type.is_some() { "Fractal" } else { "Observation" }.to_owned(),
             cbar_start_id: leg.cbar_start_id.to_string(),
             cbar_end_id: leg.cbar_end_id.to_string(),
             sbar_start_id: leg.sbar_start_id.to_string(),
@@ -214,7 +219,7 @@ impl From<&Leg> for LegCheckpoint {
             low: leg.low.to_string(),
             volume: leg.volume.to_string(),
             span_sbars: leg.span_sbars,
-        }
+        })
     }
 }
 
@@ -268,12 +273,12 @@ impl From<&Trend> for TrendCheckpoint {
     }
 }
 
-fn project_trends(series: &TrendSeries) -> Vec<TrendCheckpoint> {
-    series.iter().map(TrendCheckpoint::from).collect()
+fn project_trends(series: TrendSeriesView<'_>) -> Vec<TrendCheckpoint> {
+    series.iter().map(|trend| TrendCheckpoint::from(&*trend)).collect()
 }
 
 fn project_feature_sequence(
-    structure: &capitus_struxis::structure::structure::Structure,
+    structure: &StructureView<'_>,
 ) -> Option<Vec<FeatureElementCheckpoint>> {
     structure.feature_sequence().and_then(|elements| {
         elements
@@ -281,8 +286,8 @@ fn project_feature_sequence(
             .map(|element| {
                 let start_id = element.source_start_id();
                 let end_id = element.source_end_id();
-                let start_swing = structure.swings().get_swing(start_id)?;
-                let end_swing = structure.swings().get_swing(end_id)?;
+                let start_swing = structure.swings().get(start_id)?;
+                let end_swing = structure.swings().get(end_id)?;
                 Some(FeatureElementCheckpoint {
                     feature_id: format!("{start_id}:{end_id}"),
                     high: element.high().to_string(),
@@ -327,11 +332,11 @@ impl ReplayCheckpointProjection {
     ///
     /// Callers must drop the supplied view before the next Strategy callback,
     /// Struxis mutation, worker message wait, or thread boundary.
-    pub(crate) fn from_state_view(state: &StruxisStateView<'_>) -> Self {
+    pub(crate) fn from_state_view(state: &StruxisStateView<'_>) -> Result<Self, String> {
         let sbars = project_sbars(state.sbars());
-        let structure = structure_from_state_view(state);
+        let structure = structure_from_state_view(state)?;
 
-        Self {
+        Ok(Self {
             state_key: format!("{:?}", state.key()),
             last_ts_event: state.last_ts_event().map(|value| value.to_string()),
             sbar_count: sbars.len(),
@@ -339,7 +344,7 @@ impl ReplayCheckpointProjection {
             structure,
             keyzones: None,
             diagnostics: Vec::new(),
-        }
+        })
     }
 }
 
@@ -370,7 +375,7 @@ fn project_sbars(series: &SBarSeries) -> Vec<SBarCheckpoint> {
 
 pub(crate) fn structure_from_state_view(
     state: &StruxisStateView<'_>,
-) -> Option<StructureCheckpoint> {
+) -> Result<Option<StructureCheckpoint>, String> {
     state.structure().map(|structure| {
         let cbars = structure
             .cbars()
@@ -391,12 +396,16 @@ pub(crate) fn structure_from_state_view(
         let swings = structure
             .swings()
             .iter()
-            .map(|swing| SwingCheckpoint {
+            .map(|swing| -> Result<SwingCheckpoint, String> {
+                let legs = swing.legs()
+                    .map_err(|error| format!("Swing {} composition unavailable: {error}", swing.id))?
+                    .iter().map(LegCheckpoint::try_from).collect::<Result<Vec<_>, _>>()?;
+                Ok(SwingCheckpoint {
                 swing_id: swing.id.to_string(),
                 direction: format!("{:?}", swing.direction),
                 start_price: swing.start_price.to_string(),
                 end_price: swing.end_price.to_string(),
-                legs: swing.legs().iter().map(LegCheckpoint::from).collect(),
+                legs,
                 high: swing.high.to_string(),
                 low: swing.low.to_string(),
                 cbar_start_id: swing.cbar_start_id.to_string(),
@@ -412,11 +421,12 @@ pub(crate) fn structure_from_state_view(
                 state: format!("{:?}", swing.state),
                 created_at: swing.created_at.to_string(),
                 updated_at: swing.updated_at.to_string(),
+                })
             })
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, _>>()?;
         let trends = project_trends(structure.trends());
-        let feature_sequence = project_feature_sequence(structure);
-        StructureCheckpoint {
+        let feature_sequence = project_feature_sequence(&structure);
+        Ok(StructureCheckpoint {
             cbar_count: cbars.len(),
             cbars,
             swing_count: swings.len(),
@@ -424,8 +434,8 @@ pub(crate) fn structure_from_state_view(
             trend_count: trends.len(),
             trends,
             feature_sequence,
-        }
-    })
+        })
+    }).transpose()
 }
 
 /// Owned Instrument Registry projection. Absence means this recording predates
