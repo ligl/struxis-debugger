@@ -205,7 +205,7 @@ pub(crate) fn sequence_fingerprint(state_key: StruxisStateKey, bars: &[Bar]) -> 
     let mut hasher = Sha256::new();
     hasher.update(b"capitus.debug-chart.sbar-sequence\0");
     hasher.update(payload.as_bytes());
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hex::encode(hasher.finalize()))
 }
 
 fn canonical_decimal(value: &str) -> String {
